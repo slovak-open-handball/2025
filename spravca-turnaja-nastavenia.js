@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     updatedAt: new Date()
                 }, { merge: true });
 
-                settingsStatus.textContent = 'Settings successfully saved!';
+                settingsStatus.textContent = 'Nastavenia uložené.';
                 settingsStatus.style.color = 'green';
             } catch (error) {
                 console.error("Error saving tournament settings: ", error);
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 await batch.commit();
 
-                categorySettingsStatus.textContent = 'Category settings successfully saved!';
+                categorySettingsStatus.textContent = 'Nastavenia kategórií uložené.';
                 categorySettingsStatus.style.color = 'green';
                 await loadCategorySettings(); // Reload settings to reflect changes
             } catch (error) {
