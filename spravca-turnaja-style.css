@@ -196,10 +196,10 @@ td:last-child {
 .action-button.delete-button {
     background-color: #dc3545;
     color: white;
-    border-color: #c82333;
+    border-color: #dc3545;
 }
 .action-button.delete-button:hover {
-    background-color: #c82333;
+    background-color: #dc3545;
     border-color: #bd2130;
 }
 .action-button.delete-button:active {
@@ -288,7 +288,7 @@ td:last-child {
     font-size: 0.9em;
 }
 .category-count-pair .remove-button:hover {
-    background-color: #c82333;
+    background-color: #dc3545;
 }
 .add-button {
     position: fixed;
