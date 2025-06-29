@@ -118,6 +118,10 @@ main {
     overflow-x: hidden; /* Zabezpečí, že main sám nebude mať horizontálny scrollbar */
     align-self: flex-start;
     min-height: 0;
+    /* Pridané pre zabezpečenie plnej šírky pre potomkov */
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Priestor medzi sekciami vo vnútri main */
 }
 
 #groupsContent,
@@ -1006,7 +1010,7 @@ td:last-child {
 }
 
 .match-duration-group .form-group {
-    display: flex; /* Make form-group a flex container */
+    display: flex;
     flex-direction: column; /* Stack label and input vertically */
     gap: 5px; /* Space between label and input */
     margin-bottom: 0; /* Remove extra margin */
@@ -1087,7 +1091,7 @@ td:last-child {
 }
 
 #categorySettingsForm button[type="submit"]:hover {
-    background-color: #c46f50;
+    background-color: #c46f50; /* Hover color for the submit button */
 }
 
 /* Rule to ensure #categorySettingsForm itself does not have a border/shadow */
@@ -1096,4 +1100,10 @@ td:last-child {
     padding: 0;
     border: none;
     box-shadow: none;
+}
+
+/* New rule to make .section-block take full width */
+.section-block {
+    width: 100%;
+    box-sizing: border-box;
 }
