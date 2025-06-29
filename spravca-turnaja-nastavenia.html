@@ -7,84 +7,6 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="spravca-turnaja-style.css">
-
-    
-    <style>
-        input[type="time"],
-        input[type="number"] {
-            width: 90%;
-            padding: 0.6em 1em;
-            font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 0.5rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            transition: border-color 0.3s, box-shadow 0.3s;
-            background-color: #fff;
-        }
-
-        input[type="time"]:focus,
-        input[type="number"]:focus {
-            border-color: #4a90e2;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-            outline: none;
-        }
-
-        /* Formulárové skupiny pre lepšie odsadenie */
-        .form-group {
-            margin-bottom: 1.5em;
-        }
-
-        /* Tlačidlá v modernom štýle */
-        button[type="submit"] {
-            background-color: #4a90e2;
-            color: white;
-            padding: 0.6em 1.2em;
-            font-size: 1rem;
-            border: none;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button[type="submit"]:hover {
-            background-color: #357ABD;
-        }
-
-        /* Štýly pre nové inputy pre trvanie zápasu */
-        .match-duration-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .match-duration-group .form-group {
-            margin-bottom: 0; /* Remove extra margin from nested form-groups */
-        }
-        .match-duration-group label {
-            font-size: 0.9em;
-            color: #555;
-        }
-        .match-duration-group input[type="number"] {
-            width: calc(100% - 10px); /* Adjust width to fit grid */
-            box-sizing: border-box;
-        }
-        .calculated-duration {
-            grid-column: 1 / -1; /* Span across both columns */
-            text-align: right;
-            font-weight: bold;
-            color: #333;
-            margin-top: 10px;
-            border-top: 1px dashed #ccc;
-            padding-top: 10px;
-        }
-        
-    </style>
-
-    
 </head>
 <body>
     <script type="module" src="auth.js"></script>
@@ -118,7 +40,7 @@
                 <p id="settingsStatus" class="status-message"></p>
             </section>
 
-            <section id="categorySettingsSection" class="section-block">
+            <section id="categorySettingsSection">
                 <h2>Nastavenia zápasov podľa kategórií</h2>
                 <form id="categorySettingsForm">
                     <div id="categorySettingsContainer">
