@@ -100,23 +100,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3>${categoryName}</h3>
                     <div class="match-duration-group">
                         <div class="form-group">
-                            <label for="n-${categoryId}">N (počet častí):</label>
+                            <label for="n-${categoryId}">Počet častí zápasu:</label>
                             <input type="number" id="n-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="n" value="${n_val}" min="0">
                         </div>
                         <div class="form-group">
-                            <label for="t-${categoryId}">T (dĺžka časti - min):</label>
+                            <label for="t-${categoryId}">Dĺžka časti (min):</label>
                             <input type="number" id="t-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="t" value="${t_val}" min="0">
                         </div>
                         <div class="form-group">
-                            <label for="p-${categoryId}">P (prestávka medzi časťami - min):</label>
+                            <label for="p-${categoryId}">Prestávka medzi časťami (min):</label>
                             <input type="number" id="p-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="p" value="${p_val}" min="0">
                         </div>
                         <div class="form-group">
-                            <label for="z-${categoryId}">Z (čas medzi zápasmi - min):</label>
+                            <label for="z-${categoryId}">Čas medzi zápasmi (min):</label>
                             <input type="number" id="z-${categoryId}" class="category-setting-input" data-category-id="${categoryId}" data-setting-type="z" value="${z_val}" min="0">
                         </div>
                         <div class="calculated-duration" id="calculated-c-${categoryId}">
-                            Celkový čas zápasu (C): ${calculated_c} minút
+                            Celkový čas zápasu: ${calculated_c} minút
                         </div>
                     </div>
                     <div class="form-group">
