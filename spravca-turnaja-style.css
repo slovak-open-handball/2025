@@ -966,3 +966,57 @@ td:last-child {
 #addOptions button:hover {
     background-color: #0056b3; /* Tmavšie pozadie pri prechode myšou */
 }
+
+/* Category settings specific styles */
+.category-settings-item {
+    /* Kopíruje štýl .section-block pre konzistentné orámovanie */
+    background-color: #ffffff;
+    padding: 25px; /* Zvýšené odsadenie ako v .section-block */
+    border-radius: 10px; /* Zaoblené rohy ako v .section-block */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Jemný tieň ako v .section-block */
+    margin-bottom: 30px; /* Väčší priestor medzi kategóriami */
+    /* Odstránený pôvodný border, ak nebol špecificky požadovaný */
+}
+
+.category-settings-item h3 {
+    color: #007bff;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Adjustments for the new duration inputs */
+.match-duration-group {
+    display: flex; /* Zmena na flexbox pre vertikálne zarovnanie */
+    flex-direction: column; /* Položky sa budú radiť pod seba */
+    gap: 10px; /* Priestor medzi vstupnými skupinami */
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+.match-duration-group .form-group {
+    margin-bottom: 0; /* Odstránenie dodatočného marginu z vnorených form-group */
+}
+.match-duration-group label {
+    font-size: 0.9em;
+    color: #555;
+    white-space: nowrap; /* Zabránenie zalomeniu textu labelu */
+}
+.match-duration-group input[type="number"] {
+    width: 100%; /* Plná šírka pre input v rámci jeho form-group */
+    box-sizing: border-box;
+}
+.calculated-duration {
+    /* grid-column: 1 / -1; Toto už nie je potrebné s flexboxom */
+    text-align: right;
+    font-weight: bold;
+    color: #333;
+    margin-top: 10px;
+    border-top: 1px dashed #ccc;
+    padding-top: 10px;
+    white-space: nowrap; /* Zabezpečuje, že tento text sa tiež nezalomí */
+}
