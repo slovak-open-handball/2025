@@ -114,11 +114,10 @@ main {
     padding: 0;
     box-shadow: none;
     background-color: transparent;
-    min-width: 0;
+    min-width: 800px; /* Zabezpečí minimálnu šírku obsahu */
     overflow-x: hidden; /* Zabezpečí, že main sám nebude mať horizontálny scrollbar */
-    /* overflow-y: auto; Ak tu chceš vertikálny scrollbar pre celý main obsah */
-    align-self: flex-start; /* Zabezpečí, že main sa vertikálne neroztiahne viac, ako je potrebné */
-    min-height: 0; /* NOVÉ: Zabezpečí, že nebude minimálna výška, ktorá by ho rozťahovala */
+    align-self: flex-start;
+    min-height: 0;
 }
 
 #groupsContent,
