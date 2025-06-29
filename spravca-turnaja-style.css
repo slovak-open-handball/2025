@@ -197,7 +197,6 @@ td:last-child {
     background-color: #dc3545;
     color: white;
     border-color: #c82333;
-    width: calc(100% - 22px);
 }
 .action-button.delete-button:hover {
     background-color: #c82333;
