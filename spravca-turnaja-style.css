@@ -996,33 +996,77 @@ td:last-child {
 
 /* Adjustments for the new duration inputs */
 .match-duration-group {
-    display: flex; /* Zmena na flexbox pre vertikálne zarovnanie */
-    flex-direction: column; /* Položky sa budú radiť pod seba */
-    gap: 10px; /* Priestor medzi vstupnými skupinami */
+    display: flex;
+    flex-direction: column; /* Ensure items stack vertically */
+    gap: 15px; /* Increased space between each N, T, P, Z block */
     margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 5px;
+    padding: 20px; /* Increased padding around the group */
+    border: 1px solid #ccc; /* Slightly darker border for better visibility */
+    border-radius: 8px; /* More rounded corners */
     background-color: #f9f9f9;
-}
-.match-duration-group .form-group {
-    margin-bottom: 0; /* Odstránenie dodatočného marginu z vnorených form-group */
-}
-.match-duration-group label {
-    font-size: 0.9em;
-    color: #555;
-    white-space: nowrap; /* Zabránenie zalomeniu textu labelu */
-}
-.match-duration-group input[type="number"] {
-    width: 100%; /* Plná šírka pre input v rámci jeho form-group */
+    width: 100%; /* Make the group take full available width */
     box-sizing: border-box;
 }
+
+.match-duration-group .form-group {
+    display: flex; /* Make form-group a flex container */
+    flex-direction: column; /* Stack label and input vertically */
+    gap: 5px; /* Space between label and input */
+    margin-bottom: 0; /* Remove extra margin */
+    width: 100%; /* Ensure form-group takes full width of its parent */
+}
+
+.match-duration-group label {
+    font-weight: bold;
+    font-size: 1em; /* Slightly larger font for labels */
+    color: #333;
+    white-space: normal; /* Allow label text to wrap if necessary */
+}
+
+.match-duration-group input[type="number"],
+.match-duration-group input[type="color"] { /* Apply consistent styling to all relevant inputs */
+    width: 100%; /* Ensure full width within the form-group */
+    padding: 12px 15px; /* Button-like padding */
+    font-size: 1rem; /* Button-like font size */
+    border: 1px solid #ccc;
+    border-radius: 8px; /* More rounded corners, consistent with buttons */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: #fff;
+    box-sizing: border-box; /* Crucial for width calculation */
+}
+
+.match-duration-group input[type="number"]:focus,
+.match-duration-group input[type="color"]:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    outline: none;
+}
+
 .calculated-duration {
-    text-align: right;
+    text-align: left; /* Align to left to match input labels */
     font-weight: bold;
     color: #333;
-    margin-top: 10px;
-    border-top: 1px dashed #ccc;
-    padding-top: 10px;
-    white-space: nowrap; /* Zabezpečuje, že tento text sa tiež nezalomí */
+    margin-top: 15px; /* More space above the calculated value */
+    padding-top: 15px; /* More padding */
+    border-top: 1px dashed #aaa; /* Slightly darker dashed line */
+    font-size: 1.1em; /* Make calculated text more prominent */
+    white-space: normal; /* Allow wrapping if needed for long text */
+}
+
+/* Also ensure the submit button for categories is properly styled if it's affected */
+#categorySettingsForm button[type="submit"] {
+    background-color: #4a90e2;
+    color: white;
+    padding: 1em 1.5em; /* Larger padding for a more prominent button */
+    font-size: 1.1rem; /* Larger font size */
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: auto; /* Allow button to size according to its content */
+    margin-top: 20px; /* Space above button */
+    display: block; /* Ensure it takes full width if desired, or make it inline-block and center if smaller */
+    margin-left: auto; /* Center the button if width is auto */
+    margin-right: auto;
 }
