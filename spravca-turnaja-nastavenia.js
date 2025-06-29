@@ -50,6 +50,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
+     * Vypočíta celkové trvanie zápasu na základe zadaných častí.
+     * Vzorec: c = n * (t + p) - p
+     * @param {number} n Počet častí zápasu.
+     * @param {number} t Dĺžka časti zápasu (v minútach).
+     * @param {number} p Prestávka medzi časťami zápasu (v minútach).
+     * @returns {number} Celkový čas zápasu (v minútach).
+     */
+    function calculateTotalMatchDuration(n, t, p) {
+        if (isNaN(n) || isNaN(t) || isNaN(p) || n < 0 || t < 0 || p < 0) {
+            return 0; // Vráti 0 pre neplatné vstupy
+        }
+        // Ak je len jedna časť (n=1), nie je žiadna prestávka medzi časťami
+        if (n === 1) {
+            return n * t;
+        }
+        return n * (t + p) - p;
+    }
+
+    /**
      * Načíta a zobrazí nastavenia pre jednotlivé kategórie (trvanie, buffer, farba).
      */
     async function loadCategorySettings() {
@@ -68,17 +87,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const categoryId = categoryDoc.id;
                 const categoryName = categoryData.name;
 
+                const n_val = categoryData.n || 0;
+                const t_val = categoryData.t || 0;
+                const p_val = categoryData.p || 0;
+                const z_val = categoryData.z || 0;
+                const calculated_c = calculateTotalMatchDuration(n_val, t_val, p_val);
+
+
                 const categoryDiv = document.createElement('div');
                 categoryDiv.className = 'category-settings-item';
                 categoryDiv.innerHTML = `
                     <h3>${categoryName}</h3>
-                    <div class="form-group">
-                        <label for="duration-${categoryId}">Trvanie zápasu (minúty):</label>
-                        <input type="number" id="duration-${categoryId}" class="category-setting-input" data-category-id="${categoryId}" data-setting-type="duration" value="${categoryData.duration || 0}" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="bufferTime-${categoryId}">Čas medzi zápasmi (minúty):</label>
-                        <input type="number" id="bufferTime-${categoryId}" class="category-setting-input" data-category-id="${categoryId}" data-setting-type="bufferTime" value="${categoryData.bufferTime || 0}" min="0">
+                    <div class="match-duration-group">
+                        <div class="form-group">
+                            <label for="n-${categoryId}">N (počet častí):</label>
+                            <input type="number" id="n-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="n" value="${n_val}" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="t-${categoryId}">T (dĺžka časti - min):</label>
+                            <input type="number" id="t-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="t" value="${t_val}" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="p-${categoryId}">P (prestávka medzi časťami - min):</label>
+                            <input type="number" id="p-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="p" value="${p_val}" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="z-${categoryId}">Z (čas medzi zápasmi - min):</label>
+                            <input type="number" id="z-${categoryId}" class="category-setting-input" data-category-id="${categoryId}" data-setting-type="z" value="${z_val}" min="0">
+                        </div>
+                        <div class="calculated-duration" id="calculated-c-${categoryId}">
+                            Celkový čas zápasu (C): ${calculated_c} minút
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="color-${categoryId}">Farba:</label>
@@ -86,6 +125,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
                 categorySettingsContainer.appendChild(categoryDiv);
+
+                // Pridanie event listenerov pre dynamický výpočet C
+                const n_input = document.getElementById(`n-${categoryId}`);
+                const t_input = document.getElementById(`t-${categoryId}`);
+                const p_input = document.getElementById(`p-${categoryId}`);
+                const calculated_c_display = document.getElementById(`calculated-c-${categoryId}`);
+
+                const updateCalculatedCDuration = () => {
+                    const current_n = parseInt(n_input.value) || 0;
+                    const current_t = parseInt(t_input.value) || 0;
+                    const current_p = parseInt(p_input.value) || 0;
+                    const new_c = calculateTotalMatchDuration(current_n, current_t, current_p);
+                    calculated_c_display.textContent = `Celkový čas zápasu (C): ${new_c} minút`;
+                };
+
+                n_input.addEventListener('input', updateCalculatedCDuration);
+                t_input.addEventListener('input', updateCalculatedCDuration);
+                p_input.addEventListener('input', updateCalculatedCDuration);
             });
         } catch (error) {
             console.error("Chyba pri načítaní nastavení kategórií:", error);
@@ -139,34 +196,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const batch = writeBatch(db); // Používa batch pre efektívne ukladanie viacerých dokumentov
 
             const updatedCategoriesData = {};
+            const categorySpecificInputs = {}; // Pre dočasné uloženie n, t, p, z pre výpočet 'c'
 
             inputs.forEach(input => {
                 const categoryId = input.dataset.categoryId;
                 const settingType = input.dataset.settingType;
                 const value = input.value;
 
-                if (settingType === 'duration' || settingType === 'bufferTime') {
+                if (!categorySpecificInputs[categoryId]) {
+                    categorySpecificInputs[categoryId] = {};
+                }
+
+                if (['n', 't', 'p', 'z'].includes(settingType)) {
                     const numValue = parseInt(value);
-                    if (isNaN(numValue) || numValue < 0) { // Trvanie a buffer čas musia byť >= 0
+                    if (isNaN(numValue) || numValue < 0) {
                         allValid = false;
                         input.style.borderColor = 'red';
                         return;
                     }
-                    if (!updatedCategoriesData[categoryId]) {
-                        updatedCategoriesData[categoryId] = {};
-                    }
-                    updatedCategoriesData[categoryId][settingType] = numValue;
+                    categorySpecificInputs[categoryId][settingType] = numValue;
                 } else if (settingType === 'color') {
-                    // Pre farbu stačí overiť, či nie je prázdna (input[type="color"] to zvyčajne rieši)
                     if (!value) {
                          allValid = false;
                          input.style.borderColor = 'red';
                          return;
                     }
-                    if (!updatedCategoriesData[categoryId]) {
-                        updatedCategoriesData[categoryId] = {};
-                    }
-                    updatedCategoriesData[categoryId][settingType] = value;
+                    categorySpecificInputs[categoryId][settingType] = value;
                 }
                 input.style.borderColor = ''; // Resetuje farbu okraja
             });
@@ -176,6 +231,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 categorySettingsStatus.style.color = 'red';
                 return;
             }
+
+            // Výpočet 'c' a finalizácia 'updatedCategoriesData'
+            for (const categoryId in categorySpecificInputs) {
+                const data = categorySpecificInputs[categoryId];
+                const n = data.n || 0;
+                const t = data.t || 0;
+                const p = data.p || 0;
+                const z = data.z || 0; // 'z' je bufferTime
+                
+                const calculated_c = calculateTotalMatchDuration(n, t, p);
+
+                updatedCategoriesData[categoryId] = {
+                    n: n,
+                    t: t,
+                    p: p,
+                    z: z, // Uložiť aj 'z' ako bufferTime
+                    duration: calculated_c, // Uložiť vypočítané 'c' ako duration
+                    bufferTime: z, // 'z' je čas medzi zápasmi, ktorý je použitý ako bufferTime
+                    color: data.color || '#000000'
+                };
+            }
+
 
             try {
                 // Iteruje cez zozbierané dáta a vykoná aktualizácie v batchi
