@@ -1086,6 +1086,10 @@ td:last-child {
     margin-right: auto;
 }
 
+#categorySettingsForm button[type="submit"]:hover {
+    background-color: #c46f50;
+}
+
 /* Rule to ensure #categorySettingsForm itself does not have a border/shadow */
 #categorySettingsForm {
     background-color: transparent;
