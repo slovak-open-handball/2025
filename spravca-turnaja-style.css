@@ -967,15 +967,22 @@ td:last-child {
     background-color: #0056b3; /* Tmavšie pozadie pri prechode myšou */
 }
 
-/* Category settings specific styles */
+/* Specific styles for the category settings section to remove its own border/shadow */
+#categorySettingsSection {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 30px; /* Preserve space below the section */
+}
+
+/* Category settings specific styles for individual category frames */
 .category-settings-item {
-    /* Kopíruje štýl .section-block pre konzistentné orámovanie */
     background-color: #ffffff;
     padding: 25px; /* Zvýšené odsadenie ako v .section-block */
     border-radius: 10px; /* Zaoblené rohy ako v .section-block */
     box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Jemný tieň ako v .section-block */
     margin-bottom: 30px; /* Väčší priestor medzi kategóriami */
-    /* Odstránený pôvodný border, ak nebol špecificky požadovaný */
 }
 
 .category-settings-item h3 {
@@ -1011,7 +1018,6 @@ td:last-child {
     box-sizing: border-box;
 }
 .calculated-duration {
-    /* grid-column: 1 / -1; Toto už nie je potrebné s flexboxom */
     text-align: right;
     font-weight: bold;
     color: #333;
