@@ -1035,7 +1035,9 @@ td:last-child {
 }
 
 /* Updated selector to include input[type="time"] for consistent styling */
-input[type="time"] {
+/* IMPORTANT: This rule needs to be specific enough to override any general input styles */
+.match-duration-group input[type="time"], /* Added this specific selector */
+#settingsForm input[type="time"] { /* Also apply to time inputs in the general settings form */
     width: 100%; /* Ensure full width */
     padding: 12px 15px; /* Button-like padding */
     font-size: 1rem; /* Button-like font size */
@@ -1069,7 +1071,7 @@ input[type="time"] {
 
 /* Also ensure the submit button for categories is properly styled if it's affected */
 #categorySettingsForm button[type="submit"] {
-    background-color: #4a90e2;
+    background-color: #3a8d41;
     color: white;
     padding: 1em 1.5em; /* Larger padding for a more prominent button */
     font-size: 1.1rem; /* Larger font size */
@@ -1082,4 +1084,12 @@ input[type="time"] {
     display: block; /* Ensure it takes full width if desired, or make it inline-block and center if smaller */
     margin-left: auto; /* Center the button if width is auto */
     margin-right: auto;
+}
+
+/* Rule to ensure #categorySettingsForm itself does not have a border/shadow */
+#categorySettingsForm {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    box-shadow: none;
 }
