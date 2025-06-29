@@ -49,6 +49,38 @@
         button[type="submit"]:hover {
             background-color: #357ABD;
         }
+
+        /* Štýly pre nové inputy pre trvanie zápasu */
+        .match-duration-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .match-duration-group .form-group {
+            margin-bottom: 0; /* Remove extra margin from nested form-groups */
+        }
+        .match-duration-group label {
+            font-size: 0.9em;
+            color: #555;
+        }
+        .match-duration-group input[type="number"] {
+            width: calc(100% - 10px); /* Adjust width to fit grid */
+            box-sizing: border-box;
+        }
+        .calculated-duration {
+            grid-column: 1 / -1; /* Span across both columns */
+            text-align: right;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
         
     </style>
 
