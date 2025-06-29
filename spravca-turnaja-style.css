@@ -939,9 +939,6 @@ td:last-child {
     border: 1px solid #ddd;
     border-radius: 8px; /* Jemne zaoblené rohy */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    display: none; /* Predvolene skryté, JS ho zmení na 'flex' */
-    width: 220px; /* Pevná šírka pre rozbaľovaciu ponuku */
-    overflow: hidden; /* Zabezpečí, že zaoblené rohy fungujú aj na obsahu */
     padding: 15px !important; /* Zvýšený okraj okolo obsahu vo vnútri bieleho obdĺžnika (nad, pod, vľavo, vpravo) s !important */
     flex-direction: column !important; /* Tlačidlá pod sebou s !important */
     gap: 15px !important; /* Zvýšená medzera medzi tlačidlami s !important */
@@ -1025,8 +1022,7 @@ td:last-child {
 
 /* Apply consistent styling to all relevant inputs including type="time" */
 .match-duration-group input[type="number"],
-.match-duration-group input[type="color"],
-.match-duration-group input[type="time"] { 
+.match-duration-group input[type="color"] { 
     width: 100%; /* Ensure full width within the form-group */
     padding: 12px 15px; /* Button-like padding */
     font-size: 1rem; /* Button-like font size */
@@ -1037,6 +1033,20 @@ td:last-child {
     background-color: #fff;
     box-sizing: border-box; /* Crucial for width calculation */
 }
+
+/* Updated selector to include input[type="time"] for consistent styling */
+input[type="time"] {
+    width: 100%; /* Ensure full width */
+    padding: 12px 15px; /* Button-like padding */
+    font-size: 1rem; /* Button-like font size */
+    border: 1px solid #ccc;
+    border-radius: 8px; /* More rounded corners, consistent with buttons */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: #fff;
+    box-sizing: border-box; /* Crucial for width calculation */
+}
+
 
 .match-duration-group input[type="number"]:focus,
 .match-duration-group input[type="color"]:focus,
