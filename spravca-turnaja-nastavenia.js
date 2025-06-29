@@ -1,12 +1,14 @@
 import { db, settingsCollectionRef, categoriesCollectionRef, getDoc, setDoc, doc, getDocs, query, orderBy, writeBatch } from './spravca-turnaja-common.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Kontrola prihláseného používateľa
     const loggedInUsername = localStorage.getItem('username');
     if (!loggedInUsername || loggedInUsername !== 'admin') {
         window.location.href = 'login.html';
         return;
     }
 
+    // Získanie referencií na DOM elementy
     const settingsForm = document.getElementById('settingsForm');
     const firstDayStartTimeInput = document.getElementById('firstDayStartTimeInput');
     const otherDaysStartTimeInput = document.getElementById('otherDaysStartTimeInput');
@@ -16,9 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categorySettingsContainer = document.getElementById('categorySettingsContainer');
     const categorySettingsStatus = document.getElementById('categorySettingsStatus');
 
-    const SETTINGS_DOC_ID = 'matchTimeSettings'; // Constant document ID for settings
+    const SETTINGS_DOC_ID = 'matchTimeSettings'; // Konštantné ID dokumentu pre nastavenia
 
-    // Function to load existing settings
+    /**
+     * Načíta a zobrazí existujúce všeobecné nastavenia a nastavenia kategórií.
+     */
     async function loadSettings() {
         try {
             const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
@@ -30,32 +34,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 firstDayStartTimeInput.value = currentSettings.firstDayStartTime || '';
                 otherDaysStartTimeInput.value = currentSettings.otherDaysStartTime || '';
             } else {
-                console.log("Settings document does not exist, default values will be used.");
+                console.log("Dokument nastavení neexistuje, použijú sa predvolené hodnoty.");
                 firstDayStartTimeInput.value = '';
                 otherDaysStartTimeInput.value = '';
             }
 
-            // Load category settings (match duration, buffer, color)
+            // Načítanie nastavení kategórií (trvanie zápasu, buffer, farba)
             await loadCategorySettings();
 
         } catch (error) {
-            console.error("Error loading settings:", error);
-            settingsStatus.textContent = 'Error loading settings. See console for details.';
+            console.error("Chyba pri načítaní nastavení:", error);
+            settingsStatus.textContent = 'Chyba pri načítaní nastavení. Pozrite si konzolu pre detaily.';
             settingsStatus.style.color = 'red';
         }
     }
 
-    // Function to load and display category settings (duration, buffer, color)
+    /**
+     * Načíta a zobrazí nastavenia pre jednotlivé kategórie (trvanie, buffer, farba).
+     */
     async function loadCategorySettings() {
-        categorySettingsContainer.innerHTML = '<p>Loading categories...</p>';
+        categorySettingsContainer.innerHTML = '<p>Načítavam kategórie...</p>';
         try {
             const categoriesSnapshot = await getDocs(query(categoriesCollectionRef, orderBy('name', 'asc')));
             if (categoriesSnapshot.empty) {
-                categorySettingsContainer.innerHTML = '<p>No categories found.</p>';
+                categorySettingsContainer.innerHTML = '<p>Nenašli sa žiadne kategórie.</p>';
                 return;
             }
 
-            categorySettingsContainer.innerHTML = ''; // Clear content
+            categorySettingsContainer.innerHTML = ''; // Vymaže existujúci obsah
 
             categoriesSnapshot.forEach(categoryDoc => {
                 const categoryData = categoryDoc.data();
@@ -82,16 +88,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 categorySettingsContainer.appendChild(categoryDiv);
             });
         } catch (error) {
-            console.error("Error loading category settings:", error);
-            categorySettingsContainer.innerHTML = '<p style="color: red;">Error loading category settings.</p>';
+            console.error("Chyba pri načítaní nastavení kategórií:", error);
+            categorySettingsContainer.innerHTML = '<p style="color: red;">Chyba pri načítaní nastavení kategórií.</p>';
         }
     }
 
 
-    // Load settings on page load
+    // Načíta nastavenia pri načítaní stránky
     await loadSettings();
 
-    // Saving general tournament settings
+    // Ukladanie všeobecných nastavení turnaja
     if (settingsForm) {
         settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -100,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const otherDaysStartTime = otherDaysStartTimeInput.value;
 
             if (!firstDayStartTime || !otherDaysStartTime) {
-                settingsStatus.textContent = 'Please fill in both start times.';
+                settingsStatus.textContent = 'Prosím, vyplňte oba časy začiatku.';
                 settingsStatus.style.color = 'red';
                 return;
             }
@@ -116,21 +122,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 settingsStatus.textContent = 'Nastavenia uložené.';
                 settingsStatus.style.color = 'green';
             } catch (error) {
-                console.error("Error saving tournament settings: ", error);
-                settingsStatus.textContent = 'Error saving tournament settings. See console for details.';
+                console.error("Chyba pri ukladaní nastavení turnaja: ", error);
+                settingsStatus.textContent = 'Chyba pri ukladaní nastavení turnaja. Pozrite si konzolu pre detaily.';
                 settingsStatus.style.color = 'red';
             }
         });
     }
 
-    // Saving category settings (match duration, buffer, color)
+    // Ukladanie nastavení kategórií (trvanie zápasu, buffer, farba)
     if (categorySettingsForm) {
         categorySettingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const inputs = categorySettingsContainer.querySelectorAll('.category-setting-input');
             let allValid = true;
-            const batch = writeBatch(db); // Use batch for efficient saving of multiple documents
+            const batch = writeBatch(db); // Používa batch pre efektívne ukladanie viacerých dokumentov
 
             const updatedCategoriesData = {};
 
@@ -141,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (settingType === 'duration' || settingType === 'bufferTime') {
                     const numValue = parseInt(value);
-                    if (isNaN(numValue) || numValue < 0) { // Duration must be >= 0, buffer time >= 0
+                    if (isNaN(numValue) || numValue < 0) { // Trvanie a buffer čas musia byť >= 0
                         allValid = false;
                         input.style.borderColor = 'red';
                         return;
@@ -151,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     updatedCategoriesData[categoryId][settingType] = numValue;
                 } else if (settingType === 'color') {
-                    // For color, just validate that it's not empty (input[type="color"] usually handles this)
+                    // Pre farbu stačí overiť, či nie je prázdna (input[type="color"] to zvyčajne rieši)
                     if (!value) {
                          allValid = false;
                          input.style.borderColor = 'red';
@@ -162,17 +168,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     updatedCategoriesData[categoryId][settingType] = value;
                 }
-                input.style.borderColor = ''; // Reset border color
+                input.style.borderColor = ''; // Resetuje farbu okraja
             });
 
             if (!allValid) {
-                categorySettingsStatus.textContent = 'Please check for errors in the category input fields.';
+                categorySettingsStatus.textContent = 'Prosím, skontrolujte chyby vo vstupných poliach kategórií.';
                 categorySettingsStatus.style.color = 'red';
                 return;
             }
 
             try {
-                // Iterate through collected data and perform updates in batch
+                // Iteruje cez zozbierané dáta a vykoná aktualizácie v batchi
                 for (const categoryId in updatedCategoriesData) {
                     const categoryDocRef = doc(categoriesCollectionRef, categoryId);
                     batch.update(categoryDocRef, updatedCategoriesData[categoryId]);
@@ -181,10 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 categorySettingsStatus.textContent = 'Nastavenia kategórií uložené.';
                 categorySettingsStatus.style.color = 'green';
-                await loadCategorySettings(); // Reload settings to reflect changes
+                await loadCategorySettings(); // Znova načíta nastavenia, aby sa prejavili zmeny
             } catch (error) {
-                console.error("Error saving category settings: ", error);
-                categorySettingsStatus.textContent = 'Error saving category settings. See console for details.';
+                console.error("Chyba pri ukladaní nastavení kategórií: ", error);
+                categorySettingsStatus.textContent = 'Chyba pri ukladaní nastavení kategórií. Pozrite si konzolu pre detaily.';
                 categorySettingsStatus.style.color = 'red';
             }
         });
