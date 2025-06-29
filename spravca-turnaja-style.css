@@ -1023,8 +1023,10 @@ td:last-child {
     white-space: normal; /* Allow label text to wrap if necessary */
 }
 
+/* Apply consistent styling to all relevant inputs including type="time" */
 .match-duration-group input[type="number"],
-.match-duration-group input[type="color"] { /* Apply consistent styling to all relevant inputs */
+.match-duration-group input[type="color"],
+.match-duration-group input[type="time"] { 
     width: 100%; /* Ensure full width within the form-group */
     padding: 12px 15px; /* Button-like padding */
     font-size: 1rem; /* Button-like font size */
@@ -1037,7 +1039,8 @@ td:last-child {
 }
 
 .match-duration-group input[type="number"]:focus,
-.match-duration-group input[type="color"]:focus {
+.match-duration-group input[type="color"]:focus,
+.match-duration-group input[type="time"]:focus {
     border-color: #4a90e2;
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
     outline: none;
