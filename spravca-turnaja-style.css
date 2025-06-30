@@ -131,7 +131,7 @@ main {
     align-items: center; /* Centrovanie sekcií horizontálne */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: 1200px; /* Maximálna šírka pre centrovaný obsah (toto ostáva na kontrolu celkového priestoru) */
+    max-width: 90%; /* ZMENA: Zvýšenie maximálnej šírky pre celkový centrovaný obsah */
     margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
 }
 
@@ -162,8 +162,8 @@ main {
 .main-content-area .section-block {
     margin-bottom: 0;
     width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
-    max-width: 800px; /* ZMENA: Nastavenie maximálnej šírky pre sekcie pre centrovanie */
-    margin: 0 auto; /* ZMENA: Centrovanie jednotlivých bielych rámikov */
+    max-width: none; /* Zruší predtým nastavené max-width pre section-block, aby sa roztiahli */
+    margin: 0 auto; /* Centrovanie jednotlivých bielych rámikov */
     padding: 15px;
     box-sizing: border-box;
     background-color: #fff; /* ZMENA: Biele pozadie */
@@ -728,7 +728,7 @@ button[type="submit"] {
     overflow-x: hidden; /* Zabráni horizontálnemu posuvníku */
     padding-bottom: 5px; /* Malý padding nad tlačidlami, ak je content dlhý */
     box-sizing: border-box; /* Zabezpečí, že padding nepridá k výške, ak je nastavená výška */
-    min-height: 0; /* Dôležité pre flexbox, aby sa obsah mohol zmenšiť a scrollbar sa zobrazil */
+    min-height: 0; /* Dôležité pre flexbox, aby sa obsah mohol zmenšovať a scrollbar sa zobrazil */
 }
 
 /* Odstránenie predvolených marginov z p elementov vnútri zápasu */
