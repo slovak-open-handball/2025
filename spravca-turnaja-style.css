@@ -1224,7 +1224,7 @@ button[type="submit"] {
     
     /* Max-width pre tento kontajner na kontrolu celkového rozloženia vo viacerých stĺpcoch */
     /* Dva prvky (každý min 330px široký) + 20px medzera = 330*2 + 20 = 680px */
-    max-width: 680px; 
+    /*max-width: 680px; */
     margin-left: auto;
     margin-right: auto; /* Centrujte samotný kontajner v rámci rodiča */
 }
@@ -1304,7 +1304,7 @@ button[type="submit"] {
     /* Základné štýly zdedené */
     /* Upravte max-width tak, aby sa do neho pohodlne zmestil #categorySettingsContainer alebo všeobecný formulár nastavení */
     /* Max. šírka #categorySettingsContainer (680px) + 2x odsadenie section-block (2*15px = 30px) = 710px */
-    max-width: 710px; 
+    /*max-width: 710px; */
     margin: 0 auto; /* Zabezpečte, aby zostal centrovaný */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečte, aby bol obsah plne viditeľný */
