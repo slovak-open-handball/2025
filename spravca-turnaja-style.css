@@ -1288,7 +1288,7 @@ button[type="submit"] {
     display: flex; /* Používa flexbox pre zobrazenie vedľa seba */
     flex-wrap: wrap; /* Zalamuje prvky do ďalšieho riadku, ak sa nezmestia */
     gap: 20px; /* Medzera medzi jednotlivými skupinami */
-    justify-content: flex-start; /* Zarovná skupiny od začiatku riadku */
+    justify-content: center; 
     align-items: flex-start; /* Zarovná skupiny na začiatku krížených osí */
     padding: 10px 0; /* Malý padding zhora/zdola pre prehľadnosť */
 }
