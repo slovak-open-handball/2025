@@ -1263,7 +1263,7 @@ button[type="submit"] {
     flex-wrap: wrap;
     gap: 10px; /* Medzi tlačidlami skupín */
     justify-content: center;
-    flex-grow: 1; /* Umožní tlačidlám zaberať dostupný priestor */
+    flex-grow: 1;
 }
 
 /* Existujúce tlačidlá .display-button budú použité pre skupiny, ale teraz sú v novom kontajneri */
@@ -1336,15 +1336,6 @@ button[type="submit"] {
     font-size: 1.4em;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
-}
-
-
-.group-buttons-by-type {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px; /* Medzi tlačidlami skupín */
-    justify-content: center; /* Tlačidlá zarovnané na STRED */
-    flex-grow: 1; /* Umožní tlačidlám zaberať dostupný priestor */
 }
 
 .group-display {
