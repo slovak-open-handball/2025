@@ -131,7 +131,7 @@ main {
     align-items: center; /* Centrovanie sekcií horizontálne */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: 100%; /* ZMENA: Maximálna šírka pre celkový centrovaný obsah (mala by byť plná, aby kategórie mali priestor) */
+    max-width: 100%; /* Maximálna šírka pre celkový centrovaný obsah */
     margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
 }
 
@@ -1044,6 +1044,7 @@ button[type="submit"] {
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     flex: 1 1 300px; /* ZMENA: Zmenil som flex-basis, aby sa viac prispôsobil */
     min-width: 280px; /* ZMENA: Uistil som sa, že minimálna šírka nebráni zalomeniu */
+    max-width: 380px; /* PRIDANÉ: Maximálna šírka pre sivý blok */
     box-sizing: border-box;
 }
 
