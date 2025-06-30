@@ -371,6 +371,63 @@ function resetClubModal() {
 }
 
 /**
+ * Pokúsi sa automaticky vybrať kategóriu na základe názvu tímu.
+ * Ak nájde zhodu, nastaví select box a povolí/zakáže súvisiace polia.
+ * @param {string} teamName - Aktuálny názov tímu z inputu.
+ */
+function attemptAutoSelectCategory(teamName) {
+    let categoryToSelect = null;
+    const teamNameLower = teamName.trim().toLowerCase();
+
+    for (const category of allAvailableCategories) {
+        const categoryNameLower = (category.name || category.id).trim().toLowerCase();
+        // Check if the team name starts with the category name, followed by a space or hyphen, or is an exact match
+        if (teamNameLower.startsWith(categoryNameLower)) {
+            if (teamNameLower.length === categoryNameLower.length ||
+                teamNameLower.charAt(categoryNameLower.length) === ' ' ||
+                teamNameLower.charAt(categoryNameLower.length) === '-') {
+                categoryToSelect = category.id;
+                break; // Found a match, stop searching
+            }
+        }
+    }
+
+    // Set the category select value
+    if (clubCategorySelect) {
+        // Only auto-select if the user hasn't already made a manual selection
+        // or if the current selection is the default "Vyberte kategóriu"
+        const currentSelectedValue = clubCategorySelect.value;
+        const currentSelectedText = clubCategorySelect.options[clubCategorySelect.selectedIndex]?.textContent;
+
+        const isDefaultSelection = currentSelectedValue === '' && currentSelectedText === '-- Vyberte kategóriu --';
+
+        if (categoryToSelect && (isDefaultSelection || clubCategorySelect.value === categoryToSelect)) {
+            clubCategorySelect.value = categoryToSelect;
+            clubCategorySelect.disabled = false; // Enable if a category is selected
+        } else if (!categoryToSelect && !isDefaultSelection) {
+            // If no category matches the typed name and a category was previously selected (not default),
+            // we should not automatically reset it, as it might be a valid manual selection.
+            // However, if it was an auto-selected category that no longer matches, it should revert.
+            // For simplicity and to avoid overriding user input, we'll only reset if it's currently the auto-selected one
+            // or if it's the default.
+            const previouslyAutoSelected = allAvailableCategories.some(cat => cat.id === currentSelectedValue && teamNameLower.startsWith((cat.name || cat.id).trim().toLowerCase()));
+            if (isDefaultSelection || previouslyAutoSelected) {
+                clubCategorySelect.value = ""; // Reset if no match
+                clubCategorySelect.disabled = allAvailableCategories.length === 0; // Disable if no categories available
+            }
+        } else if (!categoryToSelect && isDefaultSelection) {
+             // If no match and it's already default, just ensure disabled state is correct
+             clubCategorySelect.disabled = allAvailableCategories.length === 0;
+        }
+
+        // Manually trigger change event to update dependent selects (group)
+        const event = new Event('change');
+        clubCategorySelect.dispatchEvent(event);
+    }
+}
+
+
+/**
  * Otvorí modálne okno klubu v rôznych režimoch (priradenie, úprava, vytvorenie, filter).
  * @param {string|null} identifier - ID tímu (pre edit) alebo typ filtra (pre filter).
  * @param {string} mode - Režim modálneho okna ('assign', 'edit', 'create', 'filter').
@@ -615,44 +672,24 @@ async function openClubModal(identifier = null, mode = 'assign') {
             if (clubGroupSelect) clubGroupSelect.disabled = true; // Always disabled on start
             if (orderInGroupInput) orderInGroupInput.disabled = true;
 
-            // Nová logika pre automatické nastavenie kategórie pri vytváraní
-            let categoryToSelect = null;
-            const initialTeamName = clubNameInput.value.trim().toLowerCase(); // Ak je už nejaký text v inpute
-            if (initialTeamName) {
-                for (const category of allAvailableCategories) {
-                    const categoryNameLower = (category.name || category.id).trim().toLowerCase();
-                    if (initialTeamName.startsWith(categoryNameLower)) {
-                        if (initialTeamName.length === categoryNameLower.length ||
-                            initialTeamName.charAt(categoryNameLower.length) === ' ' ||
-                            initialTeamName.charAt(categoryNameLower.length) === '-') {
-                            categoryToSelect = category.id;
-                            break;
-                        }
-                    }
-                }
-            }
-
+            // Initial population of categories
             if (allAvailableCategories.length > 0) {
-                populateCategorySelect(clubCategorySelect, categoryToSelect);
+                populateCategorySelect(clubCategorySelect, null); // Start with no selection
             } else {
                 clubCategorySelect.innerHTML = '<option value="">-- Žiadne kategórie --</option>';
                 clubCategorySelect.disabled = true;
             }
+            clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
             
-            // Nastavíme stav selectu skupiny a poradia podľa toho, či bola kategória vybraná
-            if (categoryToSelect && categoryToSelect !== '' && !categoryToSelect.startsWith('--')) {
-                if (clubGroupSelect) clubGroupSelect.disabled = false; // Enables
-                populateGroupSelectForClubModal(clubGroupSelect, null, allAvailableGroups, categoryToSelect);
-            } else {
-                if (clubGroupSelect) clubGroupSelect.disabled = true; // Disables
-                clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
+            // Add input listener for dynamic category selection
+            if (clubNameInput) {
+                clubNameInput.addEventListener('input', () => {
+                    attemptAutoSelectCategory(clubNameInput.value);
+                });
             }
-            
-            if (orderInGroupInput) {
-                orderInGroupInput.disabled = true;
-                orderInGroupInput.value = '';
-                orderInGroupInput.removeAttribute('required');
-            }
+
+            // Manually trigger initial auto-selection if there's pre-filled text (e.g., from browser autofill)
+            attemptAutoSelectCategory(clubNameInput.value);
 
 
             if (clubCategorySelect) {
