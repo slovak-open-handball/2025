@@ -1317,7 +1317,7 @@ button[type="submit"] {
 
 /* Štýl pre nadpis typu skupiny v navigačnej časti (text pred tlačidlami) */
 .group-type-header h3 {
-    text-align: center; /* Centrovanie textu v nadpise */
+    text-align: left; /* Centrovanie textu v nadpise */
     margin: 0; /* Odstrániť margin-top a margin-bottom */
     color: #333;
     font-size: 1.3em;
