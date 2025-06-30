@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <input type="number" id="z-${categoryId}" class="category-setting-input" data-category-id="${categoryId}" data-setting-type="z" value="${z_val}" min="0">
                         </div>
                         <div class="calculated-duration" id="calculated-c-${categoryId}">
-                            Celkový čas zápasu: ${calculated_c} minút<br>+${z_val} minút medzi zápasmi
+                            Celkový čas zápasu: ${calculated_c} minút<br>+ ${z_val} minút (medzi zápasmi)
                         </div>
                     </div>
                     <div class="form-group">
