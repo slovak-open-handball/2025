@@ -127,8 +127,8 @@ main {
 /* NOVÉ: Wrapper pre hlavný obsah na centrovanie */
 .main-content-area {
     display: flex;
-    flex-direction: column; /* ZMENA: Sekcie pod sebou */
-    align-items: center; /* ZMENA: Centrovanie sekcií horizontálne */
+    flex-direction: column; /* Sekcie pod sebou */
+    align-items: center; /* Centrovanie sekcií horizontálne */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
     max-width: 1200px; /* Maximálna šírka pre centrovaný obsah */
@@ -147,19 +147,31 @@ main {
     width: 100%;
 }
 #groupsContent .section-block,
-#clubsContent .section-block,
-/* Aplikuje sa aj na sekcie v main-content-area */
-.main-content-area .section-block { /* ZMENA: pridal som selector pre sekcie v main-content-area */
+#clubsContent .section-block {
     margin-bottom: 0;
-    /* flex a min-width pre section-block teraz zabezpečuje, aby sa roztiahli v rámci .main-content-area */
-    width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
-    max-width: 600px; /* Obmedzíme max šírku jednotlivých blokov, aby neboli príliš široké */
+    flex: 1 1 300px;
+    min-width: 380px;
     padding: 15px;
     box-sizing: border-box;
-    background-color: #fff; /* Adding background and shadow for clarity as per image */
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #fff; /* Keep this */
+    border-radius: 8px; /* Keep this */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Keep this */
 }
+
+/* Aplikuje sa na sekcie v main-content-area (Nastavenia turnaja, Nastavenia zápasov podľa kategórií) */
+.main-content-area .section-block {
+    margin-bottom: 0;
+    width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
+    max-width: none; /* Zruší obmedzenie šírky, aby sa roztiahli až do max-width rodiča */
+    padding: 15px;
+    box-sizing: border-box;
+    background-color: transparent; /* ZMENA: Transparentné pozadie */
+    border: none; /* ZMENA: Bez orámovania */
+    border-radius: 0; /* ZMENA: Bez zaoblených rohov */
+    box-shadow: none; /* ZMENA: Bez tieňa */
+}
+
+
 table {
     border-collapse: collapse;
     margin-top: 15px;
@@ -791,6 +803,9 @@ button[type="submit"] {
     border: 1px solid #ddd;
     border-radius: 8px; /* Jemne zaoblené rohy */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: none; /* Predvolene skryté, JS ho zmení na 'flex' */
+    width: 220px; /* Pevná šírka pre rozbaľovaciu ponuku */
+    overflow: hidden; /* Zabezpečí, že zaoblené rohy fungujú aj na obsahu */
     padding: 15px !important; /* Zvýšený okraj okolo obsahu vo vnútri bieleho obdĺžnika (nad, pod, vľavo, vpravo) s !important */
     flex-direction: column !important; /* Tlačidlá pod sebou s !important */
     gap: 15px !important; /* Zvýšená medzera medzi tlačidlami s !important */
