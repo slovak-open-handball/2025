@@ -308,36 +308,46 @@ function displayGroupsForCategory(categoryId) {
     
     // Zoskupenie skupín podľa typu
     const groupsByType = {};
-    Object.values(groupTypeDisplayMap).forEach(typeDisplay => {
-        groupsByType[typeDisplay] = []; // Inicializácia pre všetky typy s diakritikou
+    // Používame pevné poradie typov pre zobrazenie
+    const orderedTypes = ["Zakladna skupina", "Nadstavbova skupina", "Skupina o umiestnenie"];
+    orderedTypes.forEach(typeKey => {
+        groupsByType[groupTypeDisplayMap[typeKey]] = []; // Inicializácia pre všetky typy s diakritikou v správnom poradí
     });
 
     groupsInCategory.forEach(group => {
         const typeDisplay = groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ';
-        if (!groupsByType[typeDisplay]) {
-            groupsByType[typeDisplay] = [];
+        // Pridávame skupiny len do existujúcich typov, aby sme zachovali poradie
+        if (groupsByType[typeDisplay]) {
+            groupsByType[typeDisplay].push(group);
+        } else {
+            // Ak sa nájde typ, ktorý nie je v orderedTypes (napr. staré dáta), pridať ho na koniec
+            if (!groupsByType['Ostatné typy']) {
+                groupsByType['Ostatné typy'] = [];
+            }
+            groupsByType['Ostatné typy'].push(group);
         }
-        groupsByType[typeDisplay].push(group);
     });
 
     // Zobrazenie typov skupín a ich tlačidiel
     if (groupSelectionButtons) {
-        // Namiesto tlačidiel pre každú skupinu, vytvoríme kontajnery pre každý typ skupiny
-        // a v nich zobrazíme tlačidlá pre jednotlivé skupiny daného typu.
         groupSelectionButtons.classList.add('group-type-container'); // Nová trieda pre flexbox layout
+        groupSelectionButtons.innerHTML = ''; // Vyčistíme pred pridaním nových prvkov
 
-        // Získanie zoradených názvov typov pre konzistentné zobrazenie
-        const sortedTypes = Object.keys(groupTypeDisplayMap).map(key => groupTypeDisplayMap[key]).sort();
-
-        sortedTypes.forEach(typeDisplay => {
+        // Prechádzame cez zoradené typy
+        orderedTypes.concat(['Ostatné typy']).forEach(typeDisplayKey => {
+            const typeDisplay = groupTypeDisplayMap[typeDisplayKey] || typeDisplayKey; // Preklad pre zobrazenie
             const groupsForThisType = groupsByType[typeDisplay];
+            
             if (groupsForThisType && groupsForThisType.length > 0) {
                 const typeSectionDiv = document.createElement('div');
                 typeSectionDiv.classList.add('group-type-section');
 
+                const typeHeaderDiv = document.createElement('div');
+                typeHeaderDiv.classList.add('group-type-header'); // Kontajner pre nadpis a tlačidlá
+
                 const typeTitle = document.createElement('h3');
                 typeTitle.textContent = typeDisplay;
-                typeSectionDiv.appendChild(typeTitle);
+                typeHeaderDiv.appendChild(typeTitle);
 
                 const typeButtonsDiv = document.createElement('div');
                 typeButtonsDiv.classList.add('group-buttons-by-type');
@@ -354,7 +364,8 @@ function displayGroupsForCategory(categoryId) {
                     });
                     typeButtonsDiv.appendChild(button);
                 });
-                typeSectionDiv.appendChild(typeButtonsDiv);
+                typeHeaderDiv.appendChild(typeButtonsDiv);
+                typeSectionDiv.appendChild(typeHeaderDiv); // Pridáme header div do sekcie typu
                 groupSelectionButtons.appendChild(typeSectionDiv);
             }
         });
