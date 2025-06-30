@@ -14,8 +14,8 @@ let singleGroupUnassignedDisplay = null;
 let allCategories = [];
 let allGroups = [];
 let allTeams = [];
-let currentCategoryId = null;
-let currentGroupId = null;
+let currentCategoryId = null; // Uchováva ID kategórie
+let currentGroupId = null;    // Uchováva ID skupiny
 
 // Mapa pre preklad typov skupín z formátu DB na zobrazenie s diakritikou
 const groupTypeDisplayMap = {
@@ -241,10 +241,10 @@ function displayCategoriesAsButtons() {
             const button = document.createElement('button');
             button.classList.add('display-button');
             button.textContent = category.name || category.id;
-            button.dataset.categoryId = category.id;
+            button.dataset.categoryId = category.id; // Still use ID for internal mapping
             button.addEventListener('click', () => {
-                const categoryId = button.dataset.categoryId;
-                displayGroupsForCategory(categoryId);
+                // Pass category ID, but store name in URL
+                displayGroupsForCategory(button.dataset.categoryId);
             });
             buttonsDiv.appendChild(button);
         });
@@ -300,9 +300,11 @@ function displayGroupsForCategory(categoryId) {
 
     setActiveCategoryButton(categoryId);
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
-    window.location.hash = 'category-' + encodeURIComponent(categoryId);
-
+    
     const selectedCategory = allCategories.find(cat => cat.id === categoryId);
+    // Ulož názov kategórie do URL namiesto ID
+    window.location.hash = 'category-' + encodeURIComponent(selectedCategory.name || selectedCategory.id);
+
     if (!selectedCategory) {
         if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
         if (groupSelectionButtons) groupSelectionButtons.style.display = 'none';
@@ -363,10 +365,10 @@ function displayGroupsForCategory(categoryId) {
                     const button = document.createElement('button');
                     button.classList.add('display-button');
                     button.textContent = group.name || group.id;
-                    button.dataset.groupId = group.id;
+                    button.dataset.groupId = group.id; // Still use ID for internal mapping
                     button.addEventListener('click', () => {
-                        const groupIdToDisplay = button.dataset.groupId;
-                        displaySingleGroup(groupIdToDisplay);
+                        // Pass group ID, but store group name in URL
+                        displaySingleGroup(button.dataset.groupId);
                     });
                     typeButtonsDiv.appendChild(button);
                 });
@@ -489,10 +491,18 @@ function displayGroupsForCategory(categoryId) {
 function displaySingleGroup(groupId) {
     const group = allGroups.find(g => g.id === groupId);
     if (!group) {
+        // Fallback to category view if group not found from URL
         const hash = window.location.hash;
         const categoryPrefix = '#category-';
         const hashParts = hash.startsWith(categoryPrefix) ? hash.substring(categoryPrefix.length).split('/')[0] : null;
-        const categoryIdFromHash = hashParts ? decodeURIComponent(hashParts) : null;
+        const urlCategoryNameFromHash = hashParts ? decodeURIComponent(hashParts) : null;
+        
+        let categoryIdFromHash = null;
+        if (urlCategoryNameFromHash) {
+            const foundCategory = allCategories.find(cat => (cat.name || cat.id) === urlCategoryNameFromHash);
+            categoryIdFromHash = foundCategory ? foundCategory.id : null;
+        }
+
         if (categoryIdFromHash && allCategories.some(cat => cat.id === categoryIdFromHash)) {
             displayGroupsForCategory(categoryIdFromHash); // Vráti sa na prehľad kategórie, ak sa skupina nenašla
         } else {
@@ -520,13 +530,13 @@ function displaySingleGroup(groupId) {
     if (singleGroupDisplayBlock) singleGroupDisplayBlock.innerHTML = '';
     if (singleGroupUnassignedDisplay) singleGroupUnassignedDisplay.innerHTML = '';
 
-    // showOnly('singleGroupContent'); // Táto funkcia už nie je taká dôležitá, keďže ručne nastavujeme display
-
     setActiveCategoryButton(currentCategoryId);
     setActiveGroupButton(groupId); // Zvýrazní aktívne tlačidlo skupiny
-    window.location.hash = `category-${encodeURIComponent(currentCategoryId)}/group-${encodeURIComponent(groupId)}`;
-
+    
     const category = allCategories.find(cat => cat.id === currentCategoryId);
+    // Ulož názvy kategórie a skupiny do URL
+    window.location.hash = `category-${encodeURIComponent(category.name || category.id)}/group-${encodeURIComponent(group.name || group.id)}`;
+
     if (category && categoryTitleDisplay) {
         categoryTitleDisplay.textContent = category.name || category.id;
     }
@@ -659,7 +669,11 @@ function goBackToGroupView() {
     // showOnly('allGroupsContent'); // Táto funkcia už nie je taká dôležitá, keďže ručne nastavujeme display
     setActiveCategoryButton(categoryIdToReturnTo);
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
-    window.location.hash = 'category-' + encodeURIComponent(categoryIdToReturnTo);
+    
+    const category = allCategories.find(cat => cat.id === categoryIdToReturnTo);
+    // Ulož názov kategórie do URL namiesto ID
+    window.location.hash = 'category-' + encodeURIComponent(category.name || category.id);
+
     displayGroupsForCategory(categoryIdToReturnTo); // Znovu vykreslí prehľad kategórie s typmi a všetkými detailami skupín
 }
 function findMaxTableContentWidth(containerElement) {
@@ -738,27 +752,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     const groupPrefix = '/group-';
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
-        const urlCategoryId = hashParts[0];
-        const urlGroupId = hashParts.length > 1 ? hashParts[1] : null;
-        const decodedCategoryId = decodeURIComponent(urlCategoryId);
-        const decodedGroupId = urlGroupId ? decodeURIComponent(urlGroupId) : null;
-        const categoryExists = allCategories.some(cat => cat.id === decodedCategoryId);
-        if (categoryExists) {
+        const urlCategoryName = decodeURIComponent(hashParts[0]);
+        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]) : null;
+
+        let decodedCategoryId = null;
+        const foundCategory = allCategories.find(cat => (cat.name || cat.id) === urlCategoryName);
+        if (foundCategory) {
+            decodedCategoryId = foundCategory.id;
+        }
+        
+        if (decodedCategoryId) {
             setTimeout(() => {
-                if (decodedGroupId) {
-                    const groupExists = allGroups.some(group => group.id === decodedGroupId && group.categoryId === decodedCategoryId);
-                    if (groupExists) {
-                        // Ak je v URL aj ID skupiny, zobrazíme priamo túto skupinu
+                if (urlGroupName) {
+                    let decodedGroupId = null;
+                    const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
+                    if (foundGroup) {
+                        decodedGroupId = foundGroup.id;
+                    }
+
+                    if (decodedGroupId) {
+                        // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
                         displaySingleGroup(decodedGroupId);
                     } else {
-                        // Ak skupina z URL neexistuje, zobrazíme prehľad kategórie
+                        // Ak názov skupiny z URL neexistuje, zobrazíme prehľad kategórie
                         displayGroupsForCategory(decodedCategoryId);
                     }
                 } else {
-                    // Ak v URL nie je ID skupiny, zobrazíme prehľad kategórie
+                    // Ak v URL nie je názov skupiny, zobrazíme prehľad kategórie
                     displayGroupsForCategory(decodedCategoryId);
                 }
             }, 50);
+        } else {
+            // Ak kategória z URL neexistuje, vrátime sa na zobrazenie kategórií
+            goBackToCategories();
         }
     } 
 });
@@ -772,12 +798,25 @@ window.addEventListener('hashchange', () => {
     const groupPrefix = '/group-';
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
-        const urlCategoryId = hashParts[0];
-        const urlGroupId = hashParts.length > 1 ? hashParts[1] : null;
-        const decodedCategoryId = decodeURIComponent(urlCategoryId);
-        const decodedGroupId = urlGroupId ? decodeURIComponent(urlGroupId) : null;
-        const categoryExists = allCategories.some(cat => cat.id === decodedCategoryId);
-        if (categoryExists) {
+        const urlCategoryName = decodeURIComponent(hashParts[0]);
+        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]) : null;
+
+        let decodedCategoryId = null;
+        const foundCategory = allCategories.find(cat => (cat.name || cat.id) === urlCategoryName);
+        if (foundCategory) {
+            decodedCategoryId = foundCategory.id;
+        }
+
+        let decodedGroupId = null;
+        if (urlGroupName && decodedCategoryId) {
+            const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
+            if (foundGroup) {
+                decodedGroupId = foundGroup.id;
+            }
+        }
+        
+        // Ak existuje decodedCategoryId, pokracujeme s jeho spracovanim
+        if (decodedCategoryId) {
             const alreadyInTargetState = (currentCategoryId === decodedCategoryId) &&
                                          (currentGroupId === decodedGroupId);
             if (alreadyInTargetState) {
@@ -785,6 +824,7 @@ window.addEventListener('hashchange', () => {
             }
             currentCategoryId = decodedCategoryId;
             currentGroupId = decodedGroupId;
+
             if (decodedGroupId) {
                 const groupExists = allGroups.some(group => group.id === decodedGroupId && group.categoryId === decodedCategoryId);
                 if (groupExists) {
@@ -796,8 +836,10 @@ window.addEventListener('hashchange', () => {
                 displayGroupsForCategory(decodedCategoryId);
             }
         } else {
+            // Ak kategória z URL neexistuje (názov sa nenašiel), vrátime sa na zobrazenie kategórií
             goBackToCategories();
         }
+
     } else {
         goBackToCategories();
     }
