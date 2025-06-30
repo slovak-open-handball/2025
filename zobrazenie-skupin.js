@@ -398,64 +398,100 @@ function displayGroupsForCategory(categoryId) {
             noGroupsMsg.style.padding = '20px';
             allGroupsContainer.appendChild(noGroupsMsg);
         } else {
-            // Skupiny sú už zoradené v groupsInCategory
+            // Zoskupenie skupín podľa typu pre zobrazenie
+            const groupedDetailsByType = {};
+            orderedTypes.forEach(typeKey => {
+                groupedDetailsByType[groupTypeDisplayMap[typeKey]] = [];
+            });
+
             groupsInCategory.forEach(group => {
-                const groupDisplayDiv = document.createElement('div');
-                groupDisplayDiv.classList.add('group-display'); // Použijeme existujúcu triedu pre štýlovanie detailov skupiny
-                groupDisplayDiv.dataset.groupId = group.id; // Uložíme ID skupiny pre prípadné zvýraznenie
-
-                const groupTitle = document.createElement('h3');
-                groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
-                groupTitle.style.cursor = 'pointer'; // Nastavíme kurzor na "pointer", aby bolo vidieť, že je klikateľný
-                groupTitle.addEventListener('click', () => {
-                    displaySingleGroup(group.id); // Pridáme event listener pre kliknutie na hlavičku
-                });
-
-                groupDisplayDiv.appendChild(groupTitle);
-
-                const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
-                if (teamsInGroup.length === 0) {
-                    const noTeamsPara = document.createElement('p');
-                    noTeamsPara.textContent = 'V tejto skupine zatiaľ nie sú žiadne tímy.';
-                    noTeamsPara.style.padding = '10px';
-                    groupDisplayDiv.appendChild(noTeamsPara);
+                const typeDisplay = groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ';
+                if (groupedDetailsByType[typeDisplay]) {
+                    groupedDetailsByType[typeDisplay].push(group);
                 } else {
-                    teamsInGroup.sort((a, b) => {
-                        const orderA = a.orderInGroup || Infinity;
-                        const orderB = b.orderInGroup || Infinity;
-                        if (orderA !== orderB) {
-                            return orderA - orderB;
-                        }
-                        const nameA = (a.name || a.id || '').toLowerCase();
-                        const nameB = (b.name || b.id || '').toLowerCase();
-                        return nameA.localeCompare(nameB, 'sk-SK');
-                    });
-                    const teamList = document.createElement('ul');
-                    teamList.classList.add('team-list');
-                    teamsInGroup.forEach(team => {
-                        const teamItem = document.createElement('li');
-                        teamItem.classList.add('team-list-item');
-                        teamItem.textContent = team.name || 'Neznámy tím';
-                        teamItem.style.cursor = 'pointer';
-                        const rawClubNameForCleaning = team.clubName || team.name || '';
-                        teamItem.dataset.clubName = rawClubNameForCleaning;
-                        const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
-                        const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
-                        const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
-                        // Zachovávame `replace(/\s/g, '+')` pre názvy tímov v URL parametroch.
-                        const cleanedTeamName = fullTeamName.replace(/\s/g, '+'); 
-                        teamItem.addEventListener('click', (event) => {
-                            const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
-                            const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
-                                .replace(/\s/g, '+');
-                            const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}`;
-                            window.location.href = url;
-                        });
-                        teamList.appendChild(teamItem);
-                    });
-                    groupDisplayDiv.appendChild(teamList);
+                    if (!groupedDetailsByType['Ostatné typy']) {
+                        groupedDetailsByType['Ostatné typy'] = [];
+                    }
+                    groupedDetailsByType['Ostatné typy'].push(group);
                 }
-                allGroupsContainer.appendChild(groupDisplayDiv);
+            });
+
+            // Vykreslenie zoskupených detailov do allGroupsContainer
+            orderedTypes.concat(['Ostatné typy']).forEach(typeDisplayKey => {
+                const typeDisplay = groupTypeDisplayMap[typeDisplayKey] || typeDisplayKey;
+                const groupsForThisType = groupedDetailsByType[typeDisplay];
+
+                if (groupsForThisType && groupsForThisType.length > 0) {
+                    const typeSectionDiv = document.createElement('div');
+                    typeSectionDiv.classList.add('group-type-section'); // Nová trieda pre sekciu typu (napr. Základná skupina)
+
+                    const sectionTitle = document.createElement('h2');
+                    sectionTitle.textContent = typeDisplay;
+                    typeSectionDiv.appendChild(sectionTitle);
+
+                    const groupsDisplayGrid = document.createElement('div');
+                    groupsDisplayGrid.classList.add('groups-display-grid'); // Pre mriežkové zobrazenie skupín v rámci typu
+
+                    groupsForThisType.sort((a, b) => (a.name || a.id || '').localeCompare((b.name || b.id || ''), 'sk-SK'));
+                    groupsForThisType.forEach(group => {
+                        const groupDisplayDiv = document.createElement('div');
+                        groupDisplayDiv.classList.add('group-display');
+                        groupDisplayDiv.dataset.groupId = group.id;
+
+                        const groupTitle = document.createElement('h3');
+                        groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
+                        groupTitle.style.cursor = 'pointer'; // Nastavíme kurzor na "pointer", aby bolo vidieť, že je klikateľný
+                        groupTitle.addEventListener('click', () => {
+                            displaySingleGroup(group.id); // Pridáme event listener pre kliknutie na hlavičku
+                        });
+                        groupDisplayDiv.appendChild(groupTitle);
+
+                        const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
+                        if (teamsInGroup.length === 0) {
+                            const noTeamsPara = document.createElement('p');
+                            noTeamsPara.textContent = 'V tejto skupine zatiaľ nie sú žiadne tímy.';
+                            noTeamsPara.style.padding = '10px';
+                            groupDisplayDiv.appendChild(noTeamsPara);
+                        } else {
+                            teamsInGroup.sort((a, b) => {
+                                const orderA = a.orderInGroup || Infinity;
+                                const orderB = b.orderInGroup || Infinity;
+                                if (orderA !== orderB) {
+                                    return orderA - orderB;
+                                }
+                                const nameA = (a.name || a.id || '').toLowerCase();
+                                const nameB = (b.name || b.id || '').toLowerCase();
+                                return nameA.localeCompare(nameB, 'sk-SK');
+                            });
+                            const teamList = document.createElement('ul');
+                            teamList.classList.add('team-list');
+                            teamsInGroup.forEach(team => {
+                                const teamItem = document.createElement('li');
+                                teamItem.classList.add('team-list-item');
+                                teamItem.textContent = team.name || 'Neznámy tím';
+                                teamItem.style.cursor = 'pointer';
+                                const rawClubNameForCleaning = team.clubName || team.name || '';
+                                teamItem.dataset.clubName = rawClubNameForCleaning;
+                                const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
+                                const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
+                                const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
+                                const cleanedTeamName = fullTeamName.replace(/\s/g, '+'); 
+                                teamItem.addEventListener('click', (event) => {
+                                    const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
+                                    const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
+                                        .replace(/\s/g, '+');
+                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}`;
+                                    window.location.href = url;
+                                });
+                                teamList.appendChild(teamItem);
+                            });
+                            groupDisplayDiv.appendChild(teamList);
+                        }
+                        groupsDisplayGrid.appendChild(groupDisplayDiv);
+                    });
+                    typeSectionDiv.appendChild(groupsDisplayGrid);
+                    allGroupsContainer.appendChild(typeSectionDiv);
+                }
             });
         }
     }
