@@ -371,7 +371,7 @@ async function findFirstAvailableTime() {
         const matchesSnapshot = await getDocs(matchesQuery);
         const matches = matchesSnapshot.docs.map(doc => {
             const data = doc.data();
-            const startInMinutes = (parseInt(data.startTime.split(':')[0]) * 60 + parseInt(data.startTime.split(':')[1]));
+            const startInMinutes = parseTimeToMinutes(data.startTime);
             const duration = Number(data.duration) || 0;
             const bufferTime = Number(data.bufferTime) || 0;
             return {
@@ -392,8 +392,8 @@ async function findFirstAvailableTime() {
         const blockedIntervalsSnapshot = await getDocs(blockedIntervalsQuery);
         const allIntervals = blockedIntervalsSnapshot.docs.map(doc => {
             const data = doc.data();
-            const startInMinutes = (parseInt(data.startTime.split(':')[0]) * 60 + parseInt(data.startTime.split(':')[1]));
-            const endInMinutes = (parseInt(data.endTime.split(':')[0]) * 60 + parseInt(data.endTime.split(':')[1]));
+            const startInMinutes = parseTimeToMinutes(data.startTime);
+            const endInMinutes = parseTimeToMinutes(data.endTime);
             return {
                 id: doc.id,
                 start: startInMinutes,
@@ -745,7 +745,9 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 event.footprintEndInMinutes = event.startInMinutes + event.duration + event.bufferTime;
             } else if (event.type === 'blocked_interval' && (event.isBlocked === true || event.originalMatchId)) {
                 // For fixed blocked intervals, update their start/end times if they were shifted
-                const newEndTimeInMinutes = newEventStartInMinutes + (event.endInMinutes - (event.originalStartInMinutes || event.startInMinutes)); // Use original duration
+                // Ensure we calculate duration based on original start/end if available, otherwise current.
+                const originalDuration = (event.originalStartInMinutes && event.originalEndInMinutes) ? (event.originalEndInMinutes - event.originalStartInMinutes) : (event.endInMinutes - event.startInMinutes);
+                const newEndTimeInMinutes = newEventStartInMinutes + originalDuration;
                 const newEndTimeFormatted = formatMinutesToTime(newEndTimeInMinutes);
                 batch.update(event.docRef, { startTime: newStartTimeFormatted, endTime: newEndTimeFormatted, startInMinutes: newEventStartInMinutes, endInMinutes: newEndTimeInMinutes });
                 event.startTime = newStartTimeFormatted; // Update in memory
@@ -1039,7 +1041,7 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
     if (event.type === 'match') {
         const matchDuration = event.duration || (allSettings.categoryMatchSettings?.[event.categoryId]?.duration || 60);
         const displayedMatchEndTimeInMinutes = event.endOfPlayInMinutes; 
-        const formattedDisplayedEndTime = `${String(Math.floor(displayedMatchEndTimeInMinutes / 60)).padStart(2, '0')}:${String(displayedMatchEndTimeInMinutes % 60).padStart(2, '0')}`;
+        const formattedDisplayedEndTime = formatMinutesToTime(displayedMatchEndTimeInMinutes);
         
         return `${event.startTime} - ${formattedDisplayedEndTime}|${event.team1ClubName || 'N/A'}|${event.team2ClubName || 'N/A'}|${event.team1ShortDisplayName || 'N/A'}|${event.team2ShortDisplayName || 'N/A'}`;
     } else if (event.type === 'blocked_interval') {
@@ -2319,7 +2321,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         freeIntervalModalTitle.textContent = 'Voľný interval po vymazanom zápase';
         console.log("openFreeIntervalModal: Interval type: Free interval from deleted match.");
 
-        // Show add match and block options
+        // Show add match, block, and DELETE options for these specific placeholders
         if (addMatchButton) {
             addMatchButton.style.display = 'inline-block';
             const addMatchHandler = () => {
@@ -2342,10 +2344,18 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             blockButton._currentHandler = blockHandler;
             console.log("openFreeIntervalModal: Listener added and 'Zablokovať' button displayed.");
         }
-        // This type of free interval (from deleted match) should NOT be explicitly deleted by the user through a button, 
-        // as it represents a historical slot. It will be replaced if a match is added or blocked.
-        if (deleteButton) { deleteButton.style.display = 'none'; } 
-
+        if (deleteButton) { // Allow deleting free intervals that originated from deleted matches
+            deleteButton.style.display = 'inline-block';
+            deleteButton.textContent = 'Vymazať interval';
+            deleteButton.classList.add('delete-button'); // Add delete button styling
+            const deleteHandler = () => {
+                console.log(`openFreeIntervalModal: Clicked 'Delete interval' for free interval from deleted match ID: ${blockedIntervalId}. Calling handleDeleteInterval.`);
+                handleDeleteInterval(blockedIntervalId, date, location);
+            };
+            deleteButton.addEventListener('click', deleteHandler); 
+            deleteButton._currentHandler = deleteHandler; 
+            console.log("openFreeIntervalModal: Listener added and 'Vymazať interval' button displayed for free interval from deleted match.");
+        }
 
     } else { // Auto-generated empty interval (general gap)
         const [endH, endM] = endTime.split(':').map(Number);
