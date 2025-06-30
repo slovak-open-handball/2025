@@ -528,7 +528,7 @@ function displaySingleGroup(groupId) {
     if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
     if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily všetkých skupín
     if (singleGroupContent) singleGroupContent.style.display = 'block'; // Zobrazí detail jedinej skupiny
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block';
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none'; // SKRYJEME tlačidlo "Späť na kategórie"
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'block'; // Zobrazí tlačidlo "Späť na skupiny"
 
     // Vyčistíme obsah singleGroupContent
@@ -618,7 +618,7 @@ function displaySingleGroup(groupId) {
             unassignedList.classList.add('unassigned-team-list');
             unassignedTeamsInCategory.forEach(team => {
                 const teamItem = document.createElement('li');
-                teamItem.classList.add('unassigned-team-list-item');
+                teamItem.classList.add('team-list-item');
                 teamItem.textContent = team.name || 'Neznámy tím';
                 unassignedList.appendChild(teamItem);
             });
@@ -670,7 +670,7 @@ function goBackToGroupView() {
     if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazí navigačné tlačidlá skupín
     if (allGroupsContent) allGroupsContent.style.display = 'block'; // Zobrazí detaily všetkých skupín
     if (singleGroupContent) singleGroupContent.style.display = 'none'; // Skryje detail jednej skupiny
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block';
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block'; // ZOBRAZÍME tlačidlo "Späť na kategórie"
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none'; // Skryje tlačidlo "Späť na skupiny"
 
     // showOnly('allGroupsContent'); // Táto funkcia už nie je taká dôležitá, keďže ručne nastavujeme display
