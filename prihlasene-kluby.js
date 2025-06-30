@@ -22,7 +22,7 @@ const selectedTeamSoupiskaHracovUl = document.getElementById('selectedTeamSoupis
 let allClubs = [];
 let allCategories = [];
 let allGroups = [];
-let previousGroupViewUrl = null; // Nová premenná na uloženie URL zo zobrazenie-skupin.html
+let referringPage = '';
 
 /**
  * Načíta všetky potrebné dáta (kluby, kategórie, skupiny) z Firestore.
@@ -406,7 +406,6 @@ function adjustTableWidthsAndCleanUp() {
 
 /**
  * Odstráni riadky, ktoré nemajú žiadne tímy (totalTeams === 0).
- * @param {HTMLElement} container - HTML element, z ktorého sa majú odstrániť riadky.
  */
 function cleanUpZeroRows() {
      if (!clubsSummaryTableBody || !longestNameRowFixedBody) {
@@ -508,7 +507,7 @@ async function displaySubjectDetails(baseName, initialTeamId = null) {
                let categoryB = allCategories.find(cat => String(cat.id) === String(b.categoryId));
                let categoryNameB = (categoryB && categoryB.name) ? categoryB.name : (String(b.categoryId) || 'Neznáma kategória');
                let groupB = allGroups.find(g => String(g.id) === String(b.groupId));
-               let groupNameB = groupB ? (groupB.name || String(groupB.id)) : 'Nepriradené';
+               let groupNameB = groupB ? (groupB.name || String(b.id)) : 'Nepriradené';
                const teamTextB = `${categoryNameB}${groupNameB !== 'Nepriradené' ? ' - ' + groupNameB : ''}`;
 
                return teamTextA.localeCompare(teamTextB, 'sk-SK');
@@ -686,11 +685,22 @@ async function displaySpecificTeamDetails(teamId) {
  * Vráti používateľa na predchádzajúcu stránku alebo na súhrnnú tabuľku.
  */
 function goBackToList() {
-    // Ak sme prišli zo stránky zobrazenie-skupin.html, vrátime sa na ňu s pôvodnými parametrami
-    if (previousGroupViewUrl) {
-        window.location.href = previousGroupViewUrl;
+    // Ak sme prišli zo zobrazenia skupín (referringPage obsahuje 'zobrazenie-skupin.html')
+    // ALEBO ak URL obsahuje parameter 'sourcePage=zobrazenie-skupin'
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourcePageParam = urlParams.get('sourcePage');
+
+    if (referringPage.includes('zobrazenie-skupin.html') || sourcePageParam === 'zobrazenie-skupin') {
+        // Ak je v URL aj sourceHash, použijeme ho na návrat na konkrétny hash
+        const sourceHash = urlParams.get('sourceHash');
+        if (sourceHash) {
+            window.location.href = `zobrazenie-skupin.html${decodeURIComponent(sourceHash)}`;
+        } else {
+            history.back(); // Vráti sa späť v histórii prehliadača
+        }
     } else {
-        // Inak, zobrazíme súhrnnú tabuľku a vyčistíme URL parametre
+        // Inak (ak sme prišli z prihlasene-kluby.html alebo inej stránky),
+        // zobrazíme súhrnnú tabuľku a vyčistíme URL parametre
         displayClubsSummaryTable();
         history.replaceState({}, '', window.location.pathname);
     }
@@ -720,39 +730,25 @@ function removeTransparentRows(container) {
 async function handleUrlState() {
     await loadAllData(); // Načíta všetky dáta na začiatku
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const sourcePage = urlParams.get('sourcePage'); // Očakáva hodnotu ako 'zobrazenie-skupin'
-    const sourceHash = urlParams.get('sourceHash'); // Očakáva zakódovaný hash, napr. '%23category-U12%252BCH%2Fgroup-skupina%252BC'
-
-    if (sourcePage === 'zobrazenie-skupin' && sourceHash) {
-        // Ak sme prišli z 'zobrazenie-skupin.html' a je prítomný 'sourceHash', použijeme ho
-        // Dekódujeme hash, aby sa správne interpretovali znaky ako #, / atď.
-        previousGroupViewUrl = `zobrazenie-skupin.html${decodeURIComponent(sourceHash)}`;
-    } else if (document.referrer) {
+    if (document.referrer) {
         const referrerUrl = new URL(document.referrer);
-        // Ak nie je špecifický sourceHash, ale referrer je zobrazenie-skupin.html, použijeme referrer.href
-        // UPOZORNENIE: document.referrer NEZAHRŇA hash fragment, takže toto nebude fungovať pre presnú špecifikáciu hash-u.
-        // Toto je fallback, ak zobrazenie-skupin.js neposiela sourceHash.
-        if (referrerUrl.pathname.includes('zobrazenie-skupin.html')) {
-            previousGroupViewUrl = referrerUrl.href;
-        } else {
-            previousGroupViewUrl = null;
-        }
-    } else {
-        previousGroupViewUrl = null; // Ak nemáme žiadne informácie o predchádzajúcej stránke
+        referringPage = referrerUrl.pathname;
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
     const clubBaseName = urlParams.get('club');
     const categoryUrlParam = urlParams.get('category');
     const groupUrlParam = urlParams.get('group');
-    const teamIdFromUrl = urlParams.get('teamId');
+    const teamIdFromUrl = urlParams.get('teamId'); // NOVÉ: Získame teamId priamo z URL
 
     let teamIdToDisplay = null;
 
     if (teamIdFromUrl) {
+        // Ak je teamId priamo v URL, prioritne ho použijeme
         const foundTeamById = allClubs.find(c => String(c.id) === String(teamIdFromUrl));
         if (foundTeamById) {
             teamIdToDisplay = foundTeamById.id;
+            // Aktualizujeme history.state, aby zodpovedal aktuálnym parametrom
             const currentClubBaseName = getClubBaseName(foundTeamById);
             const category = allCategories.find(cat => String(cat.id) === String(foundTeamById.categoryId));
             const currentCategoryName = (category && category.name) ? category.name : (String(foundTeamById.categoryId) || 'Neznáma kategória');
@@ -767,6 +763,7 @@ async function handleUrlState() {
             history.replaceState({ baseName: currentClubBaseName, categoryName: currentCategoryName, groupName: currentGroupName, teamId: teamIdToDisplay }, '', url.toString());
         }
     } else if (clubBaseName && categoryUrlParam && groupUrlParam) {
+        // Ak nie je teamId priamo, ale sú ostatné parametre, pokúsime sa nájsť tím
         const foundTeam = allClubs.find(c => {
             const currentBaseName = getClubBaseName(c);
             const category = allCategories.find(cat => String(cat.id) === String(c.categoryId));
@@ -785,10 +782,11 @@ async function handleUrlState() {
             url.searchParams.set('club', clubBaseName);
             url.searchParams.set('category', categoryUrlParam);
             url.searchParams.set('group', groupUrlParam);
-            url.searchParams.set('teamId', teamIdToDisplay);
+            url.searchParams.set('teamId', teamIdToDisplay); // Doplníme teamId do URL
             history.replaceState({ baseName: clubBaseName, categoryName: categoryUrlParam, groupName: groupUrlParam, teamId: teamIdToDisplay }, '', url.toString());
         }
     } else if (clubBaseName) {
+        // Ak je prítomný len clubBaseName, zobrazíme detaily subjektu a prvý tím
         const teamsForSubject = allClubs.filter(club => getClubBaseName(club) === clubBaseName);
         if (teamsForSubject.length > 0) {
             const firstTeam = teamsForSubject[0];
@@ -797,22 +795,25 @@ async function handleUrlState() {
             const group = allGroups.find(g => String(g.id) === String(firstTeam.groupId));
             const groupName = group ? (group.name || String(group.id)) : 'Nepriradené';
 
+            // Aktualizujeme URL, aby obsahovala kategóriu a skupinu (pre prvý tím)
             const url = new URL(window.location.href);
             url.searchParams.set('club', clubBaseName);
             url.searchParams.set('category', categoryName);
             url.searchParams.set('group', groupName);
-            url.searchParams.set('teamId', firstTeam.id);
+            url.searchParams.set('teamId', firstTeam.id); // Pridáme teamId
             history.replaceState({ baseName: clubBaseName, categoryName: categoryName, groupName: groupName, teamId: firstTeam.id }, '', url.toString());
 
             teamIdToDisplay = firstTeam.id;
         }
     }
 
+    // Ak sa teamIdToDisplay našlo (či už z URL alebo ako prvý tím), zobrazíme detaily
     if (teamIdToDisplay) {
-        displaySubjectDetails(clubBaseName || 'Neznámy subjekt', teamIdToDisplay);
+        displaySubjectDetails(clubBaseName || 'Neznámy subjekt', teamIdToDisplay); // Použijeme clubBaseName z URL alebo default
     } else {
+        // Ak sa nenašiel žiadny tím alebo chýbajú parametre, zobrazíme súhrnnú tabuľku
         displayClubsSummaryTable();
-        history.replaceState({}, '', window.location.pathname);
+        history.replaceState({}, '', window.location.pathname); // Vyčistíme URL parametre
     }
 }
 
