@@ -121,7 +121,7 @@ main {
     overflow-x: hidden;
     align-self: flex-start;
     min-height: 0;
-    /* Main samotný už nie je flexbox pre svoje sekcie, tie sú v .main-content-area */
+    width: 100%; /* Zabezpečí, aby sa main roztiahlo na plnú šírku */
 }
 
 /* NOVÉ: Wrapper pre hlavný obsah na centrovanie */
@@ -131,7 +131,7 @@ main {
     align-items: stretch; /* Natiahne deti, aby zaberali plnú šírku */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: 100%; /* Maximálna šírka pre celkový centrovaný obsah */
+    max-width: none; /* ZMENENÉ: Odstránené max-width, aby sa mohlo roztiahnuť */
     margin: 0; /* ODSTRÁNENÉ auto, aby sa roztiahol */
 }
 
@@ -169,7 +169,7 @@ main {
     border-radius: 8px; /* Vrátenie zaoblených rohov */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Vrátenie tieňa */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
-    max-width: 100%; /* Nastavte maximálnu šírku pre biely obdĺžnik na 100% */
+    max-width: none; /* ZMENENÉ: Odstránené max-width, aby sa roztiahol */
     margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
     flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
@@ -178,7 +178,7 @@ main {
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
 #categorySettingsSection {
     /* Žiadne špecifické width/max-width tu nie sú potrebné, dedí od .section-block */
-    max-width: 100%; /* Zabezpečí roztiahnutie na maximálnu šírku */
+    max-width: none; /* ZMENENÉ: Odstránené max-width */
 }
 
 
@@ -999,10 +999,9 @@ button[type="submit"] {
     flex-wrap: wrap;
     gap: 20px;
     margin-top: 15px;
-    justify-content: center; /* Centrovanie blokov kategórií v rámci ich kontajnera */
+    justify-content: flex-start; /* ZMENENÉ: Centrovanie blokov kategórií v rámci ich kontajnera na zarovnanie k začiatku */
     width: 100%; /* Dôležité: zabezpečí, že kontajner využije plnú šírku rodiča */
     
-    /* ODSTRÁNENÉ: max-width pre tento kontajner na kontrolu celkového rozloženia vo viacerých stĺpcoch */
     margin-left: auto;
     margin-right: auto; /* Centrujte samotný kontajner v rámci rodiča */
 }
@@ -1065,7 +1064,7 @@ button[type="submit"] {
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu pre dva stĺpce */
-    flex: 1 1 calc(var(--settings-element-width) + (2 * 15px)); /* Umožnite obsahu diktovať veľkosť, s možnosťou rásť */
+    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* ZMENENÉ: Pevnejšia šírka, aby sa nenaťahovali a rešpektovali min-width */
     display: flex; /* Urobte z neho flexbox kontajner */
     flex-direction: column; /* Uložte obsah vertikálne */
     align-items: center; /* Centrujte obsah horizontálne v rámci prvku */
@@ -1080,7 +1079,7 @@ button[type="submit"] {
 /* Upravte hlavný biely obdĺžnik (.main-content-area .section-block) */
 .main-content-area .section-block {
     /* Základné štýly zdedené */
-    max-width: 100%; /* Nastavte maximálnu šírku na 100% */
+    max-width: none; /* ZMENENÉ: Odstránené max-width */
     margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
@@ -1091,18 +1090,16 @@ button[type="submit"] {
     .category-settings-item {
         flex: 1 1 100%; /* Jeden stĺpec, zaberie celú šírku */
         min-width: calc(var(--settings-element-width) + (2 * 15px)); /* Stále musí byť aspoň tak široký ako vstupy */
-        /* ODSTRÁNENÉ: max-width: calc(var(--settings-element-width) + (2 * 15px)); */
         /* Ak je h3 veľmi dlhý, bude sa stále pretekať kvôli overflow: visible; na .category-settings-item */
     }
 
     #categorySettingsContainer {
         flex-direction: column; /* Stohujte prvky vertikálne */
         align-items: center; /* Centrujte prvky jedného stĺpca */
-        /* ODSTRÁNENÉ: max-width pre kontajner v režime jedného stĺpca */
     }
     
     .main-content-area .section-block {
-        /* ODSTRÁNENÉ: Maximálna šírka pre jeden stĺpec: max-width z #categorySettingsContainer + 2x odsadenie section-block */
+        /* Toto by malo byť už predtým odstránené */
     }
 }
 
