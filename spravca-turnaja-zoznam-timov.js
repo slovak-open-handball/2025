@@ -454,7 +454,7 @@ async function openClubModal(identifier = null, mode = 'assign') {
         await loadAllGroups();
     }
 
-    // Pridanie listenera pre automatickú zmenu '/' na '⁄'
+    // Pridanie listenera pre automatickú zmenu '/' na '⁄' A automatické nastavenie kategórie
     if (clubNameInput) {
         clubNameInput.removeEventListener('input', handleClubNameInput); // Odstrániť starý listener pre istotu
         clubNameInput.addEventListener('input', handleClubNameInput);
@@ -560,36 +560,23 @@ async function openClubModal(identifier = null, mode = 'assign') {
                     clubNameInput.value = clubData.name || ''; // Zobrazujeme name
                     clubNameInput.focus();
 
-                    let categoryToSelect = clubData.categoryId;
+                    // Trigger input event to run handleClubNameInput (which includes attemptAutoSelectCategory)
+                    clubNameInput.dispatchEvent(new Event('input'));
 
-                    // Skontrolujeme, či je kategória z clubData platná
-                    const isValidCategory = allAvailableCategories.some(cat => cat.id === categoryToSelect);
+                    let categoryToSelect = clubCategorySelect.value; // Get the category that was potentially auto-selected by the input event
 
-                    // Ak kategória chýba alebo je neplatná, pokúsime sa ju odvodiť z názvu tímu
-                    if (!categoryToSelect || !isValidCategory) {
-                        const teamNameLower = (clubData.name || '').trim().toLowerCase();
-                        for (const category of allAvailableCategories) {
-                            const categoryNameLower = (category.name || category.id).trim().toLowerCase();
-                            // Kontrolujeme, či názov tímu začína názvom kategórie (case-insensitive)
-                            // a či je buď presná zhoda, alebo za názvom kategórie nasleduje medzera alebo pomlčka.
-                            if (teamNameLower.startsWith(categoryNameLower)) {
-                                if (teamNameLower.length === categoryNameLower.length ||
-                                    teamNameLower.charAt(categoryNameLower.length) === ' ' ||
-                                    teamNameLower.charAt(categoryNameLower.length) === '-') {
-                                    categoryToSelect = category.id;
-                                    break; // Našli sme zhodnú kategóriu, zastavíme hľadanie
-                                }
-                            }
+                    // If the category from DB was valid, prefer it. Otherwise, use auto-selected.
+                    const isValidCategoryFromDB = allAvailableCategories.some(cat => cat.id === clubData.categoryId);
+                    if (clubData.categoryId && isValidCategoryFromDB) {
+                        categoryToSelect = clubData.categoryId;
+                        populateCategorySelect(clubCategorySelect, categoryToSelect); // Re-populate to ensure it's set
+                    } else {
+                        // If DB category was invalid/missing, and auto-selection didn't find one, ensure default is shown
+                        if (!categoryToSelect || categoryToSelect === '') {
+                             populateCategorySelect(clubCategorySelect, null);
                         }
                     }
 
-                    // Naplníme kategóriu s nájdeným alebo odvodeným ID
-                    if (allAvailableCategories.length > 0) {
-                        populateCategorySelect(clubCategorySelect, categoryToSelect);
-                    } else {
-                        clubCategorySelect.innerHTML = '<option value="">-- Žiadne kategórie --</option>';
-                        clubCategorySelect.disabled = true;
-                    }
 
                     // Ak je vybratá kategória, povolíme a naplníme skupinu
                     if (categoryToSelect && categoryToSelect !== '' && !categoryToSelect.startsWith('--')) {
@@ -672,24 +659,18 @@ async function openClubModal(identifier = null, mode = 'assign') {
             if (clubGroupSelect) clubGroupSelect.disabled = true; // Always disabled on start
             if (orderInGroupInput) orderInGroupInput.disabled = true;
 
-            // Initial population of categories
+            // Initial population of categories (start with no selection)
             if (allAvailableCategories.length > 0) {
-                populateCategorySelect(clubCategorySelect, null); // Start with no selection
+                populateCategorySelect(clubCategorySelect, null);
             } else {
                 clubCategorySelect.innerHTML = '<option value="">-- Žiadne kategórie --</option>';
                 clubCategorySelect.disabled = true;
             }
             clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
             
-            // Add input listener for dynamic category selection
-            if (clubNameInput) {
-                clubNameInput.addEventListener('input', () => {
-                    attemptAutoSelectCategory(clubNameInput.value);
-                });
-            }
-
             // Manually trigger initial auto-selection if there's pre-filled text (e.g., from browser autofill)
-            attemptAutoSelectCategory(clubNameInput.value);
+            // This will call handleClubNameInput, which in turn calls attemptAutoSelectCategory
+            clubNameInput.dispatchEvent(new Event('input'));
 
 
             if (clubCategorySelect) {
@@ -881,6 +862,8 @@ function handleClubNameInput(event) {
     if (input.value.includes('/')) {
         input.value = input.value.replace(/\//g, '⁄');
     }
+    // Attempt to auto-select category whenever the input value changes
+    attemptAutoSelectCategory(input.value);
 }
 
 if (clubForm) {
