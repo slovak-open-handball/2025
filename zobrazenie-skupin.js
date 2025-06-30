@@ -845,9 +845,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (backToCategoriesButton) backToCategoriesButton.addEventListener('click', goBackToCategories);
     if (backToGroupButtonsButton) backToGroupButtonsButton.addEventListener('click', goBackToGroupView);
 
-    // Vždy zobrazíme tlačidlá kategórií a ich nadpisy
-    displayCategoriesAsButtons();
-
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
@@ -865,6 +862,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
+            // Ak je kategória z URL platná, zobrazíme tlačidlá kategórií a zavoláme displayGroupsForCategory
+            displayCategoriesAsButtons(); // Zobrazí tlačidlá kategórií a nastaví groupSelectionButtons na "Vyberte kategóriu..."
             if (urlGroupName) {
                 let decodedGroupId = null;
                 const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
@@ -884,13 +883,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 displayGroupsForCategory(decodedCategoryId);
             }
         } else {
-            // Ak kategória z URL neexistuje, vrátime sa na zobrazenie kategórií
+            // Ak kategória z URL neexistuje, vrátime sa na zobrazenie kategórií (čo ju zobrazí)
             goBackToCategories();
         }
     } else {
-        // Ak v URL nie je hash, už sme zobrazili kategórie v displayCategoriesAsButtons()
-        // a groupSelectionButtons je viditeľný s predvolenou správou.
-        // allGroupsContent a singleGroupContent zostávajú skryté, čo je správne.
+        // Ak v URL nie je hash, zobrazíme kategórie ako tlačidlá (čo už zobrazí aj groupSelectionButtons s default správou)
+        displayCategoriesAsButtons();
     }
 });
 window.addEventListener('hashchange', () => {
