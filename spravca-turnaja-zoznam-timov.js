@@ -615,13 +615,45 @@ async function openClubModal(identifier = null, mode = 'assign') {
             if (clubGroupSelect) clubGroupSelect.disabled = true; // Always disabled on start
             if (orderInGroupInput) orderInGroupInput.disabled = true;
 
+            // Nová logika pre automatické nastavenie kategórie pri vytváraní
+            let categoryToSelect = null;
+            const initialTeamName = clubNameInput.value.trim().toLowerCase(); // Ak je už nejaký text v inpute
+            if (initialTeamName) {
+                for (const category of allAvailableCategories) {
+                    const categoryNameLower = (category.name || category.id).trim().toLowerCase();
+                    if (initialTeamName.startsWith(categoryNameLower)) {
+                        if (initialTeamName.length === categoryNameLower.length ||
+                            initialTeamName.charAt(categoryNameLower.length) === ' ' ||
+                            initialTeamName.charAt(categoryNameLower.length) === '-') {
+                            categoryToSelect = category.id;
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (allAvailableCategories.length > 0) {
-                populateCategorySelect(clubCategorySelect, null);
+                populateCategorySelect(clubCategorySelect, categoryToSelect);
             } else {
                 clubCategorySelect.innerHTML = '<option value="">-- Žiadne kategórie --</option>';
                 clubCategorySelect.disabled = true;
             }
-            clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
+            
+            // Nastavíme stav selectu skupiny a poradia podľa toho, či bola kategória vybraná
+            if (categoryToSelect && categoryToSelect !== '' && !categoryToSelect.startsWith('--')) {
+                if (clubGroupSelect) clubGroupSelect.disabled = false; // Enables
+                populateGroupSelectForClubModal(clubGroupSelect, null, allAvailableGroups, categoryToSelect);
+            } else {
+                if (clubGroupSelect) clubGroupSelect.disabled = true; // Disables
+                clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
+            }
+            
+            if (orderInGroupInput) {
+                orderInGroupInput.disabled = true;
+                orderInGroupInput.value = '';
+                orderInGroupInput.removeAttribute('required');
+            }
+
 
             if (clubCategorySelect) {
                 clubCategorySelect.onchange = () => {
