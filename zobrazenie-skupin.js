@@ -530,10 +530,22 @@ function displayGroupsForCategory(categoryId) {
                                         .replace(/\s/g, '+');
                                     
                                     // Získanie aktuálneho hash fragmentu z zobrazenie-skupin.html
-                                    const currentZobrazenieSkupinHash = window.location.hash;
+                                    // Budeme ho konštruovať z currentCategoryId a currentGroupId pre spoľahlivosť
+                                    let hashToPass = '';
+                                    if (currentCategoryId) {
+                                        const currentCategory = allCategories.find(cat => cat.id === currentCategoryId);
+                                        const currentCategoryUrlName = (currentCategory.name || currentCategory.id).replace(/[ -]/g, '+');
+                                        hashToPass = `#category-${encodeURIComponent(currentCategoryUrlName)}`;
+
+                                        if (currentGroupId) {
+                                            const currentGroup = allGroups.find(g => g.id === currentGroupId);
+                                            const currentGroupUrlName = (currentGroup.name || currentGroup.id).replace(/[ -]/g, '+');
+                                            hashToPass += `/group-${encodeURIComponent(currentGroupUrlName)}`;
+                                        }
+                                    }
 
                                     // Aktualizovaná URL s novými parametrami
-                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(currentZobrazenieSkupinHash)}`;
+                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(hashToPass)}`;
                                     window.location.href = url;
                                 });
                                 teamList.appendChild(teamItem);
@@ -700,10 +712,22 @@ function displaySingleGroup(groupId) {
                         .replace(/\s/g, '+');
                     
                     // Získanie aktuálneho hash fragmentu z zobrazenie-skupin.html
-                    const currentZobrazenieSkupinHash = window.location.hash;
+                    // Budeme ho konštruovať z currentCategoryId a currentGroupId pre spoľahlivosť
+                    let hashToPass = '';
+                    if (currentCategoryId) {
+                        const currentCategory = allCategories.find(cat => cat.id === currentCategoryId);
+                        const currentCategoryUrlName = (currentCategory.name || currentCategory.id).replace(/[ -]/g, '+');
+                        hashToPass = `#category-${encodeURIComponent(currentCategoryUrlName)}`;
+
+                        if (currentGroupId) {
+                            const currentGroup = allGroups.find(g => g.id === currentGroupId);
+                            const currentGroupUrlName = (currentGroup.name || currentGroup.id).replace(/[ -]/g, '+');
+                            hashToPass += `/group-${encodeURIComponent(currentGroupUrlName)}`;
+                        }
+                    }
 
                     // Aktualizovaná URL s novými parametrami
-                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(currentZobrazenieSkupinHash)}`;
+                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(hashToPass)}`;
                     window.location.href = url;
                 });
                 teamList.appendChild(teamItem);
