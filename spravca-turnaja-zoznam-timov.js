@@ -394,30 +394,27 @@ function attemptAutoSelectCategory(teamName) {
 
     // Set the category select value
     if (clubCategorySelect) {
-        // Only auto-select if the user hasn't already made a manual selection
-        // or if the current selection is the default "Vyberte kategóriu"
         const currentSelectedValue = clubCategorySelect.value;
-        const currentSelectedText = clubCategorySelect.options[clubCategorySelect.selectedIndex]?.textContent;
+        const isCurrentlyAutoSelected = categoryToSelect && currentSelectedValue === categoryToSelect;
+        const isDefaultEmpty = currentSelectedValue === '' && clubCategorySelect.options[clubCategorySelect.selectedIndex]?.textContent === '-- Vyberte kategóriu --';
 
-        const isDefaultSelection = currentSelectedValue === '' && currentSelectedText === '-- Vyberte kategóriu --';
-
-        if (categoryToSelect && (isDefaultSelection || clubCategorySelect.value === categoryToSelect)) {
+        if (categoryToSelect) {
+            // If a category is found, select it.
             clubCategorySelect.value = categoryToSelect;
             clubCategorySelect.disabled = false; // Enable if a category is selected
-        } else if (!categoryToSelect && !isDefaultSelection) {
-            // If no category matches the typed name and a category was previously selected (not default),
-            // we should not automatically reset it, as it might be a valid manual selection.
-            // However, if it was an auto-selected category that no longer matches, it should revert.
-            // For simplicity and to avoid overriding user input, we'll only reset if it's currently the auto-selected one
-            // or if it's the default.
-            const previouslyAutoSelected = allAvailableCategories.some(cat => cat.id === currentSelectedValue && teamNameLower.startsWith((cat.name || cat.id).trim().toLowerCase()));
-            if (isDefaultSelection || previouslyAutoSelected) {
-                clubCategorySelect.value = ""; // Reset if no match
+        } else if (!categoryToSelect && !isDefaultEmpty) {
+            // If no category is found and a category was previously selected (not default empty),
+            // and it was NOT an auto-selection based on the current input (meaning user manually selected it),
+            // then we should NOT reset it.
+            // If it was an auto-selection that no longer matches, or it's the default empty, then reset.
+            const wasManuallySelected = allAvailableCategories.some(cat => cat.id === currentSelectedValue && !teamNameLower.startsWith((cat.name || cat.id).trim().toLowerCase()));
+            if (!wasManuallySelected) {
+                clubCategorySelect.value = ""; // Reset if no match or if it was an old auto-selection
                 clubCategorySelect.disabled = allAvailableCategories.length === 0; // Disable if no categories available
             }
-        } else if (!categoryToSelect && isDefaultSelection) {
-             // If no match and it's already default, just ensure disabled state is correct
-             clubCategorySelect.disabled = allAvailableCategories.length === 0;
+        } else if (!categoryToSelect && isDefaultEmpty) {
+            // If no match and it's already default empty, just ensure disabled state is correct
+            clubCategorySelect.disabled = allAvailableCategories.length === 0;
         }
 
         // Manually trigger change event to update dependent selects (group)
