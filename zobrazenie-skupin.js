@@ -236,8 +236,8 @@ function displayCategoriesAsButtons() {
     }
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // This hides it
-    if (allGroupsContent) allGroupsContent.style.display = 'none'; // This hides it
+    // groupSelectionButtons a allGroupsContent sa teraz riadia logikou v DOMContentLoaded
+    // a displayGroupsForCategory/displaySingleGroup
     if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
     showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
@@ -853,7 +853,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
-            // Odstránený setTimeout pre priame zobrazenie
             if (urlGroupName) {
                 let decodedGroupId = null;
                 const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
@@ -879,6 +878,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         // Ak v URL nie je hash, zobrazíme kategórie ako tlačidlá
         displayCategoriesAsButtons();
+        // Zabezpečíme, aby sa groupSelectionButtons a allGroupsContent zobrazili, ak existujú kategórie a skupiny
+        if (allCategories.length > 0 && allGroups.length > 0) {
+            if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex';
+            if (allGroupsContent) allGroupsContent.style.display = 'block';
+        }
     }
 });
 window.addEventListener('hashchange', () => {
