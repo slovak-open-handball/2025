@@ -51,7 +51,7 @@ function getHTMLElements() {
     categoryButtonsContainer = document.getElementById('categoryButtonsContainer');
     categoryTitleDisplay = document.getElementById('categoryTitleDisplay');
     groupSelectionButtons = document.getElementById('groupSelectionButtons'); // Tento element bude slúžiť na zobrazenie riadkov s typom skupiny a tlačidlami
-    allGroupsContent = document.getElementById('allGroupsContent'); // Toto je kontajner pre detaily VŠETKÝCH skupín
+    allGroupsContent = document.getElementById('allGroupsContent'); // Tento element bude slúžiť na zobrazenie detailov všetkých skupín (zoznamy tímov)
     singleGroupContent = document.getElementById('singleGroupContent');    
     allGroupsContainer = allGroupsContent ? allGroupsContent.querySelector('.groups-container') : null; // Kontajner pre zobrazenie všetkých skupín
     allGroupsUnassignedDisplay = allGroupsContent ? allGroupsContent.querySelector('.unassigned-teams-display') : null;
@@ -406,6 +406,11 @@ function displayGroupsForCategory(categoryId) {
 
                 const groupTitle = document.createElement('h3');
                 groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
+                groupTitle.style.cursor = 'pointer'; // Nastavíme kurzor na "pointer", aby bolo vidieť, že je klikateľný
+                groupTitle.addEventListener('click', () => {
+                    displaySingleGroup(group.id); // Pridáme event listener pre kliknutie na hlavičku
+                });
+
                 groupDisplayDiv.appendChild(groupTitle);
 
                 const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
@@ -475,7 +480,7 @@ function displayGroupsForCategory(categoryId) {
         unassignedList.classList.add('unassigned-team-list');
         unassignedTeamsInCategory.forEach(team => {
             const teamItem = document.createElement('li');
-            teamItem.classList.add('unassigned-team-list-item');
+            teamItem.classList.add('team-list-item');
             teamItem.textContent = team.name || 'Neznámy tím';
             unassignedList.appendChild(teamItem);
         });
@@ -551,8 +556,8 @@ function displaySingleGroup(groupId) {
     if (singleGroupDisplayBlock) {
         const groupTitle = document.createElement('h3');
         groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
-        groupTitle.style.cursor = 'default';
-        groupTitle.style.pointerEvents = 'none';
+        groupTitle.style.cursor = 'default'; // Tu necháme default, lebo už je klikateľné cez tlačidlo "Späť na skupiny"
+        groupTitle.style.pointerEvents = 'none'; // Aby sa zabránilo opätovnému kliknutiu, keď sme už v zobrazení jednej skupiny
         singleGroupDisplayBlock.appendChild(groupTitle);
 
         const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
