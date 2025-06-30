@@ -66,6 +66,24 @@ async function animateLoadingText(containerId, text) {
             .match-list-table td:last-child {
                 border-right: none;
             }
+            /* Drag & Drop Styles */
+            .match-row.dragging {
+                opacity: 0.5;
+                border: 2px dashed #007bff;
+            }
+            .drop-over-row {
+                background-color: #e6f7ff !important; /* Light blue for droppable empty slots */
+                border: 2px dashed #007bff;
+            }
+            .drop-target-active {
+                background-color: #f0f8ff !important; /* Lighter blue for general date-group background */
+                border: 2px dashed #007bff;
+            }
+            .drop-over-forbidden {
+                background-color: #ffe6e6 !important; /* Light red for forbidden drop targets */
+                border: 2px dashed #dc3545;
+                cursor: not-allowed;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -1454,14 +1472,14 @@ async function displayMatchesAsSchedule() {
                 openMatchModal(matchId);
             });
             row.addEventListener('dragstart', (event) => {
-                console.log(`Drag & Drop: dragstart - ID zápasu: ${event.target.dataset.id}`);
+                console.log(`Drag & Drop: dragstart - ID zápasu: ${event.target.dataset.id}, Target:`, event.target);
                 event.dataTransfer.setData('text/plain', event.target.dataset.id);
                 event.dataTransfer.effectAllowed = 'move';
                 event.target.classList.add('dragging');
             });
 
             row.addEventListener('dragend', (event) => {
-                console.log(`Drag & Drop: dragend - ID zápasu: ${event.target.dataset.id}`);
+                console.log(`Drag & Drop: dragend - ID zápasu: ${event.target.dataset.id}, Target:`, event.target);
                 event.target.classList.remove('dragging');
             });
         });
@@ -1477,17 +1495,17 @@ async function displayMatchesAsSchedule() {
                 openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId); 
             });
             row.addEventListener('dragover', (event) => {
-                event.preventDefault();
+                event.preventDefault(); // Crucial for allowing drop
                 event.dataTransfer.dropEffect = 'move';
                 event.currentTarget.classList.add('drop-over-row');
-                console.log(`Drag & Drop: dragover na empty-interval-row - ID: ${event.currentTarget.dataset.id}`);
+                console.log(`Drag & Drop: dragover na empty-interval-row - ID: ${event.currentTarget.dataset.id}, Target:`, event.currentTarget);
             });
             row.addEventListener('dragleave', (event) => {
                 event.currentTarget.classList.remove('drop-over-row');
-                console.log(`Drag & Drop: dragleave z empty-interval-row - ID: ${event.currentTarget.dataset.id}`);
+                console.log(`Drag & Drop: dragleave z empty-interval-row - ID: ${event.currentTarget.dataset.id}, Target:`, event.currentTarget);
             });
             row.addEventListener('drop', async (event) => {
-                event.preventDefault();
+                event.preventDefault(); // Crucial for handling drop
                 event.currentTarget.classList.remove('drop-over-row');
 
                 const draggedMatchId = event.dataTransfer.getData('text/plain');
@@ -1496,7 +1514,7 @@ async function displayMatchesAsSchedule() {
                 const droppedProposedStartTime = event.currentTarget.dataset.startTime;
                 const targetBlockedIntervalId = event.currentTarget.dataset.id;
 
-                console.log(`Drag & Drop: drop na empty-interval-row - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Navrhovaný čas: ${droppedProposedStartTime}, Cieľový interval ID: ${targetBlockedIntervalId}`);
+                console.log(`Drag & Drop: drop na empty-interval-row - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Navrhovaný čas: ${droppedProposedStartTime}, Cieľový interval ID: ${targetBlockedIntervalId}, Target:`, event.currentTarget);
                 
                 if (targetBlockedIntervalId) {
                     try {
@@ -1524,11 +1542,11 @@ async function displayMatchesAsSchedule() {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = 'none'; // Cannot drop on a truly blocked interval
                 event.currentTarget.classList.add('drop-over-forbidden');
-                console.log(`Drag & Drop: dragover na blocked-interval-row - ID: ${event.currentTarget.dataset.id}, Drop efekt: none`);
+                console.log(`Drag & Drop: dragover na blocked-interval-row - ID: ${event.currentTarget.dataset.id}, Drop efekt: none, Target:`, event.currentTarget);
             });
             row.addEventListener('dragleave', (event) => {
                 event.currentTarget.classList.remove('drop-over-forbidden');
-                console.log(`Drag & Drop: dragleave z blocked-interval-row - ID: ${event.currentTarget.dataset.id}`);
+                console.log(`Drag & Drop: dragleave z blocked-interval-row - ID: ${event.currentTarget.dataset.id}, Target:`, event.currentTarget);
             });
             row.addEventListener('drop', async (event) => {
                 event.preventDefault();
@@ -1540,7 +1558,7 @@ async function displayMatchesAsSchedule() {
                 const startTime = event.currentTarget.dataset.startTime;
                 const endTime = event.currentTarget.dataset.endTime;
 
-                console.log(`Drag & Drop: drop na blocked-interval-row - Pokus o presun zápasu ${draggedMatchId} na zablokovaný interval: Dátum ${date}, Miesto ${location}, Čas ${startTime}-${endTime}. Presun ZAMITNUTÝ.`);
+                console.log(`Drag & Drop: drop na blocked-interval-row - Pokus o presun zápasu ${draggedMatchId} na zablokovaný interval: Dátum ${date}, Miesto ${location}, Čas ${startTime}-${endTime}. Presun ZAMITNUTÝ. Target:`, event.currentTarget);
                 await showMessage('Upozornenie', 'Tento časový interval je zablokovaný. Zápas naň nie je možné presunúť.');
             });
         });
@@ -1573,10 +1591,10 @@ async function displayMatchesAsSchedule() {
                 if (targetRow && (targetRow.classList.contains('blocked-interval-row') || targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') ) && !targetRow.classList.contains('footer-spacer-row')) {
                     event.dataTransfer.dropEffect = 'none'; // Over a match or explicitly blocked interval (not footer spacer)
                     targetRow.classList.add('drop-over-forbidden');
-                    console.log(`Drag & Drop: dragover na date-group (forbidden row) - Drop efekt: none`);
+                    console.log(`Drag & Drop: dragover na date-group (forbidden row) - Drop efekt: none, Target:`, event.target);
                 } else {
                     dateGroupDiv.classList.add('drop-target-active');
-                    console.log(`Drag & Drop: dragover na date-group (pozadie) - Drop efekt: move`);
+                    console.log(`Drag & Drop: dragover na date-group (pozadie) - Drop efekt: move, Target:`, event.target);
                 }
             });
 
@@ -1586,7 +1604,7 @@ async function displayMatchesAsSchedule() {
                     targetRow.classList.remove('drop-over-forbidden');
                 }
                 dateGroupDiv.classList.remove('drop-target-active');
-                console.log(`Drag & Drop: dragleave z date-group`);
+                console.log(`Drag & Drop: dragleave z date-group, Target:`, event.target);
             });
 
             dateGroupDiv.addEventListener('drop', async (event) => {
@@ -1602,7 +1620,7 @@ async function displayMatchesAsSchedule() {
                 const newLocation = dateGroupDiv.dataset.location;
                 let droppedProposedStartTime = null;
 
-                console.log(`Drag & Drop: drop na date-group (pozadie) - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}`);
+                console.log(`Drag & Drop: drop na date-group (pozadie) - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Target:`, event.target);
 
 
                 if (draggedMatchId) {
