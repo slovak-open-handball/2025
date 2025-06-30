@@ -214,8 +214,34 @@ function displayClubsSummaryTable() {
         return;
     }
 
-    // Zoskupenie klubov podľa základného názvu
-    const clubsByBaseName = allClubs.reduce((acc, club) => {
+    // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
+    const containsCategoryNameInTeamName = (team) => {
+        const teamName = (team.name || team.id || '').trim().toLowerCase();
+        const teamCategory = allCategories.find(cat => cat.id === team.categoryId);
+        
+        if (!teamCategory) {
+            return false;
+        }
+
+        const categoryName = (teamCategory.name || teamCategory.id).trim().toLowerCase();
+        
+        if (teamName.startsWith(categoryName)) {
+            if (teamName.length === categoryName.length) {
+                return true;
+            }
+            const charAfterCategory = teamName.charAt(categoryName.length);
+            if (charAfterCategory === ' ' || charAfterCategory === '-') {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Filtrovanie klubov - zobrazíme iba tie, ktoré neobsahujú názov kategórie vo svojom názve
+    const filteredClubs = allClubs.filter(club => !containsCategoryNameInTeamName(club));
+
+    // Zoskupenie filtrovaných klubov podľa základného názvu
+    const clubsByBaseName = filteredClubs.reduce((acc, club) => {
         const baseName = getClubBaseName(club);
         if (!acc[baseName]) {
             acc[baseName] = [];
@@ -235,7 +261,7 @@ function displayClubsSummaryTable() {
         if (baseNamesWithTeams.length > 0) {
              // Nájdeme najdlhší názov medzi tými, ktoré majú tímy
              longestBaseName = baseNamesWithTeams.reduce((a, b) => a.length > b.length ? a : b);
-             clubsForLongestBaseName = allClubs.filter(club => getClubBaseName(club) === longestBaseName);
+             clubsForLongestBaseName = filteredClubs.filter(club => getClubBaseName(club) === longestBaseName);
         }
     }
 
