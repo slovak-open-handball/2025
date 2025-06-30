@@ -169,7 +169,7 @@ main {
     border-radius: 8px; /* Vrátenie zaoblených rohov */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Vrátenie tieňa */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
-    /* ODSTRÁNENÉ: max-width: 710px; */
+    max-width: 100%; /* Nastavte maximálnu šírku pre biely obdĺžnik na 100% */
     margin: 0 auto; /* Zabezpečte, aby zostal centrovaný */
 }
 
@@ -417,7 +417,7 @@ td:last-child {
     border: 1px solid #888;
     width: 90%;
     max-width: 600px;
-    border-radius: 8鸣;
+    border-radius: 8px;
     position: relative;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -1077,7 +1077,7 @@ button[type="submit"] {
 /* Upravte hlavný biely obdĺžnik (.main-content-area .section-block) */
 .main-content-area .section-block {
     /* Základné štýly zdedené */
-    /* ODSTRÁNENÉ: max-width tak, aby sa do neho pohodlne zmestil #categorySettingsContainer alebo všeobecný formulár nastavení */
+    max-width: 100%; /* Nastavte maximálnu šírku na 100% */
     margin: 0 auto; /* Zabezpečte, aby zostal centrovaný */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečte, aby bol obsah plne viditeľný */
