@@ -61,6 +61,10 @@ function getHTMLElements() {
     allGroupsUnassignedDisplay = allGroupsContent ? allGroupsContent.querySelector('.unassigned-teams-display') : null;
     singleGroupDisplayBlock = singleGroupContent ? singleGroupContent.querySelector('.group-display') : null;
     singleGroupUnassignedDisplay = singleGroupContent ? singleGroupContent.querySelector('.unassigned-teams-display') : null;
+
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
+    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';    
+    
     const elementsFound = dynamicContentArea && backToCategoriesButton && backToGroupButtonsButton &&
                             categoryButtonsContainer && categoryTitleDisplay && groupSelectionButtons &&
                             allGroupsContent && singleGroupContent &&
