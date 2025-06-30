@@ -166,7 +166,7 @@ function setActiveCategoryButton(categoryId) {
     clearActiveCategoryButtons();
     const categoryButton = categoryButtonsContainer ? categoryButtonsContainer.querySelector(`.display-button[data-category-id="${categoryId}"]`) : null;
     if (categoryButton) {
-        button.classList.add('active');
+        categoryButton.classList.add('active'); // Oprava: `button` zmenené na `categoryButton`
     }
 }
 function clearActiveGroupButtons() {
