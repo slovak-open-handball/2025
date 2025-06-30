@@ -22,7 +22,7 @@ const selectedTeamSoupiskaHracovUl = document.getElementById('selectedTeamSoupis
 let allClubs = [];
 let allCategories = [];
 let allGroups = [];
-let referringPage = '';
+let previousGroupViewUrl = null; // Nová premenná na uloženie URL zo zobrazenie-skupin.html
 
 /**
  * Načíta všetky potrebné dáta (kluby, kategórie, skupiny) z Firestore.
@@ -406,6 +406,7 @@ function adjustTableWidthsAndCleanUp() {
 
 /**
  * Odstráni riadky, ktoré nemajú žiadne tímy (totalTeams === 0).
+ * @param {HTMLElement} container - HTML element, z ktorého sa majú odstrániť riadky.
  */
 function cleanUpZeroRows() {
      if (!clubsSummaryTableBody || !longestNameRowFixedBody) {
@@ -685,9 +686,9 @@ async function displaySpecificTeamDetails(teamId) {
  * Vráti používateľa na predchádzajúcu stránku alebo na súhrnnú tabuľku.
  */
 function goBackToList() {
-    // Ak sme prišli zo zobrazenia skupín, vrátime sa späť v histórii prehliadača
-    if (referringPage.includes('zobrazenie-skupin.html')) {
-        history.back();
+    // Ak sme prišli zo stránky zobrazenie-skupin.html, vrátime sa na ňu s pôvodnými parametrami
+    if (previousGroupViewUrl) {
+        window.location.href = previousGroupViewUrl;
     } else {
         // Inak, zobrazíme súhrnnú tabuľku a vyčistíme URL parametre
         displayClubsSummaryTable();
@@ -721,7 +722,14 @@ async function handleUrlState() {
 
     if (document.referrer) {
         const referrerUrl = new URL(document.referrer);
-        referringPage = referrerUrl.pathname;
+        // Ak sme prišli zo stránky zobrazenie-skupin.html, uložíme celú jej URL
+        if (referrerUrl.pathname.includes('zobrazenie-skupin.html')) {
+            previousGroupViewUrl = referrerUrl.href;
+        } else {
+            previousGroupViewUrl = null; // Resetujeme, ak nie sme z tejto stránky
+        }
+    } else {
+        previousGroupViewUrl = null; // Ak nemáme referrer, resetujeme
     }
 
     const urlParams = new URLSearchParams(window.location.search);
