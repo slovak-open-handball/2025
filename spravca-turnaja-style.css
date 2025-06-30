@@ -131,7 +131,7 @@ main {
     align-items: center; /* Centrovanie sekcií horizontálne */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: 1200px; /* Maximálna šírka pre centrovaný obsah */
+    max-width: 1200px; /* Maximálna šírka pre centrovaný obsah (toto ostáva na kontrolu celkového priestoru) */
     margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
 }
 
@@ -162,13 +162,20 @@ main {
 .main-content-area .section-block {
     margin-bottom: 0;
     width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
-    max-width: none; /* Zruší obmedzenie šírky, aby sa roztiahli až do max-width rodiča */
+    max-width: 800px; /* ZMENA: Nastavenie maximálnej šírky pre sekcie pre centrovanie */
+    margin: 0 auto; /* ZMENA: Centrovanie jednotlivých bielych rámikov */
     padding: 15px;
     box-sizing: border-box;
-    background-color: transparent; /* ZMENA: Transparentné pozadie */
-    border: none; /* ZMENA: Bez orámovania */
-    border-radius: 0; /* ZMENA: Bez zaoblených rohov */
-    box-shadow: none; /* ZMENA: Bez tieňa */
+    background-color: #fff; /* ZMENA: Biele pozadie */
+    border: 1px solid #ddd; /* ZMENA: Orámovanie */
+    border-radius: 8px; /* ZMENA: Zaoblené rohy */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* ZMENA: Tieň */
+}
+
+/* Špecifické nastavenie pre #categorySettingsSection, aby mala plnú šírku */
+#categorySettingsSection {
+    width: 100%; /* ZMENA: Zabezpečí plnú šírku v rámci .main-content-area */
+    max-width: none; /* Zruší predtým nastavené max-width pre section-block */
 }
 
 
