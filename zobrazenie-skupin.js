@@ -40,6 +40,8 @@ function getCleanClubNameForUrl(rawClubNameFromData, categoryNameFromData, teamN
         const categoryRegex = new RegExp(categoryRegexPattern, 'i');
         cleanedName = cleanedName.replace(categoryRegex, '').trim();
     }    
+    // Aj tu pre prihlasene-kluby.html sa zachováva logika replace(/\s/g, '+');
+    // Ak by sa chcelo aj tu nahradzovať "-", treba zmeniť regex na /[ -]/g
     return cleanedName.trim();
 }
 function getHTMLElements() {
@@ -302,8 +304,8 @@ function displayGroupsForCategory(categoryId) {
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     
     const selectedCategory = allCategories.find(cat => cat.id === categoryId);
-    // Ulož názov kategórie do URL namiesto ID, nahraď medzery plusmi
-    const categoryUrlName = (selectedCategory.name || selectedCategory.id).replace(/ /g, '+');
+    // Ulož názov kategórie do URL namiesto ID, nahraď medzery A pomlčky plusmi
+    const categoryUrlName = (selectedCategory.name || selectedCategory.id).replace(/[ -]/g, '+');
     window.location.hash = 'category-' + encodeURIComponent(categoryUrlName);
 
     if (!selectedCategory) {
@@ -435,7 +437,8 @@ function displayGroupsForCategory(categoryId) {
                         const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
                         const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
                         const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
-                        const cleanedTeamName = fullTeamName.replace(/\s/g, '+');
+                        // Zachovávame `replace(/\s/g, '+')` pre názvy tímov v URL parametroch.
+                        const cleanedTeamName = fullTeamName.replace(/\s/g, '+'); 
                         teamItem.addEventListener('click', (event) => {
                             const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
                             const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
@@ -536,9 +539,9 @@ function displaySingleGroup(groupId) {
     setActiveGroupButton(groupId); // Zvýrazní aktívne tlačidlo skupiny
     
     const category = allCategories.find(cat => cat.id === currentCategoryId);
-    // Ulož názvy kategórie a skupiny do URL, nahraď medzery plusmi
-    const categoryUrlName = (category.name || category.id).replace(/ /g, '+');
-    const groupUrlName = (group.name || group.id).replace(/ /g, '+');
+    // Ulož názvy kategórie a skupiny do URL, nahraď medzery A pomlčky plusmi
+    const categoryUrlName = (category.name || category.id).replace(/[ -]/g, '+');
+    const groupUrlName = (group.name || group.id).replace(/[ -]/g, '+');
     window.location.hash = `category-${encodeURIComponent(categoryUrlName)}/group-${encodeURIComponent(groupUrlName)}`;
 
     if (category && categoryTitleDisplay) {
@@ -675,8 +678,8 @@ function goBackToGroupView() {
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     
     const category = allCategories.find(cat => cat.id === categoryIdToReturnTo);
-    // Ulož názov kategórie do URL namiesto ID, nahraď medzery plusmi
-    const categoryUrlName = (category.name || category.id).replace(/ /g, '+');
+    // Ulož názov kategórie do URL namiesto ID, nahraď medzery A pomlčky plusmi
+    const categoryUrlName = (category.name || category.id).replace(/[ -]/g, '+');
     window.location.hash = 'category-' + encodeURIComponent(categoryUrlName);
 
     displayGroupsForCategory(categoryIdToReturnTo); // Znovu vykreslí prehľad kategórie s typmi a všetkými detailami skupín
