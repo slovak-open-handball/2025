@@ -535,7 +535,7 @@ function displayGroupsForCategory(categoryId) {
                                 teamItem.dataset.clubName = rawClubNameForCleaning;
                                 const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
                                 const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
-                                const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
+                                const fullTeamName = `${categoryForUrl ? categoryForUrl.name + ' - ' : ''}${team.name || 'Neznámy tím'}`.trim();
                                 const cleanedTeamName = fullTeamName.replace(/\s/g, '+'); 
 
                                 // NOVÁ ČASŤ: Pridanie kategórie a skupiny do URL
@@ -717,7 +717,7 @@ function displaySingleGroup(groupId) {
                 teamItem.dataset.clubName = rawClubNameForCleaning;
                 const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
                 const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
-                const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
+                const fullTeamName = `${categoryForUrl ? categoryForUrl.name + ' - ' : ''}${team.name || 'Neznámy tím'}`.trim();
                 const cleanedTeamName = fullTeamName.replace(/\s/g, '+');
 
                 // NOVÁ ČASŤ: Pridanie kategórie a skupiny do URL
@@ -863,6 +863,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
+            // Vždy zavoláme displayGroupsForCategory, aby sa vykreslili všetky tlačidlá skupín pre danú kategóriu
+            displayGroupsForCategory(decodedCategoryId);
+            handledByHash = true; // Označíme, že hash bol spracovaný
+
             if (urlGroupName) {
                 let decodedGroupId = null;
                 const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
@@ -873,16 +877,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (decodedGroupId) {
                     // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
                     displaySingleGroup(decodedGroupId);
-                    handledByHash = true;
                 } else {
-                    // Ak názov skupiny z URL neexistuje, zobrazíme prehľad kategórie
-                    displayGroupsForCategory(decodedCategoryId);
-                    handledByHash = true;
+                    // Ak názov skupiny z URL neexistuje, zostaneme na prehľade kategórie (už zobrazenom)
                 }
-            } else {
-                // Ak v URL nie je názov skupiny, zobrazíme prehľad kategórie
-                displayGroupsForCategory(decodedCategoryId);
-                handledByHash = true;
             }
         } else {
             // Kategória z URL hashu sa nenašla, prejde sa na predvolené zobrazenie
@@ -931,15 +928,18 @@ window.addEventListener('hashchange', () => {
             currentCategoryId = decodedCategoryId;
             currentGroupId = decodedGroupId;
 
+            // Vždy zavoláme displayGroupsForCategory, aby sa vykreslili všetky tlačidlá skupín pre danú kategóriu
+            displayGroupsForCategory(decodedCategoryId);
+
             if (decodedGroupId) {
                 const groupExists = allGroups.some(group => group.id === decodedGroupId && group.categoryId === decodedCategoryId);
                 if (groupExists) {
                     displaySingleGroup(decodedGroupId);
                 } else {
-                    displayGroupsForCategory(decodedCategoryId);
+                    // Ak skupina neexistuje, zostaneme na prehľade kategórie
                 }
             } else {
-                displayGroupsForCategory(decodedCategoryId);
+                // Ak nie je špecifikovaná skupina, zostaneme na prehľade kategórie
             }
         } else {
             // Ak kategória z URL neexistuje (názov sa nenašiel), vrátime sa na zobrazenie kategórií
