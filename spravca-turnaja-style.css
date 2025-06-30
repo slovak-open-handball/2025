@@ -176,6 +176,8 @@ main {
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
 #categorySettingsSection {
     /* Žiadne špecifické width/max-width tu nie sú potrebné, dedí od .section-block */
+    /* Upravená max-width, aby sa roztiahla */
+    max-width: 100%;
 }
 
 
