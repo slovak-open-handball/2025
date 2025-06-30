@@ -1286,14 +1286,65 @@ button[type="submit"] {
 
 
 
-/* Nové pravidlá pre zobrazenie skupín v mriežke */
 .groups-display-grid {
     display: flex; /* Používa flexbox pre zobrazenie vedľa seba */
     flex-wrap: wrap; /* Zalamuje prvky do ďalšieho riadku, ak sa nezmestia */
     gap: 20px; /* Medzera medzi jednotlivými skupinami */
-    justify-content: center; 
+    justify-content: center; /* ZAROVNÁ OBSAH NA STRED */
     align-items: flex-start; /* Zarovná skupiny na začiatku krížených osí */
     padding: 10px 0; /* Malý padding zhora/zdola pre prehľadnosť */
+}
+
+/* Nové pravidlá pre kontajner typov skupín (groupSelectionButtons) */
+.group-type-container {
+    display: flex; /* Používa flexbox */
+    flex-direction: column; /* Ukladá sekcie pod seba */
+    gap: 20px; /* Medzera medzi jednotlivými sekciami typov */
+    align-items: center; /* Centrovanie celých blokov typov (h3 + tlačidlá) */
+    width: 100%; /* Zabezpečí, že zaberá celú dostupnú šírku pre centrovanie */
+}
+
+/* Upravené pravidlá pre riadok s nadpisom typu a tlačidlami */
+.group-type-header {
+    display: flex;
+    align-items: center; /* Vertikálne zarovnanie */
+    gap: 10px; /* Medzera medzi nadpisom a tlačidlami */
+    margin-bottom: 15px; /* Medzera pod celým riadkom s nadpisom a tlačidlami */
+    flex-wrap: wrap; /* Zalamovanie, ak je príliš veľa tlačidiel */
+    justify-content: center; /* Centrovanie obsahu v riadku */
+    width: 100%; /* Zabezpečí, že zaberá celú dostupnú šírku */
+}
+
+/* Štýl pre nadpis typu skupiny v navigačnej časti (text pred tlačidlami) */
+.group-type-header h3 {
+    text-align: center; /* Centrovanie textu v nadpise */
+    margin: 0; /* Odstrániť margin-top a margin-bottom */
+    color: #333;
+    font-size: 1.3em;
+    border-bottom: none; /* Odstrániť spodný okraj z nadpisu */
+    padding-bottom: 0; /* Odstrániť padding-bottom z nadpisu */
+    white-space: nowrap; /* Zabezpečí, že názov typu skupiny sa nezalomí */
+    flex-shrink: 0; /* Zabráni zmenšeniu nadpisu */
+}
+
+/* Štýl pre nadpisy sekcií skupín v hlavnej obsahovej časti (napr. "Základná skupina") */
+.group-type-section h2 {
+    text-align: center; /* Centrovanie textu v nadpise sekcie */
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.4em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+
+.group-buttons-by-type {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Medzi tlačidlami skupín */
+    justify-content: center; /* Tlačidlá zarovnané na STRED */
+    flex-grow: 1; /* Umožní tlačidlám zaberať dostupný priestor */
 }
 
 .group-display {
@@ -1302,18 +1353,20 @@ button[type="submit"] {
     border-radius: 8px; /* Zaoblené rohy */
     padding: 15px; /* Vnútorné odsadenie */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Jemný tieň pre 3D efekt */
-    flex: 1 1 calc(33% - 20px); /* Umožní 3 stĺpce s medzerami, prispôsobí sa */
-    min-width: 280px; /* Minimálna šírka skupiny, aby sa nezmenšovala príliš */
+    /* Flex vlastnosti sú teraz dynamicky nastavené v JS pre jednotnú šírku,
+       takže flex: 1 1 calc(...) sú odstránené z CSS, aby nedochádzalo ku konfliktom */
+    min-width: 280px; /* Minimálna šírka skupiny, aby sa nezmenšovala príliš, slúži ako fallback */
     max-width: 100%; /* Maximálna šírka pre mobilné zobrazenie */
     box-sizing: border-box; /* Zabezpečí, že padding a border sú súčasťou šírky */
     display: flex; /* Flexbox aj pre vnútro group-display */
     flex-direction: column; /* Položky vo vnútri idú pod seba */
 }
 
-/* Prispôsobenie pre menšie obrazovky */
+/* Prispôsobenie pre menšie obrazovky - flex: 1 1 auto sa postará o plnú šírku */
 @media (max-width: 1200px) {
     .group-display {
-        flex: 1 1 calc(50% - 20px); /* 2 stĺpce na stredne veľkých obrazovkách */
+        /* JS nastavuje pevnú šírku, takže flex vlastnosti tu nie sú potrebné,
+           pokud není potřeba explicitní zalamování na 2 sloupce */
     }
 }
 
@@ -1324,8 +1377,9 @@ button[type="submit"] {
         gap: 15px; /* Menšie medzery */
     }
     .group-display {
-        flex: 1 1 auto; /* Prispôsobí sa plnej šírke */
-        min-width: unset; /* Zruší minimálnu šírku */
+        /* JS nastavuje šírku, ak je globalMaxTeamDisplayNameWidth > 0.
+           Inak sa riadi prirodzeným tokom flexboxu a min-width: unset. */
+        min-width: unset; /* Zruší minimálnu šírku pre mobilné zobrazenie */
         padding: 12px;
     }
 }
