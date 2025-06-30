@@ -201,7 +201,7 @@ main {
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
     flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
-    flex-basis: auto; /* Umožní obsahu definovať základnú veľkosť, ale môže sa zväčšiť/zmenšiť */
+    flex-basis: auto; /* Umožní obsahu definovať základnú veľkosť, ale môže sa zväčšiť/zmenšovať */
 }
 
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
@@ -1047,7 +1047,7 @@ button[type="submit"] {
     max-width: none !important; /* DÔLEŽITÉ: Odstránil som max-width, aby sa mohli roztiahnuť */
     margin-left: auto;
     margin-right: auto; /* Centrujte samotný kontajner v rámci rodiča */
-    min-width: 0; /* Umožní kontajneru zmenšiť sa, ak je to potrebné */
+    min-width: 0; /* Umožní kontajneru zmenšenie, ak je to potrebné */
 }
 
 /* Definujte konzistentnú šírku pre vstupy a tlačidlá v sekciách nastavení */
@@ -1060,6 +1060,7 @@ button[type="submit"] {
 #settingsForm input[type="time"],
 #settingsForm button[type="submit"],
 #categorySettingsForm input[type="number"],
+/* NOVÉ: Špecifické štýly pre input type="color" */
 #categorySettingsForm input[type="color"],
 #categorySettingsForm button[type="submit"] {
     width: var(--settings-element-width);
@@ -1072,6 +1073,37 @@ button[type="submit"] {
     display: block; /* Zabezpečte, aby zaujímali vlastný riadok a rešpektovali šírku/margin auto */
 }
 
+/* NOVÉ: Špecifické nastavenia pre input type="color" */
+#categorySettingsForm input[type="color"] {
+    -webkit-appearance: none; /* Odstráni predvolený vzhľad prehliadača */
+    -moz-appearance: none;
+    appearance: none;
+    width: 80px; /* Šírka pre zobrazenie farby, môžete prispôsobiť */
+    height: 30px; /* Výška pre zobrazenie farby */
+    border: 1px solid #ccc; /* Jemný okraj */
+    border-radius: 4px; /* Zaoblené rohy */
+    padding: 0; /* Odstráni vnútorné odsadenie, aby farba vyplnila celú plochu */
+    cursor: pointer;
+    background-color: transparent; /* Zabezpečí, že sa zobrazí vybraná farba */
+    margin-left: 0; /* Odstránenie automatického marginu, aby sa dali zarovnať s labelom */
+    margin-right: 0;
+}
+
+#categorySettingsForm input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+#categorySettingsForm input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+#categorySettingsForm input[type="color"]::-moz-color-swatch-wrapper {
+    padding: 0;
+}
+#categorySettingsForm input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
 /* Popisky v skupinách formulárov v nastaveniach by mali byť povolené na prirodzené zalamovanie */
 .section-block .form-group label {
     white-space: normal; /* Povoliť zalamovanie textu, ak je príliš dlhý */
@@ -1082,6 +1114,19 @@ button[type="submit"] {
     font-size: 0.9em;
     margin-bottom: 5px;
 }
+
+/* Nové pravidlo pre zarovnanie farby s jej labelom */
+.category-settings-item .form-group {
+    display: flex;
+    flex-direction: column; /* Label a input pod sebou */
+    align-items: center; /* Centrovanie obsahu vo form-group */
+    width: 100%; /* Zabezpečí, že form-group zaberie celú šírku */
+}
+
+.category-settings-item .form-group label[for^="color-"] {
+    text-align: center; /* Centrovať text "Farba:" */
+}
+
 
 /* Názvy kategórií (h3) v rámci každého šedého prvku nastavení kategórií */
 /* Nemali by sa zalamovať a mali by byť plne viditeľné, aj keď presahujú svojho bezprostredného rodiča */
