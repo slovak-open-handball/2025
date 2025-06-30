@@ -40,9 +40,9 @@ function calculateFootprintEndTime(startTimeStr, duration, bufferTime) {
 }
 
 /**
- * Animuje daný text tak, že ho postupne vypíše, zhrubí a potom postupne vymaže, v nekonečnej slučke.
- * @param {string} containerId ID HTML elementu, kde sa má zobraziť animovaný text.\
- * @param {string} text Reťazec textu, ktorý sa má animovať.
+ * Animates the given text by gradually typing it out, bolding it, and then gradually erasing it, in an infinite loop.
+ * @param {string} containerId ID of the HTML element where the animated text should be displayed.
+ * @param {string} text The string of text to animate.
  */
 async function animateLoadingText(containerId, text) {
     const container = document.getElementById(containerId);
@@ -334,15 +334,19 @@ async function findFirstAvailableTime() {
     const matchDateSelect = document.getElementById('matchDateSelect');
     const matchLocationSelect = document.getElementById('matchLocationSelect');
     const matchStartTimeInput = document.getElementById('matchStartTime');
-    // matchDurationInput and matchBufferTimeInput are used for overall timeline calculation,
-    // but not for determining the *earliest possible start* for the suggestion itself.
+    const matchDurationInput = document.getElementById('matchDuration');
+    const matchBufferTimeInput = document.getElementById('matchBufferTime');
 
     console.log("findFirstAvailableTime called.");
     const selectedDate = matchDateSelect.value;
     const selectedLocationName = matchLocationSelect.value;
+    const proposedMatchDuration = Number(matchDurationInput.value) || 0;
+    const proposedMatchBufferTime = Number(matchBufferTimeInput.value) || 0;
+    const proposedMatchFootprint = proposedMatchDuration + proposedMatchBufferTime;
 
     console.log("Selected Date:", selectedDate);
     console.log("Selected Location:", selectedLocationName);
+    console.log("Proposed Match Footprint (duration + buffer):", proposedMatchFootprint);
 
     if (!selectedDate || !selectedLocationName) {
         matchStartTimeInput.value = '';
@@ -358,103 +362,117 @@ async function findFirstAvailableTime() {
     }
 
     try {
-        // Get initial start time for the day from settings
         const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(selectedDate);
         console.log("Initial pointer minutes for selected day (from settings):", initialScheduleStartMinutes);
 
-        // Fetch all matches for the selected date and location
-        const matchesQuery = query(
-            matchesCollectionRef,
-            where("date", "==", selectedDate),
-            where("location", "==", selectedLocationName)
-        );
-        const matchesSnapshot = await getDocs(matchesQuery);
-        const matches = matchesSnapshot.docs.map(doc => {
+        // Fetch all matches and all blocked intervals (both blocked and free placeholders)
+        const [matchesSnapshot, blockedIntervalsSnapshot] = await Promise.all([
+            getDocs(query(matchesCollectionRef, where("date", "==", selectedDate), where("location", "==", selectedLocationName))),
+            getDocs(query(blockedSlotsCollectionRef, where("date", "==", selectedDate), where("location", "==", selectedLocationName)))
+        ]);
+
+        const allEvents = [];
+        matchesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const startInMinutes = parseTimeToMinutes(data.startTime);
             const duration = Number(data.duration) || 0;
             const bufferTime = Number(data.bufferTime) || 0;
-            return {
+            allEvents.push({
                 id: doc.id,
                 start: startInMinutes,
-                end: startInMinutes + duration + bufferTime, // Match's full footprint end
-                type: 'match'
-            };
+                end: startInMinutes + duration + bufferTime,
+                type: 'match',
+                isBlocked: false // Matches are not 'blocked' intervals in this context
+            });
         });
-        console.log("Fetched matches for time finding:", matches.map(m => ({id: m.id, start: m.start, end: m.end})));
 
-        // Fetch all blocked intervals (both blocked and free placeholders)
-        const blockedIntervalsQuery = query(
-            blockedSlotsCollectionRef,
-            where("date", "==", selectedDate),
-            where("location", "==", selectedLocationName)
-        );
-        const blockedIntervalsSnapshot = await getDocs(blockedIntervalsQuery);
-        const allIntervals = blockedIntervalsSnapshot.docs.map(doc => {
+        blockedIntervalsSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const startInMinutes = parseTimeToMinutes(data.startTime);
             const endInMinutes = parseTimeToMinutes(data.endTime);
-            return {
+            allEvents.push({
                 id: doc.id,
                 start: startInMinutes,
                 end: endInMinutes,
                 type: 'blocked_interval',
                 isBlocked: data.isBlocked === true,
                 originalMatchId: data.originalMatchId || null
-            };
+            });
         });
-        console.log("Fetched all intervals (blocked/free) for time finding:", allIntervals.map(i => ({id: i.id, start: i.start, end: i.end, isBlocked: i.isBlocked})));
 
-        // Separate fixed (truly occupied) periods from flexible (free) intervals
-        let fixedOccupiedPeriods = [];
-        matches.forEach(m => fixedOccupiedPeriods.push({ start: m.start, end: m.end }));
-        allIntervals.filter(s => s.isBlocked === true || s.originalMatchId).forEach(s => fixedOccupiedPeriods.push({ start: s.start, end: s.end })); // Also include originalMatchId slots as "fixed" for finding gaps
-
-        // Sort and merge fixed occupied periods to get a clean timeline of blocked times
-        fixedOccupiedPeriods.sort((a, b) => a.start - b.start);
-        const mergedFixedOccupiedPeriods = [];
-        if (fixedOccupiedPeriods.length > 0) {
-            let currentMerged = { ...fixedOccupiedPeriods[0] };
-            for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                const nextPeriod = fixedOccupiedPeriods[i];
-                if (nextPeriod.start <= currentMerged.end) {
-                    currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
-                } else {
-                    mergedFixedOccupiedPeriods.push(currentMerged);
-                    currentMerged = { ...nextPeriod };
-                }
-            }
-            mergedFixedOccupiedPeriods.push(currentMerged);
-        }
-        console.log("Merged Fixed Occupied Periods (matches + isBlocked:true + originalMatchId):", mergedFixedOccupiedPeriods);
+        // Sort all events by their start time
+        allEvents.sort((a, b) => a.start - b.start);
+        console.log("All fetched events (matches and intervals), sorted:", allEvents.map(e => ({id: e.id, type: e.type, start: e.start, end: e.end, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId})));
 
         let proposedStartTimeInMinutes = -1;
 
-        // Step 1: Prioritize explicit "Voľný slot dostupný" (isBlocked: false, no originalMatchId) intervals
-        // This is where a subtle change is needed. These are now purely auto-generated.
-        // We want to find the first *actual gap* after initial day start.
+        // Step 1: Prioritize "Voľný interval dostupný" slots (isBlocked: false, regardless of originalMatchId)
+        // These are the general gaps and also the "after deleted match" gaps.
+        for (const event of allEvents) {
+            if (event.type === 'blocked_interval' && event.isBlocked === false) {
+                const intervalStart = event.start;
+                const intervalEnd = event.end;
+                const intervalDuration = intervalEnd - intervalStart;
 
-        let currentPointer = initialScheduleStartMinutes; // Start checking from the day's configured start time
-
-        for (const occupied of mergedFixedOccupiedPeriods) {
-            // If there's a gap between currentPointer and the start of an occupied period
-            if (currentPointer < occupied.start) {
-                proposedStartTimeInMinutes = currentPointer;
-                console.log(`Step 1: Found gap starting at ${proposedStartTimeInMinutes} before fixed occupied period.`);
-                break; // Found the first gap, take it
+                // Ensure the interval starts at or after the initial schedule start time
+                // and that the proposed match fits within this interval.
+                if (intervalStart >= initialScheduleStartMinutes && intervalDuration >= proposedMatchFootprint) {
+                    proposedStartTimeInMinutes = intervalStart;
+                    console.log(`Found suitable "Voľný interval dostupný" starting at ${proposedStartTimeInMinutes}.`);
+                    break; // Found the first suitable free interval
+                }
             }
-            // Move the pointer past the current occupied period
-            currentPointer = Math.max(currentPointer, occupied.end);
         }
 
-        // If no suitable gap was found before any occupied period, check the remaining time after the last occupied period
-        if (proposedStartTimeInMinutes === -1 && currentPointer < 24 * 60) {
-            proposedStartTimeInMinutes = currentPointer;
-            console.log(`Step 1: No earlier gap. Found gap starting at ${proposedStartTimeInMinutes} at the end of the day after fixed obstacles.`);
+        // Step 2: If no suitable "Voľný interval dostupný" was found,
+        // then find the first available time after all occupied events (matches, user-blocked, or deleted match placeholders).
+        if (proposedStartTimeInMinutes === -1) {
+            let fixedOccupiedPeriods = [];
+            allEvents.filter(e => e.type === 'match' || e.isBlocked === true || e.originalMatchId).forEach(e => {
+                fixedOccupiedPeriods.push({ start: e.start, end: e.end });
+            });
+
+            // Sort and merge fixed occupied periods
+            fixedOccupiedPeriods.sort((a, b) => a.start - b.start);
+            const mergedFixedOccupiedPeriods = [];
+            if (fixedOccupiedPeriods.length > 0) {
+                let currentMerged = { ...fixedOccupiedPeriods[0] };
+                for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
+                    const nextPeriod = fixedOccupiedPeriods[i];
+                    if (nextPeriod.start <= currentMerged.end) {
+                        currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
+                    } else {
+                        mergedFixedOccupiedPeriods.push(currentMerged);
+                        currentMerged = { ...nextPeriod };
+                    }
+                }
+                mergedFixedOccupiedPeriods.push(currentMerged);
+            }
+            console.log("Merged Fixed Occupied Periods (matches + isBlocked:true + originalMatchId):", mergedFixedOccupiedPeriods);
+
+            let currentPointer = initialScheduleStartMinutes;
+            for (const occupied of mergedFixedOccupiedPeriods) {
+                if (currentPointer < occupied.start) {
+                    // Found a gap before an occupied period
+                    if ((occupied.start - currentPointer) >= proposedMatchFootprint) {
+                        proposedStartTimeInMinutes = currentPointer;
+                        console.log(`Found gap before fixed occupied period starting at ${proposedStartTimeInMinutes}.`);
+                        break;
+                    }
+                }
+                currentPointer = Math.max(currentPointer, occupied.end);
+            }
+
+            // If still no time found, check after the last fixed event until end of day
+            if (proposedStartTimeInMinutes === -1 && currentPointer < 24 * 60) {
+                if ((24 * 60 - currentPointer) >= proposedMatchFootprint) {
+                    proposedStartTimeInMinutes = currentPointer;
+                    console.log(`Found gap at the end of the day starting at ${proposedStartTimeInMinutes}.`);
+                }
+            }
         }
 
         // Fallback: If no time was determined (e.g., entire day is theoretically blocked, or no elements)
-        // This ensures matchStartTimeInput always gets a value.
         if (proposedStartTimeInMinutes === -1) {
             proposedStartTimeInMinutes = initialScheduleStartMinutes;
             console.log("Fallback: No available time found by logic, defaulting to initial day start time:", proposedStartTimeInMinutes);
