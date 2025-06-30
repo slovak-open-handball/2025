@@ -87,14 +87,18 @@ h1 {
     overflow-y: hidden;
     z-index: 1002;
     flex-shrink: 0;
+    width: auto; /* ZMENENÉ: Umožní menu prispôsobiť sa obsahu */
+    min-width: fit-content; /* ZMENENÉ: Minimálna šírka podľa obsahu */
 }
 .left-menu ul {
     list-style: none;
     padding: 0;
     margin: 0;
+    max-width: none; /* ZMENENÉ: Umožní UL roztiahnuť sa */
 }
 .left-menu li {
     margin-bottom: 10px;
+    max-width: none; /* ZMENENÉ: Umožní LI roztiahnuť sa */
 }
 .left-menu a {
     text-decoration: none;
@@ -104,7 +108,9 @@ h1 {
     padding: 8px 5px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
-    white-space: nowrap;
+    white-space: normal; /* ZMENENÉ: Povoliť zalomenie textu */
+    overflow: visible; /* ZMENENÉ: Zobraziť celý text */
+    text-overflow: clip; /* ZMENENÉ: Odstrániť tri bodky */
 }
 .left-menu a:hover {
     background-color: #e9ecef;
@@ -195,6 +201,13 @@ main {
     flex-grow: 1; /* Zabezpečí, že sa roztiahne */
 }
 
+/* NOVÉ: Centrovanie obsahu vo vnútri #settingsContentSection */
+#settingsContentSection form {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centruje obsah formulára (inputy a tlačidlo) */
+    width: 100%; /* Zabezpečí, že formulár zaberie celú šírku */
+}
 
 table {
     border-collapse: collapse;
@@ -809,11 +822,6 @@ button[type="submit"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.schedule-cell-actions .edit-btn {
-    background-color: #28a745;
-    color: white;
 }
 
 .schedule-cell-actions .delete-btn {
