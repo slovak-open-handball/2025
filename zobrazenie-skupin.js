@@ -519,11 +519,17 @@ function displayGroupsForCategory(categoryId) {
                                 const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
                                 const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
                                 const cleanedTeamName = fullTeamName.replace(/\s/g, '+'); 
+
+                                // NOVÁ ČASŤ: Pridanie kategórie a skupiny do URL
+                                const categoryUrlParam = (categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '').replace(/[ -]/g, '+');
+                                const groupUrlParam = (group.name || group.id).replace(/[ -]/g, '+');
+
                                 teamItem.addEventListener('click', (event) => {
                                     const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
                                     const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
                                         .replace(/\s/g, '+');
-                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}`;
+                                    // Aktualizovaná URL
+                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}`;
                                     window.location.href = url;
                                 });
                                 teamList.appendChild(teamItem);
@@ -679,11 +685,17 @@ function displaySingleGroup(groupId) {
                 const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
                 const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
                 const cleanedTeamName = fullTeamName.replace(/\s/g, '+');
+
+                // NOVÁ ČASŤ: Pridanie kategórie a skupiny do URL
+                const categoryUrlParam = (categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '').replace(/[ -]/g, '+');
+                const groupUrlParam = (group.name || group.id).replace(/[ -]/g, '+');
+
                 teamItem.addEventListener('click', (event) => {
                     const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
                     const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
                         .replace(/\s/g, '+');
-                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}`;
+                    // Aktualizovaná URL
+                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}`;
                     window.location.href = url;
                 });
                 teamList.appendChild(teamItem);
