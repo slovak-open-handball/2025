@@ -1041,12 +1041,28 @@ async function displayCreatedTeams() {
             // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
             const containsCategoryNameInTeamName = (team) => {
                 const teamName = (team.name || team.id || '').trim().toLowerCase();
-                return allAvailableCategories.some(cat => {
-                    const categoryName = (cat.name || cat.id).trim().toLowerCase();
-                    // Kontrolujeme, či názov tímu ZAČÍNA názvom kategórie, za ktorým nasleduje ' - '
-                    // Toto zabráni zhode, ak je názov kategórie len podreťazec názvu tímu, napr. "U10" v "Team U10XYZ"
-                    return teamName.startsWith(`${categoryName} - `);
-                });
+                // Nájdeme objekt kategórie pre aktuálny tím
+                const teamCategory = allAvailableCategories.find(cat => cat.id === team.categoryId);
+                
+                if (!teamCategory) {
+                    return false; // Ak tím nemá kategóriu alebo kategória nebola nájdená, nemôže obsahovať jej názov
+                }
+
+                const categoryName = (teamCategory.name || teamCategory.id).trim().toLowerCase();
+                
+                // Kontrolujeme, či názov tímu začína názvom kategórie (case-insensitive)
+                // a či je buď presná zhoda, alebo za názvom kategórie nasleduje medzera alebo pomlčka.
+                // Príklady, ktoré by mali byť na konci: "U12 CH 1A", "U12 CH-Team", "U12 CH - Team", "U12 CH" (ak je to názov tímu)
+                if (teamName.startsWith(categoryName)) {
+                    if (teamName.length === categoryName.length) {
+                        return true; // Presná zhoda názvu tímu s názvom kategórie
+                    }
+                    const charAfterCategory = teamName.charAt(categoryName.length);
+                    if (charAfterCategory === ' ' || charAfterCategory === '-') {
+                        return true; // Názov tímu začína názvom kategórie a hneď za ním je medzera alebo pomlčka
+                    }
+                }
+                return false;
             };
 
             const aContainsCategory = containsCategoryNameInTeamName(a);
@@ -1356,10 +1372,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     await displayCreatedTeams(); // Zobrazí tímy po načítaní dát
     const addButtonElement = document.getElementById('addButton');
     if (addButtonElement) {
-        addButtonElement.style.display = 'block';
-        addButtonElement.title = "Vytvoriť nový tím";
-        addButtonElement.removeEventListener('click', handleAddButtonClick);
-        addButtonElement.addEventListener('click', handleAddButtonClick);
+        addButton.style.display = 'block';
+        addButton.title = "Vytvoriť nový tím";
+        addButton.removeEventListener('click', handleAddButtonClick);
+        addButton.addEventListener('click', handleAddButtonClick);
     }
     if (clubModalClose) {
         clubModalClose.addEventListener('click', () => {
