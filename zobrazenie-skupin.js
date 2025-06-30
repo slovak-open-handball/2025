@@ -4,10 +4,10 @@ let backToCategoriesButton = null;
 let backToGroupButtonsButton = null;
 let categoryButtonsContainer = null;
 let categoryTitleDisplay = null;
-let groupSelectionButtons = null;
-let allGroupsContent = null;
+let groupSelectionButtons = null; // Tento element bude slúžiť na zobrazenie riadkov s typom skupiny a tlačidlami
+let allGroupsContent = null; // Tento element bude slúžiť na zobrazenie detailov všetkých skupín (zoznamy tímov)
 let singleGroupContent = null;
-let allGroupsContainer = null;
+let allGroupsContainer = null; // Kontajner vo vnútri allGroupsContent
 let allGroupsUnassignedDisplay = null;
 let singleGroupDisplayBlock = null;
 let singleGroupUnassignedDisplay = null;
@@ -48,10 +48,10 @@ function getHTMLElements() {
     backToGroupButtonsButton = document.getElementById('backToGroupButtonsButton');
     categoryButtonsContainer = document.getElementById('categoryButtonsContainer');
     categoryTitleDisplay = document.getElementById('categoryTitleDisplay');
-    groupSelectionButtons = document.getElementById('groupSelectionButtons');
-    allGroupsContent = document.getElementById('allGroupsContent');
+    groupSelectionButtons = document.getElementById('groupSelectionButtons'); // Toto je kontajner pre typy skupín a ich tlačidlá
+    allGroupsContent = document.getElementById('allGroupsContent'); // Toto je kontajner pre detaily VŠETKÝCH skupín
     singleGroupContent = document.getElementById('singleGroupContent');    
-    allGroupsContainer = allGroupsContent ? allGroupsContent.querySelector('.groups-container') : null;
+    allGroupsContainer = allGroupsContent ? allGroupsContent.querySelector('.groups-container') : null; // Kontajner pre zobrazenie všetkých skupín
     allGroupsUnassignedDisplay = allGroupsContent ? allGroupsContent.querySelector('.unassigned-teams-display') : null;
     singleGroupDisplayBlock = singleGroupContent ? singleGroupContent.querySelector('.group-display') : null;
     singleGroupUnassignedDisplay = singleGroupContent ? singleGroupContent.querySelector('.unassigned-teams-display') : null;
@@ -166,15 +166,13 @@ function setActiveCategoryButton(categoryId) {
     clearActiveCategoryButtons();
     const categoryButton = categoryButtonsContainer ? categoryButtonsContainer.querySelector(`.display-button[data-category-id="${categoryId}"]`) : null;
     if (categoryButton) {
-        categoryButton.classList.add('active'); // Oprava: `button` zmenené na `categoryButton`
+        categoryButton.classList.add('active');
     }
 }
 function clearActiveGroupButtons() {
+    // Toto teraz prechádza cez groupSelectionButtons, kde sú tlačidlá typov
     const groupButtons = groupSelectionButtons ? groupSelectionButtons.querySelectorAll('.display-button') : [];
     groupButtons.forEach(button => button.classList.remove('active'));
-    // Removed specific handling for group titles in 'allGroupsContainer' as layout changes
-    // const groupTitlesInAllView = allGroupsContainer ? allGroupsContainer.querySelectorAll('.group-display h3') : [];
-    // groupTitlesInAllView.forEach(title => title.classList.remove('active-title'));
 }
 function setActiveGroupButton(groupId) {
     clearActiveGroupButtons();
@@ -182,18 +180,18 @@ function setActiveGroupButton(groupId) {
     if (groupButton) {
         groupButton.classList.add('active');
     }
-    // Removed specific handling for group titles in 'allGroupsContainer' as layout changes
-    // if (allGroupsContainer) {
-    //     const groupDisplays = allGroupsContainer.querySelectorAll('.group-display');
-    //     groupDisplays.forEach(groupDiv => {
-    //         if (groupDiv.dataset.groupId === groupId) {
-    //             const h3Title = groupDiv.querySelector('h3');
-    //             if (h3Title) {
-    //                 h3Title.classList.add('active-title');
-    //             }
-    //         }
-    //     });
-    // }
+    // Ak sa zobrazuje jedna skupina, zvýrazníme aj jej nadpis v zobrazení všetkých skupín
+    if (allGroupsContainer) {
+        const groupDisplays = allGroupsContainer.querySelectorAll('.group-display');
+        groupDisplays.forEach(groupDiv => {
+            if (groupDiv.dataset.groupId === groupId) {
+                const h3Title = groupDiv.querySelector('h3');
+                if (h3Title) {
+                    h3Title.classList.add('active-title');
+                }
+            }
+        });
+    }
 }
 function displayCategoriesAsButtons() {
     currentCategoryId = null;
@@ -203,10 +201,11 @@ function displayCategoriesAsButtons() {
     }
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none';
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // Skryje navigačné tlačidlá skupín
+    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
     if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-    showOnly(null);
+    showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
     if (categoryButtonsContainer) categoryButtonsContainer.innerHTML = '';
     clearActiveCategoryButtons();
     clearActiveGroupButtons();
@@ -269,31 +268,47 @@ function displayCategoriesAsButtons() {
         }
     }
 }
+
+/**
+ * Zobrazí navigačné tlačidlá pre skupiny (zoskupené podľa typu)
+ * a zároveň detaily všetkých skupín v rámci vybranej kategórie.
+ * @param {string} categoryId ID vybranej kategórie.
+ */
 function displayGroupsForCategory(categoryId) {
     currentCategoryId = categoryId;
-    currentGroupId = null;
+    currentGroupId = null; // Resetovať vybranú skupinu pri zmene kategórie
     if (!getHTMLElements()) {
         goBackToCategories();
         return;
     }
-    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
-    if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'block';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazíme groupSelectionButtons pre typy skupín
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
-    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
+    // Zobrazenie hlavných kontajnerov
+    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex'; // Zobrazí tlačidlá kategórií
+    if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'block'; // Zobrazí názov kategórie
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
+    if (allGroupsContent) allGroupsContent.style.display = 'block'; // Zobrazí kontajner pre detaily všetkých skupín
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block'; // Zobrazí tlačidlo "Späť na kategórie"
+    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none'; // Skryje tlačidlo "Späť na skupiny" (sme na prehľade kategórie)
+    
+    // Vyčistíme obsah pre prípadné predošlé zobrazenia
+    if (groupSelectionButtons) groupSelectionButtons.innerHTML = '';
     if (allGroupsContainer) allGroupsContainer.innerHTML = '';
     if (allGroupsUnassignedDisplay) allGroupsUnassignedDisplay.innerHTML = '';
     if (singleGroupDisplayBlock) singleGroupDisplayBlock.innerHTML = '';
     if (singleGroupUnassignedDisplay) singleGroupUnassignedDisplay.innerHTML = '';
-    if (groupSelectionButtons) groupSelectionButtons.innerHTML = ''; // Vyčistíme groupSelectionButtons
-    showOnly('allGroupsContent');
+
+    showOnly('allGroupsContent'); // Zobrazí .allGroupsContent a skryje .singleGroupContent
+
     setActiveCategoryButton(categoryId);
-    clearActiveGroupButtons();
+    clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     window.location.hash = 'category-' + encodeURIComponent(categoryId);
+
     const selectedCategory = allCategories.find(cat => cat.id === categoryId);
     if (!selectedCategory) {
         if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
         if (groupSelectionButtons) groupSelectionButtons.style.display = 'none';
+        if (allGroupsContent) allGroupsContent.style.display = 'none';
+        if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
+        if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
         showOnly(null);
         if (dynamicContentArea && categoryButtonsContainer) {
             const errorDiv = document.createElement('div');
@@ -306,21 +321,18 @@ function displayGroupsForCategory(categoryId) {
     
     const groupsInCategory = allGroups.filter(group => group.categoryId === categoryId);
     
-    // Zoskupenie skupín podľa typu
+    // 1. Zobrazenie navigačných tlačidiel skupín zoskupených podľa typu
     const groupsByType = {};
-    // Používame pevné poradie typov pre zobrazenie
     const orderedTypes = ["Zakladna skupina", "Nadstavbova skupina", "Skupina o umiestnenie"];
     orderedTypes.forEach(typeKey => {
-        groupsByType[groupTypeDisplayMap[typeKey]] = []; // Inicializácia pre všetky typy s diakritikou v správnom poradí
+        groupsByType[groupTypeDisplayMap[typeKey]] = [];
     });
 
     groupsInCategory.forEach(group => {
         const typeDisplay = groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ';
-        // Pridávame skupiny len do existujúcich typov, aby sme zachovali poradie
         if (groupsByType[typeDisplay]) {
             groupsByType[typeDisplay].push(group);
         } else {
-            // Ak sa nájde typ, ktorý nie je v orderedTypes (napr. staré dáta), pridať ho na koniec
             if (!groupsByType['Ostatné typy']) {
                 groupsByType['Ostatné typy'] = [];
             }
@@ -328,22 +340,16 @@ function displayGroupsForCategory(categoryId) {
         }
     });
 
-    // Zobrazenie typov skupín a ich tlačidiel
     if (groupSelectionButtons) {
-        groupSelectionButtons.classList.add('group-type-container'); // Nová trieda pre flexbox layout
-        groupSelectionButtons.innerHTML = ''; // Vyčistíme pred pridaním nových prvkov
-
-        // Prechádzame cez zoradené typy
+        groupSelectionButtons.classList.add('group-type-container'); // Zabezpečí flexbox layout
+        
         orderedTypes.concat(['Ostatné typy']).forEach(typeDisplayKey => {
-            const typeDisplay = groupTypeDisplayMap[typeDisplayKey] || typeDisplayKey; // Preklad pre zobrazenie
+            const typeDisplay = groupTypeDisplayMap[typeDisplayKey] || typeDisplayKey;
             const groupsForThisType = groupsByType[typeDisplay];
             
             if (groupsForThisType && groupsForThisType.length > 0) {
-                const typeSectionDiv = document.createElement('div');
-                typeSectionDiv.classList.add('group-type-section');
-
                 const typeHeaderDiv = document.createElement('div');
-                typeHeaderDiv.classList.add('group-type-header'); // Kontajner pre nadpis a tlačidlá
+                typeHeaderDiv.classList.add('group-type-header'); // Pre nadpis a tlačidlá v jednom riadku
 
                 const typeTitle = document.createElement('h3');
                 typeTitle.textContent = typeDisplay;
@@ -352,7 +358,7 @@ function displayGroupsForCategory(categoryId) {
                 const typeButtonsDiv = document.createElement('div');
                 typeButtonsDiv.classList.add('group-buttons-by-type');
 
-                groupsForThisType.sort((a, b) => (a.name || a.id || '').localeCompare((b.name || b.id || ''), 'sk-SK')); // Zoradenie skupín v rámci typu
+                groupsForThisType.sort((a, b) => (a.name || a.id || '').localeCompare((b.name || b.id || ''), 'sk-SK'));
                 groupsForThisType.forEach(group => {
                     const button = document.createElement('button');
                     button.classList.add('display-button');
@@ -365,31 +371,83 @@ function displayGroupsForCategory(categoryId) {
                     typeButtonsDiv.appendChild(button);
                 });
                 typeHeaderDiv.appendChild(typeButtonsDiv);
-                typeSectionDiv.appendChild(typeHeaderDiv); // Pridáme header div do sekcie typu
-                groupSelectionButtons.appendChild(typeSectionDiv);
+                groupSelectionButtons.appendChild(typeHeaderDiv); // Pridáme celý riadok s nadpisom a tlačidlami
             }
         });
 
         if (groupSelectionButtons.children.length === 0) {
             groupSelectionButtons.innerHTML = `<p>V kategórii "${selectedCategory.name || selectedCategory.id}" zatiaľ nie sú vytvorené žiadne skupiny.</p>`;
-            groupSelectionButtons.style.display = 'block'; // Zabezpečiť, že správa bude viditeľná
+            groupSelectionButtons.style.display = 'block';
         }
     }
 
 
-    // Pôvodné zobrazenie skupín v `allGroupsContainer` už nie je potrebné v tomto pohľade
-    if (allGroupsContainer) allGroupsContainer.innerHTML = '';
-    // Removed force-3-plus-2-layout as it's not applicable to the new layout
-    // if (allGroupsContainer) {
-    //     if (groupsInCategory.length === 5) {
-    //         allGroupsContainer.classList.add('force-3-plus-2-layout');
-    //     } else {
-    //         allGroupsContainer.classList.remove('force-3-plus-2-layout');
-    //     }
-    // }
-    // Removed the loop for adding groupDivs to allGroupsContainer
-    // groupsInCategory.forEach(group => { ... });
+    // 2. Zobrazenie detailov všetkých skupín v allGroupsContainer
+    if (allGroupsContainer) {
+        allGroupsContainer.innerHTML = ''; // Vyčistíme kontajner pred pridaním nových detailov
 
+        if (groupsInCategory.length === 0) {
+            const noGroupsMsg = document.createElement('p');
+            noGroupsMsg.textContent = `V kategórii "${selectedCategory.name || selectedCategory.id}" zatiaľ nie sú žiadne skupiny na zobrazenie detailov.`;
+            noGroupsMsg.style.textAlign = 'center';
+            noGroupsMsg.style.padding = '20px';
+            allGroupsContainer.appendChild(noGroupsMsg);
+        } else {
+            // Skupiny sú už zoradené v groupsInCategory
+            groupsInCategory.forEach(group => {
+                const groupDisplayDiv = document.createElement('div');
+                groupDisplayDiv.classList.add('group-display'); // Použijeme existujúcu triedu pre štýlovanie detailov skupiny
+                groupDisplayDiv.dataset.groupId = group.id; // Uložíme ID skupiny pre prípadné zvýraznenie
+
+                const groupTitle = document.createElement('h3');
+                groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
+                groupDisplayDiv.appendChild(groupTitle);
+
+                const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
+                if (teamsInGroup.length === 0) {
+                    const noTeamsPara = document.createElement('p');
+                    noTeamsPara.textContent = 'V tejto skupine zatiaľ nie sú žiadne tímy.';
+                    noTeamsPara.style.padding = '10px';
+                    groupDisplayDiv.appendChild(noTeamsPara);
+                } else {
+                    teamsInGroup.sort((a, b) => {
+                        const orderA = a.orderInGroup || Infinity;
+                        const orderB = b.orderInGroup || Infinity;
+                        if (orderA !== orderB) {
+                            return orderA - orderB;
+                        }
+                        const nameA = (a.name || a.id || '').toLowerCase();
+                        const nameB = (b.name || b.id || '').toLowerCase();
+                        return nameA.localeCompare(nameB, 'sk-SK');
+                    });
+                    const teamList = document.createElement('ul');
+                    teamList.classList.add('team-list');
+                    teamsInGroup.forEach(team => {
+                        const teamItem = document.createElement('li');
+                        teamItem.classList.add('team-list-item');
+                        teamItem.textContent = team.name || 'Neznámy tím';
+                        teamItem.style.cursor = 'pointer';
+                        const rawClubNameForCleaning = team.clubName || team.name || '';
+                        teamItem.dataset.clubName = rawClubNameForCleaning;
+                        const categoryForUrl = allCategories.find(cat => cat.id === currentCategoryId);
+                        const categoryNameForUrl = categoryForUrl ? (categoryForUrl.name || categoryForUrl.id) : '';                
+                        const fullTeamName = `${categoryNameForUrl} - ${team.name || 'Neznámy tím'}`.trim();
+                        const cleanedTeamName = fullTeamName.replace(/\s/g, '+');
+                        teamItem.addEventListener('click', (event) => {
+                            const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
+                            const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
+                                .replace(/\s/g, '+');
+                            const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}`;
+                            window.location.href = url;
+                        });
+                        teamList.appendChild(teamItem);
+                    });
+                    groupDisplayDiv.appendChild(teamList);
+                }
+                allGroupsContainer.appendChild(groupDisplayDiv);
+            });
+        }
+    }
 
     const unassignedTeamsInCategory = allTeams.filter(team =>
         (!team.groupId || (typeof team.groupId === 'string' && team.groupId.trim() === '')) &&
@@ -423,6 +481,11 @@ function displayGroupsForCategory(categoryId) {
         if (allGroupsUnassignedDisplay) allGroupsUnassignedDisplay.innerHTML = '';
     }
 }
+
+/**
+ * Zobrazí detaily jednej konkrétnej skupiny.
+ * @param {string} groupId ID vybranej skupiny.
+ */
 function displaySingleGroup(groupId) {
     const group = allGroups.find(g => g.id === groupId);
     if (!group) {
@@ -431,7 +494,7 @@ function displaySingleGroup(groupId) {
         const hashParts = hash.startsWith(categoryPrefix) ? hash.substring(categoryPrefix.length).split('/')[0] : null;
         const categoryIdFromHash = hashParts ? decodeURIComponent(hashParts) : null;
         if (categoryIdFromHash && allCategories.some(cat => cat.id === categoryIdFromHash)) {
-            displayGroupsForCategory(categoryIdFromHash);
+            displayGroupsForCategory(categoryIdFromHash); // Vráti sa na prehľad kategórie, ak sa skupina nenašla
         } else {
             goBackToCategories();
         }
@@ -443,28 +506,38 @@ function displaySingleGroup(groupId) {
         goBackToCategories();
         return;
     }
-    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
-    if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'block';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Stále zobrazujeme, aj keď sú to typy
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
-    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'block';
+
+    // Zobrazenie hlavných kontajnerov
+    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex'; // Zobrazí tlačidlá kategórií
+    if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'block'; // Zobrazí názov kategórie
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
+    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily všetkých skupín
+    if (singleGroupContent) singleGroupContent.style.display = 'block'; // Zobrazí detail jedinej skupiny
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block';
+    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'block'; // Zobrazí tlačidlo "Späť na skupiny"
+
+    // Vyčistíme obsah singleGroupContent
     if (singleGroupDisplayBlock) singleGroupDisplayBlock.innerHTML = '';
     if (singleGroupUnassignedDisplay) singleGroupUnassignedDisplay.innerHTML = '';
-    showOnly('singleGroupContent');
+
+    // showOnly('singleGroupContent'); // Táto funkcia už nie je taká dôležitá, keďže ručne nastavujeme display
+
     setActiveCategoryButton(currentCategoryId);
-    setActiveGroupButton(groupId);
+    setActiveGroupButton(groupId); // Zvýrazní aktívne tlačidlo skupiny
     window.location.hash = `category-${encodeURIComponent(currentCategoryId)}/group-${encodeURIComponent(groupId)}`;
+
     const category = allCategories.find(cat => cat.id === currentCategoryId);
     if (category && categoryTitleDisplay) {
         categoryTitleDisplay.textContent = category.name || category.id;
     }
+
     if (singleGroupDisplayBlock) {
         const groupTitle = document.createElement('h3');
-        // Zobrazenie typu skupiny s diakritikou a názvu
         groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
         groupTitle.style.cursor = 'default';
         groupTitle.style.pointerEvents = 'none';
         singleGroupDisplayBlock.appendChild(groupTitle);
+
         const teamsInGroup = allTeams.filter(team => team.groupId === group.id);
         if (teamsInGroup.length === 0) {
             const noTeamsPara = document.createElement('p');
@@ -549,10 +622,12 @@ function goBackToCategories() {
     }
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none';
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // Skryje navigačné tlačidlá skupín
+    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
+    if (singleGroupContent) singleGroupContent.style.display = 'none'; // Skryje detail jednej skupiny
     if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-    showOnly(null);
+    showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
     clearActiveCategoryButtons();
     clearActiveGroupButtons();
     if (window.location.hash) {
@@ -571,18 +646,21 @@ function goBackToGroupView() {
         goBackToCategories();
         return;
     }
+    
+    // Zobrazenie hlavných kontajnerov
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'block';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Stále zobrazujeme typy
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
-    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-    if (singleGroupDisplayBlock) singleGroupDisplayBlock.innerHTML = '';
-    if (singleGroupUnassignedDisplay) singleGroupUnassignedDisplay.innerHTML = '';
-    showOnly('allGroupsContent'); // Zobrazenie všetkých skupín (teraz zoskupených podľa typu)
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex'; // Zobrazí navigačné tlačidlá skupín
+    if (allGroupsContent) allGroupsContent.style.display = 'block'; // Zobrazí detaily všetkých skupín
+    if (singleGroupContent) singleGroupContent.style.display = 'none'; // Skryje detail jednej skupiny
+    if (backToCategoriesButton) backToCategoriesButton.style.display = 'block';
+    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none'; // Skryje tlačidlo "Späť na skupiny"
+
+    // showOnly('allGroupsContent'); // Táto funkcia už nie je taká dôležitá, keďže ručne nastavujeme display
     setActiveCategoryButton(categoryIdToReturnTo);
-    clearActiveGroupButtons();
+    clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     window.location.hash = 'category-' + encodeURIComponent(categoryIdToReturnTo);
-    displayGroupsForCategory(categoryIdToReturnTo); // Zavoláme pôvodnú funkciu, ktorá teraz vykreslí typy a ich skupiny
+    displayGroupsForCategory(categoryIdToReturnTo); // Znovu vykreslí prehľad kategórie s typmi a všetkými detailami skupín
 }
 function findMaxTableContentWidth(containerElement) {
     let maxWidth = 0;
@@ -667,12 +745,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const categoryExists = allCategories.some(cat => cat.id === decodedCategoryId);
         if (categoryExists) {
             setTimeout(() => {
-                displayGroupsForCategory(decodedCategoryId);
                 if (decodedGroupId) {
                     const groupExists = allGroups.some(group => group.id === decodedGroupId && group.categoryId === decodedCategoryId);
                     if (groupExists) {
+                        // Ak je v URL aj ID skupiny, zobrazíme priamo túto skupinu
                         displaySingleGroup(decodedGroupId);
+                    } else {
+                        // Ak skupina z URL neexistuje, zobrazíme prehľad kategórie
+                        displayGroupsForCategory(decodedCategoryId);
                     }
+                } else {
+                    // Ak v URL nie je ID skupiny, zobrazíme prehľad kategórie
+                    displayGroupsForCategory(decodedCategoryId);
                 }
             }, 50);
         }
@@ -704,7 +788,6 @@ window.addEventListener('hashchange', () => {
             if (decodedGroupId) {
                 const groupExists = allGroups.some(group => group.id === decodedGroupId && group.categoryId === decodedCategoryId);
                 if (groupExists) {
-                    displayGroupsForCategory(decodedCategoryId);
                     displaySingleGroup(decodedGroupId);
                 } else {
                     displayGroupsForCategory(decodedCategoryId);
@@ -727,7 +810,7 @@ window.addEventListener('resize', () => {
         const isAllGroupsVisible = allGroupsContent && window.getComputedStyle(allGroupsContent).display !== 'none';
         const isSingleGroupVisible = singleGroupContent && window.getComputedStyle(singleGroupContent).display !== 'none';
         if (isAllGroupsVisible && allGroupsContainer) {
-            // No longer apply uniform width to group-display elements in allGroupsContainer
+            // Uniform width is not needed for the new layout by group type
             // const uniformWidth = findMaxTableContentWidth(allGroupsContainer);
             // if (uniformWidth > 0) {
             //     setUniformTableWidth(uniformWidth, allGroupsContainer);
