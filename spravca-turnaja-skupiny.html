@@ -26,8 +26,8 @@
         <main>
             <h2>Vytvorenie skupín</h2>
             <div id="groupsContent">
-                  </div>
-            </main>
+            </div>
+        </main>
     </div>
     <button id="addButton" class="add-button" title="Pridať skupinu">+</button>
 
@@ -39,7 +39,16 @@
                 <div>
                      <label for="groupCategory">Kategória:</label>
                      <select id="groupCategory" required>
-                          </select>
+                     </select>
+                </div>
+                <div>
+                    <label for="groupType">Typ skupiny:</label>
+                    <select id="groupType" required>
+                        <option value="">-- Vyberte typ skupiny --</option>
+                        <option value="Zakladna skupina">Základná skupina</option>
+                        <option value="Nadstavbova skupina">Nadstavbová skupina</option>
+                        <option value="Skupina o umiestnenie">Skupina o umiestnenie</option>
+                    </select>
                 </div>
                 <div>
                     <label for="groupName">Názov skupiny:</label>
@@ -56,7 +65,7 @@
             <h2 id="messageModalTitle"></h2>
             <p id="messageModalText"></p>
             <div id="messageModalButtons" class="modal-buttons">
-                </div>
+            </div>
         </div>
     </div>
 
