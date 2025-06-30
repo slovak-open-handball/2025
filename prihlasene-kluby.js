@@ -548,8 +548,18 @@ async function displaySubjectDetails(baseName, initialTeamId = null) {
                     url.searchParams.set('category', categoryName);
                     url.searchParams.set('group', groupName);
                     url.searchParams.set('teamId', team.id); // Pridáme team.id
-                    // Pre zobrazenie detailov stále potrebujeme unikátne ID tímu, uložíme ho do history.state
-                    history.pushState({ baseName: baseName, categoryName: categoryName, groupName: groupName, teamId: team.id }, '', url.toString());
+
+                    // Determine whether to push or replace state
+                    const currentUrlParams = new URLSearchParams(window.location.search);
+                    const sourcePageParam = currentUrlParams.get('sourcePage');
+
+                    if (sourcePageParam === 'zobrazenie-skupin') {
+                        // If we came from zobrazenie-skupin, keep pushing to allow going back there
+                        history.pushState({ baseName: baseName, categoryName: categoryName, groupName: groupName, teamId: team.id }, '', url.toString());
+                    } else {
+                        // If we are navigating within prihlasene-kluby.html, replace state to avoid history stack for team details
+                        history.replaceState({ baseName: baseName, categoryName: categoryName, groupName: groupName, teamId: team.id }, '', url.toString());
+                    }
                     displaySpecificTeamDetails(team.id);
                 });
                teamsInCategoryButtonsDiv.appendChild(teamButton);
@@ -769,7 +779,7 @@ async function handleUrlState() {
             const category = allCategories.find(cat => String(cat.id) === String(c.categoryId));
             const currentCategoryName = (category && category.name) ? category.name : (String(c.categoryId) || 'Neznáma kategória');
             const group = allGroups.find(g => String(g.id) === String(c.groupId));
-            const currentGroupName = group ? (group.name || String(group.id)) : 'Nepriradené';
+            const currentGroupName = group ? (group.name || String(g.id)) : 'Nepriradené';
 
             return currentBaseName === clubBaseName &&
                    currentCategoryName === categoryUrlParam &&
