@@ -243,7 +243,7 @@ function displayCategoriesAsButtons() {
         groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
         groupSelectionButtons.innerHTML = ''; // Vyčistí predchádzajúci obsah
         const defaultMessage = document.createElement('p');
-        defaultMessage.textContent = 'Vyberte kategóriu vyššie pre zobrazenie skupín.';
+        defaultMessage.textContent = '';
         defaultMessage.style.textAlign = 'center';
         defaultMessage.style.padding = '20px';
         groupSelectionButtons.appendChild(defaultMessage);
