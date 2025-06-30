@@ -1482,6 +1482,53 @@ async function displayMatchesAsSchedule() {
                 console.log(`Drag & Drop: dragend - ID zápasu: ${event.target.dataset.id}, Target:`, event.target);
                 event.target.classList.remove('dragging');
             });
+            // New dragover and drop handlers for match-row
+            row.addEventListener('dragover', (event) => {
+                event.preventDefault(); // Allow drop
+                event.dataTransfer.dropEffect = 'move';
+                event.currentTarget.classList.add('drop-over-row'); // Visual feedback
+                console.log(`Drag & Drop: dragover na match-row - ID: ${event.currentTarget.dataset.id}, Target:`, event.currentTarget);
+            });
+
+            row.addEventListener('dragleave', (event) => {
+                event.currentTarget.classList.remove('drop-over-row');
+                console.log(`Drag & Drop: dragleave z match-row - ID: ${event.currentTarget.dataset.id}, Target:`, event.currentTarget);
+            });
+
+            row.addEventListener('drop', async (event) => {
+                event.preventDefault();
+                event.currentTarget.classList.remove('drop-over-row');
+
+                const draggedMatchId = event.dataTransfer.getData('text/plain');
+                const targetMatchId = event.currentTarget.dataset.id;
+                const newDate = event.currentTarget.closest('.date-group').dataset.date;
+                const newLocation = event.currentTarget.closest('.date-group').dataset.location;
+
+                console.log(`Drag & Drop: drop na match-row - Presunutý zápas ID: ${draggedMatchId}, Cieľový zápas ID: ${targetMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Target:`, event.currentTarget);
+
+                if (draggedMatchId === targetMatchId) {
+                    console.log("Drag & Drop: Dropped on self, no action.");
+                    return;
+                }
+
+                // Determine if dropping before or after the target match
+                const rect = event.currentTarget.getBoundingClientRect();
+                const dropY = event.clientY;
+                const middleY = rect.top + rect.height / 2;
+
+                let droppedProposedStartTime;
+                if (dropY < middleY) {
+                    // Dropped in the first half of the target row, so place BEFORE the target match
+                    droppedProposedStartTime = event.currentTarget.dataset.startTime;
+                    console.log(`Drag & Drop: Dropped BEFORE target match. Proposed start time: ${droppedProposedStartTime}`);
+                } else {
+                    // Dropped in the second half of the target row, so place AFTER the target match
+                    droppedProposedStartTime = event.currentTarget.dataset.footprintEndTime; // This is end of play + buffer
+                    console.log(`Drag & Drop: Dropped AFTER target match. Proposed start time: ${droppedProposedStartTime}`);
+                }
+
+                await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime);
+            });
         });
 
         matchesContainer.querySelectorAll('.empty-interval-row').forEach(row => {
@@ -1584,66 +1631,67 @@ async function displayMatchesAsSchedule() {
         matchesContainer.querySelectorAll('.date-group').forEach(dateGroupDiv => {
             dateGroupDiv.addEventListener('dragover', (event) => {
                 event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-                
+                event.dataTransfer.dropEffect = 'move'; // Default to move for the general area
+
                 const targetRow = event.target.closest('tr');
-                // Allow dropping on footer-spacer-row, but not other explicitly forbidden rows
-                if (targetRow && (targetRow.classList.contains('blocked-interval-row') || targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') ) && !targetRow.classList.contains('footer-spacer-row')) {
-                    event.dataTransfer.dropEffect = 'none'; // Over a match or explicitly blocked interval (not footer spacer)
-                    targetRow.classList.add('drop-over-forbidden');
-                    console.log(`Drag & Drop: dragover na date-group (forbidden row) - Drop efekt: none, Target:`, event.target);
+                if (targetRow) {
+                    // If over a specific row, let that row's dragover handle styling/effect.
+                    // Do NOT add drop-target-active to the dateGroupDiv itself.
+                    // Also, do NOT set dropEffect to 'none' here for valid rows.
+                    if (targetRow.classList.contains('blocked-interval-row')) {
+                        // This is a truly forbidden row, but its own dragover handles the visual.
+                        // We can still set dropEffect to 'none' here to ensure it's not droppable on this level.
+                        event.dataTransfer.dropEffect = 'none';
+                    }
+                    // For match-row and empty-interval-row, their individual dragover will handle it.
+                    // No need to add 'drop-target-active' to the parent here.
                 } else {
+                    // If not over a specific row (i.e., over the general date-group background)
                     dateGroupDiv.classList.add('drop-target-active');
                     console.log(`Drag & Drop: dragover na date-group (pozadie) - Drop efekt: move, Target:`, event.target);
                 }
             });
 
             dateGroupDiv.addEventListener('dragleave', (event) => {
-                const targetRow = event.target.closest('tr');
-                if (targetRow) {
-                    targetRow.classList.remove('drop-over-forbidden');
+                // This needs to be careful not to remove the class if just moving from one row to another within the same date-group
+                // A better way is to remove it only when the mouse leaves the entire dateGroupDiv
+                // For now, let's keep it simple and ensure it's removed on drop or full leave.
+                const relatedTarget = event.relatedTarget;
+                if (!relatedTarget || !dateGroupDiv.contains(relatedTarget)) {
+                    dateGroupDiv.classList.remove('drop-target-active');
+                    console.log(`Drag & Drop: dragleave z date-group (celý div), Target:`, event.target);
                 }
-                dateGroupDiv.classList.remove('drop-target-active');
-                console.log(`Drag & Drop: dragleave z date-group, Target:`, event.target);
             });
 
             dateGroupDiv.addEventListener('drop', async (event) => {
                 event.preventDefault();
-                const targetRow = event.target.closest('tr');
-                if (targetRow) {
-                    targetRow.classList.remove('drop-over-forbidden');
-                }
-                dateGroupDiv.classList.remove('drop-target-active');
+                dateGroupDiv.classList.remove('drop-target-active'); // Remove active class on drop
 
                 const draggedMatchId = event.dataTransfer.getData('text/plain');
                 const newDate = dateGroupDiv.dataset.date;
                 const newLocation = dateGroupDiv.dataset.location;
                 let droppedProposedStartTime = null;
 
+                const targetRow = event.target.closest('tr');
+
+                if (targetRow && (targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') || targetRow.classList.contains('blocked-interval-row'))) {
+                    // If dropped on a specific row, that row's drop handler will take care of it.
+                    // This parent drop handler should do nothing.
+                    console.log(`Drag & Drop: Drop event on date-group, but target is a specific row. Delegating to row handler.`);
+                    return;
+                }
+
+                // Original logic for dropping on general date-group background (first available time)
                 console.log(`Drag & Drop: drop na date-group (pozadie) - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Target:`, event.target);
 
-
                 if (draggedMatchId) {
-                    // Prevent drop on specifically forbidden rows (already handled by dragover, but good to double check)
-                    if (targetRow && (targetRow.classList.contains('blocked-interval-row') || targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') ) && !targetRow.classList.contains('footer-spacer-row')) {
-                         console.log(`Drag & Drop: Attempt to drop match ${draggedMatchId} onto a forbidden row. Move DENIED.`);
-                         await showMessage('Upozornenie', 'Na tento časový interval nie je možné presunúť zápas.');
-                         return;
-                    }
-
                     const isUnassignedSection = (newLocation === 'Nezadaná hala');
 
                     if (isUnassignedSection) {
-                        // For unassigned section, proposed start time is simply the current match's start time, 
-                        // as there's no fixed schedule.
                         const draggedMatchData = (await getDoc(doc(matchesCollectionRef, draggedMatchId))).data();
                         droppedProposedStartTime = draggedMatchData.startTime;
                         console.log(`Drag & Drop: Dropped onto unassigned section. Using original match start time: ${droppedProposedStartTime}`);
-
                     } else {
-                        // For dropping onto the general date-group area (not a specific row)
-                        // Find the earliest available time for this date/location.
-                        // This logic needs to mirror `findFirstAvailableTime` to get the *actual* first available slot.
                         const initialScheduleStartMinutesForDrop = await getInitialScheduleStartMinutes(newDate);
                         let currentPointerForDrop = initialScheduleStartMinutesForDrop;
 
@@ -1674,7 +1722,7 @@ async function displayMatchesAsSchedule() {
                         const blockedIntervalsSnapshot = await getDocs(blockedIntervalsQuery);
                         blockedIntervalsSnapshot.docs.forEach(doc => {
                             const data = doc.data();
-                            if (data.isBlocked === true || data.originalMatchId) { // Only fixed ones
+                            if (data.isBlocked === true || data.originalMatchId) {
                                 const startInMinutes = (parseInt(data.startTime.split(':')[0]) * 60 + parseInt(data.startTime.split(':')[1]));
                                 const endInMinutes = (parseInt(data.endTime.split(':')[0]) * 60 + parseInt(data.endTime.split(':')[1]));
                                 fixedEvents.push({ id: doc.id, start: startInMinutes, end: endInMinutes, type: 'blocked_interval' });
@@ -1685,7 +1733,7 @@ async function displayMatchesAsSchedule() {
 
                         for (const event of fixedEvents) {
                             if (currentPointerForDrop < event.start) {
-                                break; // Found a gap
+                                break;
                             }
                             currentPointerForDrop = Math.max(currentPointerForDrop, event.end);
                         }
