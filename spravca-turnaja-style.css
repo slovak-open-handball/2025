@@ -131,7 +131,7 @@ main {
     align-items: stretch; /* Natiahne deti, aby zaberali plnú šírku */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: none; /* ZMENENÉ: Odstránené max-width, aby sa mohlo roztiahnuť */
+    max-width: none; /* Odstránené max-width, aby sa mohlo roztiahnuť */
     margin: 0; /* ODSTRÁNENÉ auto, aby sa roztiahol */
 }
 
@@ -161,7 +161,7 @@ main {
 /* Aplikuje sa na sekcie v main-content-area (Nastavenia turnaja, Nastavenia zápasov podľa kategórií) */
 .main-content-area .section-block {
     margin-bottom: 0;
-    width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
+    width: 100% !important; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
     padding: 15px;
     box-sizing: border-box;
     background-color: #fff; /* Vrátenie bieleho pozadia */
@@ -169,8 +169,8 @@ main {
     border-radius: 8px; /* Vrátenie zaoblených rohov */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Vrátenie tieňa */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
-    max-width: none; /* ZMENENÉ: Odstránené max-width, aby sa roztiahol */
-    margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
+    max-width: none !important; /* Odstránené max-width, aby sa roztiahol */
+    margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
     flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
 }
@@ -178,7 +178,7 @@ main {
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
 #categorySettingsSection {
     /* Žiadne špecifické width/max-width tu nie sú potrebné, dedí od .section-block */
-    max-width: none; /* ZMENENÉ: Odstránené max-width */
+    max-width: none !important; /* Pridané !important pre maximálnu šírku */
 }
 
 
@@ -1064,7 +1064,7 @@ button[type="submit"] {
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu pre dva stĺpce */
-    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* ZMENENÉ: Pevnejšia šírka, aby sa nenaťahovali a rešpektovali min-width */
+    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* Pevnejšia šírka, aby sa nenaťahovali a rešpektovali min-width */
     display: flex; /* Urobte z neho flexbox kontajner */
     flex-direction: column; /* Uložte obsah vertikálne */
     align-items: center; /* Centrujte obsah horizontálne v rámci prvku */
@@ -1079,8 +1079,8 @@ button[type="submit"] {
 /* Upravte hlavný biely obdĺžnik (.main-content-area .section-block) */
 .main-content-area .section-block {
     /* Základné štýly zdedené */
-    max-width: none; /* ZMENENÉ: Odstránené max-width */
-    margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
+    max-width: none !important; /* Odstránené max-width */
+    margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
 }
