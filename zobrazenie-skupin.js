@@ -24,6 +24,9 @@ const groupTypeDisplayMap = {
     "Skupina o umiestnenie": "Skupina o umiestnenie"
 };
 
+// Globálna premenná pre maximálnu šírku zobrazenia názvu tímu
+let globalMaxTeamDisplayNameWidth = 0;
+
 
 function getCleanClubNameForUrl(rawClubNameFromData, categoryNameFromData, teamNameForCleaning) {
     let cleanedName = rawClubNameFromData;
@@ -44,6 +47,7 @@ function getCleanClubNameForUrl(rawClubNameFromData, categoryNameFromData, teamN
     // Ak by sa chcelo aj tu nahradzovať "-", treba zmeniť regex na /[ -]/g
     return cleanedName.trim();
 }
+
 function getHTMLElements() {
     dynamicContentArea = document.getElementById('dynamicContentArea');
     backToCategoriesButton = document.getElementById('backToCategoriesButton');
@@ -75,6 +79,40 @@ function getHTMLElements() {
     }
     return true;
 }
+
+/**
+ * Vypočíta maximálnu potrebnú šírku pre zobrazenie najdlhšieho názvu tímu.
+ * Vytvorí dočasný element pre presné meranie.
+ */
+function calculateMaxTeamNameDisplayWidth() {
+    let maxWidth = 0;
+    // Vytvorenie dočasného, skrytého elementu na meranie šírky textu
+    const tempMeasurer = document.createElement('li');
+    tempMeasurer.style.position = 'absolute';
+    tempMeasurer.style.visibility = 'hidden';
+    tempMeasurer.style.whiteSpace = 'nowrap';
+    tempMeasurer.style.padding = '8px 10px'; // Zhoduje sa s paddingom .team-list-item
+    tempMeasurer.style.border = '1px solid transparent'; // Zhoduje sa s borderom .team-list-item
+    tempMeasurer.style.fontSize = '0.95em'; // Zhoduje sa s veľkosťou fontu .team-list-item
+    document.body.appendChild(tempMeasurer);
+
+    allTeams.forEach(team => {
+        tempMeasurer.textContent = team.name || 'Neznámy tím';
+        const currentWidth = tempMeasurer.offsetWidth;
+        if (currentWidth > maxWidth) {
+            maxWidth = currentWidth;
+        }
+    });
+
+    document.body.removeChild(tempMeasurer);
+    // Pridáme nejaký bezpečnostný padding pre robustnosť (napr. pre scrollbar, drobné variácie)
+    // A padding/border pre .group-display div (15px padding + 1px border na každej strane = 32px)
+    const safetyPaddingForListItem = 10; // Extra padding pre položku zoznamu
+    const groupDisplayPaddingBorder = 15 * 2 + 1 * 2; // 15px padding + 1px border na každej strane
+    return maxWidth > 0 ? maxWidth + safetyPaddingForListItem + groupDisplayPaddingBorder : 0;
+}
+
+
 async function loadAllTournamentData() {
     try {
         const categoriesSnapshot = await getDocs(categoriesCollectionRef);
@@ -108,6 +146,10 @@ async function loadAllTournamentData() {
                 clubName: data.clubName || data.name || ''
             };
         });
+
+        // Po načítaní všetkých tímov vypočítame maximálnu šírku
+        globalMaxTeamDisplayNameWidth = calculateMaxTeamNameDisplayWidth();
+
     } catch (error) {
         if (dynamicContentArea && categoryButtonsContainer) {
             const errorDiv = document.createElement('div');
@@ -125,6 +167,7 @@ async function loadAllTournamentData() {
         console.error("Nepodarilo sa načítať dáta turnaja:", error); // Používame console.error namiesto alert()
     }
 }
+
 function showOnly(containerIdToShow) {
     if (allGroupsContent) allGroupsContent.style.display = 'none';
     if (singleGroupContent) singleGroupContent.style.display = 'none';
@@ -147,18 +190,8 @@ function showOnly(containerIdToShow) {
             if (singleGroupContent) singleGroupContent.style.display = 'none';
             break;
     }
-    if (containerIdToShow === 'allGroupsContent' && allGroupsContainer && window.getComputedStyle(allGroupsContent).display !== 'none') {
-        // Uniform width is not needed for the new layout by group type
-        // const uniformWidth = findMaxTableContentWidth(allGroupsContainer);
-        // if (uniformWidth > 0) {
-        //     setUniformTableWidth(uniformWidth, allGroupsContainer);
-        // }
-    } else if (containerIdToShow === 'singleGroupContent' && singleGroupContent && window.getComputedStyle(singleGroupContent).display !== 'none') {
-        const uniformWidth = findMaxTableContentWidth(singleGroupContent);
-        if (uniformWidth > 0) {
-            setUniformTableWidth(uniformWidth, singleGroupContent);
-        }
-    }
+    // Už nie je potrebné volať findMaxTableContentWidth/setUniformTableWidth tu,
+    // pretože šírka sa nastavuje globálne pri vykresľovaní skupín
 }
 function clearActiveCategoryButtons() {
     const categoryButtons = categoryButtonsContainer ? categoryButtonsContainer.querySelectorAll('.display-button') : [];
@@ -438,8 +471,17 @@ function displayGroupsForCategory(categoryId) {
                         groupDisplayDiv.classList.add('group-display');
                         groupDisplayDiv.dataset.groupId = group.id;
 
+                        // Aplikujeme globálne vypočítanú šírku na groupDisplayDiv
+                        if (globalMaxTeamDisplayNameWidth > 0) {
+                            groupDisplayDiv.style.width = `${globalMaxTeamDisplayNameWidth}px`;
+                            groupDisplayDiv.style.minWidth = `${globalMaxTeamDisplayNameWidth}px`;
+                            groupDisplayDiv.style.maxWidth = `${globalMaxTeamDisplayNameWidth}px`;
+                            groupDisplayDiv.style.flexBasis = 'auto'; // Flex-basis by mal byť auto, aby width prebralo prioritu
+                            groupDisplayDiv.style.flexShrink = '0'; // Zabráni zmenšovaniu
+                            groupDisplayDiv.style.flexGrow = '0'; // Zabráni zväčšovaniu
+                        }
+                        
                         const groupTitle = document.createElement('h3');
-                        // Zmenené: Zobrazuje len názov skupiny
                         groupTitle.textContent = group.name || group.id; 
                         groupTitle.style.cursor = 'pointer'; // Nastavíme kurzor na "pointer", aby bolo vidieť, že je klikateľný
                         groupTitle.addEventListener('click', () => {
@@ -591,8 +633,17 @@ function displaySingleGroup(groupId) {
     }
 
     if (singleGroupDisplayBlock) {
+        // Aplikujeme globálne vypočítanú šírku na singleGroupDisplayBlock
+        if (globalMaxTeamDisplayNameWidth > 0) {
+            singleGroupDisplayBlock.style.width = `${globalMaxTeamDisplayNameWidth}px`;
+            singleGroupDisplayBlock.style.minWidth = `${globalMaxTeamDisplayNameWidth}px`;
+            singleGroupDisplayBlock.style.maxWidth = `${globalMaxTeamDisplayNameWidth}px`;
+            singleGroupDisplayBlock.style.flexBasis = 'auto'; // Flex-basis by mal byť auto, aby width prebralo prioritu
+            singleGroupDisplayBlock.style.flexShrink = '0'; // Zabráni zmenšovaniu
+            singleGroupDisplayBlock.style.flexGrow = '0'; // Zabráni zväčšovaniu
+        }
+
         const groupTitle = document.createElement('h3');
-        // Zmenené: Zobrazuje len názov skupiny
         groupTitle.textContent = group.name || group.id;
         groupTitle.style.cursor = 'default'; // Tu necháme default, lebo už je klikateľné cez tlačidlo "Späť na skupiny"
         groupTitle.style.pointerEvents = 'none'; // Aby sa zabránilo opätovnému kliknutiu, keď sme už v zobrazení jednej skupiny
@@ -727,69 +778,10 @@ function goBackToGroupView() {
 
     displayGroupsForCategory(categoryIdToReturnTo); // Znovu vykreslí prehľad kategórie s typmi a všetkými detailami skupín
 }
-function findMaxTableContentWidth(containerElement) {
-    let maxWidth = 0;
-    if (!containerElement) {
-        return 0;
-    }
-    const groupDisplays = containerElement.querySelectorAll('.group-display');
-    if (groupDisplays.length === 0) {
-        return 0;
-    }
-    groupDisplays.forEach(displayDiv => {
-        const originalStyles = {
-            flexBasis: displayDiv.style.flexBasis,
-            width: displayDiv.style.width,
-            minWidth: displayDiv.style.minWidth,
-            maxWidth: displayDiv.style.maxWidth,
-            flexShrink: displayDiv.style.flexShrink,
-            flexGrow: displayDiv.style.flexGrow,
-            display: displayDiv.style.display
-        };
-        let tempDisplay = originalStyles.display;
-        if (window.getComputedStyle(displayDiv).display === 'none') {
-            displayDiv.style.display = 'block';
-        }
-        displayDiv.style.flexBasis = 'max-content';
-        displayDiv.style.width = 'auto';
-        displayDiv.style.minWidth = 'auto';
-        displayDiv.style.maxWidth = 'none';
-        displayDiv.style.flexShrink = '0';
-        displayDiv.style.flexGrow = '0';
-        const requiredWidth = displayDiv.offsetWidth;
-        displayDiv.style.flexBasis = originalStyles.flexBasis;
-        displayDiv.style.width = originalStyles.width;
-        displayDiv.style.minWidth = originalStyles.minWidth;
-        displayDiv.style.maxWidth = originalStyles.maxWidth;
-        displayDiv.style.flexShrink = originalStyles.flexShrink;
-        displayDiv.style.flexGrow = originalStyles.flexGrow;
-        if (window.getComputedStyle(displayDiv).display === 'block' && tempDisplay === 'none') {
-            displayDiv.style.display = originalStyles.display;
-        }
-        if (requiredWidth > maxWidth) {
-            maxWidth = requiredWidth;
-        }
-    });
-    const safetyPadding = 20;
-    return maxWidth > 0 ? maxWidth + safetyPadding : 0;
-}
-function setUniformTableWidth(width, containerElement) {
-    if (width <= 0 || !containerElement) {
-        return;
-    }
-    const groupDisplays = containerElement.querySelectorAll('.group-display');
-    if (groupDisplays.length === 0) {
-        return;
-    }
-    groupDisplays.forEach(displayDiv => {
-        displayDiv.style.width = `${width}px`;
-        displayDiv.style.minWidth = `${width}px`;
-        displayDiv.style.maxWidth = `${width}px`;
-        displayDiv.style.flexBasis = 'auto';
-        displayDiv.style.flexShrink = '0';
-        displayDiv.style.flexGrow = '0';
-    });
-}
+
+// Odstránené: findMaxTableContentWidth a setUniformTableWidth, pretože sa riadime globálnou šírkou
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     if (!getHTMLElements()) {
         return;
@@ -898,23 +890,6 @@ window.addEventListener('hashchange', () => {
     }
 });
 window.addEventListener('resize', () => {
-    if (!getHTMLElements()) {
-        return;
-    }
-    if (currentCategoryId !== null) {
-        const isAllGroupsVisible = allGroupsContent && window.getComputedStyle(allGroupsContent).display !== 'none';
-        const isSingleGroupVisible = singleGroupContent && window.getComputedStyle(singleGroupContent).display !== 'none';
-        if (isAllGroupsVisible && allGroupsContainer) {
-            // Uniform width is not needed for the new layout by group type
-            // const uniformWidth = findMaxTableContentWidth(allGroupsContainer);
-            // if (uniformWidth > 0) {
-            //     setUniformTableWidth(uniformWidth, allGroupsContainer);
-            // }
-        } else if (isSingleGroupVisible && singleGroupContent) {
-            const uniformWidth = findMaxTableContentWidth(singleGroupContent);
-            if (uniformWidth > 0) {
-                setUniformTableWidth(uniformWidth, singleGroupContent);
-            }
-        }
-    }
+    // Pri zmene veľkosti okna nie je potrebné prepočítavať šírku, pretože je statická (založená na najdlhšom názve tímu).
+    // Flexbox CSS sa postará o zalomenie do riadkov.
 });
