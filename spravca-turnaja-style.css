@@ -79,7 +79,7 @@ h1 {
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* ZMENENÉ: Pridaný tieň */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Tieň pre ľavé menu */
     position: sticky;
     top: 90px;
     align-self: flex-start;
@@ -203,7 +203,7 @@ main {
     flex-grow: 1; /* Zabezpečí, že sa roztiahne */
 }
 
-/* NOVÉ: Centrovanie obsahu vo vnútri #settingsContentSection */
+/* Centrovanie obsahu vo vnútri #settingsContentSection */
 #settingsContentSection form {
     display: flex;
     flex-direction: column;
@@ -285,15 +285,15 @@ td:last-child {
     white-space: nowrap; /* Zabezpečí, že sa text nebude zalamovať */
     overflow: hidden;    /* Skryje pretekajúci obsah */
     text-overflow: ellipsis; /* Zobrazí tri bodky, ak sa text nezmestí */
-    border-bottom: none; /* ZMENENÉ: Odstránený tieňovaný rám */
-    padding-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
-    margin-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 .modal-content h2 {
     margin-top: 0;
-    border-bottom: none; /* ZMENENÉ: Odstránený tieňovaný rám */
-    padding-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
-    margin-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 #groupsContent .section-block h2 {
     white-space: nowrap;
@@ -460,7 +460,7 @@ td:last-child {
     max-width: 600px;
     border-radius: 8px;
     position: relative;
-    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
+    box-shadow: none;
 }
 .modal-content form div {
     margin-bottom: 15px;
