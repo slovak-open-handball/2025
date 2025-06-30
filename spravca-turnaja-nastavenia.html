@@ -24,32 +24,35 @@
             </ul>
         </nav>
         <main>
-            <section id="settingsContentSection" class="section-block">
-                <h2>Nastavenia turnaja</h2>
-                <form id="settingsForm">
-                    <div class="form-group">
-                        <label for="firstDayStartTimeInput">Čas začiatku pre prvý hrací deň:</label>
-                        <input type="time" id="firstDayStartTimeInput" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="otherDaysStartTimeInput">Čas začiatku pre ostatné hracie dni:</label>
-                        <input type="time" id="otherDaysStartTimeInput" required>
-                    </div>
-                    <button type="submit">Uložiť nastavenia</button>
-                </form>
-                <p id="settingsStatus" class="status-message"></p>
-            </section>
+            <!-- NOVÝ KONTANJER PRE CENTROVANIE OBSAHU HLAVNEJ ČASTI -->
+            <div class="main-content-area">
+                <section id="settingsContentSection" class="section-block">
+                    <h2>Nastavenia turnaja</h2>
+                    <form id="settingsForm">
+                        <div class="form-group">
+                            <label for="firstDayStartTimeInput">Čas začiatku pre prvý hrací deň:</label>
+                            <input type="time" id="firstDayStartTimeInput" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="otherDaysStartTimeInput">Čas začiatku pre ostatné hracie dni:</label>
+                            <input type="time" id="otherDaysStartTimeInput" required>
+                        </div>
+                        <button type="submit">Uložiť nastavenia</button>
+                    </form>
+                    <p id="settingsStatus" class="status-message"></p>
+                </section>
 
-            <section id="categorySettingsSection" class="section-block">
-                <h2>Nastavenia zápasov podľa kategórií</h2>
-                <form id="categorySettingsForm">
-                    <div id="categorySettingsContainer">
-                        <p>Načítavam kategórie...</p>
-                    </div>
-                    <button type="submit">Uložiť nastavenia kategórií</button>
-                </form>
-                <p id="categorySettingsStatus" class="status-message"></p>
-            </section>
+                <section id="categorySettingsSection" class="section-block">
+                    <h2>Nastavenia zápasov podľa kategórií</h2>
+                    <form id="categorySettingsForm">
+                        <div id="categorySettingsContainer">
+                            <p>Načítavam kategórie...</p>
+                        </div>
+                        <button type="submit">Uložiť nastavenia kategórií</button>
+                    </form>
+                    <p id="categorySettingsStatus" class="status-message"></p>
+                </section>
+            </div>
         </main>
     </div>
     <script type="module" src="spravca-turnaja-common.js"></script>
