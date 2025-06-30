@@ -122,7 +122,7 @@ async function loadAllTournamentData() {
         if (singleGroupContent) singleGroupContent.style.display = 'none';
         if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
         if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-        alert("Nepodarilo sa načítať dáta turnaja.");
+        console.error("Nepodarilo sa načítať dáta turnaja:", error); // Používame console.error namiesto alert()
     }
 }
 function showOnly(containerIdToShow) {
@@ -439,7 +439,8 @@ function displayGroupsForCategory(categoryId) {
                         groupDisplayDiv.dataset.groupId = group.id;
 
                         const groupTitle = document.createElement('h3');
-                        groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
+                        // Zmenené: Zobrazuje len názov skupiny
+                        groupTitle.textContent = group.name || group.id; 
                         groupTitle.style.cursor = 'pointer'; // Nastavíme kurzor na "pointer", aby bolo vidieť, že je klikateľný
                         groupTitle.addEventListener('click', () => {
                             displaySingleGroup(group.id); // Pridáme event listener pre kliknutie na hlavičku
@@ -591,7 +592,8 @@ function displaySingleGroup(groupId) {
 
     if (singleGroupDisplayBlock) {
         const groupTitle = document.createElement('h3');
-        groupTitle.textContent = `${groupTypeDisplayMap[group.type] || group.type || 'Neznámy typ'} - ${group.name || group.id}`;
+        // Zmenené: Zobrazuje len názov skupiny
+        groupTitle.textContent = group.name || group.id;
         groupTitle.style.cursor = 'default'; // Tu necháme default, lebo už je klikateľné cez tlačidlo "Späť na skupiny"
         groupTitle.style.pointerEvents = 'none'; // Aby sa zabránilo opätovnému kliknutiu, keď sme už v zobrazení jednej skupiny
         singleGroupDisplayBlock.appendChild(groupTitle);
