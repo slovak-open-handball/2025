@@ -118,10 +118,11 @@ main {
     overflow-x: hidden; /* Zabezpečí, že main sám nebude mať horizontálny scrollbar */
     align-self: flex-start;
     min-height: 0;
-    /* Pridané pre zabezpečenie plnej šírky pre potomkov */
+    /* Pridané pre zabezpečenie plnej šírky pre potomkov a centrovanie */
     display: flex;
     flex-direction: column;
     gap: 30px; /* Priestor medzi sekciami vo vnútri main */
+    align-items: center; /* Centruje obsah na stred horizontálne */
 }
 
 #groupsContent,
@@ -975,6 +976,7 @@ td:last-child {
     border-radius: 0;
     box-shadow: none;
     margin-bottom: 30px; /* Preserve space below the section */
+    width: 100%; /* Ensure it takes full width to align with top section */
 }
 
 /* Category settings specific styles for individual category frames */
@@ -984,6 +986,8 @@ td:last-child {
     border-radius: 10px; /* Zaoblené rohy ako v .section-block */
     box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Jemný tieň ako v .section-block */
     margin-bottom: 30px; /* Väčší priestor medzi kategóriami */
+    width: 100%; /* Ensure each item takes full width within its container */
+    box-sizing: border-box; /* Include padding/border in width */
 }
 
 .category-settings-item h3 {
@@ -1100,10 +1104,22 @@ td:last-child {
     padding: 0;
     border: none;
     box-shadow: none;
+    width: 100%; /* Ensure form takes full width */
+    box-sizing: border-box; /* Include padding/border in width */
 }
 
 /* New rule to make .section-block take full width */
 .section-block {
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Center the form within the section-block */
+#settingsForm {
+    margin: 0 auto; /* Centers the form horizontally */
+    max-width: 600px; /* Optional: Limit width for better readability on very wide screens */
+    padding: 25px; /* Add padding to match .category-settings-item */
+    border-radius: 10px; /* Add border-radius to match .category-settings-item */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Add box-shadow to match .category-settings-item */
+    background-color: #ffffff; /* Add background to match .category-settings-item */
 }
