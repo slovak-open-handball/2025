@@ -3,10 +3,10 @@ import { db, settingsCollectionRef, categoriesCollectionRef, getDoc, setDoc, doc
 document.addEventListener('DOMContentLoaded', async () => {
     // Kontrola prihláseného používateľa
     const loggedInUsername = localStorage.getItem('username');
-    if (!loggedInUsername || loggedInUsername !== 'admin') {
+    /*if (!loggedInUsername || loggedInUsername !== 'admin') {
         window.location.href = 'login.html';
         return;
-    }
+    }*/
 
     // Získanie referencií na DOM elementy
     const settingsForm = document.getElementById('settingsForm');
