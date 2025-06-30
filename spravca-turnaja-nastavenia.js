@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Vypočíta celkové trvanie zápasu na základe zadaných častí.
      * Vzorec: c = n * (t + p) - p
      * @param {number} n Počet častí zápasu.
-     * @param {number} t Dĺžka časti zápasu (v minútach).
+     * @param {number} t Trvanie časti zápasu (v minútach).
      * @param {number} p Prestávka medzi časťami zápasu (v minútach).
      * @returns {number} Celkový čas zápasu (v minútach).
      */
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <input type="number" id="n-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="n" value="${n_val}" min="0">
                         </div>
                         <div class="form-group">
-                            <label for="t-${categoryId}">Dĺžka časti (min):</label>
+                            <label for="t-${categoryId}">Trvanie časti (min):</label>
                             <input type="number" id="t-${categoryId}" class="category-setting-input match-duration-part" data-category-id="${categoryId}" data-setting-type="t" value="${t_val}" min="0">
                         </div>
                         <div class="form-group">
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const current_t = parseInt(t_input.value) || 0;
                     const current_p = parseInt(p_input.value) || 0;
                     const new_c = calculateTotalMatchDuration(current_n, current_t, current_p);
-                    calculated_c_display.textContent = `Celkový čas zápasu (C): ${new_c} minút`;
+                    calculated_c_display.textContent = `Celkový čas zápasu: ${new_c} minút`;
                 };
 
                 n_input.addEventListener('input', updateCalculatedCDuration);
