@@ -503,18 +503,41 @@ async function openClubModal(identifier = null, mode = 'assign') {
                     clubNameInput.value = clubData.name || ''; // Zobrazujeme name
                     clubNameInput.focus();
 
-                    // Naplníme kategóriu
+                    let categoryToSelect = clubData.categoryId;
+
+                    // Skontrolujeme, či je kategória z clubData platná
+                    const isValidCategory = allAvailableCategories.some(cat => cat.id === categoryToSelect);
+
+                    // Ak kategória chýba alebo je neplatná, pokúsime sa ju odvodiť z názvu tímu
+                    if (!categoryToSelect || !isValidCategory) {
+                        const teamNameLower = (clubData.name || '').trim().toLowerCase();
+                        for (const category of allAvailableCategories) {
+                            const categoryNameLower = (category.name || category.id).trim().toLowerCase();
+                            // Kontrolujeme, či názov tímu začína názvom kategórie (case-insensitive)
+                            // a či je buď presná zhoda, alebo za názvom kategórie nasleduje medzera alebo pomlčka.
+                            if (teamNameLower.startsWith(categoryNameLower)) {
+                                if (teamNameLower.length === categoryNameLower.length ||
+                                    teamNameLower.charAt(categoryNameLower.length) === ' ' ||
+                                    teamNameLower.charAt(categoryNameLower.length) === '-') {
+                                    categoryToSelect = category.id;
+                                    break; // Našli sme zhodnú kategóriu, zastavíme hľadanie
+                                }
+                            }
+                        }
+                    }
+
+                    // Naplníme kategóriu s nájdeným alebo odvodeným ID
                     if (allAvailableCategories.length > 0) {
-                        populateCategorySelect(clubCategorySelect, clubData.categoryId);
+                        populateCategorySelect(clubCategorySelect, categoryToSelect);
                     } else {
                         clubCategorySelect.innerHTML = '<option value="">-- Žiadne kategórie --</option>';
                         clubCategorySelect.disabled = true;
                     }
 
                     // Ak je vybratá kategória, povolíme a naplníme skupinu
-                    if (clubData.categoryId && clubData.categoryId !== '' && !clubData.categoryId.startsWith('--')) {
+                    if (categoryToSelect && categoryToSelect !== '' && !categoryToSelect.startsWith('--')) {
                         if (clubGroupSelect) clubGroupSelect.disabled = false; // Enable group select if category is valid
-                        populateGroupSelectForClubModal(clubGroupSelect, clubData.groupId, allAvailableGroups, clubData.categoryId);
+                        populateGroupSelectForClubModal(clubGroupSelect, clubData.groupId, allAvailableGroups, categoryToSelect);
                     } else {
                         if (clubGroupSelect) clubGroupSelect.disabled = true; // Keep disabled if no category
                         clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
@@ -543,7 +566,7 @@ async function openClubModal(identifier = null, mode = 'assign') {
                                 }
                             } else {
                                 if (clubGroupSelect) clubGroupSelect.disabled = true; // Disables
-                                clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
+                                clubGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --';
                                 if (orderInGroupInput) {
                                     orderInGroupInput.disabled = true;
                                     orderInGroupInput.value = '';
