@@ -114,15 +114,11 @@ main {
     padding: 0;
     box-shadow: none;
     background-color: transparent;
-    min-width: 800px; /* Zabezpečí minimálnu šírku obsahu */
+    min-width: 0;
     overflow-x: hidden; /* Zabezpečí, že main sám nebude mať horizontálny scrollbar */
-    align-self: flex-start;
-    min-height: 0;
-    /* Pridané pre zabezpečenie plnej šírky pre potomkov a centrovanie */
-    display: flex;
-    flex-direction: column;
-    gap: 30px; /* Priestor medzi sekciami vo vnútri main */
-    align-items: center; /* Centruje obsah na stred horizontálne */
+    /* overflow-y: auto; Ak tu chceš vertikálny scrollbar pre celý main obsah */
+    align-self: flex-start; /* Zabezpečí, že main sa vertikálne neroztiahne viac, ako je potrebné */
+    min-height: 0; /* NOVÉ: Zabezpečí, že nebude minimálna výška, ktorá by ho rozťahovala */
 }
 
 #groupsContent,
@@ -944,6 +940,9 @@ td:last-child {
     border: 1px solid #ddd;
     border-radius: 8px; /* Jemne zaoblené rohy */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: none; /* Predvolene skryté, JS ho zmení na 'flex' */
+    width: 220px; /* Pevná šírka pre rozbaľovaciu ponuku */
+    overflow: hidden; /* Zabezpečí, že zaoblené rohy fungujú aj na obsahu */
     padding: 15px !important; /* Zvýšený okraj okolo obsahu vo vnútri bieleho obdĺžnika (nad, pod, vľavo, vpravo) s !important */
     flex-direction: column !important; /* Tlačidlá pod sebou s !important */
     gap: 15px !important; /* Zvýšená medzera medzi tlačidlami s !important */
@@ -967,159 +966,4 @@ td:last-child {
 
 #addOptions button:hover {
     background-color: #0056b3; /* Tmavšie pozadie pri prechode myšou */
-}
-
-/* Specific styles for the category settings section to remove its own border/shadow */
-#categorySettingsSection {
-    background-color: transparent;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-    margin-bottom: 30px; /* Preserve space below the section */
-    width: 100%; /* Ensure it takes full width to align with top section */
-}
-
-/* Category settings specific styles for individual category frames */
-.category-settings-item {
-    background-color: #ffffff;
-    padding: 25px; /* Zvýšené odsadenie ako v .section-block */
-    border-radius: 10px; /* Zaoblené rohy ako v .section-block */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Jemný tieň ako v .section-block */
-    margin-bottom: 30px; /* Väčší priestor medzi kategóriami */
-    width: 100%; /* Ensure each item takes full width within its container */
-    box-sizing: border-box; /* Include padding/border in width */
-}
-
-.category-settings-item h3 {
-    color: #007bff;
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.5em;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-
-/* Adjustments for the new duration inputs */
-.match-duration-group {
-    display: flex;
-    flex-direction: column; /* Ensure items stack vertically */
-    gap: 15px; /* Increased space between each N, T, P, Z block */
-    margin-bottom: 15px;
-    padding: 20px; /* Increased padding around the group */
-    border: 1px solid #ccc; /* Slightly darker border for better visibility */
-    border-radius: 8px; /* More rounded corners */
-    background-color: #f9f9f9;
-    width: 100%; /* Make the group take full available width */
-    box-sizing: border-box;
-}
-
-.match-duration-group .form-group {
-    display: flex;
-    flex-direction: column; /* Stack label and input vertically */
-    gap: 5px; /* Space between label and input */
-    margin-bottom: 0; /* Remove extra margin */
-    width: 100%; /* Ensure form-group takes full width of its parent */
-}
-
-.match-duration-group label {
-    font-weight: bold;
-    font-size: 1em; /* Slightly larger font for labels */
-    color: #333;
-    white-space: normal; /* Allow label text to wrap if necessary */
-}
-
-/* Apply consistent styling to all relevant inputs including type="time" */
-.match-duration-group input[type="number"],
-.match-duration-group input[type="color"] { 
-    width: 100%; /* Ensure full width within the form-group */
-    padding: 12px 15px; /* Button-like padding */
-    font-size: 1rem; /* Button-like font size */
-    border: 1px solid #ccc;
-    border-radius: 8px; /* More rounded corners, consistent with buttons */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    transition: border-color 0.3s, box-shadow 0.3s;
-    background-color: #fff;
-    box-sizing: border-box; /* Crucial for width calculation */
-}
-
-/* Updated selector to include input[type="time"] for consistent styling */
-/* IMPORTANT: This rule needs to be specific enough to override any general input styles */
-.match-duration-group input[type="time"], /* Added this specific selector */
-#settingsForm input[type="time"] { /* Also apply to time inputs in the general settings form */
-    width: 100%; /* Ensure full width */
-    padding: 12px 15px; /* Button-like padding */
-    font-size: 1rem; /* Button-like font size */
-    border: 1px solid #ccc;
-    border-radius: 8px; /* More rounded corners, consistent with buttons */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    transition: border-color 0.3s, box-shadow 0.3s;
-    background-color: #fff;
-    box-sizing: border-box; /* Crucial for width calculation */
-}
-
-
-.match-duration-group input[type="number"]:focus,
-.match-duration-group input[type="color"]:focus,
-.match-duration-group input[type="time"]:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-    outline: none;
-}
-
-.calculated-duration {
-    text-align: left; /* Align to left to match input labels */
-    font-weight: bold;
-    color: #333;
-    margin-top: 15px; /* More space above the calculated value */
-    padding-top: 15px; /* More padding */
-    border-top: 1px dashed #aaa; /* Slightly darker dashed line */
-    font-size: 1.1em; /* Make calculated text more prominent */
-    white-space: normal; /* Allow wrapping if needed for long text */
-}
-
-/* Also ensure the submit button for categories is properly styled if it's affected */
-#categorySettingsForm button[type="submit"] {
-    background-color: #3a8d41;
-    color: white;
-    padding: 1em 1.5em; /* Larger padding for a more prominent button */
-    font-size: 1.1rem; /* Larger font size */
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    width: auto; /* Allow button to size according to its content */
-    margin-top: 20px; /* Space above button */
-    display: block; /* Ensure it takes full width if desired, or make it inline-block and center if smaller */
-    margin-left: auto; /* Center the button if width is auto */
-    margin-right: auto;
-}
-
-#categorySettingsForm button[type="submit"]:hover {
-    background-color: #c46f50; /* Hover color for the submit button */
-}
-
-/* Rule to ensure #categorySettingsForm itself does not have a border/shadow */
-#categorySettingsForm {
-    background-color: transparent;
-    padding: 0;
-    border: none;
-    box-shadow: none;
-    width: 100%; /* Ensure form takes full width */
-    box-sizing: border-box; /* Include padding/border in width */
-}
-
-/* New rule to make .section-block take full width */
-.section-block {
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* Center the form within the section-block */
-#settingsForm {
-    margin: 0 auto; /* Centers the form horizontally */
-    max-width: 600px; /* Optional: Limit width for better readability on very wide screens */
-    padding: 25px; /* Add padding to match .category-settings-item */
-    border-radius: 10px; /* Add border-radius to match .category-settings-item */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Add box-shadow to match .category-settings-item */
-    background-color: #ffffff; /* Add background to match .category-settings-item */
 }
