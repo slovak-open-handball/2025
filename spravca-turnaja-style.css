@@ -69,10 +69,10 @@ h1 {
 }
 .content-wrapper {
     display: flex;
-    width: 100%; /* Make it span full width */
+    width: 100%; /* Zabezpečí plnú šírku pre content-wrapper */
     /* REMOVE max-width: 1400px; */
     /* REMOVE margin: 20px auto; */
-    padding: 0 20px; /* Keep padding for spacing from edges */
+    padding: 0 20px; /* Zachováva padding od okrajov */
     box-sizing: border-box;
     gap: 20px;
 }
@@ -115,23 +115,29 @@ h1 {
     color: #004085;
 }
 main {
-    flex-grow: 1; /* Allows main to take up remaining space */
+    flex-grow: 1; /* Umožní main zabrať zvyšný priestor vedľa menu */
     padding: 0;
     box-shadow: none;
     background-color: transparent;
     min-width: 0;
-    overflow-x: hidden; /* Zabezpečí, že main sám nebude mať horizontálny scrollbar */
-    /* overflow-y: auto; Ak tu chceš vertikálny scrollbar pre celý main obsah */
-    align-self: flex-start; /* Zabezpečí, že main sa vertikálne neroztiahne viac, ako je potrebné */
-    min-height: 0; /* NOVÉ: Zabezpečí, že nebude minimálna výška, ktorá by ho rozťahovala */
-
-    /* ZMENA: Nastavenie main ako flex kontajnera pre centrovanie obsahu */
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center; /* Toto vycentruje sekcie (section-block) v rámci main */
-    align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
+    overflow-x: hidden;
+    align-self: flex-start;
+    min-height: 0;
+    /* Main samotný už nie je flexbox pre svoje sekcie, tie sú v .main-content-area */
 }
+
+/* NOVÉ: Wrapper pre hlavný obsah na centrovanie */
+.main-content-area {
+    display: flex; /* Bude flexboxom pre sekcie s nastaveniami */
+    flex-wrap: wrap; /* Umožní zalomenie sekcií na ďalší riadok */
+    gap: 20px; /* Medzera medzi sekciami */
+    justify-content: center; /* Centrovanie sekcií v rámci tohto wrapperu */
+    align-items: flex-start; /* Zarovnanie sekcií na začiatok vertikálne */
+    width: 100%; /* Zaberá celú šírku main */
+    max-width: 1200px; /* Maximálna šírka pre centrovaný obsah */
+    margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
+}
+
 
 #groupsContent,
 #clubsContent {
@@ -144,7 +150,9 @@ main {
     width: 100%;
 }
 #groupsContent .section-block,
-#clubsContent .section-block {
+#clubsContent .section-block,
+/* Aplikuje sa aj na sekcie v main-content-area */
+.main-content-area .section-block { /* ZMENA: pridal som selector pre sekcie v main-content-area */
     margin-bottom: 0;
     flex: 1 1 300px;
     min-width: 380px;
