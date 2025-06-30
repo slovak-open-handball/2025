@@ -234,18 +234,36 @@ function displayCategoriesAsButtons() {
     if (!getHTMLElements()) {
         return;
     }
+    // Ensure category buttons container is visible
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    // groupSelectionButtons a allGroupsContent sa teraz riadia logikou v DOMContentLoaded
-    // a displayGroupsForCategory/displaySingleGroup
+    
+    // Always show group selection buttons container, but clear its content and add a default message
+    if (groupSelectionButtons) {
+        groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
+        groupSelectionButtons.innerHTML = ''; // Vyčistí predchádzajúci obsah
+        const defaultMessage = document.createElement('p');
+        defaultMessage.textContent = 'Vyberte kategóriu vyššie pre zobrazenie skupín.';
+        defaultMessage.style.textAlign = 'center';
+        defaultMessage.style.padding = '20px';
+        groupSelectionButtons.appendChild(defaultMessage);
+    }
+
+    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
+    if (singleGroupContent) singleGroupContent.style.display = 'none'; // Skryje detail jednej skupiny
     if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-    showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
-    if (categoryButtonsContainer) categoryButtonsContainer.innerHTML = '';
+    
+    showOnly(null); // Zabezpečí skrytie kontajnerov pre skupiny
+    
+    if (categoryButtonsContainer) categoryButtonsContainer.innerHTML = ''; // Vyčistí tlačidlá kategórií
     clearActiveCategoryButtons();
-    clearActiveGroupButtons();
+    clearActiveGroupButtons(); // Vyčistí aktívny stav pre tlačidlá skupín
+
     if (allCategories.length === 0) {
         if (categoryButtonsContainer) categoryButtonsContainer.innerHTML = '<p>Zatiaľ nie sú pridané žiadne kategórie.</p>';
+        // Ak nie sú žiadne kategórie, aktualizuj správu pre skupiny
+        if (groupSelectionButtons) groupSelectionButtons.innerHTML = '<p style="text-align: center; padding: 20px;">Žiadne kategórie, žiadne skupiny na zobrazenie.</p>';
         return;
     }
     const chlapciCategories = [];
@@ -775,20 +793,11 @@ function goBackToCategories() {
     if (!getHTMLElements()) {
         return;
     }
-    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
-    if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // Skryje navigačné tlačidlá skupín
-    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
-    if (singleGroupContent) singleGroupContent.style.display = 'none'; // Skryje detail jednej skupiny
-    if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
-    if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
-    showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
-    clearActiveCategoryButtons();
-    clearActiveGroupButtons();
+    // Všetky kontajnery sa nastavia na základný stav pomocou displayCategoriesAsButtons()
+    displayCategoriesAsButtons();
     if (window.location.hash) {
         history.replaceState({}, document.title, window.location.pathname);
     }
-    displayCategoriesAsButtons();
 }
 function goBackToGroupView() {
     const categoryIdToReturnTo = currentCategoryId;
@@ -880,7 +889,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } else {
         // Ak v URL nie je hash, už sme zobrazili kategórie v displayCategoriesAsButtons()
-        // a groupSelectionButtons a allGroupsContent sú správne skryté.
+        // a groupSelectionButtons je viditeľný s predvolenou správou.
+        // allGroupsContent a singleGroupContent zostávajú skryté, čo je správne.
     }
 });
 window.addEventListener('hashchange', () => {
