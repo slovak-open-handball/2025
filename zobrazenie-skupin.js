@@ -590,7 +590,7 @@ function displayGroupsForCategory(categoryId) {
             allGroupsUnassignedDisplay.appendChild(unassignedDivContent);
         }
     } else {
-        if (allGroupsUnassignedDisplay) allGroupsUnassignedDisplay.innerHTML = '';
+        if (allGroupsUnassignedDisplay) singleGroupUnassignedDisplay.innerHTML = '';
     }
 }
 
@@ -836,6 +836,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (backToCategoriesButton) backToCategoriesButton.addEventListener('click', goBackToCategories);
     if (backToGroupButtonsButton) backToGroupButtonsButton.addEventListener('click', goBackToGroupView);
 
+    // Vždy zobrazíme tlačidlá kategórií a ich nadpisy
+    displayCategoriesAsButtons();
+
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
@@ -876,20 +879,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             goBackToCategories();
         }
     } else {
-        // Ak v URL nie je hash, zobrazíme kategórie ako tlačidlá
-        displayCategoriesAsButtons();
-        // Zabezpečíme, aby sa groupSelectionButtons a allGroupsContent zobrazili, ak existujú kategórie a skupiny
-        if (allCategories.length > 0 && allGroups.length > 0) {
-            if (groupSelectionButtons) groupSelectionButtons.style.display = 'flex';
-            if (allGroupsContent) allGroupsContent.style.display = 'block';
-        }
+        // Ak v URL nie je hash, už sme zobrazili kategórie v displayCategoriesAsButtons()
+        // a groupSelectionButtons a allGroupsContent sú správne skryté.
     }
 });
 window.addEventListener('hashchange', () => {
     if (!getHTMLElements()) {
         return;
     }
-    if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
+    // categoryButtonsContainer je už vždy zobrazený a naplnený v DOMContentLoaded
+    // if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex'; // Toto už nie je potrebné tu
+
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
