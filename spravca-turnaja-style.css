@@ -131,7 +131,7 @@ main {
     align-items: center; /* Centrovanie sekcií horizontálne */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
-    max-width: 90%; /* ZMENA: Zvýšenie maximálnej šírky pre celkový centrovaný obsah */
+    max-width: 100%; /* ZMENA: Maximálna šírka pre celkový centrovaný obsah (mala by byť plná, aby kategórie mali priestor) */
     margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
 }
 
@@ -162,20 +162,20 @@ main {
 .main-content-area .section-block {
     margin-bottom: 0;
     width: 100%; /* Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
-    max-width: none; /* Zruší predtým nastavené max-width pre section-block, aby sa roztiahli */
-    margin: 0 auto; /* Centrovanie jednotlivých bielych rámikov */
+    max-width: 800px; /* Max šírka pre Nastavenia turnaja - pre centrovanie */
+    margin: 0 auto; /* Centrovanie Nastavení turnaja */
     padding: 15px;
     box-sizing: border-box;
-    background-color: #fff; /* ZMENA: Biele pozadie */
-    border: 1px solid #ddd; /* ZMENA: Orámovanie */
-    border-radius: 8px; /* ZMENA: Zaoblené rohy */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* ZMENA: Tieň */
+    background-color: transparent; /* ZMENA: Transparentné pozadie */
+    border: none; /* ZMENA: Bez orámovania */
+    border-radius: 0; /* ZMENA: Bez zaoblených rohov */
+    box-shadow: none; /* ZMENA: Bez tieňa */
 }
 
-/* Špecifické nastavenie pre #categorySettingsSection, aby mala plnú šírku */
+/* Špecifické nastavenie pre #categorySettingsSection, aby mala plnú šírku a tým pádom aj jej vnútro */
 #categorySettingsSection {
     width: 100%; /* ZMENA: Zabezpečí plnú šírku v rámci .main-content-area */
-    max-width: none; /* Zruší predtým nastavené max-width pre section-block */
+    max-width: none; /* Zruší akékoľvek obmedzenie max-width, aby sa roztiahla */
 }
 
 
@@ -1042,8 +1042,8 @@ button[type="submit"] {
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    flex: 1 1 calc(33.33% - 13.33px); /* Tri stĺpce, zohľadňujúce gap */
-    min-width: 280px; /* Minimálna šírka pre mobilné zariadenia alebo menšie zobrazenia */
+    flex: 1 1 300px; /* ZMENA: Zmenil som flex-basis, aby sa viac prispôsobil */
+    min-width: 280px; /* ZMENA: Uistil som sa, že minimálna šírka nebráni zalomeniu */
     box-sizing: border-box;
 }
 
