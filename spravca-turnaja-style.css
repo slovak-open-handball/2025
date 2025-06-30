@@ -128,11 +128,11 @@ main {
 .main-content-area {
     display: flex;
     flex-direction: column; /* Sekcie pod sebou */
-    align-items: stretch; /* ZMENENÉ: Natiahne deti, aby zaberali plnú šírku */
+    align-items: stretch; /* Natiahne deti, aby zaberali plnú šírku */
     gap: 20px; /* Medzera medzi sekciami */
     width: 100%; /* Zaberá celú šírku main */
     max-width: 100%; /* Maximálna šírka pre celkový centrovaný obsah */
-    margin: 0 auto; /* Centrovanie tohto wrapperu v rámci main */
+    margin: 0; /* ODSTRÁNENÉ auto, aby sa roztiahol */
 }
 
 
@@ -170,7 +170,9 @@ main {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Vrátenie tieňa */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
     max-width: 100%; /* Nastavte maximálnu šírku pre biely obdĺžnik na 100% */
-    margin: 0; /* ZMENENÉ: Odstránené auto, aby sa roztiahol podľa align-items: stretch v rodičovi */
+    margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
+    flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
+    flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
 }
 
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
@@ -1079,7 +1081,7 @@ button[type="submit"] {
 .main-content-area .section-block {
     /* Základné štýly zdedené */
     max-width: 100%; /* Nastavte maximálnu šírku na 100% */
-    margin: 0; /* ZMENENÉ: Odstránené auto, aby sa roztiahol podľa align-items: stretch v rodičovi */
+    margin: 0; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
 }
