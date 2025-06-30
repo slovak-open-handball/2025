@@ -79,7 +79,7 @@ h1 {
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     position: sticky;
     top: 90px;
     align-self: flex-start;
@@ -124,7 +124,7 @@ main {
     flex-shrink: 1; /* Umožní main zmenšiť sa */
     flex-basis: 0; /* DÔLEŽITÉ: Umožňuje main efektívne využiť flex-grow na rozdelenie priestoru */
     padding: 0;
-    box-shadow: none;
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     background-color: transparent;
     min-width: 0; /* Umožní obsahu zmenšiť sa */
     overflow-x: hidden;
@@ -165,7 +165,7 @@ main {
     box-sizing: border-box;
     background-color: #fff; /* Ponechať */
     border-radius: 8px; /* Ponechať */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Ponechať */
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
 }
 
 /* Aplikuje sa na sekcie v main-content-area (Nastavenia turnaja, Nastavenia zápasov podľa kategórií) */
@@ -177,7 +177,7 @@ main {
     background-color: #fff; /* Biele pozadie */
     border: none; /* Odstránenie orámovania */
     border-radius: 8px; /* Zaoblené rohy */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Tieň */
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
     max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
@@ -391,7 +391,7 @@ td:last-child {
     right: 20px;
     background-color: #fff;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     padding: 10px;
     display: none; /* Predvolene skryté, JS ho zobrazí */
     flex-direction: column;
@@ -449,7 +449,7 @@ td:last-child {
     max-width: 600px;
     border-radius: 8px;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
 }
 .modal-content h2 {
     margin-top: 0;
@@ -605,7 +605,7 @@ button[type="submit"] {
     overflow-x: auto;
     border: 1px solid #ddd;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     background-color: #fff;
     width: 80vw; /* Tabuľka vyplní dostupnú šírku rodiča main, ktorý je flex-grow: 1 */
     margin: 20px auto 0 auto;
@@ -670,7 +670,7 @@ button[type="submit"] {
     position: sticky;
     left: 0;
     z-index: 11;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     padding: 5px;
     text-align: left;
     white-space: normal; /* Povoliť zalomenie textu, ak je názov miesta dlhý */
@@ -837,7 +837,7 @@ button[type="submit"] {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 8px; /* Jemne zaoblené rohy */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     display: none; /* Predvolene skryté, JS ho zmení na 'flex' */
     width: 220px; /* Pevná šírka pre rozbaľovaciu ponuku */
     overflow: hidden; /* Zabezpečí, že zaoblené rohy fungujú aj na obsahu */
@@ -929,7 +929,7 @@ button[type="submit"] {
     text-align: center;
     font-size: 0.8em;
     color: #333;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
 }
 
 .schedule-cell-accommodation .schedule-cell-title {
@@ -954,7 +954,7 @@ button[type="submit"] {
 /* Styling for when a draggable item is hovered over a target row (for insertion) */
 .match-row.drop-over-row {
     border-top: 2px solid #007bff; /* Modrá linka na vrchu pre vizuálne rozdelenie */
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); /* Jemný modrý tieň */
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     transition: all 0.1s ease-in-out; /* Hladký prechod */
     background-color: #e0f0ff; /* Svetlomodré pozadie pre cieľový riadok */
 }
@@ -963,7 +963,7 @@ button[type="submit"] {
 .date-group.drop-target-active {
     border: 2px dashed #28a745; /* Zelený prerušovaný okraj pre cieľovú skupinu */
     background-color: #e6ffe6; /* Svetlozelené pozadie */
-    box-shadow: 0 0 15px rgba(40, 167, 69, 0.6); /* Výraznejší zelený tieň */
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     transition: all 0.2s ease-in-out; /* Hladký prechod */
 }
 
@@ -1083,7 +1083,7 @@ button[type="submit"] {
     border: none; /* Odstránenie orámovania */
     border-radius: 8px;
     padding: 15px; /* Odsadenie pre samotný šedý obdĺžnik */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu */
