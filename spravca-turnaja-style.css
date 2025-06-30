@@ -1223,7 +1223,7 @@ button[type="submit"] {
     flex-direction: column; /* Typy skupín pod sebou */
     gap: 20px; /* Medzi sekciami typov */
     width: 100%;
-    align-items: flex-start; /* Zarovnávanie obsahu typu na začiatok */
+    align-items: center;
     padding: 20px;
     box-sizing: border-box;
 }
@@ -1242,6 +1242,8 @@ button[type="submit"] {
     gap: 10px; /* Medzera medzi nadpisom a tlačidlami */
     margin-bottom: 15px; /* Medzera pod celým riadkom s nadpisom a tlačidlami */
     flex-wrap: wrap; /* Zalamovanie, ak je príliš veľa tlačidiel */
+    justify-content: center;
+    width: 100%;
 }
 
 .group-type-section h3 {
@@ -1259,7 +1261,7 @@ button[type="submit"] {
     display: flex;
     flex-wrap: wrap;
     gap: 10px; /* Medzi tlačidlami skupín */
-    justify-content: flex-start; /* Tlačidlá zarovnané vľavo */
+    justify-content: center;
     flex-grow: 1; /* Umožní tlačidlám zaberať dostupný priestor */
 }
 
