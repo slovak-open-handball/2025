@@ -993,8 +993,11 @@ button[type="submit"] {
 
 /* Nové štýly pre zobrazenie nastavení kategórií vedľa seba */
 #categorySettingsContainer {
-    display: block; /* Vrátenie na blokové zobrazenie, aby sa itemy zobrazovali pod sebou */
+    display: flex; /* ZMENA: Zobrazenie ako flex, aby sa itemy zobrazovali vedľa seba */
+    flex-wrap: wrap; /* ZMENA: Umožní zalomenie na ďalší riadok */
+    gap: 20px; /* ZMENA: Medzera medzi jednotlivými blokmi kategórií */
     margin-top: 15px; /* Trocha miesta od nadpisu */
+    justify-content: flex-start; /* Zarovnanie blokov na začiatok riadku */
 }
 
 .category-settings-item {
@@ -1003,12 +1006,15 @@ button[type="submit"] {
     border-radius: 8px;
     padding: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    margin-bottom: 15px; /* Medzera medzi kategóriami */
-    /* Odstránené flex: 1 1 ... a min-width pre item, keďže sa už nemajú zobrazovať vedľa seba */
+    /* margin-bottom je teraz súčasťou gap na #categorySettingsContainer */
+    flex: 1 1 calc(33.33% - 13.33px); /* ZMENA: Tri stĺpce, zohľadňujúce gap */
+    min-width: 280px; /* Minimálna šírka pre mobilné zariadenia alebo menšie zobrazenia */
+    box-sizing: border-box; /* Zabezpečí, že padding je zahrnutý v šírke */
 }
 
 .category-settings-item:last-child {
-    margin-bottom: 0; /* Bez marginu pre posledný item */
+    /* Toto pravidlo už nie je potrebné, keďže gap to rieši */
+    /* margin-bottom: 0; */
 }
 
 /* Nadpis kategórie */
@@ -1073,11 +1079,16 @@ button[type="submit"] {
 }
 
 /* Responzívne úpravy pre menšie obrazovky */
-@media (max-width: 1024px) { /* Pre tablety */
-    /* Ak je main flex, section-block sa už o to postará */
+@media (max-width: 1200px) { /* Pre stredné obrazovky (napr. tablety na šírku) */
+    .category-settings-item {
+        flex: 1 1 calc(50% - 10px); /* Dva stĺpce */
+    }
 }
 
 @media (max-width: 768px) { /* Pre menšie tablety a mobily */
+    .category-settings-item {
+        flex: 1 1 100%; /* Jeden stĺpec */
+    }
     .category-settings-item .form-group {
         flex: 1 1 calc(50% - 5px); /* Dva stĺpce inputov na mobiloch */
     }
