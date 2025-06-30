@@ -611,7 +611,8 @@ async function displaySpecificTeamDetails(teamId) {
          const groupName = group ? (group.name || String(group.id)) : 'Nepriradené';
 
          // Aktualizácia hlavného titulku na základe nájdeného tímu
-         if (clubDetailTitleSpan) clubDetailTitleSpan.textContent = `${baseName} - ${categoryName}${groupName !== 'Nepriradené' ? ' - ' + groupName : ''}`;
+         // if (clubDetailTitleSpan) clubDetailTitleSpan.textContent = `${baseName} - ${categoryName}${groupName !== 'Nepriradené' ? ' - ' + groupName : ''}`;
+         if (clubDetailTitleSpan) clubDetailTitleSpan.textContent = `${baseName}`;
 
         // Načítanie a zobrazenie realizačného tímu
         if (selectedTeamRealizacnyTimDiv) {
