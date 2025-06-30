@@ -177,15 +177,15 @@ main {
     padding: 15px;
     box-sizing: border-box;
     background-color: #fff; /* Biele pozadie */
-    border: 0; /* ZMENENÉ: Odstránené orámovanie */
+    border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
     border-radius: 8px; /* Zaoblené rohy */
-    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
+    box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
     max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
     flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
-    flex-basis: auto; /* Umožniť obsahu definovať základnú veľkosť, ale môže sa zväčšiť/zmenšiť */
+    flex-basis: auto; /* Umožní obsahu definovať základnú veľkosť, ale môže sa zväčšiť/zmenšiť */
 }
 
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
@@ -1085,10 +1085,10 @@ button[type="submit"] {
 /* Jeho šírka by mala byť určená jeho obsahom, najmä h3 alebo pevnými vstupmi */
 .category-settings-item {
     background-color: #f9f9f9;
-    border: 0; /* ZMENENÉ: Odstránené orámovanie */
+    border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
     border-radius: 8px;
     padding: 15px; /* Odsadenie pre samotný šedý obdĺžnik */
-    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
+    box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu */
