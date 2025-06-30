@@ -59,6 +59,13 @@ async function animateLoadingText(containerId, text) {
             .modal-content button.delete-button {
                 margin-left: -1px;
             }
+            /* New styles for table cell borders */
+            .match-list-table td {
+                border-right: 1px solid #EAEAEA;
+            }
+            .match-list-table td:last-child {
+                border-right: none;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -1447,15 +1454,15 @@ async function displayMatchesAsSchedule() {
                 openMatchModal(matchId);
             });
             row.addEventListener('dragstart', (event) => {
+                console.log(`Drag & Drop: dragstart - ID zápasu: ${event.target.dataset.id}`);
                 event.dataTransfer.setData('text/plain', event.target.dataset.id);
                 event.dataTransfer.effectAllowed = 'move';
                 event.target.classList.add('dragging');
-                console.log(`Drag started for match ID: ${event.target.dataset.id}`);
             });
 
             row.addEventListener('dragend', (event) => {
+                console.log(`Drag & Drop: dragend - ID zápasu: ${event.target.dataset.id}`);
                 event.target.classList.remove('dragging');
-                console.log(`Drag ended for match ID: ${event.target.dataset.id}`);
             });
         });
 
@@ -1473,9 +1480,11 @@ async function displayMatchesAsSchedule() {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = 'move';
                 event.currentTarget.classList.add('drop-over-row');
+                console.log(`Drag & Drop: dragover na empty-interval-row - ID: ${event.currentTarget.dataset.id}`);
             });
             row.addEventListener('dragleave', (event) => {
                 event.currentTarget.classList.remove('drop-over-row');
+                console.log(`Drag & Drop: dragleave z empty-interval-row - ID: ${event.currentTarget.dataset.id}`);
             });
             row.addEventListener('drop', async (event) => {
                 event.preventDefault();
@@ -1487,17 +1496,14 @@ async function displayMatchesAsSchedule() {
                 const droppedProposedStartTime = event.currentTarget.dataset.startTime;
                 const targetBlockedIntervalId = event.currentTarget.dataset.id;
 
-                console.log(`Presunutý zápas ${draggedMatchId} na prázdny interval. Nový dátum: ${newDate}, nové miesto: ${newLocation}, navrhovaný čas začiatku: ${droppedProposedStartTime}. ID cieľového zablokovaného intervalu (na vymazanie): ${targetBlockedIntervalId}`);
+                console.log(`Drag & Drop: drop na empty-interval-row - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Navrhovaný čas: ${droppedProposedStartTime}, Cieľový interval ID: ${targetBlockedIntervalId}`);
                 
-                // IMPORTANT: Delete the original free slot (targetBlockedIntervalId) here, before calling moveAndRescheduleMatch.
-                // This ensures the slot is removed before the recalculation rebuilds the timeline, preventing conflicts.
                 if (targetBlockedIntervalId) {
                     try {
                         await deleteDoc(doc(blockedSlotsCollectionRef, targetBlockedIntervalId));
-                        console.log(`Dropped: Original free slot ${targetBlockedIntervalId} deleted.`);
+                        console.log(`Drag & Drop: Original free slot ${targetBlockedIntervalId} deleted.`);
                     } catch (error) {
-                        console.error(`Dropped: Error deleting original free slot ${targetBlockedIntervalId}:`, error);
-                        // Continue even if deletion fails, the recalculation should clean up eventually
+                        console.error(`Drag & Drop: Error deleting original free slot ${targetBlockedIntervalId}:`, error);
                     }
                 }
                 
@@ -1518,9 +1524,11 @@ async function displayMatchesAsSchedule() {
                 event.preventDefault();
                 event.dataTransfer.dropEffect = 'none'; // Cannot drop on a truly blocked interval
                 event.currentTarget.classList.add('drop-over-forbidden');
+                console.log(`Drag & Drop: dragover na blocked-interval-row - ID: ${event.currentTarget.dataset.id}, Drop efekt: none`);
             });
             row.addEventListener('dragleave', (event) => {
                 event.currentTarget.classList.remove('drop-over-forbidden');
+                console.log(`Drag & Drop: dragleave z blocked-interval-row - ID: ${event.currentTarget.dataset.id}`);
             });
             row.addEventListener('drop', async (event) => {
                 event.preventDefault();
@@ -1532,7 +1540,7 @@ async function displayMatchesAsSchedule() {
                 const startTime = event.currentTarget.dataset.startTime;
                 const endTime = event.currentTarget.dataset.endTime;
 
-                console.log(`Pokus o presun zápasu ${draggedMatchId} na zablokovaný interval: Dátum ${date}, Miesto ${location}, Čas ${startTime}-${endTime}. Presun ZAMITNUTÝ.`);
+                console.log(`Drag & Drop: drop na blocked-interval-row - Pokus o presun zápasu ${draggedMatchId} na zablokovaný interval: Dátum ${date}, Miesto ${location}, Čas ${startTime}-${endTime}. Presun ZAMITNUTÝ.`);
                 await showMessage('Upozornenie', 'Tento časový interval je zablokovaný. Zápas naň nie je možné presunúť.');
             });
         });
@@ -1565,8 +1573,10 @@ async function displayMatchesAsSchedule() {
                 if (targetRow && (targetRow.classList.contains('blocked-interval-row') || targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') ) && !targetRow.classList.contains('footer-spacer-row')) {
                     event.dataTransfer.dropEffect = 'none'; // Over a match or explicitly blocked interval (not footer spacer)
                     targetRow.classList.add('drop-over-forbidden');
+                    console.log(`Drag & Drop: dragover na date-group (forbidden row) - Drop efekt: none`);
                 } else {
                     dateGroupDiv.classList.add('drop-target-active');
+                    console.log(`Drag & Drop: dragover na date-group (pozadie) - Drop efekt: move`);
                 }
             });
 
@@ -1576,6 +1586,7 @@ async function displayMatchesAsSchedule() {
                     targetRow.classList.remove('drop-over-forbidden');
                 }
                 dateGroupDiv.classList.remove('drop-target-active');
+                console.log(`Drag & Drop: dragleave z date-group`);
             });
 
             dateGroupDiv.addEventListener('drop', async (event) => {
@@ -1591,10 +1602,13 @@ async function displayMatchesAsSchedule() {
                 const newLocation = dateGroupDiv.dataset.location;
                 let droppedProposedStartTime = null;
 
+                console.log(`Drag & Drop: drop na date-group (pozadie) - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}`);
+
+
                 if (draggedMatchId) {
                     // Prevent drop on specifically forbidden rows (already handled by dragover, but good to double check)
                     if (targetRow && (targetRow.classList.contains('blocked-interval-row') || targetRow.classList.contains('match-row') || targetRow.classList.contains('empty-interval-row') ) && !targetRow.classList.contains('footer-spacer-row')) {
-                         console.log(`Attempt to drop match ${draggedMatchId} onto a forbidden row. Move DENIED.`);
+                         console.log(`Drag & Drop: Attempt to drop match ${draggedMatchId} onto a forbidden row. Move DENIED.`);
                          await showMessage('Upozornenie', 'Na tento časový interval nie je možné presunúť zápas.');
                          return;
                     }
@@ -1606,7 +1620,7 @@ async function displayMatchesAsSchedule() {
                         // as there's no fixed schedule.
                         const draggedMatchData = (await getDoc(doc(matchesCollectionRef, draggedMatchId))).data();
                         droppedProposedStartTime = draggedMatchData.startTime;
-                        console.log(`Dropped onto unassigned section. Using original match start time: ${droppedProposedStartTime}`);
+                        console.log(`Drag & Drop: Dropped onto unassigned section. Using original match start time: ${droppedProposedStartTime}`);
 
                     } else {
                         // For dropping onto the general date-group area (not a specific row)
@@ -1659,10 +1673,10 @@ async function displayMatchesAsSchedule() {
                         }
 
                         droppedProposedStartTime = `${String(Math.floor(currentPointerForDrop / 60)).padStart(2, '0')}:${String(currentPointerForDrop % 60).padStart(2, '0')}`;
-                        console.log(`Dropped onto date group background. Calculated earliest available time: ${droppedProposedStartTime}`);
+                        console.log(`Drag & Drop: Dropped onto date group background. Calculated earliest available time: ${droppedProposedStartTime}`);
                     }
 
-                    console.log(`Attempting to move and reschedule match ${draggedMatchId} to Date: ${newDate}, Location: ${newLocation}, Proposed Start Time: ${droppedProposedStartTime}.`);
+                    console.log(`Drag & Drop: Attempting to move and reschedule match ${draggedMatchId} to Date: ${newDate}, Location: ${newLocation}, Proposed Start Time: ${droppedProposedStartTime}.`);
                     await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime);
                 }
             });
@@ -1836,6 +1850,7 @@ async function editPlace(placeName, placeType) {
     const placeAddressInput = document.getElementById('placeAddress');
     const placeGoogleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
     const deletePlaceButtonModal = document.getElementById('deletePlaceButtonModal');
+    const placeModalTitle = document.getElementById('placeModalTitle'); // Get the title element
 
     try {
         const q = query(placesCollectionRef, where("name", "==", placeName), where("type", "==", placeType));
@@ -1851,6 +1866,8 @@ async function editPlace(placeName, placeType) {
             placeNameInput.value = placeData.name || '';
             placeAddressInput.value = placeData.address || '';
             placeGoogleMapsUrlInput.value = placeData.googleMapsUrl || '';
+
+            placeModalTitle.textContent = 'Upraviť miesto'; // Set the title here
 
             deletePlaceButtonModal.style.display = 'inline-block';
             if (deletePlaceButtonModal && deletePlaceButtonModal._currentHandler) {
@@ -2486,9 +2503,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         placeNameInput.value = '';
         placeAddressInput.value = '';
         googleMapsUrlInput.value = '';
+        const placeModalTitle = document.getElementById('placeModalTitle'); // Get the title element
+        if (placeModalTitle) {
+            placeModalTitle.textContent = 'Pridať miesto'; // Set title for new place
+        }
         deletePlaceButtonModal.style.display = 'none';
         if (deletePlaceButtonModal && deletePlaceButtonModal._currentHandler) {
-            deletePlaceButtonButton.removeEventListener('click', deletePlaceButtonModal._currentHandler);
+            deletePlaceButtonModal.removeEventListener('click', deletePlaceButtonModal._currentHandler);
             delete deletePlaceButtonModal._currentHandler;
         }
         openModal(placeModal);
