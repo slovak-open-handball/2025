@@ -69,10 +69,10 @@ h1 {
 }
 .content-wrapper {
     display: flex;
-    width: 100%;
-    max-width: 1400px; /* ZMENA: Nastavenie maximálnej šírky pre centrovanie */
-    margin: 20px auto; /* ZMENA: Centrovanie horizontálne */
-    padding: 0 20px;
+    width: 100%; /* Make it span full width */
+    /* REMOVE max-width: 1400px; */
+    /* REMOVE margin: 20px auto; */
+    padding: 0 20px; /* Keep padding for spacing from edges */
     box-sizing: border-box;
     gap: 20px;
 }
@@ -115,7 +115,7 @@ h1 {
     color: #004085;
 }
 main {
-    flex-grow: 1;
+    flex-grow: 1; /* Allows main to take up remaining space */
     padding: 0;
     box-shadow: none;
     background-color: transparent;
@@ -125,11 +125,11 @@ main {
     align-self: flex-start; /* Zabezpečí, že main sa vertikálne neroztiahne viac, ako je potrebné */
     min-height: 0; /* NOVÉ: Zabezpečí, že nebude minimálna výška, ktorá by ho rozťahovala */
 
-    /* NOVÉ: Aby sekcie v main boli vedľa seba */
+    /* ZMENA: Nastavenie main ako flex kontajnera pre centrovanie obsahu */
     display: flex;
-    flex-wrap: wrap; /* Umožní zalomenie na ďalší riadok */
-    gap: 20px; /* Medzera medzi sekciami */
-    justify-content: flex-start; /* Zarovnanie na začiatok */
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center; /* Toto vycentruje sekcie (section-block) v rámci main */
     align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
 }
 
@@ -150,6 +150,9 @@ main {
     min-width: 380px;
     padding: 15px;
     box-sizing: border-box;
+    background-color: #fff; /* Adding background and shadow for clarity as per image */
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 table {
     border-collapse: collapse;
@@ -1002,7 +1005,7 @@ button[type="submit"] {
     flex-wrap: wrap; /* ZMENA: Umožní zalomenie na ďalší riadok */
     gap: 20px; /* ZMENA: Medzera medzi jednotlivými blokmi kategórií */
     margin-top: 15px; /* Trocha miesta od nadpisu */
-    justify-content: flex-start; /* Zarovnanie blokov na začiatok riadku */
+    justify-content: center; /* ZMENA: Centrovanie blokov kategórií v rámci ich kontajnera */
 }
 
 .category-settings-item {
@@ -1038,6 +1041,7 @@ button[type="submit"] {
     gap: 10px; /* Medzera medzi inputmi */
     margin-bottom: 15px; /* Medzera pod skupinou */
     align-items: flex-end; /* Zarovnanie na spodok, aby sa inputy pekne zarovnali */
+    justify-content: center; /* ZMENA: Centrovanie inputov v rámci match-duration-group */
 }
 
 .category-settings-item .form-group {
