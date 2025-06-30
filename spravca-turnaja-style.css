@@ -1263,7 +1263,6 @@ button[type="submit"] {
     flex-wrap: wrap;
     gap: 10px; /* Medzi tlačidlami skupín */
     justify-content: center;
-    flex-grow: 1;
 }
 
 /* Existujúce tlačidlá .display-button budú použité pre skupiny, ale teraz sú v novom kontajneri */
