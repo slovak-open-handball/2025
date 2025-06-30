@@ -6,6 +6,7 @@ const groupModal = document.getElementById('groupModal');
 const groupModalCloseBtn = groupModal ? groupModal.querySelector('.group-modal-close') : null;
 const groupForm = document.getElementById('groupForm');
 const groupCategorySelect = document.getElementById('groupCategory');
+const groupTypeSelect = document.getElementById('groupType'); // NOVÉ: Referencia na select box pre typ skupiny
 const groupNameInput = document.getElementById('groupName');
 const groupModalTitle = document.getElementById('groupModalTitle');
 const groupFormSubmitButton = groupForm ? groupForm.querySelector('button[type="submit"]') : null;
@@ -19,7 +20,8 @@ let editingGroupId = null; // Bude uchovávať skutočné ID dokumentu skupiny p
  * @param {object|null} groupData - Dáta skupiny, ak sa upravuje existujúca skupina.
  */
 async function openGroupModal(groupId = null, groupData = null) {
-    if (!groupModal || !groupForm || !groupCategorySelect || !groupNameInput || !groupModalTitle || !groupFormSubmitButton) {
+    // Aktualizované overenie, aby zahŕňalo aj groupTypeSelect
+    if (!groupModal || !groupForm || !groupCategorySelect || !groupTypeSelect || !groupNameInput || !groupModalTitle || !groupFormSubmitButton) {
         if (groupModal) closeModal(groupModal);
         return;
     }
@@ -35,6 +37,8 @@ async function openGroupModal(groupId = null, groupData = null) {
         groupFormSubmitButton.textContent = 'Uložiť zmeny';
         await populateCategorySelect(groupCategorySelect, groupData.categoryId);
         groupCategorySelect.disabled = false;
+        groupTypeSelect.value = groupData.type || ''; // Nastaví vybraný typ skupiny
+        groupTypeSelect.disabled = false;
         groupNameInput.value = groupData.name || '';
         groupNameInput.focus();
     } else {
@@ -44,9 +48,14 @@ async function openGroupModal(groupId = null, groupData = null) {
         groupFormSubmitButton.textContent = 'Uložiť';
         await populateCategorySelect(groupCategorySelect, null);
         groupCategorySelect.disabled = false;
+        groupTypeSelect.value = ''; // Resetuje typ skupiny
+        groupTypeSelect.disabled = false;
         if (groupCategorySelect.options.length > 1) {
             groupCategorySelect.focus();
-        } else {
+        } else if (groupTypeSelect.options.length > 1) { // Ak sú kategórie prázdne, skúsi fokusovať typ
+            groupTypeSelect.focus();
+        }
+        else {
             groupNameInput.focus();
         }
     }
@@ -105,6 +114,8 @@ async function displayGroupsByCategory() {
             const headerRow = document.createElement('tr');
             const groupNameTh = document.createElement('th');
             groupNameTh.textContent = 'Názov skupiny';
+            const groupTypeTh = document.createElement('th'); // NOVÉ: Hlavička pre typ skupiny
+            groupTypeTh.textContent = 'Typ skupiny'; // Text hlavičky
             const actionsTh = document.createElement('th');
             // Pridanie názvu kategórie do hlavičky stĺpca s tlačidlami
             actionsTh.innerHTML = `<span style="font-weight: bold;">${categoryDisplayName}</span>`; // Názov kategórie
@@ -112,6 +123,7 @@ async function displayGroupsByCategory() {
             actionsTh.style.verticalAlign = 'middle';
             actionsTh.style.width = '150px'; // Nastavte šírku podľa potreby
             headerRow.appendChild(groupNameTh);
+            headerRow.appendChild(groupTypeTh); // NOVÉ: Pridanie hlavičky typu
             headerRow.appendChild(actionsTh);
             thead.appendChild(headerRow);
             categoryGroupsTable.appendChild(thead);
@@ -120,7 +132,7 @@ async function displayGroupsByCategory() {
             if (groupsForThisCategory.length === 0) {
                 const noGroupsRow = document.createElement('tr');
                 const td = document.createElement('td');
-                td.colSpan = 2;
+                td.colSpan = 3; // Zmenené colspan na 3
                 td.textContent = `V kategórii "${categoryDisplayName}" zatiaľ nie sú žiadne skupiny.`; // Zobrazujeme názov kategórie
                 td.style.textAlign = 'center';
                 noGroupsRow.appendChild(td);
@@ -132,6 +144,10 @@ async function displayGroupsByCategory() {
                     const groupNameTd = document.createElement('td');
                     groupNameTd.textContent = group.data.name || 'Neznámy názov skupiny';
                     groupRow.appendChild(groupNameTd);
+
+                    const groupTypeTd = document.createElement('td'); // NOVÉ: Bunka pre typ skupiny
+                    groupTypeTd.textContent = group.data.type || 'Neznámy typ'; // Zobrazí typ skupiny
+                    groupRow.appendChild(groupTypeTd);
 
                     const groupActionsTd = document.createElement('td');
                     groupActionsTd.style.whiteSpace = 'nowrap';
@@ -204,6 +220,10 @@ function resetGroupModal() {
         groupCategorySelect.innerHTML = '<option value="">-- Vyberte kategóriu --</option>';
         groupCategorySelect.disabled = true;
     }
+    if (groupTypeSelect) { // NOVÉ: Resetuje typ skupiny
+        groupTypeSelect.value = '';
+        groupTypeSelect.disabled = true;
+    }
 }
 
 // Spustí sa po načítaní DOM obsahu
@@ -247,11 +267,18 @@ if (groupForm) {
     groupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const selectedCategoryId = groupCategorySelect ? groupCategorySelect.value : '';
+        const selectedGroupType = groupTypeSelect ? groupTypeSelect.value : ''; // NOVÉ: Získame vybraný typ skupiny
         const groupName = groupNameInput ? groupNameInput.value.trim() : '';
 
         if (selectedCategoryId === '' || selectedCategoryId.startsWith('--')) {
             await showMessage('Chyba', 'Prosím, vyberte platnú kategóriu pre skupinu.');
             if (groupCategorySelect) groupCategorySelect.focus();
+            return;
+        }
+        // NOVÉ: Overenie, či bol vybraný typ skupiny
+        if (selectedGroupType === '' || selectedGroupType.startsWith('--')) {
+            await showMessage('Chyba', 'Prosím, vyberte platný typ skupiny.');
+            if (groupTypeSelect) groupTypeSelect.focus();
             return;
         }
         if (groupName === '') {
@@ -267,20 +294,25 @@ if (groupForm) {
         try {
             if (currentGroupModalMode === 'add') {
                 // Režim pridávania novej skupiny
-                // Skontrolujeme, či skupina s rovnakým názvom už v danej kategórii existuje
-                const qExistingName = query(groupsCollectionRef, where('name', '==', groupName), where('categoryId', '==', selectedCategoryId));
+                // Skontrolujeme, či skupina s rovnakým názvom a TYPOM už v danej kategórii existuje
+                const qExistingName = query(
+                    groupsCollectionRef,
+                    where('name', '==', groupName),
+                    where('categoryId', '==', selectedCategoryId),
+                    where('type', '==', selectedGroupType) // NOVÉ: Kontrola aj podľa typu
+                );
                 const existingNameSnapshot = await getDocs(qExistingName);
                 if (!existingNameSnapshot.empty) {
-                    await showMessage('Upozornenie', `Skupina s názvom "${groupName}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie.`);
+                    await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
                     if (groupNameInput) groupNameInput.focus();
                     return;
                 }
 
                 // Generujeme náhodné ID pre nový dokument skupiny
                 const newGroupDocRef = doc(groupsCollectionRef);
-                await setDoc(newGroupDocRef, { name: groupName, categoryId: selectedCategoryId });
+                await setDoc(newGroupDocRef, { name: groupName, categoryId: selectedCategoryId, type: selectedGroupType }); // Uloží aj typ skupiny
 
-                await showMessage('Úspech', `Skupina "${groupName}" v kategórii "${categoryDisplayName}" úspešne pridaná.`);
+                await showMessage('Úspech', `Skupina "${groupName}" (${selectedGroupType}) v kategórii "${categoryDisplayName}" úspešne pridaná.`);
             } else if (currentGroupModalMode === 'edit') {
                 // Režim úpravy existujúcej skupiny
                 const groupIdToUpdate = editingGroupId; // Toto je stabilné ID dokumentu skupiny
@@ -301,26 +333,33 @@ if (groupForm) {
                 const oldGroupData = currentGroupDoc.data();
                 const oldCategoryOfGroup = oldGroupData.categoryId;
                 const oldNameOfGroup = oldGroupData.name;
+                const oldTypeOfGroup = oldGroupData.type; // NOVÉ: Starý typ skupiny
 
-                // Skontrolujeme, či sa zmenil názov alebo kategória
+                // Skontrolujeme, či sa zmenil názov, kategória alebo typ
                 const nameChanged = (groupName !== oldNameOfGroup);
                 const categoryChanged = (selectedCategoryId !== oldCategoryOfGroup);
+                const typeChanged = (selectedGroupType !== oldTypeOfGroup); // NOVÉ: Kontrola zmeny typu
 
-                if (nameChanged || categoryChanged) {
-                    // Ak sa zmenil názov alebo kategória, skontrolujeme unikátnosť nového kombina
-                    const qExistingName = query(groupsCollectionRef, where('name', '==', groupName), where('categoryId', '==', selectedCategoryId));
+                if (nameChanged || categoryChanged || typeChanged) {
+                    // Ak sa zmenil názov, kategória alebo typ, skontrolujeme unikátnosť nového kombina
+                    const qExistingName = query(
+                        groupsCollectionRef,
+                        where('name', '==', groupName),
+                        where('categoryId', '==', selectedCategoryId),
+                        where('type', '==', selectedGroupType) // NOVÉ: Kontrola aj podľa typu
+                    );
                     const existingNameSnapshot = await getDocs(qExistingName);
 
-                    // Ak existuje iný dokument s rovnakým názvom a kategóriou
+                    // Ak existuje iný dokument s rovnakým názvom, kategóriou a typom
                     if (!existingNameSnapshot.empty && existingNameSnapshot.docs.some(doc => doc.id !== groupIdToUpdate)) {
-                        await showMessage('Upozornenie', `Skupina s názvom "${groupName}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie.`);
+                        await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
                         if (groupNameInput) groupNameInput.focus();
                         return;
                     }
 
                     const batch = writeBatch(db);
-                    // Aktualizujeme pole 'name' a 'categoryId' v existujúcom dokumente skupiny
-                    batch.update(doc(groupsCollectionRef, groupIdToUpdate), { name: groupName, categoryId: selectedCategoryId });
+                    // Aktualizujeme pole 'name', 'categoryId' a 'type' v existujúcom dokumente skupiny
+                    batch.update(doc(groupsCollectionRef, groupIdToUpdate), { name: groupName, categoryId: selectedCategoryId, type: selectedGroupType });
 
                     // Ak sa zmenila kategória skupiny, aktualizujeme aj categoryId v kluboch priradených k tejto skupine
                     if (categoryChanged) {
@@ -331,7 +370,7 @@ if (groupForm) {
                         });
                     }
                     await batch.commit();
-                    await showMessage('Úspech', `Skupina "${oldNameOfGroup}" úspešne upravená na "${groupName}" v kategórii "${categoryDisplayName}".`);
+                    await showMessage('Úspech', `Skupina "${oldNameOfGroup}" úspešne upravená na "${groupName}" (${selectedGroupType}) v kategórii "${categoryDisplayName}".`);
                 } else {
                     // Ak sa nič nezmenilo, len zatvoríme modál
                     await showMessage('Informácia', 'Žiadne zmeny neboli vykonané.');
