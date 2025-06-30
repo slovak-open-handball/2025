@@ -528,8 +528,12 @@ function displayGroupsForCategory(categoryId) {
                                     const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
                                     const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
                                         .replace(/\s/g, '+');
-                                    // Aktualizovaná URL
-                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}`;
+                                    
+                                    // Získanie aktuálneho hash fragmentu z zobrazenie-skupin.html
+                                    const currentZobrazenieSkupinHash = window.location.hash;
+
+                                    // Aktualizovaná URL s novými parametrami
+                                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(currentZobrazenieSkupinHash)}`;
                                     window.location.href = url;
                                 });
                                 teamList.appendChild(teamItem);
@@ -694,8 +698,12 @@ function displaySingleGroup(groupId) {
                     const clickedClubNameRaw = event.currentTarget.dataset.clubName;                    
                     const cleanedClubName = getCleanClubNameForUrl(clickedClubNameRaw, categoryNameForUrl, team.name)
                         .replace(/\s/g, '+');
-                    // Aktualizovaná URL
-                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}`;
+                    
+                    // Získanie aktuálneho hash fragmentu z zobrazenie-skupin.html
+                    const currentZobrazenieSkupinHash = window.location.hash;
+
+                    // Aktualizovaná URL s novými parametrami
+                    const url = `prihlasene-kluby.html?club=${cleanedClubName}&team=${cleanedTeamName}&category=${categoryUrlParam}&group=${groupUrlParam}&sourcePage=zobrazenie-skupin&sourceHash=${encodeURIComponent(currentZobrazenieSkupinHash)}`;
                     window.location.href = url;
                 });
                 teamList.appendChild(teamItem);
