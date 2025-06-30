@@ -236,8 +236,8 @@ function displayCategoriesAsButtons() {
     }
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
-    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // Skryje navigačné tlačidlá skupín
-    if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
+    if (groupSelectionButtons) groupSelectionButtons.style.display = 'none'; // This hides it
+    if (allGroupsContent) allGroupsContent.style.display = 'none'; // This hides it
     if (backToCategoriesButton) backToCategoriesButton.style.display = 'none';
     if (backToGroupButtonsButton) backToGroupButtonsButton.style.display = 'none';
     showOnly(null); // Zabezpečí skrytie všetkých kontajnerov pre skupiny
@@ -660,7 +660,7 @@ function displaySingleGroup(groupId) {
             singleGroupDisplayBlock.style.width = `${globalMaxTeamDisplayNameWidth}px`;
             singleGroupDisplayBlock.style.minWidth = `${globalMaxTeamDisplayNameWidth}px`;
             singleGroupDisplayBlock.style.maxWidth = `${globalMaxTeamDisplayNameWidth}px`;
-            singleGroupDisplayBlock.style.flexBasis = 'auto'; // Flex-basis by mal byť auto, aby width prebralo prioritu
+            singleGroupDisplayBlock.style.flexBasis = 'auto'; // Flex-basis by mal byť auto, aby width prebralo priorit
             singleGroupDisplayBlock.style.flexShrink = '0'; // Zabráni zmenšovaniu
             singleGroupDisplayBlock.style.flexGrow = '0'; // Zabráni zväčšovaniu
         }
@@ -831,12 +831,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     await loadAllTournamentData();
+
+    // Pridanie listenerov pre tlačidlá "Späť"
     if (backToCategoriesButton) backToCategoriesButton.addEventListener('click', goBackToCategories);
     if (backToGroupButtonsButton) backToGroupButtonsButton.addEventListener('click', goBackToGroupView);
-    displayCategoriesAsButtons();
+
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
+
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
         // Dekódujeme a nahradíme plusy späť na medzery pred hľadaním
@@ -850,31 +853,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
-            setTimeout(() => {
-                if (urlGroupName) {
-                    let decodedGroupId = null;
-                    const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
-                    if (foundGroup) {
-                        decodedGroupId = foundGroup.id;
-                    }
+            // Odstránený setTimeout pre priame zobrazenie
+            if (urlGroupName) {
+                let decodedGroupId = null;
+                const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
+                if (foundGroup) {
+                    decodedGroupId = foundGroup.id;
+                }
 
-                    if (decodedGroupId) {
-                        // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
-                        displaySingleGroup(decodedGroupId);
-                    } else {
-                        // Ak názov skupiny z URL neexistuje, zobrazíme prehľad kategórie
-                        displayGroupsForCategory(decodedCategoryId);
-                    }
+                if (decodedGroupId) {
+                    // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
+                    displaySingleGroup(decodedGroupId);
                 } else {
-                    // Ak v URL nie je názov skupiny, zobrazíme prehľad kategórie
+                    // Ak názov skupiny z URL neexistuje, zobrazíme prehľad kategórie
                     displayGroupsForCategory(decodedCategoryId);
                 }
-            }, 50);
+            } else {
+                // Ak v URL nie je názov skupiny, zobrazíme prehľad kategórie
+                displayGroupsForCategory(decodedCategoryId);
+            }
         } else {
             // Ak kategória z URL neexistuje, vrátime sa na zobrazenie kategórií
             goBackToCategories();
         }
-    } 
+    } else {
+        // Ak v URL nie je hash, zobrazíme kategórie ako tlačidlá
+        displayCategoriesAsButtons();
+    }
 });
 window.addEventListener('hashchange', () => {
     if (!getHTMLElements()) {
