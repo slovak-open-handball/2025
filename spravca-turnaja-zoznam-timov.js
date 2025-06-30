@@ -423,6 +423,46 @@ function attemptAutoSelectCategory(teamName) {
     }
 }
 
+/**
+ * Nájde prvé dostupné poradie v skupine (najmenšie celé číslo > 0).
+ * @param {string} categoryId - ID kategórie.
+ * @param {string} groupId - ID skupiny.
+ * @param {string|null} excludeTeamId - ID tímu, ktorý sa má vylúčiť z kontroly (pri úprave).
+ * @returns {Promise<number|null>} Prvé dostupné poradie alebo null, ak nastane chyba.
+ */
+async function findFirstAvailableOrderInGroup(categoryId, groupId, excludeTeamId = null) {
+    if (!categoryId || !groupId) {
+        return null;
+    }
+
+    try {
+        const q = query(
+            clubsCollectionRef,
+            where('categoryId', '==', categoryId),
+            where('groupId', '==', groupId)
+        );
+        const querySnapshot = await getDocs(q);
+        const existingOrders = new Set();
+        querySnapshot.forEach(doc => {
+            if (doc.id !== excludeTeamId) { // Vylúčime aktuálne upravovaný tím
+                const order = doc.data().orderInGroup;
+                if (typeof order === 'number' && order > 0) {
+                    existingOrders.add(order);
+                }
+            }
+        });
+
+        let order = 1;
+        while (existingOrders.has(order)) {
+            order++;
+        }
+        return order;
+    } catch (e) {
+        console.error("Chyba pri hľadaní dostupného poradia v skupine:", e);
+        return null;
+    }
+}
+
 
 /**
  * Otvorí modálne okno klubu v rôznych režimoch (priradenie, úprava, vytvorenie, filter).
@@ -522,13 +562,20 @@ async function openClubModal(identifier = null, mode = 'assign') {
                 };
             }
             if (clubGroupSelect) {
-                clubGroupSelect.onchange = () => {
+                clubGroupSelect.onchange = async () => { // Zmena na async
                     const selectedGroupId = clubGroupSelect.value;
-                    if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--')) {
+                    const selectedCategoryId = clubCategorySelect.value; // Získať vybranú kategóriu
+                    if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--') && selectedCategoryId) {
                         if (orderInGroupInput) {
                             orderInGroupInput.disabled = false;
-                            orderInGroupInput.focus();
                             orderInGroupInput.setAttribute('required', 'required');
+                            const availableOrder = await findFirstAvailableOrderInGroup(selectedCategoryId, selectedGroupId, editingClubId);
+                            if (availableOrder !== null) {
+                                orderInGroupInput.value = availableOrder;
+                            } else {
+                                orderInGroupInput.value = ''; // Reset if no order found or error
+                            }
+                            orderInGroupInput.focus();
                         }
                     } else {
                         if (orderInGroupInput) {
@@ -617,13 +664,20 @@ async function openClubModal(identifier = null, mode = 'assign') {
                         };
                     }
                     if (clubGroupSelect) {
-                        clubGroupSelect.onchange = () => {
+                        clubGroupSelect.onchange = async () => { // Zmena na async
                             const selectedGroupId = clubGroupSelect.value;
-                            if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--')) {
+                            const selectedCategoryId = clubCategorySelect.value; // Získať vybranú kategóriu
+                            if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--') && selectedCategoryId) {
                                 if (orderInGroupInput) {
                                     orderInGroupInput.disabled = false;
-                                    orderInGroupInput.focus();
                                     orderInGroupInput.setAttribute('required', 'required');
+                                    const availableOrder = await findFirstAvailableOrderInGroup(selectedCategoryId, selectedGroupId, editingClubId);
+                                    if (availableOrder !== null) {
+                                        orderInGroupInput.value = availableOrder;
+                                    } else {
+                                        orderInGroupInput.value = ''; // Reset if no order found or error
+                                    }
+                                    orderInGroupInput.focus();
                                 }
                             } else {
                                 if (orderInGroupInput) {
@@ -693,13 +747,20 @@ async function openClubModal(identifier = null, mode = 'assign') {
                 };
             }
             if (clubGroupSelect) {
-                clubGroupSelect.onchange = () => {
+                clubGroupSelect.onchange = async () => { // Zmena na async
                     const selectedGroupId = clubGroupSelect.value;
-                    if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--')) {
+                    const selectedCategoryId = clubCategorySelect.value; // Získať vybranú kategóriu
+                    if (selectedGroupId && selectedGroupId !== '' && !selectedGroupId.startsWith('--') && selectedCategoryId) {
                         if (orderInGroupInput) {
                             orderInGroupInput.disabled = false;
-                            orderInGroupInput.focus();
                             orderInGroupInput.setAttribute('required', 'required');
+                            const availableOrder = await findFirstAvailableOrderInGroup(selectedCategoryId, selectedGroupId, editingClubId);
+                            if (availableOrder !== null) {
+                                orderInGroupInput.value = availableOrder;
+                            } else {
+                                orderInGroupInput.value = ''; // Reset if no order found or error
+                            }
+                            orderInGroupInput.focus();
                         }
                     } else {
                         if (orderInGroupInput) {
