@@ -895,6 +895,21 @@ if (clubForm) {
                 if (clubNameInput) clubNameInput.focus();
                 return;
             }
+            // Kontrola duplicitného poradia v skupine pri vytváraní
+            if (selectedCategoryIdInModal && selectedGroupIdInModal && orderInGroup !== null) {
+                const existingOrderQuery = query(clubsCollectionRef,
+                    where('categoryId', '==', selectedCategoryIdInModal),
+                    where('groupId', '==', selectedGroupIdInModal),
+                    where('orderInGroup', '==', orderInGroup)
+                );
+                const existingOrderSnapshot = await getDocs(existingOrderQuery);
+                if (!existingOrderSnapshot.empty) {
+                    await showMessage('Chyba', `Poradie ${orderInGroup} je už obsadené v tejto skupine. Prosím, vyberte iné poradie.`);
+                    if (orderInGroupInput) orderInGroupInput.focus();
+                    return;
+                }
+            }
+
         } else if (operationType === 'assign') {
             if (!unassignedClubSelect || !unassignedClubSelect.value || unassignedClubSelect.value.startsWith('--')) {
                 await showMessage('Chyba', "Prosím, vyberte nepriradený tím k priradeniu.");
@@ -1108,53 +1123,12 @@ async function displayCreatedTeams() {
             return;
         }
 
-        // Predvolené zoradenie: Tímy, ktoré obsahujú názov kategórie vo svojom názve, idú na koniec
+        // Predvolené zoradenie podľa názvu tímu
         allTeams.sort((a, b) => {
-            // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
-            const containsCategoryNameInTeamName = (team) => {
-                const teamName = (team.name || team.id || '').trim().toLowerCase();
-                // Nájdeme objekt kategórie pre aktuálny tím
-                const teamCategory = allAvailableCategories.find(cat => cat.id === team.categoryId);
-                
-                if (!teamCategory) {
-                    return false; // Ak tím nemá kategóriu alebo kategória nebola nájdená, nemôže obsahovať jej názov
-                }
-
-                const categoryName = (teamCategory.name || teamCategory.id).trim().toLowerCase();
-                
-                // Kontrolujeme, či názov tímu začína názvom kategórie (case-insensitive)
-                // a či je buď presná zhoda, alebo za názvom kategórie nasleduje medzera alebo pomlčka.
-                // Príklady, ktoré by mali byť na konci: "U12 CH 1A", "U12 CH-Team", "U12 CH - Team", "U12 CH" (ak je to názov tímu)
-                if (teamName.startsWith(categoryName)) {
-                    if (teamName.length === categoryName.length) {
-                        return true; // Presná zhoda názvu tímu s názvom kategórie
-                    }
-                    const charAfterCategory = teamName.charAt(categoryName.length);
-                    if (charAfterCategory === ' ' || charAfterCategory === '-') {
-                        return true; // Názov tímu začína názvom kategórie a hneď za ním je medzera alebo pomlčka
-                    }
-                }
-                return false;
-            };
-
-            const aContainsCategory = containsCategoryNameInTeamName(a);
-            const bContainsCategory = containsCategoryNameInTeamName(b);
-
-            // Ak 'a' obsahuje kategóriu a 'b' nie, 'a' ide za 'b'
-            if (aContainsCategory && !bContainsCategory) {
-                return 1;
-            }
-            // Ak 'b' obsahuje kategóriu a 'a' nie, 'a' ide pred 'b'
-            if (!aContainsCategory && bContainsCategory) {
-                return -1;
-            }
-
-            // Ak sú obe alebo žiadna v kategórii, zoradiť abecedne
             const nameA = (a.name || a.id || '').trim().toLowerCase();
             const nameB = (b.name || b.id || '').trim().toLowerCase();
             return nameA.localeCompare(nameB, 'sk-SK');
         });
-
 
         let filteredTeams = allTeams;
 
@@ -1190,7 +1164,7 @@ async function displayCreatedTeams() {
 
         teamsToDisplay = filteredTeams; // Aktualizácia teamsToDisplay po filtrovaní
 
-        // Aplikácia zoradenia (Poradie v skupine)
+        // Aplikácia zoradenia
         if (currentSort.column === 'orderInGroup') {
             teamsToDisplay.sort((a, b) => {
                 const orderA = a.orderInGroup;
