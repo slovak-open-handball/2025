@@ -14,6 +14,13 @@ const groupFormSubmitButton = groupForm ? groupForm.querySelector('button[type="
 let currentGroupModalMode = 'add';
 let editingGroupId = null; // Bude uchovávať skutočné ID dokumentu skupiny pri úprave
 
+// Mapa pre preklad typov skupín z formátu DB na zobrazenie s diakritikou
+const groupTypeDisplayMap = {
+    "Zakladna skupina": "Základná skupina",
+    "Nadstavbova skupina": "Nadstavbová skupina",
+    "Skupina o umiestnenie": "Skupina o umiestnenie"
+};
+
 /**
  * Otvorí modálne okno pre pridanie alebo úpravu skupiny.
  * @param {string|null} groupId - ID skupiny, ak sa upravuje existujúca skupina.
@@ -146,7 +153,8 @@ async function displayGroupsByCategory() {
                     groupRow.appendChild(groupNameTd);
 
                     const groupTypeTd = document.createElement('td'); // NOVÉ: Bunka pre typ skupiny
-                    groupTypeTd.textContent = group.data.type || 'Neznámy typ'; // Zobrazí typ skupiny
+                    // Použijeme groupTypeDisplayMap na zobrazenie s diakritikou
+                    groupTypeTd.textContent = groupTypeDisplayMap[group.data.type] || group.data.type || 'Neznámy typ';
                     groupRow.appendChild(groupTypeTd);
 
                     const groupActionsTd = document.createElement('td');
@@ -303,7 +311,7 @@ if (groupForm) {
                 );
                 const existingNameSnapshot = await getDocs(qExistingName);
                 if (!existingNameSnapshot.empty) {
-                    await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
+                    await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${groupTypeDisplayMap[selectedGroupType] || selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
                     if (groupNameInput) groupNameInput.focus();
                     return;
                 }
@@ -312,7 +320,7 @@ if (groupForm) {
                 const newGroupDocRef = doc(groupsCollectionRef);
                 await setDoc(newGroupDocRef, { name: groupName, categoryId: selectedCategoryId, type: selectedGroupType }); // Uloží aj typ skupiny
 
-                await showMessage('Úspech', `Skupina "${groupName}" (${selectedGroupType}) v kategórii "${categoryDisplayName}" úspešne pridaná.`);
+                await showMessage('Úspech', `Skupina "${groupName}" (${groupTypeDisplayMap[selectedGroupType] || selectedGroupType}) v kategórii "${categoryDisplayName}" úspešne pridaná.`);
             } else if (currentGroupModalMode === 'edit') {
                 // Režim úpravy existujúcej skupiny
                 const groupIdToUpdate = editingGroupId; // Toto je stabilné ID dokumentu skupiny
@@ -352,7 +360,7 @@ if (groupForm) {
 
                     // Ak existuje iný dokument s rovnakým názvom, kategóriou a typom
                     if (!existingNameSnapshot.empty && existingNameSnapshot.docs.some(doc => doc.id !== groupIdToUpdate)) {
-                        await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
+                        await showMessage('Upozornenie', `Skupina s názvom "${groupName}" a typom "${groupTypeDisplayMap[selectedGroupType] || selectedGroupType}" už v kategórii "${categoryDisplayName}" existuje! Názvy skupín musia byť unikátne v rámci kategórie a typu.`);
                         if (groupNameInput) groupNameInput.focus();
                         return;
                     }
@@ -370,7 +378,7 @@ if (groupForm) {
                         });
                     }
                     await batch.commit();
-                    await showMessage('Úspech', `Skupina "${oldNameOfGroup}" úspešne upravená na "${groupName}" (${selectedGroupType}) v kategórii "${categoryDisplayName}".`);
+                    await showMessage('Úspech', `Skupina "${oldNameOfGroup}" úspešne upravená na "${groupName}" (${groupTypeDisplayMap[selectedGroupType] || selectedGroupType}) v kategórii "${categoryDisplayName}".`);
                 } else {
                     // Ak sa nič nezmenilo, len zatvoríme modál
                     await showMessage('Informácia', 'Žiadne zmeny neboli vykonané.');
