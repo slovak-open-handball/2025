@@ -169,6 +169,8 @@ main {
     border-radius: 8px; /* Vrátenie zaoblených rohov */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Vrátenie tieňa */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
+    /* ODSTRÁNENÉ: max-width: 710px; */
+    margin: 0 auto; /* Zabezpečte, aby zostal centrovaný */
 }
 
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
@@ -415,7 +417,7 @@ td:last-child {
     border: 1px solid #888;
     width: 90%;
     max-width: 600px;
-    border-radius: 8px;
+    border-radius: 8鸣;
     position: relative;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -997,9 +999,7 @@ button[type="submit"] {
     justify-content: center; /* Centrovanie blokov kategórií v rámci ich kontajnera */
     width: 100%; /* Dôležité: zabezpečí, že kontajner využije plnú šírku rodiča */
     
-    /* Max-width pre tento kontajner na kontrolu celkového rozloženia vo viacerých stĺpcoch */
-    /* Dva prvky (každý min 330px široký) + 20px medzera = 330*2 + 20 = 680px */
-    max-width: 680px; 
+    /* ODSTRÁNENÉ: max-width pre tento kontajner na kontrolu celkového rozloženia vo viacerých stĺpcoch */
     margin-left: auto;
     margin-right: auto; /* Centrujte samotný kontajner v rámci rodiča */
 }
@@ -1062,7 +1062,7 @@ button[type="submit"] {
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu pre dva stĺpce */
-    flex: 0 0 auto; /* Umožnite obsahu diktovať veľkosť, bez pevného percenta */
+    flex: 1 1 calc(var(--settings-element-width) + (2 * 15px)); /* Umožnite obsahu diktovať veľkosť, s možnosťou rásť */
     display: flex; /* Urobte z neho flexbox kontajner */
     flex-direction: column; /* Uložte obsah vertikálne */
     align-items: center; /* Centrujte obsah horizontálne v rámci prvku */
@@ -1077,9 +1077,7 @@ button[type="submit"] {
 /* Upravte hlavný biely obdĺžnik (.main-content-area .section-block) */
 .main-content-area .section-block {
     /* Základné štýly zdedené */
-    /* Upravte max-width tak, aby sa do neho pohodlne zmestil #categorySettingsContainer alebo všeobecný formulár nastavení */
-    /* Max. šírka #categorySettingsContainer (680px) + 2x odsadenie section-block (2*15px = 30px) = 710px */
-    max-width: 710px; 
+    /* ODSTRÁNENÉ: max-width tak, aby sa do neho pohodlne zmestil #categorySettingsContainer alebo všeobecný formulár nastavení */
     margin: 0 auto; /* Zabezpečte, aby zostal centrovaný */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečte, aby bol obsah plne viditeľný */
@@ -1090,19 +1088,18 @@ button[type="submit"] {
     .category-settings-item {
         flex: 1 1 100%; /* Jeden stĺpec, zaberie celú šírku */
         min-width: calc(var(--settings-element-width) + (2 * 15px)); /* Stále musí byť aspoň tak široký ako vstupy */
-        max-width: calc(var(--settings-element-width) + (2 * 15px)); /* Maximálna šírka pre jeden prvok */
+        /* ODSTRÁNENÉ: max-width: calc(var(--settings-element-width) + (2 * 15px)); */
         /* Ak je h3 veľmi dlhý, bude sa stále pretekať kvôli overflow: visible; na .category-settings-item */
     }
 
     #categorySettingsContainer {
         flex-direction: column; /* Stohujte prvky vertikálne */
         align-items: center; /* Centrujte prvky jedného stĺpca */
-        max-width: calc(var(--settings-element-width) + (2 * 15px)); /* Maximálna šírka pre kontajner v režime jedného stĺpca */
+        /* ODSTRÁNENÉ: max-width pre kontajner v režime jedného stĺpca */
     }
     
     .main-content-area .section-block {
-        /* Maximálna šírka pre jeden stĺpec: max-width z #categorySettingsContainer + 2x odsadenie section-block */
-        max-width: calc(var(--settings-element-width) + (2 * 15px) + (2 * 15px)); /* 300 + 30 + 30 = 360px */
+        /* ODSTRÁNENÉ: Maximálna šírka pre jeden stĺpec: max-width z #categorySettingsContainer + 2x odsadenie section-block */
     }
 }
 
