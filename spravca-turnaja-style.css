@@ -1274,3 +1274,125 @@ button[type="submit"] {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+
+
+
+
+
+
+
+
+/* Nové pravidlá pre zobrazenie skupín v mriežke */
+.groups-display-grid {
+    display: flex; /* Používa flexbox pre zobrazenie vedľa seba */
+    flex-wrap: wrap; /* Zalamuje prvky do ďalšieho riadku, ak sa nezmestia */
+    gap: 20px; /* Medzera medzi jednotlivými skupinami */
+    justify-content: flex-start; /* Zarovná skupiny od začiatku riadku */
+    align-items: flex-start; /* Zarovná skupiny na začiatku krížených osí */
+    padding: 10px 0; /* Malý padding zhora/zdola pre prehľadnosť */
+}
+
+.group-display {
+    background-color: #ffffff; /* Biely podklad pre každú skupinu */
+    border: 1px solid #ddd; /* Jemný okraj */
+    border-radius: 8px; /* Zaoblené rohy */
+    padding: 15px; /* Vnútorné odsadenie */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Jemný tieň pre 3D efekt */
+    flex: 1 1 calc(33% - 20px); /* Umožní 3 stĺpce s medzerami, prispôsobí sa */
+    min-width: 280px; /* Minimálna šírka skupiny, aby sa nezmenšovala príliš */
+    max-width: 100%; /* Maximálna šírka pre mobilné zobrazenie */
+    box-sizing: border-box; /* Zabezpečí, že padding a border sú súčasťou šírky */
+    display: flex; /* Flexbox aj pre vnútro group-display */
+    flex-direction: column; /* Položky vo vnútri idú pod seba */
+}
+
+/* Prispôsobenie pre menšie obrazovky */
+@media (max-width: 1200px) {
+    .group-display {
+        flex: 1 1 calc(50% - 20px); /* 2 stĺpce na stredne veľkých obrazovkách */
+    }
+}
+
+@media (max-width: 768px) {
+    .groups-display-grid {
+        flex-direction: column; /* Na malých obrazovkách pod sebou */
+        align-items: stretch; /* Rozšíri sa na celú šírku */
+        gap: 15px; /* Menšie medzery */
+    }
+    .group-display {
+        flex: 1 1 auto; /* Prispôsobí sa plnej šírke */
+        min-width: unset; /* Zruší minimálnu šírku */
+        padding: 12px;
+    }
+}
+
+/* Štýly pre nadpisy skupín v prehľade */
+.group-display h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #3a8d41; /* Zelená farba nadpisu */
+    font-size: 1.2em;
+    border-bottom: 1px solid #eee; /* Jemná čiara pod nadpisom */
+    padding-bottom: 8px;
+    text-align: center;
+}
+
+.group-display h3.active-title {
+    background-color: #c46f50; /* Aktívny stav nadpisu */
+    color: white;
+    border-radius: 5px;
+    padding: 8px;
+    transition: background-color 0.3s ease;
+}
+
+/* Štýly pre zoznam tímov v skupine */
+.team-list {
+    list-style: none; /* Odstráni odrážky */
+    padding: 0;
+    margin: 0;
+}
+
+.team-list-item {
+    background-color: #f9f9f9; /* Svetlejší podklad pre položky */
+    margin-bottom: 5px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    font-size: 0.95em;
+    color: #555;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.team-list-item:hover {
+    background-color: #e6e6e6; /* Zmena farby pri hoveri */
+    border-color: #ccc;
+}
+
+/* Štýly pre sekciu nepriradených tímov */
+.unassigned-teams-section {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px dashed #ccc; /* Prerušovaný okraj */
+    border-radius: 8px;
+    background-color: #fffaf0; /* Jemne žltý podklad */
+    text-align: center;
+}
+
+.unassigned-teams-section h2 {
+    color: #c46f50; /* Oranžová farba nadpisu */
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.4em;
+}
+
+.unassigned-team-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.unassigned-team-list .team-list-item {
+    background-color: #ffe0b2; /* Oranžový podklad pre nepriradené tímy */
+    border-color: #ffcc80;
+}
