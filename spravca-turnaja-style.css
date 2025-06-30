@@ -1079,7 +1079,7 @@ button[type="submit"] {
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu */
-    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* ZMENENÉ: Explicitná veľkosť, aby sa nezmenšovali ani nenaťahovali príliš */
+    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* Explicitná veľkosť, aby sa nezmenšovali ani nenaťahovali príliš */
     display: flex; /* Urobte z neho flexbox kontajner */
     flex-direction: column; /* Uložte obsah vertikálne */
     align-items: center; /* Centrujte obsah horizontálne v rámci prvku */
@@ -1103,6 +1103,16 @@ button[type="submit"] {
     flex-basis: auto; /* Umožní obsahu definovať základnú veľkosť, ale môže sa zväčšiť/zmenšiť */
     flex-grow: 1; /* Zabezpečí, že zaberie dostupný priestor */
 }
+
+/* NOVÉ: Úpravy pre categorySettingsForm */
+#categorySettingsForm {
+    display: flex; /* Urobí z neho flex kontajner */
+    flex-direction: column; /* Udrží h2 a categorySettingsContainer pod sebou */
+    width: 100%; /* Zabezpečí, že formulár zaberie celú šírku rodiča */
+    max-width: none; /* Odstráni prípadné obmedzenia šírky */
+    flex-grow: 1; /* Umožní formuláru roztiahnuť sa */
+}
+
 
 /* Responzívne úpravy pre .category-settings-item a jeho kontajnery */
 @media (max-width: 750px) { /* Upravte breakpoint na prepnutie na jeden stĺpec pre užšie obrazovky */
