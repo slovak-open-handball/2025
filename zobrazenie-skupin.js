@@ -849,9 +849,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
 
+    let handledByHash = false; // Príznak, či zobrazenie bolo spracované podľa hashu
+
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
-        // Dekódujeme a nahradíme plusy späť na medzery pred hľadaním
         const urlCategoryName = decodeURIComponent(hashParts[0]).replace(/\+/g, ' ');
         const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]).replace(/\+/g, ' ') : null;
 
@@ -862,8 +863,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
-            // Ak je kategória z URL platná, zobrazíme tlačidlá kategórií a zavoláme displayGroupsForCategory
-            displayCategoriesAsButtons(); // Zobrazí tlačidlá kategórií a nastaví groupSelectionButtons na "Vyberte kategóriu..."
             if (urlGroupName) {
                 let decodedGroupId = null;
                 const foundGroup = allGroups.find(group => (group.name || group.id) === urlGroupName && group.categoryId === decodedCategoryId);
@@ -874,20 +873,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (decodedGroupId) {
                     // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
                     displaySingleGroup(decodedGroupId);
+                    handledByHash = true;
                 } else {
                     // Ak názov skupiny z URL neexistuje, zobrazíme prehľad kategórie
                     displayGroupsForCategory(decodedCategoryId);
+                    handledByHash = true;
                 }
             } else {
                 // Ak v URL nie je názov skupiny, zobrazíme prehľad kategórie
                 displayGroupsForCategory(decodedCategoryId);
+                handledByHash = true;
             }
         } else {
-            // Ak kategória z URL neexistuje, vrátime sa na zobrazenie kategórií (čo ju zobrazí)
-            goBackToCategories();
+            // Kategória z URL hashu sa nenašla, prejde sa na predvolené zobrazenie
         }
-    } else {
-        // Ak v URL nie je hash, zobrazíme kategórie ako tlačidlá (čo už zobrazí aj groupSelectionButtons s default správou)
+    }
+
+    if (!handledByHash) {
+        // Ak nebol spracovaný platný hash, zobrazíme predvolené zobrazenie výberu kategórií
         displayCategoriesAsButtons();
     }
 });
@@ -895,9 +898,6 @@ window.addEventListener('hashchange', () => {
     if (!getHTMLElements()) {
         return;
     }
-    // categoryButtonsContainer je už vždy zobrazený a naplnený v DOMContentLoaded
-    // if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex'; // Toto už nie je potrebné tu
-
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
