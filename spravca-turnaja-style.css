@@ -283,6 +283,9 @@ td:last-child {
     white-space: nowrap; /* Zabezpečí, že sa text nebude zalamovať */
     overflow: hidden;    /* Skryje pretekajúci obsah */
     text-overflow: ellipsis; /* Zobrazí tri bodky, ak sa text nezmestí */
+    border-bottom: none; /* ZMENENÉ: Odstránený tieňovaný rám */
+    padding-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
+    margin-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
 }
 #groupsContent .section-block h2 {
     white-space: nowrap;
@@ -453,9 +456,9 @@ td:last-child {
 }
 .modal-content h2 {
     margin-top: 0;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
+    border-bottom: none; /* ZMENENÉ: Odstránený tieňovaný rám */
+    padding-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
+    margin-bottom: 0; /* ZMENENÉ: Odstránené odsadenie */
 }
 .modal-content form div {
     margin-bottom: 15px;
