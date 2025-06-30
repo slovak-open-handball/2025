@@ -48,7 +48,7 @@ function getHTMLElements() {
     backToGroupButtonsButton = document.getElementById('backToGroupButtonsButton');
     categoryButtonsContainer = document.getElementById('categoryButtonsContainer');
     categoryTitleDisplay = document.getElementById('categoryTitleDisplay');
-    groupSelectionButtons = document.getElementById('groupSelectionButtons'); // Toto je kontajner pre typy skupín a ich tlačidlá
+    groupSelectionButtons = document.getElementById('groupSelectionButtons'); // Tento element bude slúžiť na zobrazenie riadkov s typom skupiny a tlačidlami
     allGroupsContent = document.getElementById('allGroupsContent'); // Toto je kontajner pre detaily VŠETKÝCH skupín
     singleGroupContent = document.getElementById('singleGroupContent');    
     allGroupsContainer = allGroupsContent ? allGroupsContent.querySelector('.groups-container') : null; // Kontajner pre zobrazenie všetkých skupín
@@ -302,8 +302,8 @@ function displayGroupsForCategory(categoryId) {
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     
     const selectedCategory = allCategories.find(cat => cat.id === categoryId);
-    // Ulož názov kategórie do URL namiesto ID, nahraď medzery pomlčkami
-    const categoryUrlName = (selectedCategory.name || selectedCategory.id).replace(/ /g, '-');
+    // Ulož názov kategórie do URL namiesto ID, nahraď medzery plusmi
+    const categoryUrlName = (selectedCategory.name || selectedCategory.id).replace(/ /g, '+');
     window.location.hash = 'category-' + encodeURIComponent(categoryUrlName);
 
     if (!selectedCategory) {
@@ -496,8 +496,8 @@ function displaySingleGroup(groupId) {
         const hash = window.location.hash;
         const categoryPrefix = '#category-';
         const hashParts = hash.startsWith(categoryPrefix) ? hash.substring(categoryPrefix.length).split('/')[0] : null;
-        // Dekódovanie a nahradenie pomlčiek späť na medzery
-        const urlCategoryNameFromHash = hashParts ? decodeURIComponent(hashParts[0]).replace(/-/g, ' ') : null;
+        // Dekódovanie a nahradenie plusov späť na medzery
+        const urlCategoryNameFromHash = hashParts ? decodeURIComponent(hashParts[0]).replace(/\+/g, ' ') : null;
         
         let categoryIdFromHash = null;
         if (urlCategoryNameFromHash) {
@@ -536,9 +536,9 @@ function displaySingleGroup(groupId) {
     setActiveGroupButton(groupId); // Zvýrazní aktívne tlačidlo skupiny
     
     const category = allCategories.find(cat => cat.id === currentCategoryId);
-    // Ulož názvy kategórie a skupiny do URL, nahraď medzery pomlčkami
-    const categoryUrlName = (category.name || category.id).replace(/ /g, '-');
-    const groupUrlName = (group.name || group.id).replace(/ /g, '-');
+    // Ulož názvy kategórie a skupiny do URL, nahraď medzery plusmi
+    const categoryUrlName = (category.name || category.id).replace(/ /g, '+');
+    const groupUrlName = (group.name || group.id).replace(/ /g, '+');
     window.location.hash = `category-${encodeURIComponent(categoryUrlName)}/group-${encodeURIComponent(groupUrlName)}`;
 
     if (category && categoryTitleDisplay) {
@@ -675,8 +675,8 @@ function goBackToGroupView() {
     clearActiveGroupButtons(); // Zruší aktívny stav pre tlačidlá skupín
     
     const category = allCategories.find(cat => cat.id === categoryIdToReturnTo);
-    // Ulož názov kategórie do URL namiesto ID, nahraď medzery pomlčkami
-    const categoryUrlName = (category.name || category.id).replace(/ /g, '-');
+    // Ulož názov kategórie do URL namiesto ID, nahraď medzery plusmi
+    const categoryUrlName = (category.name || category.id).replace(/ /g, '+');
     window.location.hash = 'category-' + encodeURIComponent(categoryUrlName);
 
     displayGroupsForCategory(categoryIdToReturnTo); // Znovu vykreslí prehľad kategórie s typmi a všetkými detailami skupín
@@ -757,9 +757,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const groupPrefix = '/group-';
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
-        // Dekódujeme a nahradíme pomlčky späť na medzery pred hľadaním
-        const urlCategoryName = decodeURIComponent(hashParts[0]).replace(/-/g, ' ');
-        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]).replace(/-/g, ' ') : null;
+        // Dekódujeme a nahradíme plusy späť na medzery pred hľadaním
+        const urlCategoryName = decodeURIComponent(hashParts[0]).replace(/\+/g, ' ');
+        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]).replace(/\+/g, ' ') : null;
 
         let decodedCategoryId = null;
         const foundCategory = allCategories.find(cat => (cat.name || cat.id) === urlCategoryName);
@@ -804,9 +804,9 @@ window.addEventListener('hashchange', () => {
     const groupPrefix = '/group-';
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
-        // Dekódujeme a nahradíme pomlčky späť na medzery pred hľadaním
-        const urlCategoryName = decodeURIComponent(hashParts[0]).replace(/-/g, ' ');
-        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]).replace(/-/g, ' ') : null;
+        // Dekódujeme a nahradíme plusy späť na medzery pred hľadaním
+        const urlCategoryName = decodeURIComponent(hashParts[0]).replace(/\+/g, ' ');
+        const urlGroupName = hashParts.length > 1 ? decodeURIComponent(hashParts[1]).replace(/\+/g, ' ') : null;
 
         let decodedCategoryId = null;
         const foundCategory = allCategories.find(cat => (cat.name || cat.id) === urlCategoryName);
