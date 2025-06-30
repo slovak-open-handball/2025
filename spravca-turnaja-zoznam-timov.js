@@ -1036,12 +1036,37 @@ async function displayCreatedTeams() {
             return;
         }
 
-        // Predvolené zoradenie podľa názvu tímu
+        // Predvolené zoradenie: Tímy, ktoré obsahujú názov kategórie vo svojom názve, idú na koniec
         allTeams.sort((a, b) => {
+            // Pomocná funkcia na zistenie, či názov tímu obsahuje názov kategórie
+            const containsCategoryNameInTeamName = (team) => {
+                const teamName = (team.name || team.id || '').trim().toLowerCase();
+                return allAvailableCategories.some(cat => {
+                    const categoryName = (cat.name || cat.id).trim().toLowerCase();
+                    // Kontrolujeme, či názov tímu ZAČÍNA názvom kategórie, za ktorým nasleduje ' - '
+                    // Toto zabráni zhode, ak je názov kategórie len podreťazec názvu tímu, napr. "U10" v "Team U10XYZ"
+                    return teamName.startsWith(`${categoryName} - `);
+                });
+            };
+
+            const aContainsCategory = containsCategoryNameInTeamName(a);
+            const bContainsCategory = containsCategoryNameInTeamName(b);
+
+            // Ak 'a' obsahuje kategóriu a 'b' nie, 'a' ide za 'b'
+            if (aContainsCategory && !bContainsCategory) {
+                return 1;
+            }
+            // Ak 'b' obsahuje kategóriu a 'a' nie, 'a' ide pred 'b'
+            if (!aContainsCategory && bContainsCategory) {
+                return -1;
+            }
+
+            // Ak sú obe alebo žiadna v kategórii, zoradiť abecedne
             const nameA = (a.name || a.id || '').trim().toLowerCase();
             const nameB = (b.name || b.id || '').trim().toLowerCase();
             return nameA.localeCompare(nameB, 'sk-SK');
         });
+
 
         let filteredTeams = allTeams;
 
@@ -1077,7 +1102,7 @@ async function displayCreatedTeams() {
 
         teamsToDisplay = filteredTeams; // Aktualizácia teamsToDisplay po filtrovaní
 
-        // Aplikácia zoradenia
+        // Aplikácia zoradenia (Poradie v skupine)
         if (currentSort.column === 'orderInGroup') {
             teamsToDisplay.sort((a, b) => {
                 const orderA = a.orderInGroup;
