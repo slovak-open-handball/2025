@@ -190,12 +190,12 @@ main {
     padding: 15px;
     box-sizing: border-box;
     background-color: #fff; /* Biele pozadie */
-    border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
+    /* border: 0 !important; Removed by user, kept for reference */
     border-radius: 8px; /* Zaoblené rohy */
-    box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
+    /* box-shadow: none !important; Removed by user, kept for reference */
     outline: 0 !important; /* NOVÉ: Odstránenie obrysu s !important */
-    border-width: 0 !important; /* NOVÉ: Explicitné nastavenie hrúbky okraja na 0 */
-    border-style: none !important; /* NOVÉ: Explicitné nastavenie štýlu okraja na none */
+    /* border-width: 0 !important; Removed by user, kept for reference */
+    /* border-style: none !important; Removed by user, kept for reference */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
     max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
@@ -1146,12 +1146,12 @@ button[type="submit"] {
 /* Jeho šírka by mala byť určená jeho obsahom, najmä h3 alebo pevnými vstupmi */
 .category-settings-item {
     background-color: #f9f9f9;
-    border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
-    border-width: 0 !important; /* NOVÉ: Explicitné nastavenie hrúbky okraja na 0 */
-    border-style: none !important; /* NOVÉ: Explicitné nastavenie štýlu okraja na none */
+    /* border: 0 !important; Removed by user, kept for reference */
+    /* border-width: 0 !important; Removed by user, kept for reference */
+    /* border-style: none !important; Removed by user, kept for reference */
     border-radius: 8px;
     padding: 15px; /* Odsadenie pre samotný šedý obdĺžnik */
-    box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
+    /* box-shadow: none !important; Removed by user, kept for reference */
     outline: 0 !important; /* NOVÉ: Odstránenie obrysu s !important */
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
@@ -1215,4 +1215,63 @@ button[type="submit"] {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
+}
+
+/* Nové štýly pre zobrazenie skupín podľa typu */
+#groupSelectionButtons.group-type-container {
+    display: flex;
+    flex-direction: column; /* Typy skupín pod sebou */
+    gap: 20px; /* Medzi sekciami typov */
+    width: 100%;
+    align-items: flex-start; /* Zarovnávanie obsahu typu na začiatok */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.group-type-section {
+    width: 100%;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.group-type-header {
+    display: flex; /* Zabezpečí nadpis a tlačidlá v jednom riadku */
+    align-items: center; /* Vertikálne zarovnanie */
+    gap: 10px; /* Medzera medzi nadpisom a tlačidlami */
+    margin-bottom: 15px; /* Medzera pod celým riadkom s nadpisom a tlačidlami */
+    flex-wrap: wrap; /* Zalamovanie, ak je príliš veľa tlačidiel */
+}
+
+.group-type-section h3 {
+    text-align: left; /* Názov typu skupiny zarovnaný vľavo */
+    margin: 0; /* Odstrániť margin-top a margin-bottom */
+    color: #333;
+    font-size: 1.3em;
+    border-bottom: none; /* Odstrániť spodný okraj z nadpisu */
+    padding-bottom: 0; /* Odstrániť padding-bottom z nadpisu */
+    white-space: nowrap; /* Zabezpečí, že názov typu skupiny sa nezalomí */
+    flex-shrink: 0; /* Zabráni zmenšeniu nadpisu */
+}
+
+.group-buttons-by-type {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Medzi tlačidlami skupín */
+    justify-content: flex-start; /* Tlačidlá zarovnané vľavo */
+    flex-grow: 1; /* Umožní tlačidlám zaberať dostupný priestor */
+}
+
+/* Existujúce tlačidlá .display-button budú použité pre skupiny, ale teraz sú v novom kontajneri */
+.group-buttons-by-type .display-button {
+    flex-grow: 0; /* Nechceme, aby sa tlačidlá príliš naťahovali */
+    flex-shrink: 1; /* Umožní zmenšenie, ak je priestoru málo */
+    flex-basis: auto; /* Určí základnú veľkosť obsahu */
+    min-width: 120px; /* Minimálna šírka pre tlačidlo */
+    max-width: 200px; /* Maximálna šírka pre tlačidlo */
+    white-space: nowrap; /* Zabezpečí, že text sa nezalomí */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
