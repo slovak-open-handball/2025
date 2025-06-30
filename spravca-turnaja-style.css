@@ -409,17 +409,14 @@ td:last-child {
 /* Updated styles for number and time inputs */
 .modal-content form input[type="number"],
 .modal-content form input[type="time"] {
-    width: auto; /* Allow width to be determined by content or max-width */
-    max-width: 150px; /* Adjust this value as needed for desired width */
-    min-width: 120px; /* Ensure a minimum width */
+    width: calc(100% - 22px); /* Matches button width */
     padding: 10px 20px; /* Increased padding to match button height */
     height: auto; /* Allow height to adjust with padding */
     box-sizing: border-box; /* Include padding in the element's total width and height */
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
-    display: inline-block; /* Make them inline-block so they can sit next to each other if desired */
-    vertical-align: middle; /* Align vertically */
+    display: block; /* Ensures they take full width in a new line */
 }
 
 
