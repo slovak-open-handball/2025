@@ -167,7 +167,13 @@ main {
     box-sizing: border-box;
     background-color: #fff; /* Ponechať */
     border-radius: 8px; /* Ponechať */
-    box-shadow: none; /* ZMENENÉ: Odstránený tieň */
+    /* Zabezpečí odstránenie akýchkoľvek tieňov z týchto blokov */
+    box-shadow: none !important;
+    /* Zabezpečí odstránenie akýchkoľvek orámovaní z týchto blokov */
+    border: 0 !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    outline: 0 !important;
 }
 
 /* Aplikuje sa na sekcie v main-content-area (Nastavenia turnaja, Nastavenia zápasov podľa kategórií) */
@@ -180,6 +186,9 @@ main {
     border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
     border-radius: 8px; /* Zaoblené rohy */
     box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
+    outline: 0 !important; /* NOVÉ: Odstránenie obrysu s !important */
+    border-width: 0 !important; /* NOVÉ: Explicitné nastavenie hrúbky okraja na 0 */
+    border-style: none !important; /* NOVÉ: Explicitné nastavenie štýlu okraja na none */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
     max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
@@ -1086,9 +1095,12 @@ button[type="submit"] {
 .category-settings-item {
     background-color: #f9f9f9;
     border: 0 !important; /* ZMENENÉ: Odstránené orámovanie s !important */
+    border-width: 0 !important; /* NOVÉ: Explicitné nastavenie hrúbky okraja na 0 */
+    border-style: none !important; /* NOVÉ: Explicitné nastavenie štýlu okraja na none */
     border-radius: 8px;
     padding: 15px; /* Odsadenie pre samotný šedý obdĺžnik */
     box-shadow: none !important; /* ZMENENÉ: Odstránený tieň s !important */
+    outline: 0 !important; /* NOVÉ: Odstránenie obrysu s !important */
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu */
