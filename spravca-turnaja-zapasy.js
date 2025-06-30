@@ -1250,7 +1250,7 @@ async function displayMatchesAsSchedule() {
                         scheduleHtml += `<div class="date-group" data-date="${date}" data-location="${location}" data-initial-start-time="${String(Math.floor(initialScheduleStartMinutes / 60)).padStart(2, '0')}:${String(initialScheduleStartMinutes % 60).padStart(2, '0')}">`;
                         scheduleHtml += `<h3 class="playing-day-header-clickable" style="background-color: #eaeaea; padding: 15px; margin: 0; border-bottom: 1px solid #ddd; cursor: pointer;">${dayName} ${formattedDisplayDate}</h3>`;
 
-                        scheduleHtml += `<table class="data-table match-list-table compact-table" style="width: 100%; text-align: center; border-collapse: collapse;">`;
+                        scheduleHtml += `<table class="data-table match-list-table compact-table" style="width: 100%; border-collapse: collapse;">`;
                         scheduleHtml += `<thead><tr>`;
                         scheduleHtml += `<th>Čas</th>`;
                         scheduleHtml += `<th>Domáci</th>`;
