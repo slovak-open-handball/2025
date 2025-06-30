@@ -124,7 +124,7 @@ main {
     overflow-x: hidden;
     align-self: flex-start;
     min-height: 0;
-    /* Odstránené width: 100%; spolieham sa na flex-grow a flex-basis */
+    width: 100% !important; /* DÔLEŽITÉ: Zabezpečí, aby sa main roztiahlo na plnú šírku */
 }
 
 /* NOVÉ: Wrapper pre hlavný obsah na centrovanie */
@@ -133,8 +133,8 @@ main {
     flex-direction: column; /* Sekcie pod sebou */
     align-items: stretch; /* Natiahne deti, aby zaberali plnú šírku */
     gap: 20px; /* Medzera medzi sekciami */
-    width: 100%; /* Zaberá celú šírku main */
-    max-width: none; /* Odstránené max-width, aby sa mohlo roztiahnuť */
+    width: 100% !important; /* ZMENENÉ: Zaberá celú šírku main */
+    max-width: none !important; /* ZMENENÉ: Odstránené max-width, aby sa mohlo roztiahnuť */
     margin: 0; /* ODSTRÁNENÉ auto, aby sa roztiahol */
     flex-grow: 1; /* Umožní main-content-area roztiahnuť sa */
 }
@@ -165,7 +165,7 @@ main {
 /* Aplikuje sa na sekcie v main-content-area (Nastavenia turnaja, Nastavenia zápasov podľa kategórií) */
 .main-content-area .section-block {
     margin-bottom: 0;
-    width: auto; /* ZMENENÉ: Namiesto 100% !important, necháme auto, aby sa prispôsobilo flex rodičovi */
+    width: 100% !important; /* DÔLEŽITÉ: Zabezpečí, že každý blok zaberie celú šírku v rámci main-content-area */
     padding: 15px;
     box-sizing: border-box;
     background-color: #fff; /* Biele pozadie */
@@ -173,7 +173,7 @@ main {
     border-radius: 8px; /* Zaoblené rohy */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Tieň */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
-    max-width: none; /* ZMENENÉ: Odstránenie všetkých explicitných max-width */
+    max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     margin: 0 !important; /* Zabezpečí, aby sa roztiahol podľa align-items: stretch v rodičovi */
     flex-grow: 1; /* Povoliť roztiahnutie v rámci flex kontajnera */
     flex-shrink: 1; /* Povoliť zmenšenie v rámci flex kontajnera */
@@ -183,14 +183,14 @@ main {
 /* Špecifické nastavenie pre #categorySettingsSection, aby nemala vlastné max-width, ale bola podriadená .section-block */
 #categorySettingsSection {
     /* Žiadne špecifické width/max-width tu nie sú potrebné, dedí od .section-block */
-    max-width: none; /* ZMENENÉ: Odstránenie všetkých explicitných max-width */
+    max-width: none !important; /* DÔLEŽITÉ: Odstránenie všetkých explicitných max-width */
     flex-grow: 1; /* Zabezpečí, že sa roztiahne */
 }
 
 /* Špecifické nastavenie pre #settingsContentSection (Nastavenia turnaja) */
 #settingsContentSection {
-    max-width: none; /* ZMENENÉ: Odstránenie všetkých explicitných max-width */
-    width: auto; /* ZMENENÉ: Auto namiesto 100% !important */
+    max-width: none !important; /* DÔLEŽITÉ: Zabezpečí, že sa aj tento biely obdĺžnik roztiahne */
+    width: 100% !important; /* DÔLEŽITÉ: Explicitne nastavená šírka */
     margin: 0 !important;
     flex-grow: 1; /* Zabezpečí, že sa roztiahne */
 }
@@ -1014,8 +1014,8 @@ button[type="submit"] {
     gap: 20px;
     margin-top: 15px;
     justify-content: center; /* Centrovanie prvkov, ak nezaplnia celý riadok */
-    width: 100%; /* Zabezpečí, že kontajner využije plnú šírku rodiča */
-    max-width: none; /* ZMENENÉ: Odstránil som max-width, aby sa mohli roztiahnuť */
+    width: 100% !important; /* DÔLEŽITÉ: Zabezpečí, že kontajner využije plnú šírku rodiča */
+    max-width: none !important; /* DÔLEŽITÉ: Odstránil som max-width, aby sa mohli roztiahnuť */
     margin-left: auto;
     margin-right: auto; /* Centrujte samotný kontajner v rámci rodiča */
     min-width: 0; /* Umožní kontajneru zmenšiť sa, ak je to potrebné */
@@ -1064,7 +1064,7 @@ button[type="submit"] {
     margin-left: auto;   /* Centrujte h3 v rámci jeho kontajnera */
     margin-right: auto;
     text-align: center;
-    min-width: var(--settings-element-width); /* Zabezpečte, že je aspoň tak široký ako vstupy */
+    min-width: var(--settings-element-width); /* Zabezpečí, že je aspoň tak široký ako vstupy */
 }
 
 
@@ -1079,14 +1079,14 @@ button[type="submit"] {
     box-sizing: border-box; /* Zahrňte odsadenie do celkovej šírky prvku */
 
     /* Nastavenia Flexboxu */
-    flex: 1 1 var(--settings-element-width); /* ZMENENÉ: Umožní rásť a shrinkovať, ale s preferovanou šírkou */
+    flex: 0 0 calc(var(--settings-element-width) + (2 * 15px)); /* ZMENENÉ: Explicitná veľkosť, aby sa nezmenšovali ani nenaťahovali príliš */
     display: flex; /* Urobte z neho flexbox kontajner */
     flex-direction: column; /* Uložte obsah vertikálne */
     align-items: center; /* Centrujte obsah horizontálne v rámci prvku */
 
     /* Minimálna šírka na zabezpečenie, aby sa vstupy/tlačidlá zmestili, plus vlastné odsadenie */
     min-width: calc(var(--settings-element-width) + (2 * 15px)); /* 300px (vstup) + 30px (odsadenie) = 330px */
-    max-width: 100%; /* ZMENENÉ: max-width na 100% pre lepšiu odozvu na malých obrazovkách */
+    max-width: calc(var(--settings-element-width) + (2 * 15px)); /* DÔLEŽITÉ: Obmedzenie max-width na pevnú hodnotu */
     
     /* Dôležité: Umožnite, aby bol obsah viditeľný, aj keď presahuje maximálnu šírku, podľa požiadavky užívateľa */
     overflow: visible; 
@@ -1095,8 +1095,8 @@ button[type="submit"] {
 /* Upravte hlavný biely obdĺžnik (.main-content-area .section-block) */
 .main-content-area .section-block {
     /* Základné štýly zdedené */
-    max-width: none !important; /* ZMENENÉ: Odstránenie max-width z .section-block pre plnú šírku */
-    width: auto; /* ZMENENÉ: Auto namiesto pevných šírok */
+    max-width: none !important; /* DÔLEŽITÉ: Odstránenie max-width z .section-block pre plnú šírku */
+    width: 100% !important; /* DÔLEŽITÉ: Explicitne nastavená šírka */
     margin: 0 !important; /* Odstránenie margin auto, aby sa natiahol */
     /* Žiadny overflow: hidden; ani tu, aby sa h3 mohol pretekať */
     overflow: visible; /* Zabezpečí, že obsah je plne viditeľný */
