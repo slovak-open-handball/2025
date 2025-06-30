@@ -770,6 +770,9 @@ button[type="submit"] {
     border: 1px solid #ddd;
     border-radius: 8px; /* Jemne zaoblené rohy */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: none; /* Predvolene skryté, JS ho zmení na 'flex' */
+    width: 220px; /* Pevná šírka pre rozbaľovaciu ponuku */
+    overflow: hidden; /* Zabezpečí, že zaoblené rohy fungujú aj na obsahu */
     padding: 15px !important; /* Zvýšený okraj okolo obsahu vo vnútri bieleho obdĺžnika (nad, pod, vľavo, vpravo) s !important */
     flex-direction: column !important; /* Tlačidlá pod sebou s !important */
     gap: 15px !important; /* Zvýšená medzera medzi tlačidlami s !important */
@@ -982,4 +985,76 @@ button[type="submit"] {
 
 #addOptions button:hover {
     background-color: #0056b3; /* Tmavšie pozadie pri prechode myšou */
+}
+
+/* Nové štýly pre zobrazenie nastavení kategórií vedľa seba */
+#categorySettingsContainer {
+    display: flex;
+    flex-wrap: wrap; /* Umožní zalomenie na ďalší riadok, ak je málo miesta */
+    gap: 20px; /* Medzera medzi jednotlivými blokmi kategórií */
+    justify-content: flex-start; /* Zarovná bloky na začiatok riadku */
+    margin-top: 20px; /* Priestor od nadpisu */
+}
+
+.category-settings-item {
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    flex: 1 1 calc(33.33% - 20px); /* Tri stĺpce, zohľadňujúce gap. Upravené pre lepšie využitie šírky. */
+    min-width: 280px; /* Minimálna šírka pre mobilné zariadenia alebo menšie zobrazenia */
+    box-sizing: border-box; /* Zabezpečí, že padding je zahrnutý v šírke */
+    margin-bottom: 0; /* Odstráni spodný margin, ak bol nejaký predvolený */
+}
+
+/* Usporiadanie formulárových skupín v rámci jedného bloku kategórie */
+.category-settings-item .match-duration-group {
+    display: flex;
+    flex-wrap: wrap; /* Umožní zalamovanie inputov vnútri bloku */
+    gap: 10px; /* Medzera medzi inputmi */
+    margin-bottom: 15px; /* Medzera pod skupinou */
+}
+
+.category-settings-item .form-group {
+    flex: 1 1 calc(50% - 10px); /* Dva stĺpce inputov, zohľadňujúce gap */
+    margin-bottom: 0; /* Odstráni predvolený margin, aby sa prispôsobil flex layoutu */
+}
+
+.category-settings-item .form-group label {
+    font-size: 0.85em; /* Trochu menšie písmo pre štítky inputov */
+    margin-bottom: 3px; /* Menšia medzera pod štítkom */
+}
+
+.category-settings-item input[type="number"],
+.category-settings-item input[type="color"] {
+    width: 100%; /* Zabezpečí plnú šírku inputov v rámci ich flex-basis */
+    padding: 8px; /* Menší padding pre kompaktnosť */
+    box-sizing: border-box;
+}
+
+.category-settings-item .calculated-duration {
+    flex-basis: 100%; /* Zaberie celú šírku pod inputmi */
+    text-align: center;
+    font-weight: bold;
+    margin-top: 10px;
+    padding: 5px;
+    background-color: #f0f8ff; /* Svetlomodré pozadie pre vypočítaný čas */
+    border-radius: 4px;
+}
+
+/* Responzívne úpravy pre menšie obrazovky */
+@media (max-width: 1024px) { /* Pre tablety */
+    .category-settings-item {
+        flex: 1 1 calc(50% - 15px); /* Dva stĺpce */
+    }
+}
+
+@media (max-width: 768px) { /* Pre menšie tablety a mobily */
+    .category-settings-item {
+        flex: 1 1 100%; /* Jeden stĺpec */
+    }
+    .category-settings-item .form-group {
+        flex: 1 1 100%; /* Inputy pod sebou na mobiloch */
+    }
 }
