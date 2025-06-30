@@ -61,7 +61,7 @@ async function animateLoadingText(containerId, text) {
             }
             /* New styles for table cell borders */
             .match-list-table td {
-                border-right: 1px solid #000000;
+                border-right: 1px solid #EAEAEA;
             }
             .match-list-table td:last-child {
                 border-right: none;
