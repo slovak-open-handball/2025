@@ -845,11 +845,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (backToCategoriesButton) backToCategoriesButton.addEventListener('click', goBackToCategories);
     if (backToGroupButtonsButton) backToGroupButtonsButton.addEventListener('click', goBackToGroupView);
 
+    // Vždy zobrazíme tlačidlá kategórií ako prvé
+    displayCategoriesAsButtons();
+
     const hash = window.location.hash;
     const categoryPrefix = '#category-';
     const groupPrefix = '/group-';
-
-    let handledByHash = false; // Príznak, či zobrazenie bolo spracované podľa hashu
 
     if (hash && hash.startsWith(categoryPrefix)) {
         const hashParts = hash.substring(categoryPrefix.length).split(groupPrefix);
@@ -863,9 +864,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (decodedCategoryId) {
-            // Vždy zavoláme displayGroupsForCategory, aby sa vykreslili všetky tlačidlá skupín pre danú kategóriu
+            // Ak je kategória z URL platná, zobrazíme tlačidlá skupín pre túto kategóriu
             displayGroupsForCategory(decodedCategoryId);
-            handledByHash = true; // Označíme, že hash bol spracovaný
 
             if (urlGroupName) {
                 let decodedGroupId = null;
@@ -877,18 +877,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (decodedGroupId) {
                     // Ak je v URL aj názov skupiny a existuje, zobrazíme priamo túto skupinu
                     displaySingleGroup(decodedGroupId);
-                } else {
-                    // Ak názov skupiny z URL neexistuje, zostaneme na prehľade kategórie (už zobrazenom)
                 }
             }
-        } else {
-            // Kategória z URL hashu sa nenašla, prejde sa na predvolené zobrazenie
         }
-    }
-
-    if (!handledByHash) {
-        // Ak nebol spracovaný platný hash, zobrazíme predvolené zobrazenie výberu kategórií
-        displayCategoriesAsButtons();
     }
 });
 window.addEventListener('hashchange', () => {
