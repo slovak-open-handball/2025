@@ -238,15 +238,11 @@ function displayCategoriesAsButtons() {
     if (categoryButtonsContainer) categoryButtonsContainer.style.display = 'flex';
     if (categoryTitleDisplay) categoryTitleDisplay.style.display = 'none';
     
-    // Always show group selection buttons container, but clear its content and add a default message
+    // Always show group selection buttons container, but clear its content
     if (groupSelectionButtons) {
         groupSelectionButtons.style.display = 'flex'; // Zobrazí kontajner pre typy skupín a ich tlačidlá
         groupSelectionButtons.innerHTML = ''; // Vyčistí predchádzajúci obsah
-        const defaultMessage = document.createElement('p');
-        defaultMessage.textContent = '';
-        defaultMessage.style.textAlign = 'center';
-        defaultMessage.style.padding = '20px';
-        groupSelectionButtons.appendChild(defaultMessage);
+        // Odstránená veta "Vyberte kategóriu vyššie pre zobrazenie skupín."
     }
 
     if (allGroupsContent) allGroupsContent.style.display = 'none'; // Skryje detaily skupín
