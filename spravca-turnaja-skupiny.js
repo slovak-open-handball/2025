@@ -203,11 +203,17 @@ async function displayGroupsByCategory() {
             groupsContentDiv.appendChild(categorySectionDiv);
         });
 
-        if (Object.keys(groupsByCategory).length === 0 && categories.length > 0) {
-            const message = document.createElement('p');
-            message.textContent = "Žiadne skupiny zatiaľ nemajú priradenú kategóriu, alebo žiadne skupiny neboli pridané.";
-            groupsContentDiv.appendChild(message);
-        }
+        // Tento blok kódu by sa mal spúšťať len v prípade, že po spracovaní všetkých kategórií
+        // neboli nájdené žiadne skupiny PRIRADENÉ k existujúcim kategóriám.
+        // Správa o tom, že žiadne skupiny nemajú priradenú kategóriu, bola presunutá vyššie.
+        // Ak sú kategórie, ale žiadne skupiny, zobrazí sa správa "V kategórii 'X' zatiaľ nie sú žiadne skupiny."
+        // Ak nie sú žiadne kategórie, zobrazí sa správa "Pridajte kategórie..."
+        // Preto táto podmienka je zbytočná, ak `groupsContentDiv` nie je prázdny.
+        // if (Object.keys(groupsByCategory).length === 0 && categories.length > 0) {
+        //     const message = document.createElement('p');
+        //     message.textContent = "Žiadne skupiny zatiaľ nemajú priradenú kategóriu, alebo žiadne skupiny neboli pridané.";
+        //     groupsContentDiv.appendChild(message);
+        // }
     } catch (error) {
         console.error('Chyba pri načítaní dát skupín:', error);
         const errorMessage = document.createElement('p');
@@ -243,8 +249,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     displayGroupsByCategory();
 
+    // Táto časť by mala zostať, aby sa zabezpečilo, že groupsContentDiv je viditeľný
+    // a ostatné sekcie sú skryté, ak je to potrebné.
     if (groupsContentDiv) {
-        groupsContentDiv.style.display = 'flex';
+        groupsContentDiv.style.display = 'flex'; // Zabezpečí, že flexbox funguje
         const otherSections = document.querySelectorAll('main > section, main > div');
         otherSections.forEach(section => {
             if (section.id !== 'groupsContent') {
