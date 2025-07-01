@@ -23,8 +23,8 @@
         .category-group-section {
             /* Flexibilita pre šírku */
             flex: 0 0 auto; 
-            /* Minimálna šírka pre celú sekciu (tabuľku), aby sa obsah nezalamoval a tlačidlá zmestili */
-            min-width: 600px; 
+            /* Minimálna šírka pre celú sekciu (tabuľku), aby sa obsah zmestil aj so zalomením */
+            min-width: 350px; 
             /* Maximálna šírka môže pomôcť pri zalomení, ak je príliš veľa priestoru */
             max-width: calc(100% - 40px); /* Aby sa zmestila jedna tabuľka s gapmi */
             box-sizing: border-box; 
@@ -42,13 +42,13 @@
         .category-group-table th:nth-child(1),
         .category-group-table td:nth-child(1) {
             width: 30%; /* Prispôsobiteľná šírka, ale s min-width */
-            min-width: 180px; /* Minimálna šírka pre názov skupiny */
+            min-width: 80px; /* Minimálna šírka pre názov skupiny (text sa zalamuje) */
         }
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
             width: 40%; /* Prispôsobiteľná šírka, ale s min-width */
-            min-width: 220px; /* Minimálna šírka pre typ skupiny (dlhší text) */
+            min-width: 120px; /* Minimálna šírka pre typ skupiny (text sa zalamuje) */
         }
 
         .category-group-table th:nth-child(3),
@@ -60,9 +60,9 @@
         .category-group-table th,
         .category-group-table td {
             padding: 8px; 
-            white-space: nowrap; /* Zabráni zalamovaniu textu */
-            overflow: hidden; /* Skryje prebytočný text, ak by sa náhodou nezmestil (ale min-width by tomu mal zabrániť) */
-            text-overflow: ellipsis; /* Zobrazí tri bodky, ak sa text skryje */
+            white-space: normal; /* Zalamovanie textu */
+            overflow: hidden; /* Skryje prebytočný text, ak by sa náhodou nezmestil (pre dlhé slová) */
+            text-overflow: clip; /* Žiadne tri bodky */
             text-align: left; 
         }
         
@@ -71,31 +71,30 @@
             justify-content: space-between; 
             align-items: center; 
             gap: 5px; 
-            white-space: nowrap; 
+            white-space: nowrap; /* Tlačidlá sa nezalamujú */
             overflow: visible; /* Aby tlačidlá neboli orezané */
             text-overflow: clip; /* Tlačidlá netreba orezávať */
         }
 
         /* Media queries pre responzivitu */
-        /* Pre veľké obrazovky (viac ako 1240px) - dve tabuľky vedľa seba */
-        @media (min-width: 1240px) {
+        /* Pre veľké obrazovky (viac ako 1070px) - tri tabuľky vedľa seba */
+        @media (min-width: 1070px) {
+            .category-group-section {
+                width: calc(33.33% - 13.3333px); /* Tri tabuľky vedľa seba s gapom 20px */
+                max-width: calc(33.33% - 13.3333px);
+            }
+        }
+
+        /* Pre stredné obrazovky (medzi 720px a 1069px) - dve tabuľky vedľa seba */
+        @media (max-width: 1069px) and (min-width: 720px) {
             .category-group-section {
                 width: calc(50% - 20px); /* Dve tabuľky vedľa seba s gapom 20px */
                 max-width: calc(50% - 20px);
             }
         }
 
-        /* Pre stredné obrazovky (medzi 701px a 1239px) - jedna tabuľka na celú šírku */
-        @media (max-width: 1239px) and (min-width: 701px) {
-            .category-group-section {
-                width: 100%;
-                max-width: 100%;
-                min-width: 600px; /* Udržať min-width pre obsah */
-            }
-        }
-
-        /* Pre mobilné obrazovky (do 700px) - jedna tabuľka, upravený layout */
-        @media (max-width: 700px) { 
+        /* Pre menšie obrazovky (do 719px) - jedna tabuľka na celú šírku */
+        @media (max-width: 719px) { 
             .category-group-section {
                 width: 100%; 
                 min-width: unset; /* Zruší pevnú minimálnu šírku na mobiloch pre plnú šírku */
@@ -125,7 +124,7 @@
             .category-group-table td:nth-child(1):before { content: "Názov skupiny:"; }
             .category-group-table td:nth-child(2):before { content: "Typ skupiny:"; }
             .category-group-table td:nth-child(3):before { content: "Akcie:"; }
-            .category-group-table .actions-cell { /* trieda akcie-cell nie je v HTML, ale ak sa pridá, toto pomôže */
+            .category-group-table .actions-cell { 
                 display: flex;
                 flex-wrap: wrap; /* Tlačidlá sa môžu zalomiť */
                 justify-content: center;
