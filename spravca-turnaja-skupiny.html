@@ -7,6 +7,36 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">    
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="spravca-turnaja-style.css">
+    <style>
+        /* Nové štýly pre flexbox usporiadanie kategórií */
+        #groupsContent {
+            display: flex;
+            flex-wrap: wrap; /* Umožní zalomenie na nový riadok */
+            gap: 20px; /* Medzera medzi kategóriami */
+            justify-content: flex-start; /* Zarovnanie kategórií na začiatok */
+            align-items: flex-start; /* Zarovnanie položiek na začiatok krížovej osi */
+        }
+
+        .category-group-section {
+            flex: 1 1 calc(33.333% - 20px); /* Tri stĺpce s medzerami */
+            min-width: 300px; /* Minimálna šírka pre zobrazenie jednej kategórie */
+            box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
+            margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
+        }
+
+        /* Ak je len jedna kategória, zaberie celú šírku */
+        @media (max-width: 900px) {
+            .category-group-section {
+                flex: 1 1 calc(50% - 20px); /* Dva stĺpce na menších obrazovkách */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .category-group-section {
+                flex: 1 1 100%; /* Jeden stĺpec na mobilných zariadeniach */
+            }
+        }
+    </style>
 </head>
 <body>
     <script type="module" src="auth.js"></script>
