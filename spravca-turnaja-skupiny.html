@@ -11,32 +11,37 @@
         /* Flexbox pre zobrazenie tabuliek vedľa seba, ak to šírka umožňuje */
         #groupsContent {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 20px;
             width: 100%;
+            max-width: 100%;
         }
+
         .category-group-section {
             box-sizing: border-box;
+            margin-bottom: 0;
         }
+
         .category-group-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto;
         }
+
         .category-group-table th,
         .category-group-table td {
             padding: 8px;
             white-space: nowrap;
             text-align: left;
         }
+
         .category-group-table td:nth-child(3) {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            justify-content: flex-start;
             gap: 5px;
-            white-space: nowrap;
+            flex-wrap: wrap;
         }
 
-        /* Mobilné zobrazenie */
         @media (max-width: 1000px) {
             .category-group-table th,
             .category-group-table td {
@@ -66,6 +71,7 @@
                 justify-content: center;
                 gap: 5px;
                 margin-top: 10px;
+                flex-wrap: wrap;
             }
         }
     </style>
