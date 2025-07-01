@@ -15,16 +15,16 @@
             gap: 20px; /* Medzera medzi kategóriami */
             justify-content: flex-start; /* Zarovnanie kategórií na začiatok */
             align-items: flex-start; /* Zarovnanie položiek na začiatok krížovej osi */
-            /* Zabezpečí, že groupsContent zaberie dostupnú šírku */
-            width: 100%; 
+            width: 100%; /* Zabezpečí, že groupsContent zaberie dostupnú šírku */
             max-width: 100%; /* Zabezpečí, že nepretečie */
         }
 
         .category-group-section {
             /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
             /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
+            /* Zvýšená min-width pre zobrazenie všetkého obsahu bez prekrývania */
             flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 600px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
+            min-width: 650px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
             /* overflow-x: auto; */ /* Odstránené, aby sa zabránilo horizontálnemu posuvníku */
@@ -33,33 +33,33 @@
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
         .category-group-section table {
             width: 100%;
-            /* table-layout: fixed; */ /* Odstránené, aby sa šírka stĺpcov prispôsobila obsahu */
+            border-collapse: collapse; /* Odstráni medzery medzi bunkami */
         }
 
         /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
-        /* Tieto šírky sú teraz len orientačné, prehliadač ich bude prispôsobovať obsahu */
         .category-group-table th:nth-child(1),
         .category-group-table td:nth-child(1) {
-            /* width: 35%; */ /* Odstránené */
-            min-width: 150px; /* Minimálna šírka pre názov skupiny */
+            width: 35%; /* Názov skupiny */
+            min-width: 180px; /* Minimálna šírka pre názov skupiny */
         }
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
-            /* width: 35%; */ /* Odstránené */
-            min-width: 150px; /* Minimálna šírka pre typ skupiny */
+            width: 35%; /* Typ skupiny */
+            min-width: 180px; /* Minimálna šírka pre typ skupiny */
         }
 
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
-            /* width: 30%; */ /* Odstránené */
-            min-width: 180px; /* Minimálna šírka pre akcie (tlačidlá) */
+            width: 30%; /* Akcie (Upraviť/Vymazať) */
+            min-width: 200px; /* Minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
         .category-group-table td {
             padding: 8px; /* Pridá padding pre lepšiu čitateľnosť */
             white-space: nowrap; /* Zabráni zalamovaniu textu */
+            text-align: left; /* Zarovnanie textu vľavo */
         }
         
         .category-group-table td:nth-child(3) {
@@ -71,14 +71,14 @@
         }
 
         /* Prispôsobenie pre menšie obrazovky */
-        @media (max-width: 900px) {
+        @media (max-width: 1400px) { /* Zmena breakpointu pre 2 stĺpce */
             .category-group-section {
-                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (100% - 1*gap) / 2 = (100% - 20px) / 2 */
-                min-width: 550px; /* Upravená minimálna šírka */
+                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
+                min-width: 600px; /* Upravená minimálna šírka */
             }
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 1000px) { /* Zmena breakpointu pre 1 stĺpec */
             .category-group-section {
                 flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
                 min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
