@@ -15,21 +15,31 @@
             gap: 20px; /* Medzera medzi kategóriami */
             justify-content: flex-start; /* Zarovnanie kategórií na začiatok */
             align-items: flex-start; /* Zarovnanie položiek na začiatok krížovej osi */
+            /* Zabezpečí, že groupsContent zaberie dostupnú šírku */
+            width: 100%; 
+            max-width: 100%; /* Zabezpečí, že nepretečie */
         }
 
         .category-group-section {
             /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
-            flex: 0 0 calc(33.33% - 42px); /* Ponechávame priestor pre gap, napr. (20px * 2) / 3 = 13.33px */
-            min-width: 420px; /* Zvýšená minimálna šírka pre lepšie zobrazenie */
+            /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
+            flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
+            min-width: 340px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
+        }
+
+        /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
+        .category-group-section table {
+            width: 100%;
+            table-layout: fixed; /* Pomôže s rozložením stĺpcov */
         }
 
         /* Prispôsobenie pre menšie obrazovky */
         @media (max-width: 900px) {
             .category-group-section {
-                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (20px * 1) / 2 = 10px */
-                min-width: 300px; /* Upravená minimálna šírka */
+                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (100% - 1*gap) / 2 = (100% - 20px) / 2 */
+                min-width: 320px; /* Upravená minimálna šírka */
             }
         }
 
