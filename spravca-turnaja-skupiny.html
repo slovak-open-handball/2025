@@ -24,7 +24,7 @@
             /* Flexibilita pre šírku */
             flex: 0 0 auto; 
             /* Minimálna šírka pre celú sekciu (tabuľku), aby sa obsah zmestil aj so zalomením */
-            min-width: 400px; /* Zvýšená minimálna šírka pre celú sekciu */
+            min-width: 390px; /* Zvýšená minimálna šírka pre celú sekciu */
             /* Maximálna šírka môže pomôcť pri zalomení, ak je príliš veľa priestoru */
             max-width: calc(100% - 40px); /* Aby sa zmestila jedna tabuľka s gapmi */
             box-sizing: border-box; 
@@ -47,14 +47,14 @@
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
-            width: 50%; /* Prispôsobiteľná šírka, ale s min-width */
+            width: 40%; /* Prispôsobiteľná šírka, ale s min-width */
             min-width: 130px; /* Minimálna šírka pre typ skupiny */
         }
 
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
-            width: 20%; /* Prispôsobiteľná šírka, ale s min-width */
-            min-width: 200px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
+            width: 30%; /* Prispôsobiteľná šírka, ale s min-width */
+            min-width: 190px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
@@ -70,31 +70,31 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            gap: 0px;
+            gap: 5px; 
             white-space: nowrap; /* Tlačidlá sa nezalamujú */
             overflow: visible; /* Aby tlačidlá neboli orezané */
             text-overflow: clip; /* Tlačidlá netreba orezávať */
         }
 
         /* Media queries pre responzivitu */
-        /* Pre veľké obrazovky (viac ako 1240px) - tri tabuľky vedľa seba */
-        @media (min-width: 1240px) {
+        /* Pre veľké obrazovky (viac ako 1210px) - tri tabuľky vedľa seba */
+        @media (min-width: 1210px) {
             .category-group-section {
                 width: calc(33.33% - 13.3333px); /* Tri tabuľky vedľa seba s gapom 20px */
                 max-width: calc(33.33% - 13.3333px);
             }
         }
 
-        /* Pre stredné obrazovky (medzi 820px a 1239px) - dve tabuľky vedľa seba */
-        @media (max-width: 1239px) and (min-width: 820px) {
+        /* Pre stredné obrazovky (medzi 800px a 1209px) - dve tabuľky vedľa seba */
+        @media (max-width: 1209px) and (min-width: 800px) {
             .category-group-section {
                 width: calc(50% - 20px); /* Dve tabuľky vedľa seba s gapom 20px */
                 max-width: calc(50% - 20px);
             }
         }
 
-        /* Pre menšie obrazovky (do 819px) - jedna tabuľka na celú šírku */
-        @media (max-width: 819px) { 
+        /* Pre menšie obrazovky (do 799px) - jedna tabuľka na celú šírku */
+        @media (max-width: 799px) { 
             .category-group-section {
                 width: 100%; 
                 min-width: unset; /* Zruší pevnú minimálnu šírku na mobiloch pre plnú šírku */
