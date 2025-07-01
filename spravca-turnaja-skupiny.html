@@ -22,7 +22,7 @@
         .category-group-section {
             /* Flex-basis nastavený na 33.33% pre 3 stĺpce, s odpočítaním medzery */
             flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 750px; /* Zvýšená minimálna šírka pre obsah tabuľky a tlačidlá */
+            min-width: 530px; /* Minimalna šírka pre obsah tabuľky (súčet min-width stĺpcov + padding) */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
         }
@@ -36,20 +36,20 @@
         /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
         .category-group-table th:nth-child(1),
         .category-group-table td:nth-child(1) {
-            width: 35%; /* Názov skupiny */
-            min-width: 220px; /* Zvýšená minimálna šírka pre názov skupiny */
+            width: 30%; /* Názov skupiny */
+            min-width: 160px; /* Minimálna šírka pre názov skupiny */
         }
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
-            width: 35%; /* Typ skupiny */
-            min-width: 220px; /* Zvýšená minimálna šírka pre typ skupiny */
+            width: 40%; /* Typ skupiny */
+            min-width: 200px; /* Minimálna šírka pre typ skupiny (dlhší text) */
         }
 
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
             width: 30%; /* Akcie (Upraviť/Vymazať) */
-            min-width: 220px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
+            min-width: 170px; /* Minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
@@ -71,7 +71,7 @@
         @media (max-width: 1400px) { /* Zmena breakpointu pre 2 stĺpce */
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
-                min-width: 700px; /* Upravená minimálna šírka */
+                min-width: 530px; /* Upravená minimálna šírka */
             }
         }
 
