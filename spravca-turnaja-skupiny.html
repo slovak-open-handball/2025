@@ -20,14 +20,12 @@
         }
 
         .category-group-section {
-            /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
-            /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
-            /* Zvýšená min-width pre zobrazenie všetkého obsahu bez prekrývania */
-            flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
+            /* Flex-basis nastavený na auto, aby sa šírka riadila obsahom a min-width */
+            flex: 0 0 auto; 
             min-width: 650px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
+            max-width: calc(100% - 20px); /* Zabezpečí, že nepretečie rodičovský kontajner s gapom */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
-            /* overflow-x: auto; */ /* Odstránené, aby sa zabránilo horizontálnemu posuvníku */
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
