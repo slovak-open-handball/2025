@@ -24,7 +24,7 @@
             /* Flexibilita pre šírku */
             flex: 0 0 auto; 
             /* Minimálna šírka pre celú sekciu (tabuľku), aby sa obsah zmestil aj so zalomením */
-            min-width: 420px; /* Zvýšená minimálna šírka pre celú sekciu */
+            min-width: 440px; /* Zvýšená minimálna šírka pre celú sekciu */
             /* Maximálna šírka môže pomôcť pri zalomení, ak je príliš veľa priestoru */
             max-width: calc(100% - 40px); /* Aby sa zmestila jedna tabuľka s gapmi */
             box-sizing: border-box; 
@@ -54,7 +54,7 @@
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
             width: 30%; /* Prispôsobiteľná šírka, ale s min-width */
-            min-width: 200px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
+            min-width: 210px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
@@ -68,7 +68,7 @@
         
         .category-group-table td:nth-child(3) {
             display: flex; 
-            justify-content: space-between; 
+            justify-content: flex-end; /* Zmenené na flex-end pre zarovnanie doprava */
             align-items: center; 
             gap: 0 !important; /* Medzera medzi tlačidlami nastavená na 0px s !important */
             white-space: nowrap; /* Tlačidlá sa nezalamujú */
@@ -84,24 +84,24 @@
         }
 
         /* Media queries pre responzivitu */
-        /* Pre veľké obrazovky (viac ako 1270px) - tri tabuľky vedľa seba */
-        @media (min-width: 1270px) {
+        /* Pre veľké obrazovky (viac ako 1330px) - tri tabuľky vedľa seba */
+        @media (min-width: 1330px) {
             .category-group-section {
                 width: calc(33.33% - 13.3333px); /* Tri tabuľky vedľa seba s gapom 20px */
                 max-width: calc(33.33% - 13.3333px);
             }
         }
 
-        /* Pre stredné obrazovky (medzi 840px a 1269px) - dve tabuľky vedľa seba */
-        @media (max-width: 1269px) and (min-width: 840px) {
+        /* Pre stredné obrazovky (medzi 880px a 1329px) - dve tabuľky vedľa seba */
+        @media (max-width: 1329px) and (min-width: 880px) {
             .category-group-section {
                 width: calc(50% - 20px); /* Dve tabuľky vedľa seba s gapom 20px */
                 max-width: calc(50% - 20px);
             }
         }
 
-        /* Pre menšie obrazovky (do 839px) - jedna tabuľka na celú šírku */
-        @media (max-width: 839px) { 
+        /* Pre menšie obrazovky (do 879px) - jedna tabuľka na celú šírku */
+        @media (max-width: 879px) { 
             .category-group-section {
                 width: 100%; 
                 min-width: unset; /* Zruší pevnú minimálnu šírku na mobiloch pre plnú šírku */
