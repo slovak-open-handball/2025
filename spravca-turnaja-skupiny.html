@@ -11,51 +11,43 @@
         /* Nové štýly pre flexbox usporiadanie kategórií */
         #groupsContent {
             display: flex;
-            flex-wrap: wrap; /* Umožní zalomenie na nový riadok */
-            gap: 20px; /* Medzera medzi kategóriami */
-            justify-content: flex-start; /* Zarovnanie kategórií na začiatok */
-            align-items: flex-start; /* Zarovnanie položiek na začiatok krížovej osi */
-            width: 100%; /* Zabezpečí, že groupsContent zaberie dostupnú šírku */
-            max-width: 100%; /* Zabezpečí, že nepretečie */
+            flex-direction: column; /* Tabuľky sa budú zobrazovať pod sebou */
+            gap: 20px; /* Medzera medzi kategóriami/tabuľkami */
+            justify-content: flex-start; 
+            align-items: flex-start; 
+            width: 100%; 
+            max-width: 100%; 
         }
 
         .category-group-section {
-            /* Flex-basis nastavený na 33.33% pre 3 stĺpce, s odpočítaním medzery */
-            flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 530px; /* Minimalna šírka pre obsah tabuľky (súčet min-width stĺpcov + padding) */
-            box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
-            margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
+            flex: 0 0 100%; /* Každá sekcia (tabuľka) zaberie celú dostupnú šírku */
+            /* min-width a max-width sú odstránené, pretože šírka bude 100% */
+            box-sizing: border-box; 
+            margin-bottom: 0; 
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
         .category-group-table {
-            width: 100%;
-            border-collapse: collapse; /* Odstráni medzery medzi bunkami */
+            width: 100%; /* Tabuľka stále zaberá 100% šírky svojho rodiča (.category-group-section) */
+            border-collapse: collapse; 
+            table-layout: auto; /* Prehliadač automaticky určí šírky stĺpcov na základe obsahu */
         }
 
-        /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
+        /* Odstránime pevné šírky a minimálne šírky pre stĺpce, aby sa prispôsobili obsahu */
         .category-group-table th:nth-child(1),
-        .category-group-table td:nth-child(1) {
-            width: 30%; /* Názov skupiny */
-            min-width: 160px; /* Minimálna šírka pre názov skupiny */
-        }
-
+        .category-group-table td:nth-child(1),
         .category-group-table th:nth-child(2),
-        .category-group-table td:nth-child(2) {
-            width: 40%; /* Typ skupiny */
-            min-width: 200px; /* Minimálna šírka pre typ skupiny (dlhší text) */
-        }
-
+        .category-group-table td:nth-child(2),
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
-            width: 30%; /* Akcie (Upraviť/Vymazať) */
-            min-width: 170px; /* Minimálna šírka pre akcie (tlačidlá) */
+            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+            min-width: unset; /* Zrušíme minimálnu šírku, auto režim ju spracuje */
         }
 
         .category-group-table th,
         .category-group-table td {
             padding: 8px; /* Pridá padding pre lepšiu čitateľnosť */
-            white-space: nowrap; /* Zabráni zalamovaniu textu */
+            white-space: nowrap; /* Kľúčové: Zabráni zalamovaniu textu, čím stĺpce nútia rozšíriť sa */
             text-align: left; /* Zarovnanie textu vľavo */
         }
         
@@ -67,33 +59,13 @@
             white-space: nowrap; /* Zabezpečí, že tlačidlá sa nezalamujú */
         }
 
-        /* Prispôsobenie pre menšie obrazovky */
-        @media (max-width: 1400px) { /* Zmena breakpointu pre 2 stĺpce */
-            .category-group-section {
-                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
-                min-width: 530px; /* Upravená minimálna šírka */
-            }
-        }
-
-        @media (max-width: 1000px) { /* Zmena breakpointu pre 1 stĺpec */
-            .category-group-section {
-                flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
-                min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
-            }
-            /* Na mobiloch môžeme zmeniť rozloženie stĺpcov, ak je to potrebné */
-            .category-group-table th:nth-child(1),
-            .category-group-table td:nth-child(1),
-            .category-group-table th:nth-child(2),
-            .category-group-table td:nth-child(2),
-            .category-group-table th:nth-child(3),
-            .category-group-table td:nth-child(3) {
-                width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
-            }
+        /* Prispôsobenie pre menšie obrazovky - zjednodušené, keďže hlavné rozloženie je už pod sebou */
+        @media (max-width: 1000px) { /* Tento breakpoint pre mobilné zariadenia môže zostať */
+            /* Pre mobilné zariadenia je stále vhodné zobraziť bunky ako bloky pre lepšiu čitateľnosť */
             .category-group-table th,
             .category-group-table td {
                 display: block; /* Každá bunka na novom riadku */
-                text-align: left; /* Zarovnanie textu vľavo */
-                white-space: normal; /* Umožní zalomenie textu na mobiloch, ak je to potrebné */
+                white-space: normal; /* Na mobiloch povolíme zalomenie textu, ak je to potrebné */
             }
             .category-group-table thead {
                 display: none; /* Skryje hlavičku tabuľky na mobiloch */
