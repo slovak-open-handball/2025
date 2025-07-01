@@ -10,16 +10,17 @@
     <style>
         /* Flexbox pre zobrazenie tabuliek vedľa seba, ak to šírka umožňuje */
         #groupsContent {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 20px;
             width: 100%;
-            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .category-group-section {
+            width: 100%; /* default pre mobilne zariadenia */
+            max-width: 100%;
             box-sizing: border-box;
-            margin-bottom: 0;
         }
 
         .category-group-table {
