@@ -18,9 +18,9 @@
         }
 
         .category-group-section {
-            /* Upravený flex-basis, aby sa predišlo prekrývaniu s gap */
-            flex: 1 1 calc(33.33% - 14px); /* Ponechávame priestor pre gap, napr. (20px * 2) / 3 = 13.33px */
-            min-width: 300px; /* Minimálna šírka pre zobrazenie jednej kategórie */
+            /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
+            flex: 0 0 calc(33.33% - 14px); /* Ponechávame priestor pre gap, napr. (20px * 2) / 3 = 13.33px */
+            min-width: 320px; /* Zvýšená minimálna šírka pre lepšie zobrazenie */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
         }
@@ -28,13 +28,15 @@
         /* Prispôsobenie pre menšie obrazovky */
         @media (max-width: 900px) {
             .category-group-section {
-                flex: 1 1 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (20px * 1) / 2 = 10px */
+                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (20px * 1) / 2 = 10px */
+                min-width: 300px; /* Upravená minimálna šírka */
             }
         }
 
         @media (max-width: 600px) {
             .category-group-section {
-                flex: 1 1 100%; /* Jeden stĺpec na mobilných zariadeniach */
+                flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
+                min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
             }
         }
     </style>
