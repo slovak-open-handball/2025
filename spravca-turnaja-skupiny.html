@@ -20,17 +20,36 @@
         }
 
         .category-group-section {
-            /* Flex-basis nastavený na auto, aby sa šírka riadila obsahom a min-width */
-            flex: 0 0 auto; 
-            max-width: calc(100% - 20px); /* Zabezpečí, že nepretečie rodičovský kontajner s gapom */
+            /* Flex-basis nastavený na 33.33% pre 3 stĺpce, s odpočítaním medzery */
+            flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
+            min-width: 680px; /* Zvýšená minimálna šírka pre obsah tabuľky a tlačidlá */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
-        .category-group-section table {
+        .category-group-table {
             width: 100%;
             border-collapse: collapse; /* Odstráni medzery medzi bunkami */
+        }
+
+        /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
+        .category-group-table th:nth-child(1),
+        .category-group-table td:nth-child(1) {
+            width: 35%; /* Názov skupiny */
+            min-width: 220px; /* Zvýšená minimálna šírka pre názov skupiny */
+        }
+
+        .category-group-table th:nth-child(2),
+        .category-group-table td:nth-child(2) {
+            width: 35%; /* Typ skupiny */
+            min-width: 220px; /* Zvýšená minimálna šírka pre typ skupiny */
+        }
+
+        .category-group-table th:nth-child(3),
+        .category-group-table td:nth-child(3) {
+            width: 30%; /* Akcie (Upraviť/Vymazať) */
+            min-width: 220px; /* Zvýšená minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
@@ -52,7 +71,7 @@
         @media (max-width: 1400px) { /* Zmena breakpointu pre 2 stĺpce */
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
-                min-width: 700px; /* Upravená minimálna šírka */
+                min-width: 650px; /* Upravená minimálna šírka */
             }
         }
 
@@ -63,7 +82,10 @@
             }
             /* Na mobiloch môžeme zmeniť rozloženie stĺpcov, ak je to potrebné */
             .category-group-table th:nth-child(1),
+            .category-group-table td:nth-child(1),
             .category-group-table th:nth-child(2),
+            .category-group-table td:nth-child(2),
+            .category-group-table th:nth-child(3),
             .category-group-table td:nth-child(3) {
                 width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
             }
@@ -72,6 +94,9 @@
                 display: block; /* Každá bunka na novom riadku */
                 text-align: left; /* Zarovnanie textu vľavo */
                 white-space: normal; /* Umožní zalomenie textu na mobiloch, ak je to potrebné */
+            }
+            .category-group-table thead {
+                display: none; /* Skryje hlavičku tabuľky na mobiloch */
             }
             .category-group-table tr {
                 display: block; /* Každý riadok ako blok */
