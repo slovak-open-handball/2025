@@ -11,19 +11,21 @@
         /* Nové štýly pre flexbox usporiadanie kategórií */
         #groupsContent {
             display: flex;
-            flex-direction: column; /* Tabuľky sa budú zobrazovať pod sebou */
+            flex-direction: row; /* Zobrazenie vedľa seba */
+            flex-wrap: wrap; /* Umožní zalomenie na nový riadok */
             gap: 20px; /* Medzera medzi kategóriami/tabuľkami */
-            justify-content: flex-start; 
-            align-items: flex-start; 
-            width: 100%; 
-            max-width: 100%; 
+            justify-content: center; /* Centrovanie tabuliek */
+            align-items: flex-start; /* Zarovnanie položiek na začiatok krížovej osi */
+            width: 100%; /* Zabezpečí, že groupsContent zaberie dostupnú šírku */
+            max-width: 100%; /* Zabezpečí, že nepretečie */
         }
 
         .category-group-section {
-            flex: 0 0 100%; /* Každá sekcia (tabuľka) zaberie celú dostupnú šírku */
-            /* min-width a max-width sú odstránené, pretože šírka bude 100% */
-            box-sizing: border-box; 
-            margin-bottom: 0; 
+            /* Flex-basis auto, aby sa šírka riadila obsahom a min-width */
+            flex: 0 0 auto; 
+            min-width: 550px; /* Minimalna šírka pre obsah tabuľky (súčet min-width stĺpcov + padding) */
+            box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
+            margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
@@ -35,13 +37,21 @@
 
         /* Odstránime pevné šírky a minimálne šírky pre stĺpce, aby sa prispôsobili obsahu */
         .category-group-table th:nth-child(1),
-        .category-group-table td:nth-child(1),
+        .category-group-table td:nth-child(1) {
+            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+            min-width: 160px; /* Minimálna šírka pre názov skupiny */
+        }
+
         .category-group-table th:nth-child(2),
-        .category-group-table td:nth-child(2),
+        .category-group-table td:nth-child(2) {
+            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+            min-width: 200px; /* Minimálna šírka pre typ skupiny (dlhší text) */
+        }
+
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
             width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
-            min-width: unset; /* Zrušíme minimálnu šírku, auto režim ju spracuje */
+            min-width: 130px; /* Minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
@@ -59,9 +69,35 @@
             white-space: nowrap; /* Zabezpečí, že tlačidlá sa nezalamujú */
         }
 
-        /* Prispôsobenie pre menšie obrazovky - zjednodušené, keďže hlavné rozloženie je už pod sebou */
-        @media (max-width: 1000px) { /* Tento breakpoint pre mobilné zariadenia môže zostať */
-            /* Pre mobilné zariadenia je stále vhodné zobraziť bunky ako bloky pre lepšiu čitateľnosť */
+        /* Prispôsobenie pre menšie obrazovky */
+        @media (max-width: 1700px) { /* Zmena breakpointu pre 3 stĺpce */
+             .category-group-section {
+                 flex: 0 0 calc(33.33% - 13.3333px); /* 3 stĺpce */
+                 min-width: 550px; /* Udržanie minimálnej šírky */
+             }
+         }
+
+        @media (max-width: 1150px) { /* Zmena breakpointu pre 2 stĺpce */
+            .category-group-section {
+                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
+                min-width: 550px; /* Upravená minimálna šírka */
+            }
+        }
+
+        @media (max-width: 700px) { /* Zmena breakpointu pre 1 stĺpec */
+            .category-group-section {
+                flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
+                min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
+            }
+            /* Na mobiloch môžeme zmeniť rozloženie stĺpcov, ak je to potrebné */
+            .category-group-table th:nth-child(1),
+            .category-group-table td:nth-child(1),
+            .category-group-table th:nth-child(2),
+            .category-group-table td:nth-child(2),
+            .category-group-table th:nth-child(3),
+            .category-group-table td:nth-child(3) {
+                width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+            }
             .category-group-table th,
             .category-group-table td {
                 display: block; /* Každá bunka na novom riadku */
