@@ -22,7 +22,7 @@
         .category-group-section {
             /* Flex-basis nastavený na auto, aby sa šírka riadila obsahom a min-width */
             flex: 0 0 auto; 
-            min-width: 650px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
+            min-width: 750px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
             max-width: calc(100% - 20px); /* Zabezpečí, že nepretečie rodičovský kontajner s gapom */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
@@ -37,19 +37,16 @@
         /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
         .category-group-table th:nth-child(1),
         .category-group-table td:nth-child(1) {
-            width: 35%; /* Názov skupiny */
             min-width: 180px; /* Minimálna šírka pre názov skupiny */
         }
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
-            width: 35%; /* Typ skupiny */
             min-width: 180px; /* Minimálna šírka pre typ skupiny */
         }
 
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
-            width: 30%; /* Akcie (Upraviť/Vymazať) */
             min-width: 200px; /* Minimálna šírka pre akcie (tlačidlá) */
         }
 
@@ -72,7 +69,7 @@
         @media (max-width: 1400px) { /* Zmena breakpointu pre 2 stĺpce */
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
-                min-width: 600px; /* Upravená minimálna šírka */
+                min-width: 700px; /* Upravená minimálna šírka */
             }
         }
 
