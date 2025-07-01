@@ -24,7 +24,7 @@
             /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
             /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
             flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 480px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
+            min-width: 500px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
             /* overflow-x: auto; */ /* Odstránené, aby sa zabránilo horizontálnemu posuvníku */
@@ -74,7 +74,7 @@
         @media (max-width: 900px) {
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (100% - 1*gap) / 2 = (100% - 20px) / 2 */
-                min-width: 450px; /* Upravená minimálna šírka */
+                min-width: 480px; /* Upravená minimálna šírka */
             }
         }
 
