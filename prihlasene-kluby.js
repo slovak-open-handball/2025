@@ -539,7 +539,7 @@ async function displaySubjectDetails(baseName, initialTeamId = null) {
                }
                
                // Konštruujeme text tlačidla: Kategória - Celý názov tímu
-               const buttonText = `${categoryName} - ${team.name || 'Neznámy tím'}`;
+               const buttonText = `${categoryName} | ${team.name || 'Neznámy tím'}`;
                teamButton.textContent = buttonText;
                teamButton.dataset.teamId = team.id; // Uložíme ID tímu do datasetu
 
