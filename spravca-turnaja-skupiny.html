@@ -24,15 +24,16 @@
             /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
             /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
             flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 360px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky */
+            min-width: 400px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky a tlačidiel */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
+            overflow-x: auto; /* Pridá horizontálny posuvník, ak je obsah príliš široký */
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
         .category-group-section table {
             width: 100%;
-            table-layout: fixed; /* Pomôže s rozložením stĺpcov */
+            /* table-layout: fixed; */ /* Odstránené, aby sa šírka stĺpcov prispôsobila obsahu */
         }
 
         /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
@@ -54,16 +55,20 @@
         .category-group-table th,
         .category-group-table td {
             padding: 8px; /* Pridá padding pre lepšiu čitateľnosť */
-            overflow: hidden; /* Skryje pretečenie, ale s dostatočnou šírkou by nemalo nastať */
-            text-overflow: ellipsis; /* Pridá tri bodky, ak by náhodou pretekalo (ako poistka) */
-            white-space: normal; /* Umožní textu zalomiť sa na viac riadkov */
+            /* overflow: hidden; */ /* Odstránené, aby sa text nezakrýval */
+            /* text-overflow: ellipsis; */ /* Odstránené */
+            white-space: nowrap; /* Zabráni zalamovaniu textu */
+        }
+        
+        .category-group-table td:nth-child(3) {
+            white-space: nowrap; /* Zabezpečí, že tlačidlá sa nezalamujú */
         }
 
         /* Prispôsobenie pre menšie obrazovky */
         @media (max-width: 900px) {
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (100% - 1*gap) / 2 = (100% - 20px) / 2 */
-                min-width: 340px; /* Upravená minimálna šírka */
+                min-width: 380px; /* Upravená minimálna šírka */
             }
         }
 
@@ -85,7 +90,7 @@
             .category-group-table td {
                 display: block; /* Každá bunka na novom riadku */
                 text-align: left; /* Zarovnanie textu vľavo */
-                white-space: normal; /* Umožní zalomenie textu */
+                white-space: normal; /* Umožní zalomenie textu na mobiloch, ak je to potrebné */
             }
             .category-group-table thead {
                 display: none; /* Skryje hlavičku tabuľky na mobiloch */
