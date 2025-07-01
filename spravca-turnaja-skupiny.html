@@ -21,111 +21,123 @@
         }
 
         .category-group-section {
-            /* Flex-basis auto, aby sa šírka riadila obsahom a min-width */
+            /* Flexibilita pre šírku */
             flex: 0 0 auto; 
-            min-width: 550px; /* Minimalna šírka pre obsah tabuľky (súčet min-width stĺpcov + padding) */
-            box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
-            margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
+            /* Minimálna šírka pre celú sekciu (tabuľku), aby sa obsah nezalamoval a tlačidlá zmestili */
+            min-width: 600px; 
+            /* Maximálna šírka môže pomôcť pri zalomení, ak je príliš veľa priestoru */
+            max-width: calc(100% - 40px); /* Aby sa zmestila jedna tabuľka s gapmi */
+            box-sizing: border-box; 
+            margin-bottom: 0; 
         }
 
         /* Zabezpečí, že tabuľky vnútri sekcií nepretečú */
         .category-group-table {
             width: 100%; /* Tabuľka stále zaberá 100% šírky svojho rodiča (.category-group-section) */
             border-collapse: collapse; 
-            table-layout: auto; /* Prehliadač automaticky určí šírky stĺpcov na základe obsahu */
+            table-layout: fixed; /* Kľúčové: Pevné rozloženie stĺpcov */
         }
 
-        /* Odstránime pevné šírky a minimálne šírky pre stĺpce, aby sa prispôsobili obsahu */
+        /* Explicitné šírky pre stĺpce v režime fixed table-layout */
         .category-group-table th:nth-child(1),
         .category-group-table td:nth-child(1) {
-            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
-            min-width: 160px; /* Minimálna šírka pre názov skupiny */
+            width: 30%; /* Prispôsobiteľná šírka, ale s min-width */
+            min-width: 180px; /* Minimálna šírka pre názov skupiny */
         }
 
         .category-group-table th:nth-child(2),
         .category-group-table td:nth-child(2) {
-            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
-            min-width: 200px; /* Minimálna šírka pre typ skupiny (dlhší text) */
+            width: 40%; /* Prispôsobiteľná šírka, ale s min-width */
+            min-width: 220px; /* Minimálna šírka pre typ skupiny (dlhší text) */
         }
 
         .category-group-table th:nth-child(3),
         .category-group-table td:nth-child(3) {
-            width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
-            min-width: 130px; /* Minimálna šírka pre akcie (tlačidlá) */
+            width: 30%; /* Prispôsobiteľná šírka, ale s min-width */
+            min-width: 170px; /* Minimálna šírka pre akcie (tlačidlá) */
         }
 
         .category-group-table th,
         .category-group-table td {
-            padding: 8px; /* Pridá padding pre lepšiu čitateľnosť */
-            white-space: nowrap; /* Kľúčové: Zabráni zalamovaniu textu, čím stĺpce nútia rozšíriť sa */
-            text-align: left; /* Zarovnanie textu vľavo */
+            padding: 8px; 
+            white-space: nowrap; /* Zabráni zalamovaniu textu */
+            overflow: hidden; /* Skryje prebytočný text, ak by sa náhodou nezmestil (ale min-width by tomu mal zabrániť) */
+            text-overflow: ellipsis; /* Zobrazí tri bodky, ak sa text skryje */
+            text-align: left; 
         }
         
         .category-group-table td:nth-child(3) {
-            display: flex; /* Použije flexbox pre tlačidlá */
-            justify-content: space-between; /* Tlačidlá sa rozložia na okraje stĺpca */
-            align-items: center; /* Vertikálne centrovanie tlačidiel */
-            gap: 5px; /* Medzera medzi tlačidlami */
-            white-space: nowrap; /* Zabezpečí, že tlačidlá sa nezalamujú */
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            gap: 5px; 
+            white-space: nowrap; 
+            overflow: visible; /* Aby tlačidlá neboli orezané */
+            text-overflow: clip; /* Tlačidlá netreba orezávať */
         }
 
-        /* Prispôsobenie pre menšie obrazovky */
-        @media (max-width: 1700px) { /* Zmena breakpointu pre 3 stĺpce */
-             .category-group-section {
-                 flex: 0 0 calc(33.33% - 13.3333px); /* 3 stĺpce */
-                 min-width: 550px; /* Udržanie minimálnej šírky */
-             }
-         }
-
-        @media (max-width: 1150px) { /* Zmena breakpointu pre 2 stĺpce */
+        /* Media queries pre responzivitu */
+        /* Pre veľké obrazovky (viac ako 1240px) - dve tabuľky vedľa seba */
+        @media (min-width: 1240px) {
             .category-group-section {
-                flex: 0 0 calc(50% - 10px); /* Dva stĺpce na stredných obrazovkách */
-                min-width: 550px; /* Upravená minimálna šírka */
+                width: calc(50% - 20px); /* Dve tabuľky vedľa seba s gapom 20px */
+                max-width: calc(50% - 20px);
             }
         }
 
-        @media (max-width: 700px) { /* Zmena breakpointu pre 1 stĺpec */
+        /* Pre stredné obrazovky (medzi 701px a 1239px) - jedna tabuľka na celú šírku */
+        @media (max-width: 1239px) and (min-width: 701px) {
             .category-group-section {
-                flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
-                min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
+                width: 100%;
+                max-width: 100%;
+                min-width: 600px; /* Udržať min-width pre obsah */
             }
-            /* Na mobiloch môžeme zmeniť rozloženie stĺpcov, ak je to potrebné */
-            .category-group-table th:nth-child(1),
-            .category-group-table td:nth-child(1),
-            .category-group-table th:nth-child(2),
-            .category-group-table td:nth-child(2),
-            .category-group-table th:nth-child(3),
-            .category-group-table td:nth-child(3) {
-                width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+        }
+
+        /* Pre mobilné obrazovky (do 700px) - jedna tabuľka, upravený layout */
+        @media (max-width: 700px) { 
+            .category-group-section {
+                width: 100%; 
+                min-width: unset; /* Zruší pevnú minimálnu šírku na mobiloch pre plnú šírku */
+                max-width: 100%;
             }
             .category-group-table th,
             .category-group-table td {
                 display: block; /* Každá bunka na novom riadku */
                 white-space: normal; /* Na mobiloch povolíme zalomenie textu, ak je to potrebné */
+                text-overflow: clip; /* Na mobiloch netreba ellipsis, ak sa zalamuje */
             }
             .category-group-table thead {
                 display: none; /* Skryje hlavičku tabuľky na mobiloch */
             }
             .category-group-table tr {
                 display: block; /* Každý riadok ako blok */
-                margin-bottom: 15px; /* Medzera medzi riadkami */
+                margin-bottom: 15px; 
                 border: 1px solid #ddd;
                 border-radius: 8px;
                 padding: 10px;
             }
             .category-group-table td:before {
-                content: attr(data-label); /* Zobrazí label z data-label atribútu */
+                content: attr(data-label); 
                 font-weight: bold;
                 margin-right: 10px;
             }
             .category-group-table td:nth-child(1):before { content: "Názov skupiny:"; }
             .category-group-table td:nth-child(2):before { content: "Typ skupiny:"; }
             .category-group-table td:nth-child(3):before { content: "Akcie:"; }
-            .category-group-table .actions-cell {
+            .category-group-table .actions-cell { /* trieda akcie-cell nie je v HTML, ale ak sa pridá, toto pomôže */
                 display: flex;
+                flex-wrap: wrap; /* Tlačidlá sa môžu zalomiť */
                 justify-content: center;
                 gap: 5px;
                 margin-top: 10px;
+            }
+            /* Reset šírok stĺpcov pre mobilné zobrazenie */
+            .category-group-table th:nth-child(1), .category-group-table td:nth-child(1),
+            .category-group-table th:nth-child(2), .category-group-table td:nth-child(2),
+            .category-group-table th:nth-child(3), .category-group-table td:nth-child(3) {
+                width: auto;
+                min-width: unset;
             }
         }
     </style>
