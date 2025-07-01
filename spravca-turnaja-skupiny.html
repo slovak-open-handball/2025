@@ -24,7 +24,7 @@
             /* Upravený flex-basis a flex-shrink na 0, aby sa predišlo prekrývaniu */
             /* Používame calc pre presnejší výpočet šírky s ohľadom na gap */
             flex: 0 0 calc(33.33% - 13.3333px); /* (100% - 2*gap) / 3 = (100% - 40px) / 3 */
-            min-width: 340px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky */
+            min-width: 360px; /* Zvýšená minimálna šírka pre lepšie zobrazenie obsahu tabuľky */
             box-sizing: border-box; /* Zabezpečí správne počítanie šírky s paddingom a borderom */
             margin-bottom: 0; /* Odstráni spodný margin, ak je definovaný inde */
         }
@@ -35,11 +35,35 @@
             table-layout: fixed; /* Pomôže s rozložením stĺpcov */
         }
 
+        /* Explicitné nastavenie šírok stĺpcov pre tabuľku skupín */
+        .category-group-table th:nth-child(1),
+        .category-group-table td:nth-child(1) {
+            width: 35%; /* Názov skupiny */
+        }
+
+        .category-group-table th:nth-child(2),
+        .category-group-table td:nth-child(2) {
+            width: 35%; /* Typ skupiny */
+        }
+
+        .category-group-table th:nth-child(3),
+        .category-group-table td:nth-child(3) {
+            width: 30%; /* Akcie (Upraviť/Vymazať) */
+        }
+
+        .category-group-table th,
+        .category-group-table td {
+            padding: 8px; /* Pridá padding pre lepšiu čitateľnosť */
+            overflow: hidden; /* Skryje pretečenie, ale s dostatočnou šírkou by nemalo nastať */
+            text-overflow: ellipsis; /* Pridá tri bodky, ak by náhodou pretekalo (ako poistka) */
+            white-space: normal; /* Umožní textu zalomiť sa na viac riadkov */
+        }
+
         /* Prispôsobenie pre menšie obrazovky */
         @media (max-width: 900px) {
             .category-group-section {
                 flex: 0 0 calc(50% - 10px); /* Dva stĺpce na menších obrazovkách, (100% - 1*gap) / 2 = (100% - 20px) / 2 */
-                min-width: 320px; /* Upravená minimálna šírka */
+                min-width: 340px; /* Upravená minimálna šírka */
             }
         }
 
@@ -47,6 +71,45 @@
             .category-group-section {
                 flex: 0 0 100%; /* Jeden stĺpec na mobilných zariadeniach */
                 min-width: unset; /* Zruší minimálnu šírku na mobiloch pre plnú šírku */
+            }
+            /* Na mobiloch môžeme zmeniť rozloženie stĺpcov, ak je to potrebné */
+            .category-group-table th:nth-child(1),
+            .category-group-table td:nth-child(1),
+            .category-group-table th:nth-child(2),
+            .category-group-table td:nth-child(2),
+            .category-group-table th:nth-child(3),
+            .category-group-table td:nth-child(3) {
+                width: auto; /* Automatická šírka pre flexibilné prispôsobenie */
+            }
+            .category-group-table th,
+            .category-group-table td {
+                display: block; /* Každá bunka na novom riadku */
+                text-align: left; /* Zarovnanie textu vľavo */
+                white-space: normal; /* Umožní zalomenie textu */
+            }
+            .category-group-table thead {
+                display: none; /* Skryje hlavičku tabuľky na mobiloch */
+            }
+            .category-group-table tr {
+                display: block; /* Každý riadok ako blok */
+                margin-bottom: 15px; /* Medzera medzi riadkami */
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            .category-group-table td:before {
+                content: attr(data-label); /* Zobrazí label z data-label atribútu */
+                font-weight: bold;
+                margin-right: 10px;
+            }
+            .category-group-table td:nth-child(1):before { content: "Názov skupiny:"; }
+            .category-group-table td:nth-child(2):before { content: "Typ skupiny:"; }
+            .category-group-table td:nth-child(3):before { content: "Akcie:"; }
+            .category-group-table .actions-cell {
+                display: flex;
+                justify-content: center;
+                gap: 5px;
+                margin-top: 10px;
             }
         }
     </style>
