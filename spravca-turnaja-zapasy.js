@@ -862,9 +862,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         await batch.commit();
         console.log(`[recalculateAndSaveScheduleForDateAndLocation] Batch commit úspešný.`);
 
-        // Kľúčová zmena: Explicitne zavolajte displayMatchesAsSchedule po dokončení prepočtu
-        // Odstránil som toto volanie, pretože onSnapshot by sa mal postarať o obnovenie zobrazenia.
-        // Ak sa stále zobrazuje dvakrát, problém je v onSnapshot alebo v tom, ako sa spúšťa.
+        // Kľúčová zmena: Odstránené explicitné volanie displayMatchesAsSchedule
+        // Toto volanie je teraz handled by onSnapshot listeners
         // await displayMatchesAsSchedule(allSettings); 
 
     } catch (error) {
@@ -1076,19 +1075,24 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
     } catch (error) {
         console.error("[moveAndRescheduleMatch] Chyba pri presúvaní a prepočítavaní rozvrhu:", error);
         await showMessage('Chyba', `Chyba pri presúvaní zápasu: ${error.message}.`);
-        await displayMatchesAsSchedule(allSettings); // Odovzdaj allSettings
+        // displayMatchesAsSchedule(allSettings); // Odstránené explicitné volanie
     }
 }
 
 /**
  * Zobrazí zápasy ako rozvrh, zoskupené podľa miesta a dátumu.
  * @param {object} currentAllSettings Aktuálny objekt allSettings, odovzdaný z onSnapshot listenera.
+ * @param {Array<object>} matchesData Pole objektov zápasov.
+ * @param {Array<object>} blockedSlotsData Pole objektov zablokovaných/voľných slotov.
  */
-async function displayMatchesAsSchedule(currentAllSettings) {
+async function displayMatchesAsSchedule(currentAllSettings, matchesData, blockedSlotsData) {
     const matchesContainer = document.getElementById('matchesContainer');
     if (!matchesContainer) return;
 
     console.log("[displayMatchesAsSchedule] START. Current allSettings:", JSON.stringify(currentAllSettings));
+    console.log("[displayMatchesAsSchedule] Prijaté matchesData:", JSON.stringify(matchesData.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, storedDuration: m.duration, storedBufferTime: m.bufferTime}))));
+    console.log("[displayMatchesAsSchedule] Prijaté blockedSlotsData:", JSON.stringify(blockedSlotsData.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
+
 
     // Ulož funkciu zastavenia animácie z predchádzajúceho volania
     if (typeof matchesContainer._stopAnimation === 'function') {
@@ -1105,10 +1109,8 @@ async function displayMatchesAsSchedule(currentAllSettings) {
     console.log('[displayMatchesAsSchedule] Spustené načítavanie dát.');
 
     try {
-        const matchesQuery = query(matchesCollectionRef, orderBy("date", "asc"), orderBy("location", "asc"), orderBy("startTime", "asc"));
-        const matchesSnapshot = await getDocs(matchesQuery);
-        let allMatchesRaw = matchesSnapshot.docs.map(doc => ({ id: doc.id, type: 'match', docRef: doc.ref, ...doc.data() }));
-        console.log("[displayMatchesAsSchedule] Načítané surové zápasy (po fetchData):", JSON.stringify(allMatchesRaw.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, storedDuration: m.duration, storedBufferTime: m.bufferTime}))));
+        let allMatchesRaw = matchesData; // Použi prijaté dáta
+        console.log("[displayMatchesAsSchedule] Použité surové zápasy (z parametra):", JSON.stringify(allMatchesRaw.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, storedDuration: m.duration, storedBufferTime: m.bufferTime}))));
 
         const categoriesSnapshot = await getDocs(categoriesCollectionRef);
         const categoriesMap = new Map();
@@ -1144,19 +1146,13 @@ async function displayMatchesAsSchedule(currentAllSettings) {
         let globalOtherDaysStartTime = allSettings.otherDaysStartTime || '08:00';
         console.log(`[displayMatchesAsSchedule] Globálny čas začiatku (prvý deň): ${globalFirstDayStartTime}, (ostatné dni): ${globalOtherDaysStartTime}`);
 
-        const blockedIntervalsSnapshot = await getDocs(query(blockedSlotsCollectionRef));
-        const allBlockedIntervals = blockedIntervalsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            type: 'blocked_interval',
-            isBlocked: doc.data().isBlocked === true,
-            originalMatchId: doc.data().originalMatchId || null,
-            ...doc.data(),
-            startInMinutes: parseTimeToMinutes(doc.data().startTime),
-            endInMinutes: parseTimeToMinutes(doc.data().endTime)
-        }));
-        console.log("[displayMatchesAsSchedule] Načítané zablokované intervaly:", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
+        const allBlockedIntervals = blockedSlotsData; // Použi prijaté dáta
+        console.log("[displayMatchesAsSchedule] Použité zablokované intervaly (z parametra):", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
 
         // --- NOVÁ LOGIKA: Aktualizuj dokumenty zápasov so správnym trvaním/bufferom z nastavení ---
+        // Táto časť sa teraz spúšťa v rámci onSnapshot pre settings, ale jej výsledok (aktualizované zápasy)
+        // by mal byť zachytený onSnapshot pre matches, ktorý potom spustí displayMatchesAsSchedule.
+        // Preto je dôležité, aby displayMatchesAsSchedule používala dáta z parametrov.
         const updateMatchesBatch = writeBatch(db);
         let matchesToUpdateCount = 0;
         const affectedDateLocations = new Set(); // Sledovanie dotknutých dátumov a miest
@@ -2694,7 +2690,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
@@ -2726,7 +2722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closePlaceModalButton = document.getElementById('closePlaceModal');
     const placeForm = document.getElementById('placeForm'); 
     const placeIdInput = document.getElementById('placeId');
-    const placeTypeSelect = document.getElementById('placeTypeSelect');
+    const placeTypeSelect = document = document.getElementById('placeTypeSelect');
     const placeNameInput = document.getElementById('placeName');
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
@@ -2735,21 +2731,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const closeFreeIntervalModalButton = document.getElementById('closeFreeSlotModal');
 
-    // Inicializuj allSettings ako prázdny objekt
+    // Inicializuj allSettings ako prázdny objekt a dáta zápasov/slotov
     let allSettings = {};
+    let allMatchesData = [];
+    let allBlockedSlotsData = [];
 
     // Nastav poslucháč na zmeny nastavení v reálnom čase
     const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-    onSnapshot(settingsDocRef, async (docSnapshot) => { // Zmenené na async
+    onSnapshot(settingsDocRef, async (docSnapshot) => {
         if (docSnapshot.exists()) {
             allSettings = docSnapshot.data();
             console.log("[onSnapshot] Nastavenia aktualizované v reálnom čase (základné):", allSettings);
         } else {
-            allSettings = {}; // Resetuj, ak dokument nastavení neexistuje
+            allSettings = {};
             console.log("[onSnapshot] Dokument nastavení neexistuje.");
         }
 
-        // Kľúčová zmena: Načítanie nastavení kategórií a ich pridanie do allSettings
         try {
             const categoriesSnapshot = await getDocs(categoriesCollectionRef);
             const categoryMatchSettings = {};
@@ -2760,8 +2757,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     t: catData.t || 0,
                     p: catData.p || 0,
                     z: catData.z || 0,
-                    duration: catData.duration !== undefined ? catData.duration : 60, // Použi priamo 'duration' z DB
-                    bufferTime: catData.bufferTime !== undefined ? catData.bufferTime : 5, // Použi priamo 'bufferTime' z DB
+                    duration: catData.duration !== undefined ? catData.duration : 60,
+                    bufferTime: catData.bufferTime !== undefined ? catData.bufferTime : 5,
                     color: catData.color || '#000000'
                 };
             });
@@ -2772,11 +2769,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("[onSnapshot] Chyba pri načítaní nastavení kategórií pre allSettings:", error);
         }
 
-        // Znova zobraz rozvrh pri každej zmene nastavení
-        displayMatchesAsSchedule(allSettings);
+        // Vždy zavolaj displayMatchesAsSchedule s najnovšími nastaveniami a aktuálnymi dátami zápasov/slotov
+        displayMatchesAsSchedule(allSettings, allMatchesData, allBlockedSlotsData);
     }, (error) => {
         console.error("[onSnapshot] Chyba pri počúvaní zmien nastavení:", error);
-        showMessage('Chyha', `Chyba pri načítaní nastavení: ${error.message}`);
+        showMessage('Chyba', `Chyba pri načítaní nastavení: ${error.message}`);
+    });
+
+    // Nový onSnapshot poslucháč pre zápasy
+    onSnapshot(query(matchesCollectionRef), (snapshot) => {
+        allMatchesData = snapshot.docs.map(doc => ({ id: doc.id, type: 'match', docRef: doc.ref, ...doc.data() }));
+        console.log("[onSnapshot] Matches data updated in real-time.");
+        // Re-render the schedule with the latest data and settings
+        displayMatchesAsSchedule(allSettings, allMatchesData, allBlockedSlotsData);
+    }, (error) => {
+        console.error("[onSnapshot] Chyba pri počúvaní zmien zápasov:", error);
+        showMessage('Chyba', `Chyba pri načítaní zápasov: ${error.message}`);
+    });
+
+    // Nový onSnapshot poslucháč pre zablokované sloty
+    onSnapshot(query(blockedSlotsCollectionRef), (snapshot) => {
+        allBlockedSlotsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            type: 'blocked_interval',
+            isBlocked: doc.data().isBlocked === true,
+            originalMatchId: doc.data().originalMatchId || null,
+            docRef: doc.ref,
+            ...doc.data(),
+            startInMinutes: parseTimeToMinutes(doc.data().startTime),
+            endInMinutes: parseTimeToMinutes(doc.data().endTime)
+        }));
+        console.log("[onSnapshot] Blocked slots data updated in real-time.");
+        // Re-render the schedule with the latest data and settings
+        displayMatchesAsSchedule(allSettings, allMatchesData, allBlockedSlotsData);
+    }, (error) => {
+        console.error("[onSnapshot] Chyba pri počúvaní zmien zablokovaných slotov:", error);
+        showMessage('Chyba', `Chyba pri načítaní zablokovaných slotov: ${error.message}`);
     });
 
 
@@ -2791,7 +2819,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Počiatočné zobrazenie zápasov (bude aktualizované onSnapshot)
-    // await displayMatchesAsSchedule(allSettings); // Toto počiatočné volanie môže byť redundantné, ak sa onSnapshot spustí okamžite
+    // Toto počiatočné volanie už nie je striktne potrebné, pretože onSnapshot sa spustí okamžite
+    // ale pre istotu, ak by Firebase bola pomalá, môžeme ho nechať, aby sa zobrazilo aspoň prázdne rozvrhnutie.
+    // displayMatchesAsSchedule(allSettings, allMatchesData, allBlockedSlotsData);
 
 
     if (!document.getElementById('add-options-show-style')) {
