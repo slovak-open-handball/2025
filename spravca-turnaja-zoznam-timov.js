@@ -23,6 +23,7 @@ const filterModalTitle = document.getElementById('filterModalTitle');
 const filterSelect = document.getElementById('filterSelect');
 const addButton = document.getElementById('addButton');
 const clearFiltersButton = document.getElementById('clearFiltersButton');
+const groupTypeFilterButtons = document.getElementById('groupTypeFilterButtons'); // NOVÉ: Referencia na kontajner tlačidiel typu skupiny
 
 let allAvailableCategories = [];
 let allAvailableGroups = [];
@@ -33,11 +34,19 @@ let currentClubModalMode = null;
 let currentFilters = {
     teamName: null,
     category: null,
-    group: null
+    group: null,
+    groupType: null // NOVÉ: Filter podľa typu skupiny
 };
 let currentSort = {
     column: null,
     direction: 'asc'
+};
+
+// Mapa pre preklad typov skupín z formátu DB na zobrazenie s diakritikou
+const groupTypeDisplayMap = {
+    "Zakladna skupina": "Základná skupina",
+    "Nadstavbova skupina": "Nadstavbová skupina",
+    "Skupina o umiestnenie": "Skupina o umiestnenie"
 };
 
 /**
@@ -220,10 +229,10 @@ async function loadAllGroups() {
         querySnapshot.forEach((doc) => {
             const groupData = doc.data();
             if (groupData && typeof groupData.name === 'string' && groupData.name.trim() !== '') {
-                allAvailableGroups.push({ id: doc.id, name: groupData.name.trim(), categoryId: groupData.categoryId });
+                allAvailableGroups.push({ id: doc.id, name: groupData.name.trim(), categoryId: groupData.categoryId, type: groupData.type || "Zakladna skupina" }); // Pridaný typ
             } else {
                 // Ak názov chýba, použijeme ID ako názov
-                allAvailableGroups.push({ id: doc.id, name: doc.id, categoryId: groupData.categoryId });
+                allAvailableGroups.push({ id: doc.id, name: doc.id, categoryId: groupData.categoryId, type: groupData.type || "Zakladna skupina" }); // Pridaný typ
             }
         });
         allAvailableGroups.sort((a, b) => {
@@ -1129,7 +1138,7 @@ if (clubForm) {
  * Zobrazí vytvorené tímy v tabuľke, aplikuje filtre a zoradenie.
  */
 async function displayCreatedTeams() {
-    if (!createdTeamsTableBody || !createdTeamsTableHeader) {
+    if (!createdTeamsTableBody || !createdTeamsTableHeader || !groupTypeFilterButtons) { // Pridaný groupTypeFilterButtons
         return;
     }
     createdTeamsTableBody.innerHTML = '';
@@ -1153,7 +1162,8 @@ async function displayCreatedTeams() {
              currentFilters = {
                  teamName: null,
                  category: null,
-                 group: null
+                 group: null,
+                 groupType: null // Resetujeme aj filter typu skupiny
              };
              currentSort = {
                  column: null,
@@ -1181,6 +1191,7 @@ async function displayCreatedTeams() {
             createdTeamsTableBody.innerHTML = '<tr><td colspan="6">Zatiaľ nie sú vytvorené žiadne tímy.</td></tr>';
             teamsToDisplay = [];
             displayAppliedFiltersInHeader();
+            renderGroupTypeFilterButtons(); // Vykreslí tlačidlá aj keď nie sú tímy
             return;
         }
 
@@ -1200,6 +1211,8 @@ async function displayCreatedTeams() {
                 filteredTeams = filteredTeams.filter(team => {
                     const teamCategoryId = team.categoryId;
                     const teamGroupId = team.groupId;
+                    const teamGroup = allAvailableGroups.find(g => g.id === teamGroupId);
+                    const teamGroupType = teamGroup ? teamGroup.type : null;
 
                     if (filterType === 'teamName') {
                         // Porovnávame vyčistený názov tímu s vybranou hodnotou filtra
@@ -1217,6 +1230,11 @@ async function displayCreatedTeams() {
                         } else {
                             return teamGroupId === filterValue; // Compare IDs
                         }
+                    } else if (filterType === 'groupType') { // NOVÉ: Filter podľa typu skupiny
+                        if (filterValue === 'all') { // "Všetky skupiny"
+                            return true;
+                        }
+                        return teamGroupType === filterValue;
                     }
                     return false;
                 });
@@ -1248,6 +1266,7 @@ async function displayCreatedTeams() {
         if (teamsToDisplay.length === 0) {
             createdTeamsTableBody.innerHTML = '<tr><td colspan="6">Žiadne tímy zodpovedajúce filtru.</td></tr>';
             displayAppliedFiltersInHeader();
+            renderGroupTypeFilterButtons(); // Vykreslí tlačidlá aj keď nie sú tímy
             return;
         }
 
@@ -1346,12 +1365,14 @@ async function displayCreatedTeams() {
               noTeamsRow.colSpan = 6;
           }
          displayAppliedFiltersInHeader();
+         renderGroupTypeFilterButtons(); // Vykreslí tlačidlá po zobrazení tímov
     } catch (e) {
         console.error('Chyba pri načítaní a zobrazení tímov:', e);
         createdTeamsTableBody.innerHTML = '<tr><td colspan="6">Nepodarilo sa načítať tímy.</td></tr>';
         allTeams = [];
         teamsToDisplay = [];
         displayAppliedFiltersInHeader();
+        renderGroupTypeFilterButtons(); // Vykreslí tlačidlá aj pri chybe
     }
 }
 
@@ -1393,6 +1414,60 @@ function displayAppliedFiltersInHeader() {
          }
      });
 }
+
+/**
+ * Vykreslí tlačidlá na filtrovanie tímov podľa typu skupiny.
+ */
+function renderGroupTypeFilterButtons() {
+    if (!groupTypeFilterButtons) return;
+
+    groupTypeFilterButtons.innerHTML = ''; // Vyčistíme kontajner
+
+    const uniqueGroupTypes = new Set();
+    allAvailableGroups.forEach(group => {
+        if (group.type) {
+            uniqueGroupTypes.add(group.type);
+        }
+    });
+
+    const orderedTypes = ["Zakladna skupina", "Nadstavbova skupina", "Skupina o umiestnenie"];
+    const sortedUniqueTypes = Array.from(uniqueGroupTypes).sort((a, b) => {
+        const indexA = orderedTypes.indexOf(a);
+        const indexB = orderedTypes.indexOf(b);
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b, 'sk-SK'); // Ak ani jeden nie je v orderedTypes, zoradíme abecedne
+        if (indexA === -1) return 1; // Neznámy typ ide na koniec
+        if (indexB === -1) return -1; // Neznámy typ ide na koniec
+        return indexA - indexB; // Zoradíme podľa poradia v orderedTypes
+    });
+
+    // Tlačidlo "Všetky skupiny"
+    const allButton = document.createElement('button');
+    allButton.textContent = 'Všetky skupiny';
+    allButton.classList.add('action-button');
+    if (currentFilters.groupType === null || currentFilters.groupType === 'all') {
+        allButton.classList.add('active'); // Zvýrazníme, ak je aktívny filter "všetky"
+    }
+    allButton.addEventListener('click', () => {
+        currentFilters.groupType = null; // Nastavíme na null pre "všetky"
+        displayCreatedTeams();
+    });
+    groupTypeFilterButtons.appendChild(allButton);
+
+    sortedUniqueTypes.forEach(type => {
+        const button = document.createElement('button');
+        button.textContent = groupTypeDisplayMap[type] || type; // Zobrazíme preložený názov
+        button.classList.add('action-button');
+        if (currentFilters.groupType === type) {
+            button.classList.add('active'); // Zvýrazníme, ak je tento typ aktívny
+        }
+        button.addEventListener('click', () => {
+            currentFilters.groupType = type;
+            displayCreatedTeams();
+        });
+        groupTypeFilterButtons.appendChild(button);
+    });
+}
+
 
 /**
  * Pridá listenery pre kliknutie na hlavičky tabuľky pre filtrovanie a zoradenie.
