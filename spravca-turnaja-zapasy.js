@@ -609,7 +609,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             docRef: doc.ref,
             ...doc.data(),
             startInMinutes: parseTimeToMinutes(doc.data().startTime),
-            endInMinutes: parseTimeToMinutes(doc.data().endTime)
+            endInMinutes: parseTimeToTimeToMinutes(doc.data().endTime)
         }));
 
         // 2. Separate truly fixed events (matches and user-blocked intervals, and 'deleted match' permanent free slots)
@@ -1085,8 +1085,8 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
             displayText = 'Zablokovaný interval';
             const blockedIntervalStartHour = String(Math.floor(event.startInMinutes / 60)).padStart(2, '0');
             const blockedIntervalStartMinute = String(event.startInMinutes % 60).padStart(2, '0');
-            const blockedIntervalEndHour = String(Math.floor(blockedInterval.endInMinutes / 60)).padStart(2, '0');
-            const blockedIntervalEndMinute = String(blockedInterval.endInMinutes % 60).padStart(2, '0');
+            const blockedIntervalEndHour = String(Math.floor(event.endInMinutes / 60)).padStart(2, '0');
+            const blockedIntervalEndMinute = String(event.endInMinutes % 60).padStart(2, '0');
             return `${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}|${displayText}`;
         } else {
             displayText = 'Voľný interval dostupný'; 
@@ -1105,25 +1105,24 @@ async function displayMatchesAsSchedule(currentAllSettings) {
     if (!matchesContainer) return;
 
     // Store the stop animation function from the previous call
-    if (typeof matchesContainer._stopAnimation === 'function') { // Check if it's a function
+    if (typeof matchesContainer._stopAnimation === 'function') {
         matchesContainer._stopAnimation();
         console.log("displayMatchesAsSchedule: Zastavujem predchádzajúcu animáciu.");
     } else {
-        console.log("displayMatchesAsSchedule: Predchádzajúca _stopAnimation nebola funkcia alebo bola nedefinovaná:", matchesContainer._stopAnimation);
+        console.log("displayMatchesAsSchedule: Predchádzajúca _stopAnimation nebola funkcia alebo bola nedefinovaná.");
     }
     matchesContainer.innerHTML = `<p id="loadingAnimationText" style="text-align: center; font-size: 1.2em; color: #555;"></p>`;
     // Store the new stop animation function
     matchesContainer._stopAnimation = animateLoadingText('loadingAnimationText', 'Načítavam zoznam zápasov...');
-    console.log("displayMatchesAsSchedule: Nová _stopAnimation priradená:", matchesContainer._stopAnimation);
-
+    console.log("displayMatchesAsSchedule: Nová _stopAnimation priradená.");
 
     console.log('displayMatchesAsSchedule: Spustené načítavanie dát.');
 
     try {
         const matchesQuery = query(matchesCollectionRef, orderBy("date", "asc"), orderBy("location", "asc"), orderBy("startTime", "asc"));
         const matchesSnapshot = await getDocs(matchesQuery);
-        let allMatches = matchesSnapshot.docs.map(doc => ({ id: doc.id, type: 'match', ...doc.data() }));
-        console.log("displayMatchesAsSchedule: Načítané zápasy (po fetchData):", JSON.stringify(allMatches.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime}))));
+        let allMatchesRaw = matchesSnapshot.docs.map(doc => ({ id: doc.id, type: 'match', docRef: doc.ref, ...doc.data() }));
+        console.log("displayMatchesAsSchedule: Načítané surové zápasy (po fetchData):", JSON.stringify(allMatchesRaw.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, storedDuration: m.duration, storedBufferTime: m.bufferTime}))));
 
         const categoriesSnapshot = await getDocs(categoriesCollectionRef);
         const categoriesMap = new Map();
@@ -1134,7 +1133,6 @@ async function displayMatchesAsSchedule(currentAllSettings) {
             categoryColorsMap.set(doc.id, categoryData.color || null);
         });
         console.log("displayMatchesAsSchedule: Načítané kategórie:", Array.from(categoriesMap.entries()));
-
         console.log("Farby pre Kategórie:");
         categoriesSnapshot.docs.forEach(doc => {
             const categoryData = doc.data();
@@ -1155,36 +1153,47 @@ async function displayMatchesAsSchedule(currentAllSettings) {
         const allSportHalls = sportHallsSnapshot.docs.map(doc => doc.data().name);
         console.log("displayMatchesAsSchedule: Načítané športové haly:", allSportHalls);
 
-        // Use the currentAllSettings passed as a parameter
-        const allSettings = currentAllSettings;
+        const allSettings = currentAllSettings; // Use the currentAllSettings passed as a parameter
         let globalFirstDayStartTime = allSettings.firstDayStartTime || '08:00';
         let globalOtherDaysStartTime = allSettings.otherDaysStartTime || '08:00';
         console.log(`displayMatchesAsSchedule: Globálny čas začiatku (prvý deň): ${globalFirstDayStartTime}, (ostatné dni): ${globalOtherDaysStartTime}`);
 
         const blockedIntervalsSnapshot = await getDocs(query(blockedSlotsCollectionRef));
-        const allBlockedIntervals = blockedIntervalsSnapshot.docs.map(doc => ({ 
-            id: doc.id, 
+        const allBlockedIntervals = blockedIntervalsSnapshot.docs.map(doc => ({
+            id: doc.id,
             type: 'blocked_interval',
             isBlocked: doc.data().isBlocked === true,
-            originalMatchId: doc.data().originalMatchId || null, // Keep track of original match ID
+            originalMatchId: doc.data().originalMatchId || null,
             ...doc.data(),
             startInMinutes: parseTimeToMinutes(doc.data().startTime),
             endInMinutes: parseTimeToMinutes(doc.data().endTime)
         }));
         console.log("displayMatchesAsSchedule: Načítané zablokované intervaly:", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
 
+        // --- NEW LOGIC: Update match documents with correct duration/buffer from settings ---
+        const updateMatchesBatch = writeBatch(db);
+        let matchesToUpdateCount = 0;
 
-        // Pre-process all matches to include team display names and updated duration/buffer from settings
-        const processedMatchesPromises = allMatches.map(async match => {
+        const processedMatchesPromises = allMatchesRaw.map(async match => {
             const [team1Data, team2Data] = await Promise.allSettled([
                 getTeamName(match.categoryId, match.groupId, match.team1Number, categoriesMap, groupsMap),
                 getTeamName(match.categoryId, match.groupId, match.team2Number, categoriesMap, groupsMap)
             ]);
 
             const categorySettings = getCategoryMatchSettings(match.categoryId, allSettings);
-            const duration = categorySettings.duration;
-            const bufferTime = categorySettings.bufferTime;
+            const calculatedDuration = categorySettings.duration;
+            const calculatedBufferTime = categorySettings.bufferTime;
             const startInMinutes = parseTimeToMinutes(match.startTime);
+
+            // Check if the stored duration/buffer needs updating
+            if (match.duration !== calculatedDuration || match.bufferTime !== calculatedBufferTime) {
+                console.log(`displayMatchesAsSchedule: Zápas ID ${match.id} má neaktuálne trvanie/buffer. Aktualizujem v DB. Staré: D=${match.duration}, B=${match.bufferTime}. Nové: D=${calculatedDuration}, B=${calculatedBufferTime}`);
+                updateMatchesBatch.update(match.docRef, {
+                    duration: calculatedDuration,
+                    bufferTime: calculatedBufferTime
+                });
+                matchesToUpdateCount++;
+            }
 
             return {
                 ...match,
@@ -1196,15 +1205,22 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                 team2ShortDisplayName: team2Data.status === 'fulfilled' ? team2Data.value.shortDisplayName : 'N/A',
                 team2ClubName: team2Data.status === 'fulfilled' ? team2Data.value.clubName : 'N/A',
                 team2ClubId: team2Data.status === 'fulfilled' ? team2Data.value.clubId : null,
-                duration: duration, // Use updated duration from settings
-                bufferTime: bufferTime, // Use updated bufferTime from settings
+                duration: calculatedDuration, // Use updated duration
+                bufferTime: calculatedBufferTime, // Use updated bufferTime
                 startInMinutes: startInMinutes,
-                endOfPlayInMinutes: startInMinutes + duration, // Recalculate end of play
-                footprintEndInMinutes: startInMinutes + duration + bufferTime // Recalculate footprint end
+                endOfPlayInMinutes: startInMinutes + calculatedDuration, // Recalculate end of play
+                footprintEndInMinutes: startInMinutes + calculatedDuration + calculatedBufferTime // Recalculate footprint end
             };
         });
 
-        allMatches = await Promise.all(processedMatchesPromises);
+        let allMatches = await Promise.all(processedMatchesPromises);
+        
+        if (matchesToUpdateCount > 0) {
+            console.log(`displayMatchesAsSchedule: Spúšťam batch pre aktualizáciu ${matchesToUpdateCount} zápasov.`);
+            await updateMatchesBatch.commit();
+            console.log(`displayMatchesAsSchedule: Batch pre aktualizáciu zápasov úspešne dokončený.`);
+        }
+        
         console.log("displayMatchesAsSchedule: Všetky zápasy s naplnenými zobrazovanými názvami a prepočítanou dĺžkou/bufferom:", JSON.stringify(allMatches.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, duration: m.duration, bufferTime: m.bufferTime, footprintEndInMinutes: m.footprintEndInMinutes}))));
 
 
@@ -1964,7 +1980,6 @@ async function deletePlayingDay(dateToDelete) {
             await batch.commit();
             await showMessage('Úspech', `Hrací deň ${dateToDelete} a všetky súvisiace zápasy/intervaly boli vymazané!`);
             closeModal(document.getElementById('playingDayModal'));
-            // No need to pass allSettings here, as it's a full delete and displayMatchesAsSchedule will fetch latest.
             // The onSnapshot listener for settings will trigger displayMatchesAsSchedule with latest settings.
         } catch (error) {
             console.error("Chyba pri mazaní hracieho dňa:", error);
@@ -2208,7 +2223,10 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
 
     } else {
         matchModalTitle.textContent = 'Pridať nový zápas';
-        await populateCategorySelect(matchCategorySelect);
+        await populateCategorySelect(matchCategorySelect); 
+        // Set initial duration/buffer based on the default selected category
+        await updateMatchDurationAndBuffer(allSettings); 
+
         await populatePlayingDaysSelect(matchDateSelect, prefillDate); 
         await populateSportHallSelects(matchLocationSelect, prefillLocation);
         
@@ -2221,20 +2239,6 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         team1NumberInput.disabled = true;
         team2NumberInput.value = '';
         team2NumberInput.disabled = true;
-
-        let defaultDuration = 60;
-        let defaultBufferTime = 5;
-        
-        // If there are category settings, try to get the first one's defaults
-        if (allSettings.categoryMatchSettings) {
-            const firstCategoryIdWithSettings = Object.keys(allSettings.categoryMatchSettings)[0];
-            if (firstCategoryIdWithSettings) {
-                defaultDuration = allSettings.categoryMatchSettings[firstCategoryIdWithSettings].duration || defaultDuration;
-                defaultBufferTime = allSettings.categoryMatchSettings[firstCategoryIdWithSettings].bufferTime || defaultBufferTime;
-            }
-        }
-        matchDurationInput.value = defaultDuration;
-        matchBufferTimeInput.value = defaultBufferTime;
         
         await findFirstAvailableTime(allSettings); // Pass allSettings
     }
@@ -2654,7 +2658,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchIdInput = document.getElementById('matchId');
     const matchModalTitle = document.getElementById('matchModalTitle');
     const matchDateSelect = document.getElementById('matchDateSelect');
-    const matchLocationSelect = document.getElementById('matchLocationSelect'); // Opravená chyba
+    const matchLocationSelect = document.getElementById('matchLocationSelect'); 
     const matchStartTimeInput = document.getElementById('matchStartTime');
     const matchDurationInput = document.getElementById('matchDuration');
     const matchBufferTimeInput = document.getElementById('matchBufferTime');
