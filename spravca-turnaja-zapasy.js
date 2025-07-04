@@ -587,6 +587,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
 ) {
     console.groupCollapsed(`[recalculateAndSaveScheduleForDateAndLocation] === SPUSTENÉ pre Dátum: ${processDate}, Miesto: ${processLocation}, Účel: ${purpose}. ` +
                 `Presunutý zápas ID: ${movedMatchDetails ? movedMatchDetails.id : 'žiadny'} ===`);
+    console.log("[recalculateAndSaveScheduleForDateAndLocation] START. Current allSettings:", JSON.stringify(allSettings));
     console.log("Input parameters:", { processDate, processLocation, purpose, movedMatchDetails, allSettings });
 
     try {
@@ -599,8 +600,9 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         let currentMatches = matchesSnapshot.docs.map(doc => {
             const data = doc.data();
             const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
-            const duration = categorySettings?.duration || Number(data.duration) || 60;
-            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
+            // Ensure we use the values from categorySettings if available, otherwise fallback to stored or default
+            const duration = categorySettings?.duration !== undefined ? categorySettings.duration : (Number(data.duration) || 60);
+            const bufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(data.bufferTime) || 5);
             const startInMinutes = parseTimeToMinutes(data.startTime);
 
             return {
@@ -759,14 +761,6 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 newEventStartInMinutes = currentTimePointer;
                 console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
-                // If there's a gap, fill it with a placeholder (handled in Faza 4), but the current event still starts at its original time
-                // unless it's a match being moved to an earlier slot.
-                // For existing events, if their start is *after* currentTimePointer, they keep their start time
-                // unless they are explicitly being moved (handled by drag and drop logic).
-                // The compaction logic should primarily push things *forward*.
-                // If an event is naturally later, it stays later, and the gap is filled.
-                // The current logic `newEventStartInMinutes = currentTimePointer;` for `event.startInMinutes > currentTimePointer`
-                // effectively compacts everything to the earliest possible slot. This is generally desired.
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
                 console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else {
@@ -782,11 +776,12 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 event.startTime = newStartTimeFormatted;
                 event.endOfPlayInMinutes = event.startInMinutes + event.duration;
                 event.footprintEndInMinutes = event.startInMinutes + event.duration + event.bufferTime;
-                console.log(`  -> Zápas ${event.id} aktualizovaný v batchi. Starý čas: ${oldStartTime}, Nový čas: ${newStartTimeFormatted}. End of Play: ${formatMinutesToTime(event.endOfPlayInMinutes)}, Footprint End: ${formatMinutesToTime(event.footprintEndInMinutes)}`);
+                console.log(`  -> Zápas ${event.id} aktualizovaný v batchi. Starý čas: ${oldStartTime}, Nový čas: ${newStartTimeFormatted}. Trvanie: ${event.duration}, Buffer: ${event.bufferTime}. End of Play: ${formatMinutesToTime(event.endOfPlayInMinutes)}, Footprint End: ${formatMinutesToTime(event.footprintEndInMinutes)}`);
             } else if (event.type === 'blocked_interval' && (event.isBlocked === true || event.originalMatchId)) {
-                // For blocked intervals or placeholders, recalculate end time based on new start time and original duration
-                const originalDuration = event.endInMinutes - originalEventStartInMinutes; // Use original start for duration
-                const newEndTimeInMinutes = newEventStartInMinutes + originalDuration;
+                // For blocked intervals or placeholders, recalculate end time based on new start time and their original duration
+                // The duration of a blocked interval is its end time minus its start time (as fetched).
+                const intervalDuration = event.endInMinutes - event.startInMinutes; // Use the fetched start/end for its inherent duration
+                const newEndTimeInMinutes = newEventStartInMinutes + intervalDuration;
                 const newEndTimeFormatted = formatMinutesToTime(newEndTimeInMinutes);
                 batch.update(event.docRef, { startTime: newStartTimeFormatted, endTime: newEndTimeFormatted, startInMinutes: newEventStartInMinutes, endInMinutes: newEndTimeInMinutes });
                 event.startTime = newStartTimeFormatted;
@@ -946,8 +941,8 @@ async function deleteMatch(matchId, allSettings) {
             
             // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené
             const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
-            const duration = categorySettings?.duration || Number(matchData.duration) || 60;
-            const bufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 5;
+            const duration = categorySettings?.duration !== undefined ? categorySettings.duration : (Number(matchData.duration) || 60);
+            const bufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(matchData.bufferTime) || 5);
 
             const startInMinutes = parseTimeToMinutes(startTime);
             const endInMinutes = startInMinutes + duration + bufferTime;
@@ -1018,8 +1013,8 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
 
         // Získaj trvanie a čas medzi zápasmi z nastavení kategórie pre výpočet pôvodnej stopy
         const categorySettings = allSettings.categoryMatchSettings?.[draggedMatchData.categoryId];
-        const originalDuration = categorySettings?.duration || Number(draggedMatchData.duration) || 60;
-        const originalBufferTime = categorySettings?.bufferTime || Number(draggedMatchData.bufferTime) || 5;
+        const originalDuration = categorySettings?.duration !== undefined ? categorySettings.duration : (Number(draggedMatchData.duration) || 60);
+        const originalBufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(draggedMatchData.bufferTime) || 5);
 
         const originalFootprintEndTime = calculateFootprintEndTime(originalStartTime, originalDuration, originalBufferTime);
 
@@ -1116,6 +1111,8 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
 async function displayMatchesAsSchedule(currentAllSettings) {
     const matchesContainer = document.getElementById('matchesContainer');
     if (!matchesContainer) return;
+
+    console.log("[displayMatchesAsSchedule] START. Current allSettings:", JSON.stringify(currentAllSettings));
 
     // Ulož funkciu zastavenia animácie z predchádzajúceho volania
     if (typeof matchesContainer._stopAnimation === 'function') {
@@ -1897,8 +1894,8 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                             const data = doc.data();
                             // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené
                             const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
-                            const duration = categorySettings?.duration || Number(data.duration) || 60;
-                            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
+                            const duration = categorySettings?.duration !== undefined ? categorySettings.duration : (Number(data.duration) || 60);
+                            const bufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(data.bufferTime) || 5);
                             const startInMinutes = parseTimeToMinutes(data.startTime);
                             return {
                                 id: doc.id,
@@ -2561,8 +2558,8 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime,
                 const matchData = matchDoc.data();
                 // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené
                 const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
-                const matchDuration = categorySettings?.duration || Number(matchData.duration) || 0;
-                const matchBufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 0;
+                const matchDuration = categorySettings?.duration !== undefined ? categorySettings.duration : (Number(matchData.duration) || 0);
+                const matchBufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(matchData.bufferTime) || 0);
 
                 const matchStartInMinutes = parseTimeToMinutes(matchData.startTime);
                 const matchFootprintEndInMinutes = matchStartInMinutes + matchDuration + matchBufferTime; 
@@ -2580,8 +2577,8 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime,
                 const matchStartTime = overlappingMatch.data().startTime;
                 // Získaj trvanie a čas medzi zápasmi z nastavení kategórie pre prekrývajúci sa zápas
                 const overlappingMatchCategorySettings = allSettings.categoryMatchSettings?.[overlappingMatch.data().categoryId];
-                const overlappingMatchDuration = overlappingMatchCategorySettings?.duration || Number(overlappingMatch.data().duration) || 0;
-                const overlappingMatchBufferTime = overlappingMatchCategorySettings?.bufferTime || Number(overlappingMatch.data().bufferTime) || 0;
+                const overlappingMatchDuration = overlappingMatchCategorySettings?.duration !== undefined ? overlappingMatchCategorySettings.duration : (Number(overlappingMatch.data().duration) || 0);
+                const overlappingMatchBufferTime = overlappingMatchCategorySettings?.bufferTime !== undefined ? overlappingMatchCategorySettings.bufferTime : (Number(overlappingMatch.data().bufferTime) || 0);
 
                 const matchFootprintEndInMinutes = parseTimeToMinutes(matchStartTime) + overlappingMatchDuration + overlappingMatchBufferTime;
                 const formattedMatchEndTime = formatTime(matchFootprintEndInMinutes);
@@ -2777,8 +2774,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     t: catData.t || 0,
                     p: catData.p || 0,
                     z: catData.z || 0,
-                    duration: catData.duration || 60, // Použi priamo 'duration' z DB
-                    bufferTime: catData.bufferTime || 5, // Použi priamo 'bufferTime' z DB
+                    duration: catData.duration !== undefined ? catData.duration : 60, // Použi priamo 'duration' z DB
+                    bufferTime: catData.bufferTime !== undefined ? catData.bufferTime : 5, // Použi priamo 'bufferTime' z DB
                     color: catData.color || '#000000'
                 };
             });
@@ -2793,7 +2790,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         displayMatchesAsSchedule(allSettings);
     }, (error) => {
         console.error("[onSnapshot] Chyba pri počúvaní zmien nastavení:", error);
-        showMessage('Chyba', `Chyba pri načítaní nastavení: ${error.message}`);
+        showMessage('Chyha', `Chyba pri načítaní nastavení: ${error.message}`);
     });
 
 
