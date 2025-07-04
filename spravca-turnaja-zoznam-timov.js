@@ -1455,11 +1455,7 @@ function renderGroupTypeFilterButtons() {
     // Ak nie je vybraný žiadny filter typu skupiny, automaticky vyberieme prvý dostupný typ
     if (currentFilters.groupType === null && sortedUniqueTypes.length > 0) {
         currentFilters.groupType = sortedUniqueTypes[0];
-        // Pre-select the first button
-        const firstButton = groupTypeFilterButtons.querySelector('.action-button');
-        if (firstButton) {
-            firstButton.classList.add('active-filter-button');
-        }
+        // Pre-select the first button (this will be handled by displayCreatedTeams calling renderGroupTypeFilterButtons)
     }
 }
 
@@ -1546,7 +1542,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await loadAllCategoriesForDynamicSelects();
     await loadAllGroups();
-    await displayCreatedTeams(); // Zobrazí tímy po načítaní dát
+    
+    // Pred vykreslením tímov inicializujeme filter typu skupiny, ak ešte nie je nastavený
+    renderGroupTypeFilterButtons(); // Táto funkcia teraz inicializuje currentFilters.groupType
+    
+    await displayCreatedTeams(); // Zobrazí tímy po načítaní dát a nastavení filtra
+
     const addButtonElement = document.getElementById('addButton');
     if (addButtonElement) {
         addButton.style.display = 'block';
