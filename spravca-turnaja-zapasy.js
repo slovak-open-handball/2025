@@ -453,7 +453,7 @@ async function findFirstAvailableTime(currentAllSettings) {
             if (fixedOccupiedPeriods.length > 0) {
                 let currentMerged = { ...fixedOccupiedPeriods[0] };
                 for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                    const nextPeriod = fixedOccupiedPeriods[i]; // OPRAVA: Zmenené z fixedFixedOccupiedPeriods na fixedOccupiedPeriods
+                    const nextPeriod = fixedOccupiedPeriods[i];
                     if (nextPeriod.start <= currentMerged.end) {
                         currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
                     } else {
@@ -577,18 +577,20 @@ const getTeamName = async (categoryId, groupId, teamNumber, categoriesMap, group
  * @param {object|null} movedMatchDetails Informácie o zápase, ktorý bol práve presunutý.
  * { id, oldDate, oldLocation, oldStartTime, oldFootprintEndTime, newDate, newLocation, newStartTime, newFootprintEndTime }
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
+ * @param {string|null} userDefinedStartTime Voliteľný čas začiatku zadaný používateľom pre zápas, ak ide o úpravu.
  */
 async function recalculateAndSaveScheduleForDateAndLocation(
     processDate,
     processLocation,
     purpose,
     movedMatchDetails = null,
-    allSettings // Odovzdaj allSettings tejto funkcii
+    allSettings, // Odovzdaj allSettings tejto funkcii
+    userDefinedStartTime = null // Nový parameter
 ) {
     console.groupCollapsed(`[recalculateAndSaveScheduleForDateAndLocation] === SPUSTENÉ pre Dátum: ${processDate}, Miesto: ${processLocation}, Účel: ${purpose}. ` +
-                `Presunutý zápas ID: ${movedMatchDetails ? movedMatchDetails.id : 'žiadny'} ===`);
+                `Presunutý zápas ID: ${movedMatchDetails ? movedMatchDetails.id : 'žiadny'}, Používateľský čas: ${userDefinedStartTime || 'žiadny'} ===`);
     console.log("[recalculateAndSaveScheduleForDateAndLocation] START. Current allSettings:", JSON.stringify(allSettings));
-    console.log("Input parameters:", { processDate, processLocation, purpose, movedMatchDetails, allSettings });
+    console.log("Input parameters:", { processDate, processLocation, purpose, movedMatchDetails, allSettings, userDefinedStartTime });
 
     try {
         const batch = writeBatch(db); 
@@ -757,8 +759,20 @@ async function recalculateAndSaveScheduleForDateAndLocation(
 
             let newEventStartInMinutes = event.startInMinutes;
 
-            // Ensure the event starts no earlier than the current time pointer
-            if (event.startInMinutes < currentTimePointer) {
+            // Ak ide o zápas, ktorý bol práve upravený používateľom, použite jeho zadaný čas
+            if (event.type === 'match' && userDefinedStartTime && event.id === movedMatchDetails?.id) {
+                const userStartInMinutes = parseTimeToMinutes(userDefinedStartTime);
+                // Skontrolujte, či sa používateľom zadaný čas prekrýva s predchádzajúcou udalosťou
+                if (userStartInMinutes < currentTimePointer) {
+                    // Ak sa prekrýva, posuňte ho na najbližší dostupný čas
+                    newEventStartInMinutes = currentTimePointer;
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas ${userDefinedStartTime}) sa prekrýva, posunutý na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                } else {
+                    // Inak použite používateľom zadaný čas
+                    newEventStartInMinutes = userStartInMinutes;
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                }
+            } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
                 console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
@@ -2585,7 +2599,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
@@ -2617,7 +2631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closePlaceModalButton = document.getElementById('closePlaceModal');
     const placeForm = document.getElementById('placeForm'); 
     const placeIdInput = document.getElementById('placeId');
-    const placeTypeSelect = document.getElementById('placeTypeSelect');
+    const placeTypeSelect = document = document.getElementById('placeTypeSelect');
     const placeNameInput = document.getElementById('placeName');
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
@@ -3044,7 +3058,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Prepočítaj len, ak ide o konkrétne miesto
             if (finalMatchLocationName !== 'Nezadaná hala') {
                 console.log("[matchForm] Volám recalculateAndSaveScheduleForDateAndLocation.");
-                await recalculateAndSaveScheduleForDateAndLocation(matchDate, finalMatchLocationName, 'process', insertedMatchInfo, allSettings); // Odovzdaj allSettings
+                // ODOSLAŤ userDefinedStartTime pre úpravy
+                await recalculateAndSaveScheduleForDateAndLocation(matchDate, finalMatchLocationName, 'process', insertedMatchInfo, allSettings, matchStartTime);
             } else {
                 // Ak ide o nepriradený zápas, len obnov zobrazenie
                 console.log("[matchForm] Zápas je nepriradený. Len obnovujem zobrazenie rozvrhu.");
