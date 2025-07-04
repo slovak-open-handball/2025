@@ -2155,12 +2155,14 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
 
     const allSettings = currentAllSettings;
 
+    // Odstráň existujúce poslucháče udalostí pre tlačidlo vymazania
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
         deleteMatchButtonModal.removeEventListener('click', deleteMatchButtonModal._currentHandler);
         delete deleteMatchButtonModal._currentHandler;
     }
 
-    matchForm.reset();
+    matchForm.reset(); // Resetuj formulár na začiatku
+
     matchIdInput.value = matchId || '';
     deleteMatchButtonModal.style.display = matchId ? 'inline-block' : 'none';
     
@@ -2194,6 +2196,8 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         
         // Uisti sa, že je vybraná správna kategória v rozbaľovacom zozname PRED získaním nastavení
         matchCategorySelect.value = matchData.categoryId;
+        
+        // Explicitne nastav hodnoty z nastavení kategórie
         const categorySettings = getCategoryMatchSettings(matchData.categoryId, allSettings);
         matchDurationInput.value = categorySettings.duration;
         matchBufferTimeInput.value = categorySettings.bufferTime;
@@ -2233,6 +2237,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         }
 
         // Teraz, keď je vybraná kategória, aktualizuj trvanie/buffer
+        // Toto by malo prebiť akúkoľvek predvolenú hodnotu 60 z HTML alebo resetu
         await updateMatchDurationAndBuffer(allSettings); 
 
         await populatePlayingDaysSelect(matchDateSelect, prefillDate); 
