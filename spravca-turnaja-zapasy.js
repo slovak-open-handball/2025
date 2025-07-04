@@ -2465,7 +2465,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
     } else { // Automaticky generovaný prázdny interval (všeobecná medzera)
         const [endH, endM] = endTime.split(':').map(Number);
         if (endH === 24 && endM === 0) { // Ak ide o úplne posledný interval dňa
-            console.log("[openFreeIntervalModal] Interval končí o 24:00. Toto je zvyčajne koncový zástupný symbol, žiadne špecifické akcie.");
+            console.log("[openFreeIntervalModal] Interval končí o 24:00. Toto je zvyčajne koncový zástupný symbol, žiadne špeciálne akcie.");
             freeIntervalModalTitle.textContent = 'Voľný interval do konca dňa';
             // Žiadne tlačidlá pre úplne posledný koncový zástupný symbol
             if (addMatchButton) { addMatchButton.style.display = 'inline-block'; } // Stále povoľ pridanie zápasu
