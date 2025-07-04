@@ -295,6 +295,9 @@ td:last-child {
     border-color: #a71d2a;
     width: calc(100% - 22px);
 }
+.action-button.active-filter-button {
+    background-color: #c46f50;
+}
 .section-block h2 {
     text-align: center;
     margin-bottom: 20px;
