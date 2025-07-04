@@ -23,7 +23,7 @@ const filterModalTitle = document.getElementById('filterModalTitle');
 const filterSelect = document.getElementById('filterSelect');
 const addButton = document.getElementById('addButton');
 const clearFiltersButton = document.getElementById('clearFiltersButton');
-const groupTypeFilterButtons = document.getElementById('groupTypeFilterButtons'); // NOVÉ: Referencia na kontajner tlačidiel typu skupiny
+const groupTypeFilterButtons = document.getElementById('groupTypeFilterButtons'); // Referencia na kontajner tlačidiel typu skupiny
 
 let allAvailableCategories = [];
 let allAvailableGroups = [];
@@ -35,7 +35,7 @@ let currentFilters = {
     teamName: null,
     category: null,
     group: null,
-    groupType: null // NOVÉ: Filter podľa typu skupiny
+    groupType: null // Filter podľa typu skupiny
 };
 let currentSort = {
     column: null,
@@ -1138,7 +1138,7 @@ if (clubForm) {
  * Zobrazí vytvorené tímy v tabuľke, aplikuje filtre a zoradenie.
  */
 async function displayCreatedTeams() {
-    if (!createdTeamsTableBody || !createdTeamsTableHeader || !groupTypeFilterButtons) { // Pridaný groupTypeFilterButtons
+    if (!createdTeamsTableBody || !createdTeamsTableHeader || !groupTypeFilterButtons) {
         return;
     }
     createdTeamsTableBody.innerHTML = '';
@@ -1230,10 +1230,7 @@ async function displayCreatedTeams() {
                         } else {
                             return teamGroupId === filterValue; // Compare IDs
                         }
-                    } else if (filterType === 'groupType') { // NOVÉ: Filter podľa typu skupiny
-                        if (filterValue === 'all') { // "Všetky skupiny"
-                            return true;
-                        }
+                    } else if (filterType === 'groupType') { // Filter podľa typu skupiny
                         return teamGroupType === filterValue;
                     }
                     return false;
@@ -1440,25 +1437,26 @@ function renderGroupTypeFilterButtons() {
         return indexA - indexB; // Zoradíme podľa poradia v orderedTypes
     });
 
-    // Tlačidlo "Všetky skupiny"
-    const allButton = document.createElement('button');
-    allButton.textContent = 'Všetky skupiny';
-    allButton.classList.add('action-button');
-    if (currentFilters.groupType === null || currentFilters.groupType === 'all') {
-        allButton.classList.add('active'); // Zvýrazníme, ak je aktívny filter "všetky"
+    // Pridáme tlačidlo pre zrušenie filtra typu skupiny, ktoré funguje ako "Všetky skupiny"
+    const clearGroupTypeFilterButton = document.createElement('button');
+    clearGroupTypeFilterButton.textContent = 'Všetky skupiny';
+    clearGroupTypeFilterButton.classList.add('action-button');
+    if (currentFilters.groupType === null) { // Ak nie je vybraný žiadny filter typu skupiny, toto je aktívne
+        clearGroupTypeFilterButton.classList.add('active-filter-button');
     }
-    allButton.addEventListener('click', () => {
-        currentFilters.groupType = null; // Nastavíme na null pre "všetky"
+    clearGroupTypeFilterButton.addEventListener('click', () => {
+        currentFilters.groupType = null; // Zrušíme filter typu skupiny
         displayCreatedTeams();
     });
-    groupTypeFilterButtons.appendChild(allButton);
+    groupTypeFilterButtons.appendChild(clearGroupTypeFilterButton);
+
 
     sortedUniqueTypes.forEach(type => {
         const button = document.createElement('button');
         button.textContent = groupTypeDisplayMap[type] || type; // Zobrazíme preložený názov
         button.classList.add('action-button');
         if (currentFilters.groupType === type) {
-            button.classList.add('active'); // Zvýrazníme, ak je tento typ aktívny
+            button.classList.add('active-filter-button'); // Zvýrazníme, ak je tento typ aktívny
         }
         button.addEventListener('click', () => {
             currentFilters.groupType = type;
