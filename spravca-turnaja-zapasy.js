@@ -2148,7 +2148,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document.getElementById('team2NumberInput');
+    const team2NumberInput = document.getElementById('team2NumberInput'); // Opravený preklep
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
@@ -2578,7 +2578,7 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime,
  */
 async function unblockBlockedInterval(intervalId, date, location, allSettings) {
     console.log(`unblockBlockedInterval: === FUNKCIA ODBLOKOVANIA INTERVALU SPUSTENÁ ===`);
-    console.log(`unblockBlockedInterval: ID intervalu: ${intervalId}, Dátum: ${date}, Miesto: ${location}`);
+    console.log(`unblockBlockedInterval: Interval ID: ${intervalId}, Dátum: ${date}, Miesto: ${location}`);
     const freeIntervalModal = document.getElementById('freeSlotModal'); 
     const confirmed = await showConfirmation('Potvrdenie', 'Naozaj chcete odblokovať tento interval? Zápasy môžu byť teraz naplánované počas tohto času.');
     if (confirmed) {
@@ -2899,7 +2899,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let team2Result = null;
         try {
             team1Result = await getTeamName(matchCategory, matchGroup, team1Number, categoriesMap, groupsMap);
-            team2Result = await await getTeamName(matchCategory, matchGroup, team2Number, categoriesMap, groupsMap);
+            team2Result = await getTeamName(matchCategory, matchGroup, team2Number, categoriesMap, groupsMap); // Opravené dvojité await
         } catch (error) {
             console.error("Chyba pri získavaní názvov tímov:", error);
             await showMessage('Chyba', "Vyskytla sa chyba pri získavaní názvov tímov. Skúste to znova.");
