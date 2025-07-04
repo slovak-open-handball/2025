@@ -1146,18 +1146,20 @@ async function displayCreatedTeams() {
               clearFiltersButtonElement.removeEventListener('click', oldListener);
          }
          const newListener = () => {
+             // Uložíme aktuálny filter typu skupiny pred resetovaním ostatných filtrov
+             const currentGroupTypeFilter = currentFilters.groupType;
+
              currentFilters = {
                  teamName: null,
                  category: null,
-                 group: null,
-                 group: null // Resetujeme filter pre skupiny
+                 group: null
              };
              currentSort = {
                  column: null,
                  direction: 'asc'
              };
-             // ÚPRAVA: Neresetujeme filter groupType pri kliknutí na "Vymazať filtre"
-             // currentFilters.groupType = null; 
+             // Obnovíme filter typu skupiny na pôvodnú hodnotu
+             currentFilters.groupType = currentGroupTypeFilter; 
              displayCreatedTeams();
          };
          clearFiltersButtonElement.addEventListener('click', newListener);
