@@ -339,6 +339,7 @@ async function findFirstAvailableTime(currentAllSettings) {
     console.log("findFirstAvailableTime volaná.");
     const selectedDate = matchDateSelect.value;
     const selectedLocationName = matchLocationSelect.value;
+    // Použi aktuálne hodnoty z input polí, ktoré by mali byť aktualizované funkciou updateMatchDurationAndBuffer
     const proposedMatchDuration = Number(matchDurationInput.value) || 0;
     const proposedMatchBufferTime = Number(matchBufferTimeInput.value) || 0;
     const proposedMatchFootprint = proposedMatchDuration + proposedMatchBufferTime;
@@ -2148,7 +2149,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document.getElementById('team2NumberInput'); // Opravený preklep
+    const team2NumberInput = document.getElementById('team2NumberInput'); 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
@@ -2230,6 +2231,15 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         matchModalTitle.textContent = 'Pridať nový zápas';
         // Po naplnení kategórií aktualizuj trvanie/buffer na základe pôvodne vybranej kategórie
         await updateMatchDurationAndBuffer(allSettings); 
+        
+        // Získaj aktuálne nastavenia pre predvolenú/prvú kategóriu
+        const defaultCategoryId = matchCategorySelect.value;
+        if (defaultCategoryId) {
+            const defaultCategorySettings = getCategoryMatchSettings(defaultCategoryId, allSettings);
+            matchDurationInput.value = defaultCategorySettings.duration;
+            matchBufferTimeInput.value = defaultCategorySettings.bufferTime;
+        }
+
 
         await populatePlayingDaysSelect(matchDateSelect, prefillDate); 
         await populateSportHallSelects(matchLocationSelect, prefillLocation);
@@ -2899,7 +2909,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let team2Result = null;
         try {
             team1Result = await getTeamName(matchCategory, matchGroup, team1Number, categoriesMap, groupsMap);
-            team2Result = await getTeamName(matchCategory, matchGroup, team2Number, categoriesMap, groupsMap); // Opravené dvojité await
+            team2Result = await getTeamName(matchCategory, matchGroup, team2Number, categoriesMap, groupsMap); 
         } catch (error) {
             console.error("Chyba pri získavaní názvov tímov:", error);
             await showMessage('Chyba', "Vyskytla sa chyba pri získavaní názvov tímov. Skúste to znova.");
