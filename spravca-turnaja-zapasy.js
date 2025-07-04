@@ -453,7 +453,7 @@ async function findFirstAvailableTime(currentAllSettings) {
             if (fixedOccupiedPeriods.length > 0) {
                 let currentMerged = { ...fixedOccupiedPeriods[0] };
                 for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                    const nextPeriod = FixedOccupiedPeriods[i];
+                    const nextPeriod = fixedOccupiedPeriods[i]; // OPRAVA: Zmenené z fixedFixedOccupiedPeriods na fixedOccupiedPeriods
                     if (nextPeriod.start <= currentMerged.end) {
                         currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
                     } else {
@@ -1320,138 +1320,9 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                         console.log(`[displayMatchesAsSchedule] Udalosti pre render pre ${location} na ${date} (zoradené):`, JSON.stringify(currentEventsForRendering.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
 
 
-                        const finalEventsToRender = [];
-                        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(date, allSettings); 
-                        let currentTimePointerInMinutes = initialScheduleStartMinutes;
-                        
-                        // Uisti sa, že ak pre daný deň nie sú žiadne udalosti, vytvorí sa zástupný symbol od počiatočného štartu do konca dňa
-                        if (currentEventsForRendering.length === 0) {
-                            const gapStart = initialScheduleStartMinutes;
-                            const gapEnd = 24 * 60; // Koniec dňa
-                            const formattedGapStartTime = formatMinutesToTime(gapStart);
-                            const formattedGapEndTime = formatMinutesToTime(gapEnd);
-                            
-                            // Kontrola, či už takýto interval neexistuje v allBlockedIntervals
-                            const existingInitialPlaceholder = allBlockedIntervals.find(s => 
-                                s.date === date && 
-                                s.location === location && 
-                                s.isBlocked === false && 
-                                s.startInMinutes === gapStart && 
-                                s.endInMinutes === gapEnd
-                            );
-
-                            if (gapEnd > gapStart && !existingInitialPlaceholder) { // Pridaná podmienka !existingInitialPlaceholder
-                                finalEventsToRender.push({
-                                    type: 'blocked_interval',
-                                    id: 'generated-initial-interval-' + Math.random().toString(36).substr(2, 9),
-                                    date: date,
-                                    location: location,
-                                    startTime: formattedGapStartTime,
-                                    endTime: formattedGapEndTime,
-                                    isBlocked: false,
-                                    startInMinutes: gapStart,
-                                    endInMinutes: gapEnd,
-                                    originalMatchId: null
-                                });
-                                console.log(`[displayMatchesAsSchedule] Žiadne udalosti pre ${date} na ${location}. Pridávam počiatočný celodenný zástupný symbol.`);
-                            }
-                        } else {
-                            for (let i = 0; i < currentEventsForRendering.length; i++) {
-                                const event = currentEventsForRendering[i];
-                                const eventStart = event.startInMinutes;
-                                const eventEnd = event.type === 'match' ? event.footprintEndInMinutes : event.endInMinutes;
-
-                                // Pridaj voľný interval, ak je medzera medzi aktuálnym ukazovateľom a začiatkom udalosti
-                                if (currentTimePointerInMinutes < eventStart) {
-                                    const gapStart = currentTimePointerInMinutes;
-                                    const gapEnd = eventStart;
-                                    const formattedGapStartTime = formatMinutesToTime(gapStart);
-                                    const formattedGapEndTime = formatMinutesToTime(gapEnd);
-                                    
-                                    // Získaj čas medzi zápasmi *predchádzajúcej* udalosti zápasu, ak existuje.
-                                    // Je kľúčové iterovať dozadu, aby sa našiel posledný zápas a získal sa jeho buffer.
-                                    let previousMatchBufferTime = 0;
-                                    for(let j = i - 1; j >= 0; j--) {
-                                        if (currentEventsForRendering[j].type === 'match') {
-                                            previousMatchBufferTime = currentEventsForRendering[j].bufferTime || 0;
-                                            break; // Nájdený posledný zápas, získaj jeho buffer a preruš
-                                        }
-                                    }
-
-                                    // Pridaj zástupný symbol len, ak bol vytvorený z vymazaného zápasu,
-                                    // alebo ak je jeho trvanie väčšie ako čas medzi zápasmi predchádzajúceho zápasu.
-                                    const existingFreeInterval = allBlockedIntervals.find(s => 
-                                        s.date === date && 
-                                        s.location === location && 
-                                        s.isBlocked === false && 
-                                        s.startInMinutes === gapStart && 
-                                        s.endInMinutes === gapEnd
-                                    );
-
-                                    const isFromDeletedMatch = existingFreeInterval && existingFreeInterval.originalMatchId;
-                                    const isLongerThanPreviousBuffer = (gapEnd - gapStart) > previousMatchBufferTime;
-
-                                    if ((isFromDeletedMatch || isLongerThanPreviousBuffer) && !existingFreeInterval) { // Pridaná podmienka !existingFreeInterval
-                                        finalEventsToRender.push({
-                                            type: 'blocked_interval',
-                                            id: existingFreeInterval ? existingFreeInterval.id : 'generated-interval-' + Math.random().toString(36).substr(2, 9),
-                                            date: date,
-                                            location: location,
-                                            startTime: formattedGapStartTime,
-                                            endTime: formattedGapEndTime,
-                                            isBlocked: false,
-                                            startInMinutes: gapStart,
-                                            endInMinutes: gapEnd,
-                                            originalMatchId: isFromDeletedMatch ? existingFreeInterval.originalMatchId : null // Zachovaj, ak z vymazaného zápasu
-                                        });
-                                        console.log(`[displayMatchesAsSchedule] Pridávam zástupný symbol medzery (${formattedGapStartTime}-${formattedGapEndTime}). Z vymazaného zápasu: ${isFromDeletedMatch}, Dlhšie ako buffer: ${isLongerThanPreviousBuffer}`);
-                                    } else {
-                                        console.log(`[displayMatchesAsSchedule] Preskakujem medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože je to čisto čas medzi zápasmi alebo je príliš krátka, alebo už existuje.`);
-                                    }
-                                }
-                                
-                                // Pridaj skutočnú udalosť
-                                finalEventsToRender.push(event);
-                                currentTimePointerInMinutes = Math.max(currentTimePointerInMinutes, eventEnd);
-                            }
-
-                            // Pridaj konečný zástupný symbol, ak je medzera medzi poslednou udalosťou a koncom dňa
-                            if (currentTimePointerInMinutes < 24 * 60) {
-                                const gapStart = currentTimePointerInMinutes;
-                                const gapEnd = 24 * 60;
-                                const formattedGapStartTime = formatMinutesToTime(gapStart);
-                                const formattedGapEndTime = formatMinutesToTime(gapEnd);
-
-                                // Kontrola, či už takýto interval neexistuje v allBlockedIntervals
-                                const existingFinalPlaceholder = allBlockedIntervals.find(s => 
-                                    s.date === date && 
-                                    s.location === location && 
-                                    s.isBlocked === false && 
-                                    s.startInMinutes === gapStart && 
-                                    s.endInMinutes === gapEnd
-                                );
-
-                                if ((gapEnd - gapStart) > 0 && !existingFinalPlaceholder) { // Pridaná podmienka !existingFinalPlaceholder
-                                    finalEventsToRender.push({
-                                        type: 'blocked_interval',
-                                        id: existingFinalPlaceholder ? existingFinalPlaceholder.id : 'generated-final-interval-' + Math.random().toString(36).substr(2, 9),
-                                        date: date,
-                                        location: location,
-                                        startTime: formattedGapStartTime,
-                                        endTime: formattedGapEndTime,
-                                        isBlocked: false,
-                                        startInMinutes: gapStart,
-                                        endInMinutes: gapEnd,
-                                        originalMatchId: null 
-                                    });
-                                    console.log(`[displayMatchesAsSchedule] Pridávam konečný zástupný symbol medzery: ${formattedGapStartTime}-${formattedGapEndTime}.`);
-                                } else {
-                                    console.log(`[displayMatchesAsSchedule] Preskakujem konečnú medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože jej trvanie je 0 alebo už existuje.`);
-                                }
-                            }
-                        }
-
-                        console.log(`[displayMatchesAsSchedule] FinalEventsToRender (po vložení medzier a zástupných symbolov):`, JSON.stringify(finalEventsToRender.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
+                        // === ZMENA TU: finalEventsToRender je teraz priamo currentEventsForRendering ===
+                        const finalEventsToRender = currentEventsForRendering;
+                        console.log(`[displayMatchesAsSchedule] FinalEventsToRender (priamo z currentEventsForRendering):`, JSON.stringify(finalEventsToRender.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
 
                         
                         scheduleHtml += `<div class="date-group" data-date="${date}" data-location="${location}" data-initial-start-time="${formatMinutesToTime(initialScheduleStartMinutes)}">`;
@@ -1521,6 +1392,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     dataAttributes += ` data-original-match-id="${blockedInterval.originalMatchId}"`;
                                 }
 
+                                // OPRAVA: Použi blockedIntervalStartMinute namiesto blockedInterval.startMinute
                                 let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
@@ -2713,7 +2585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
@@ -2745,7 +2617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closePlaceModalButton = document.getElementById('closePlaceModal');
     const placeForm = document.getElementById('placeForm'); 
     const placeIdInput = document.getElementById('placeId');
-    const placeTypeSelect = document.getElementById('placeTypeSelect');
+    const placeTypeSelect = document = document.getElementById('placeTypeSelect');
     const placeNameInput = document.getElementById('placeName');
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
