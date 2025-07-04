@@ -852,7 +852,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         await batch.commit();
         console.log(`[recalculateAndSaveScheduleForDateAndLocation] Batch commit úspešný.`);
 
-        await displayMatchesAsSchedule(allSettings);
+        // Removed the direct call to displayMatchesAsSchedule here, as it's handled by the onSnapshot listener.
+        // This prevents redundant calls and potential race conditions.
     } catch (error) {
         console.error("[recalculateAndSaveScheduleForDateAndLocation] Chyba pri prepočítavaní a ukladaní rozvrhu:", error);
         await showMessage('Chyba', `Chyba pri prepočítavaní rozvrhu: ${error.message}`);
