@@ -1474,7 +1474,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                     if (!unassignedMatchesByDate.has(match.date)) {
                         unassignedMatchesByDate.set(match.date, []);
                     }
-                    unassignedMatchesByDate.get(match.date).push(match);
+                    unassignedMatchesByDate.set(match.date, [...unassignedMatchesByDate.get(match.date) || [], match]);
                 });
 
                 // Zoraď dátumy pre nepriradené zápasy
@@ -2189,8 +2189,14 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         team2NumberInput.disabled = true;
         console.log("[openMatchModal] Tímy resetované a zakázané.");
         
-        console.log("[openMatchModal] Volám findFirstAvailableTime.");
-        await findFirstAvailableTime(allSettings);
+        // NOVÁ LOGIKA: Prioritizácia prefillStartTime
+        if (prefillStartTime) {
+            matchStartTimeInput.value = prefillStartTime;
+            console.log(`[openMatchModal] Predvyplnený počiatočný čas z parametra: ${prefillStartTime}`);
+        } else {
+            console.log("[openMatchModal] Volám findFirstAvailableTime, pretože prefillStartTime je prázdny.");
+            await findFirstAvailableTime(allSettings);
+        }
     }
     openModal(matchModal);
     console.log("[openMatchModal] Modálne okno otvorené.");
@@ -2892,16 +2898,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const team1Number = parseInt(team1NumberInput.value);
         const team2Number = parseInt(team2NumberInput.value);
         const matchDate = matchDateSelect.value;
-        const matchLocationName = matchLocationSelect.value;
         const matchStartTime = matchStartTimeInput.value;
         const matchDuration = parseInt(matchDurationInput.value); // Toto je hodnota z formulára
         const matchBufferTime = parseInt(matchBufferTimeInput.value); // Toto je hodnota z formulára
         let currentMatchId = matchIdInput.value; // Použi 'let', pretože sa môže aktualizovať pre nové zápasy
 
         // Ak nie je vybrané žiadne miesto, nastav locationType na 'Nezadaná hala'
-        let finalMatchLocationName = matchLocationName;
+        let finalMatchLocationName = matchLocationSelect.value;
         let finalMatchLocationType = 'Športová hala'; // Predvolené
-        if (!matchLocationName) {
+        if (!finalMatchLocationName) {
             finalMatchLocationName = 'Nezadaná hala'; // Alebo prázdny reťazec, v závislosti od toho, ako to chceš spracovať v DB
             finalMatchLocationType = 'Nezadaná hala';
             console.log("[matchForm] Miesto nebolo vybrané. Nastavené na 'Nezadaná hala'.");
