@@ -2602,7 +2602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
@@ -2634,7 +2634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closePlaceModalButton = document.getElementById('closePlaceModal');
     const placeForm = document.getElementById('placeForm'); 
     const placeIdInput = document.getElementById('placeId');
-    const placeTypeSelect = document.getElementById('placeTypeSelect');
+    const placeTypeSelect = document = document.getElementById('placeTypeSelect');
     const placeNameInput = document.getElementById('placeName');
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
@@ -3003,6 +3003,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             await showMessage('Chyba', "Vyskytla sa chyba pri kontrole, či tímy už hrali proti sebe, alebo pri spracovaní duplicity. Skúste to znova.");
             return;
         }
+
+        // --- NOVÁ KONTROLA: Časové prekrývanie tímov ---
+        const newMatchStartMinutes = parseTimeToMinutes(matchStartTime);
+        const newMatchEndMinutes = newMatchStartMinutes + matchDuration + matchBufferTime;
+
+        const allMatchesOnDateQuery = query(matchesCollectionRef, where("date", "==", matchDate));
+        const allMatchesOnDateSnapshot = await getDocs(allMatchesOnDateQuery);
+
+        for (const docSnapshot of allMatchesOnDateSnapshot.docs) {
+            const existingMatch = docSnapshot.data();
+            const existingMatchId = docSnapshot.id;
+
+            // Preskoč aktuálny upravovaný zápas, aby sa nekontroloval sám so sebou
+            if (currentMatchId && existingMatchId === currentMatchId) {
+                continue;
+            }
+
+            const existingMatchCategorySettings = getCategoryMatchSettings(existingMatch.categoryId, allSettings);
+            const existingMatchDuration = existingMatchCategorySettings.duration;
+            const existingMatchBufferTime = existingMatchCategorySettings.bufferTime;
+
+            const existingMatchStartMinutes = parseTimeToMinutes(existingMatch.startTime);
+            const existingMatchEndMinutes = existingMatchStartMinutes + existingMatchDuration + existingMatchBufferTime;
+
+            const team1Playing = 
+                (existingMatch.categoryId === matchCategory && existingMatch.groupId === matchGroup && existingMatch.team1Number === team1Number) ||
+                (existingMatch.categoryId === matchCategory && existingMatch.groupId === matchGroup && existingMatch.team2Number === team1Number);
+            
+            const team2Playing = 
+                (existingMatch.categoryId === matchCategory && existingMatch.groupId === matchGroup && existingMatch.team1Number === team2Number) ||
+                (existingMatch.categoryId === matchCategory && existingMatch.groupId === matchGroup && existingMatch.team2Number === team2Number);
+
+            if ((team1Playing || team2Playing) && 
+                ((newMatchStartMinutes < existingMatchEndMinutes && newMatchEndMinutes > existingMatchStartMinutes))) {
+                
+                let conflictingTeamName = '';
+                if (team1Playing) conflictingTeamName = team1Result.fullDisplayName;
+                if (team2Playing && (conflictingTeamName === '' || conflictingTeamName !== team2Result.fullDisplayName)) {
+                    if (conflictingTeamName !== '') conflictingTeamName += ' a ';
+                    conflictingTeamName += team2Result.fullDisplayName;
+                }
+
+                await showMessage('Chyba', 
+                    `Tím ${conflictingTeamName} už hrá iný zápas v čase ${existingMatch.startTime} - ${formatMinutesToTime(existingMatchEndMinutes)} v ten istý deň. Prosím, zvoľte iný čas.`);
+                console.warn(`[matchForm] Tím ${conflictingTeamName} hrá v tom istom čase iný zápas.`);
+                return;
+            }
+        }
+        // --- KONIEC NOVEJ KONTROLY ---
         
         let matchRef;
         if (currentMatchId) {
