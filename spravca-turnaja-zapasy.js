@@ -453,7 +453,7 @@ async function findFirstAvailableTime(currentAllSettings) {
             if (fixedOccupiedPeriods.length > 0) {
                 let currentMerged = { ...fixedOccupiedPeriods[0] };
                 for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                    const nextPeriod = fixedFixedOccupiedPeriods[i];
+                    const nextPeriod = FixedOccupiedPeriods[i];
                     if (nextPeriod.start <= currentMerged.end) {
                         currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
                     } else {
