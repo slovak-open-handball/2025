@@ -2153,7 +2153,6 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
-    // Použi currentAllSettings odovzdané ako parameter
     const allSettings = currentAllSettings;
 
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
@@ -2166,14 +2165,14 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     deleteMatchButtonModal.style.display = matchId ? 'inline-block' : 'none';
     
     if (matchId) {
-        const handler = () => deleteMatch(matchId, allSettings); // Odovzdaj allSettings
+        const handler = () => deleteMatch(matchId, allSettings);
         deleteMatchButtonModal.addEventListener('click', handler);
         deleteMatchButtonModal._currentHandler = handler;
     } else {
         deleteMatchButtonModal._currentHandler = null; 
     }
 
-    // Naplní výber kategórie najprv, pretože je potrebný pre trvanie/buffer
+    // Naplní výber kategórie najprv
     await populateCategorySelect(matchCategorySelect);
 
     if (matchId) {
@@ -2186,21 +2185,18 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         }
         const matchData = matchDoc.data();
         await populatePlayingDaysSelect(matchDateSelect, matchData.date);
-        // Ak zápas nemá locationType alebo to nie je 'Športová hala', zobraz predvolenú/prázdnu možnosť
         if (!matchData.location || matchData.locationType !== 'Športová hala') {
-            await populateSportHallSelects(matchLocationSelect, ''); // Naplní s vybranou prázdnou možnosťou
+            await populateSportHallSelects(matchLocationSelect, '');
         } else {
             await populateSportHallSelects(matchLocationSelect, matchData.location);
         }
         matchStartTimeInput.value = matchData.startTime || '';
         
-        // Explicitne nastav trvanie a čas medzi zápasmi z nastavení pre zobrazenie v modálnom okne
+        // Uisti sa, že je vybraná správna kategória v rozbaľovacom zozname PRED získaním nastavení
+        matchCategorySelect.value = matchData.categoryId;
         const categorySettings = getCategoryMatchSettings(matchData.categoryId, allSettings);
         matchDurationInput.value = categorySettings.duration;
         matchBufferTimeInput.value = categorySettings.bufferTime;
-
-        // Uisti sa, že je vybraná správna kategória v rozbaľovacom zozname
-        matchCategorySelect.value = matchData.categoryId;
 
         if (matchData.categoryId) {
             await populateGroupSelect(matchData.categoryId, matchGroupSelect, matchData.groupId);
@@ -2227,19 +2223,17 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
             matchStartTimeInput.value = prefillStartTime;
         }
 
-    } else {
+    } else { // Pridávanie nového zápasu
         matchModalTitle.textContent = 'Pridať nový zápas';
-        // Po naplnení kategórií aktualizuj trvanie/buffer na základe pôvodne vybranej kategórie
-        await updateMatchDurationAndBuffer(allSettings); 
         
-        // Získaj aktuálne nastavenia pre predvolenú/prvú kategóriu
-        const defaultCategoryId = matchCategorySelect.value;
-        if (defaultCategoryId) {
-            const defaultCategorySettings = getCategoryMatchSettings(defaultCategoryId, allSettings);
-            matchDurationInput.value = defaultCategorySettings.duration;
-            matchBufferTimeInput.value = defaultCategorySettings.bufferTime;
+        // Získaj ID prvej kategórie, ak existuje, aby sa nastavili predvolené hodnoty
+        const firstCategoryOption = matchCategorySelect.querySelector('option:not([value=""])');
+        if (firstCategoryOption) {
+            matchCategorySelect.value = firstCategoryOption.value;
         }
 
+        // Teraz, keď je vybraná kategória, aktualizuj trvanie/buffer
+        await updateMatchDurationAndBuffer(allSettings); 
 
         await populatePlayingDaysSelect(matchDateSelect, prefillDate); 
         await populateSportHallSelects(matchLocationSelect, prefillLocation);
@@ -2254,7 +2248,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         team2NumberInput.value = '';
         team2NumberInput.disabled = true;
         
-        await findFirstAvailableTime(allSettings); // Odovzdaj allSettings
+        await findFirstAvailableTime(allSettings);
     }
     openModal(matchModal);
 }
