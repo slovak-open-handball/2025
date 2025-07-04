@@ -163,7 +163,7 @@ async function animateLoadingText(containerId, text) {
     animate();
 
     // Vráti funkciu na zastavenie animácie
-    return () => {
+    return ()l => {
         clearTimeout(animationId);
         container.innerHTML = ''; // Vymaže obsah
     };
@@ -1315,6 +1315,9 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                         const formattedDisplayDate = `${String(displayDateObj.getDate()).padStart(2, '0')}. ${String(displayDateObj.getMonth() + 1).padStart(2, '0')}. ${displayDateObj.getFullYear()}`;
                         const dayName = displayDateObj.toLocaleDateString('sk-SK', { weekday: 'long' });
 
+                        // Calculate initialScheduleStartMinutes for this specific date
+                        const initialScheduleStartMinutesForDate = await getInitialScheduleStartMinutes(date, allSettings);
+
 
                         const currentEventsForRendering = [
                             ...matchesForDateAndLocation.map(m => {
@@ -1339,7 +1342,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                         console.log(`[displayMatchesAsSchedule] FinalEventsToRender (priamo z currentEventsForRendering):`, JSON.stringify(finalEventsToRender.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
 
                         
-                        scheduleHtml += `<div class="date-group" data-date="${date}" data-location="${location}" data-initial-start-time="${formatMinutesToTime(initialScheduleStartMinutes)}">`;
+                        scheduleHtml += `<div class="date-group" data-date="${date}" data-location="${location}" data-initial-start-time="${formatMinutesToTime(initialScheduleStartMinutesForDate)}">`;
                         scheduleHtml += `<h3 class="playing-day-header-clickable" style="background-color: #eaeaea; padding: 15px; margin: 0; border-bottom: 1px solid #ddd; cursor: pointer;">${dayName} ${formattedDisplayDate}</h3>`;
 
                         scheduleHtml += `<table class="data-table match-list-table compact-table" style="width: 100%; border-collapse: collapse;">`;
