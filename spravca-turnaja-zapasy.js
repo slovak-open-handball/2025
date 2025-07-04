@@ -1521,7 +1521,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     dataAttributes += ` data-original-match-id="${blockedInterval.originalMatchId}"`;
                                 }
 
-                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedInterval.startMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
+                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
                                 if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
