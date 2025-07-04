@@ -315,6 +315,7 @@ async function updateMatchDurationAndBuffer(currentAllSettings) {
         matchDurationInput.value = settings.duration;
         matchBufferTimeInput.value = settings.bufferTime;
     } else {
+        // If no category selected, default to 60/5
         matchDurationInput.value = 60;
         matchBufferTimeInput.value = 5;
     }
@@ -609,7 +610,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             docRef: doc.ref,
             ...doc.data(),
             startInMinutes: parseTimeToMinutes(doc.data().startTime),
-            endInMinutes: parseTimeToTimeToMinutes(doc.data().endTime)
+            endInMinutes: parseTimeToMinutes(doc.data().endTime)
         }));
 
         // 2. Separate truly fixed events (matches and user-blocked intervals, and 'deleted match' permanent free slots)
@@ -2171,6 +2172,8 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         deleteMatchButtonModal._currentHandler = null; 
     }
 
+    // Populate category select first, as it's needed for duration/buffer
+    await populateCategorySelect(matchCategorySelect);
 
     if (matchId) {
         matchModalTitle.textContent = 'Upraviť zápas';
@@ -2190,12 +2193,14 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         }
         matchStartTimeInput.value = matchData.startTime || '';
         
-        // Use duration and bufferTime from settings for display in modal
+        // Explicitly set duration and bufferTime from settings for display in modal
         const categorySettings = getCategoryMatchSettings(matchData.categoryId, allSettings);
         matchDurationInput.value = categorySettings.duration;
         matchBufferTimeInput.value = categorySettings.bufferTime;
 
-        await populateCategorySelect(matchCategorySelect, matchData.categoryId);
+        // Ensure the correct category is selected in the dropdown
+        matchCategorySelect.value = matchData.categoryId;
+
         if (matchData.categoryId) {
             await populateGroupSelect(matchData.categoryId, matchGroupSelect, matchData.groupId);
             matchGroupSelect.disabled = false;
@@ -2223,8 +2228,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
 
     } else {
         matchModalTitle.textContent = 'Pridať nový zápas';
-        await populateCategorySelect(matchCategorySelect); 
-        // Set initial duration/buffer based on the default selected category
+        // After populating categories, update duration/buffer based on the initially selected category
         await updateMatchDurationAndBuffer(allSettings); 
 
         await populatePlayingDaysSelect(matchDateSelect, prefillDate); 
