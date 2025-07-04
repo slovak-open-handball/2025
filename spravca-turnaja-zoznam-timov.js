@@ -1437,19 +1437,18 @@ function renderGroupTypeFilterButtons() {
         return indexA - indexB; // Zoradíme podľa poradia v orderedTypes
     });
 
-    // Pridáme tlačidlo pre zrušenie filtra typu skupiny, ktoré funguje ako "Všetky skupiny"
-    const clearGroupTypeFilterButton = document.createElement('button');
-    clearGroupTypeFilterButton.textContent = 'Všetky skupiny';
-    clearGroupTypeFilterButton.classList.add('action-button');
-    if (currentFilters.groupType === null) { // Ak nie je vybraný žiadny filter typu skupiny, toto je aktívne
-        clearGroupTypeFilterButton.classList.add('active-filter-button');
+    // Vytvorenie tlačidla "Všetky skupiny" pre resetovanie filtra
+    const allGroupsButton = document.createElement('button');
+    allGroupsButton.textContent = 'Všetky skupiny';
+    allGroupsButton.classList.add('action-button');
+    if (currentFilters.groupType === null) {
+        allGroupsButton.classList.add('active-filter-button');
     }
-    clearGroupTypeFilterButton.addEventListener('click', () => {
-        currentFilters.groupType = null; // Zrušíme filter typu skupiny
+    allGroupsButton.addEventListener('click', () => {
+        currentFilters.groupType = null; // Resetuje filter typu skupiny
         displayCreatedTeams();
     });
-    groupTypeFilterButtons.appendChild(clearGroupTypeFilterButton);
-
+    groupTypeFilterButtons.appendChild(allGroupsButton);
 
     sortedUniqueTypes.forEach(type => {
         const button = document.createElement('button');
