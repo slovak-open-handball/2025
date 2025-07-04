@@ -2269,17 +2269,12 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
         matchModalTitle.textContent = 'Pridať nový zápas';
         console.log("[openMatchModal] Režim pridávania nového zápasu.");
         
-        // Získaj ID prvej kategórie, ak existuje, aby sa nastavili predvolené hodnoty
-        const firstCategoryOption = matchCategorySelect.querySelector('option:not([value=""])');
-        if (firstCategoryOption) {
-            matchCategorySelect.value = firstCategoryOption.value;
-            console.log(`[openMatchModal] Nastavená predvolená kategória na prvú dostupnú: ${matchCategorySelect.value}`);
-        } else {
-            console.log("[openMatchModal] Žiadne kategórie nie sú k dispozícii na predvolené nastavenie.");
-        }
+        // Pôvodný kód na automatické nastavenie prvej kategórie bol odstránený/zakomentovaný.
+        // matchCategorySelect.value = ''; // Uistite sa, že je prázdna hodnota, ak to nie je predvolené
+        console.log("[openMatchModal] Kategória sa automaticky nenastavuje. Zostáva na predvolenej hodnote.");
 
-        // Teraz, keď je vybraná kategória, aktualizuj trvanie/buffer
-        console.log("[openMatchModal] Volám updateMatchDurationAndBuffer po nastavení predvolenej kategórie.");
+        // Teraz, keď (prípadne) nie je vybraná kategória, aktualizuj trvanie/buffer
+        console.log("[openMatchModal] Volám updateMatchDurationAndBuffer po nastavení (alebo nenastavení) kategórie.");
         await updateMatchDurationAndBuffer(allSettings); 
 
         console.log("[openMatchModal] Volám populatePlayingDaysSelect a populateSportHallSelects pre predvyplnenie.");
@@ -2524,7 +2519,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
     }
 
     openModal(freeIntervalModal);
-    console.log("[openFreeIntervalModal] Modálne okno otvorené.");
+    console.log("[openMatchModal] Modálne okno otvorené.");
 }
 
 
