@@ -853,7 +853,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         await batch.commit();
         console.log(`recalculateAndSaveScheduleForDateAndLocation: Batch commit successful.`);
 
-        await displayMatchesAsSchedule();
+        await displayMatchesAsSchedule(allSettings); // Pass allSettings
     } catch (error) {
         console.error("recalculateAndSaveScheduleForDateAndLocation: Chyba pri prepočítavaní a ukladaní rozvrhu:", error);
         await showMessage('Chyba', `Chyba pri prepočítavaní rozvrhu: ${error.message}`);
@@ -1061,7 +1061,7 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
     } catch (error) {
         console.error("moveAndRescheduleMatch: Chyba pri presúvaní a prepočítavaní rozvrhu:", error);
         await showMessage('Chyba', `Chyba pri presúvaní zápasu: ${error.message}.`);
-        await displayMatchesAsSchedule();
+        await displayMatchesAsSchedule(allSettings); // Pass allSettings
     }
 }
 
@@ -1085,8 +1085,8 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
             displayText = 'Zablokovaný interval';
             const blockedIntervalStartHour = String(Math.floor(event.startInMinutes / 60)).padStart(2, '0');
             const blockedIntervalStartMinute = String(event.startInMinutes % 60).padStart(2, '0');
-            const blockedIntervalEndHour = String(Math.floor(event.endInMinutes / 60)).padStart(2, '0');
-            const blockedIntervalEndMinute = String(event.endInMinutes % 60).padStart(2, '0');
+            const blockedIntervalEndHour = String(Math.floor(blockedInterval.endInMinutes / 60)).padStart(2, '0');
+            const blockedIntervalEndMinute = String(blockedInterval.endInMinutes % 60).padStart(2, '0');
             return `${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}|${displayText}`;
         } else {
             displayText = 'Voľný interval dostupný'; 
@@ -1965,7 +1965,7 @@ async function deletePlayingDay(dateToDelete) {
             await showMessage('Úspech', `Hrací deň ${dateToDelete} a všetky súvisiace zápasy/intervaly boli vymazané!`);
             closeModal(document.getElementById('playingDayModal'));
             // No need to pass allSettings here, as it's a full delete and displayMatchesAsSchedule will fetch latest.
-            await displayMatchesAsSchedule();
+            // The onSnapshot listener for settings will trigger displayMatchesAsSchedule with latest settings.
         } catch (error) {
             console.error("Chyba pri mazaní hracieho dňa:", error);
             await showMessage('Chyba', `Chyba pri mazaní hracieho dňa. Detail: ${error.message}`);
@@ -2012,8 +2012,7 @@ async function deletePlace(placeNameToDelete, placeTypeToDelete) {
             await batch.commit();
             await showMessage('Úspech', `Miesto ${placeNameToDelete} (${placeTypeToDelete}) a všetky súvisiace zápasy boli vymazané!`);
             closeModal(document.getElementById('placeModal'));
-            // No need to pass allSettings here, as it's a full delete and displayMatchesAsSchedule will fetch latest.
-            await displayMatchesAsSchedule();
+            // The onSnapshot listener for settings will trigger displayMatchesAsSchedule with latest settings.
         } catch (error) {
                 console.error("Chyba pri mazaní miesta:", error);
                 await showMessage('Chyba', `Chyba pri mazaní miesta ${placeNameToDelete} (${placeTypeToDelete}). Detail: ${error.message}`);
@@ -2655,7 +2654,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchIdInput = document.getElementById('matchId');
     const matchModalTitle = document.getElementById('matchModalTitle');
     const matchDateSelect = document.getElementById('matchDateSelect');
-    const matchLocationSelect = document.getElementById('matchLocationSelect'); 
+    const matchLocationSelect = document.getElementById('matchLocationSelect'); // Opravená chyba
     const matchStartTimeInput = document.getElementById('matchStartTime');
     const matchDurationInput = document.getElementById('matchDuration');
     const matchBufferTimeInput = document.getElementById('matchBufferTime');
@@ -3070,7 +3069,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await showMessage('Úspech', 'Miesto úspešne pridané!');
             }
             closeModal(placeModal);
-            await displayMatchesAsSchedule(allSettings); // Pass allSettings
+            // The onSnapshot listener for settings will trigger displayMatchesAsSchedule with latest settings.
         } catch (error) {
             console.error("Error saving place:", error);
             await showMessage('Chyba', `Chyba pri ukladaní miesta. Detaily: ${error.message}`);
@@ -3108,7 +3107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await showMessage('Úspech', 'Hrací deň úspešne pridaný!');
             }
             closeModal(playingDayModal);
-            await displayMatchesAsSchedule(allSettings); // Pass allSettings
+            // The onSnapshot listener for settings will trigger displayMatchesAsSchedule with latest settings.
         } catch (error) {
             console.error("Error saving playing day:", error);
             await showMessage('Chyba', `Chyba pri ukladaní hracieho dňa. Detaily: ${error.message}`);
