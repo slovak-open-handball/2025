@@ -752,7 +752,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         for (let i = 0; i < fixedEvents.length; i++) {
             const event = fixedEvents[i];
             const originalEventStartInMinutes = event.startInMinutes; // Store original start time for logging
-            console.log(`Fáza 3 (Kompakcia): SPRACOVÁVAM udalosť [${i + 1}/${fixedEvents.length}]: ID: ${event.id || 'N/A'}, Typ: ${event.type}, Pôvodný Start (min): ${formatMinutesToTime(originalEventStartInMinutes)} (${originalEventStartInMinutes}), Aktuálny currentTimePointer: ${formatMinutesToTime(currentTimePointer)} (${currentTimePointer})`);
+            console.log(`Fáza 3 (Kompakcia): SPRACOVÁVAM udalosť [${i + 1}/${fixedEvents.length}]: ID: ${event.id || 'N/A'}, Typ: ${event.type}, Pôvodný Start (min): ${formatMinutesToTime(originalEventStartInMinutes)} (${originalEventStartInMinutes}), Aktuálny currentTimePointer PRED spracovaním: ${formatMinutesToTime(currentTimePointer)} (${currentTimePointer})`);
 
             let newEventStartInMinutes = event.startInMinutes;
 
@@ -780,7 +780,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             } else if (event.type === 'blocked_interval' && (event.isBlocked === true || event.originalMatchId)) {
                 // For blocked intervals or placeholders, recalculate end time based on new start time and their original duration
                 // The duration of a blocked interval is its end time minus its start time (as fetched).
-                const intervalDuration = event.endInMinutes - event.startInMinutes; // Use the fetched start/end for its inherent duration
+                const intervalDuration = event.endInMinutes - originalEventStartInMinutes; // Use the original start and end for its inherent duration
                 const newEndTimeInMinutes = newEventStartInMinutes + intervalDuration;
                 const newEndTimeFormatted = formatMinutesToTime(newEndTimeInMinutes);
                 batch.update(event.docRef, { startTime: newStartTimeFormatted, endTime: newEndTimeFormatted, startInMinutes: newEventStartInMinutes, endInMinutes: newEndTimeInMinutes });
@@ -790,8 +790,12 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 console.log(`  -> Zablokovaný interval ${event.id} aktualizovaný v batchi. Nový čas: ${newStartTimeFormatted}-${newEndTimeFormatted}.`);
             }
 
-            const eventFootprintEndInMinutes = (event.type === 'match') ? event.startInMinutes + event.duration + event.bufferTime : event.endInMinutes;
-            currentTimePointer = Math.max(currentTimePointer, eventFootprintEndInMinutes);
+            // Aktualizuj currentTimePointer na koniec udalosti + jej buffer (ak je to zápas), inak len na koniec udalosti
+            if (event.type === 'match') {
+                currentTimePointer = Math.max(currentTimePointer, event.startInMinutes + event.duration + event.bufferTime);
+            } else { // Pre zablokované intervaly (placeholdery) sa jednoducho posuň na ich koniec
+                currentTimePointer = Math.max(currentTimePointer, event.endInMinutes);
+            }
             console.log(`Fáza 3 (Kompakcia): Po spracovaní udalosti ${event.id || 'N/A'}, currentTimePointer je teraz: ${formatMinutesToTime(currentTimePointer)} (${currentTimePointer}).`);
         }
 
@@ -1528,7 +1532,7 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                                     dataAttributes += ` data-original-match-id="${blockedInterval.originalMatchId}"`;
                                 }
 
-                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
+                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedInterval.startInMinutes % 60 < 10 ? '0' : ''}${blockedInterval.startInMinutes % 60} - ${blockedIntervalEndHour}:${blockedInterval.endInMinutes % 60 < 10 ? '0' : ''}${blockedInterval.endInMinutes % 60}</td>`;
                                 let textColspan = '4';
 
                                 if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
@@ -2708,7 +2712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
