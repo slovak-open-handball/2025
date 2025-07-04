@@ -2368,7 +2368,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         const [endH, endM] = endTime.split(':').map(Number);
         if (endH === 24 && endM === 0) { // Ak ide o úplne posledný interval dňa
             console.log("[openFreeIntervalModal] Interval končí o 24:00. Toto je zvyčajne koncový zástupný symbol, žiadne špeciálne akcie.");
-            freeIntervalModalTitle.textContent = 'Voľný interval';
+            freeIntervalModalTitle.textContent = 'Voľný interval do konca dňa';
             // Stále povoľ pridanie zápasu
             if (addMatchButton) { 
                 addMatchButton.style.display = 'inline-block'; 
