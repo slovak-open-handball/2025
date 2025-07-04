@@ -288,6 +288,7 @@ function getCategoryMatchSettings(categoryId, currentAllSettings) {
     console.log(`[getCategoryMatchSettings] Volaná pre categoryId: ${categoryId}`);
     console.log(`[getCategoryMatchSettings] currentAllSettings:`, currentAllSettings);
     try {
+        // Kontrolujeme, či categoryMatchSettings existuje a či obsahuje dané categoryId
         const categorySettings = currentAllSettings.categoryMatchSettings?.[categoryId];
         if (categorySettings) {
             console.log(`[getCategoryMatchSettings] Nájdené nastavenia pre kategóriu ${categoryId}:`, categorySettings);
@@ -694,7 +695,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
 
                 if (isSameDaySameLocationMove) {
                     const oldStartInMinutes = parseTimeToMinutes(movedMatchDetails.oldStartTime);
-                    const newStartInMinutes = parseTimeToTimeToMinutes(movedMatchDetails.newStartTime);
+                    const newStartInMinutes = parseTimeToMinutes(movedMatchDetails.newStartTime);
 
                     if (newStartInMinutes > oldStartInMinutes) {
                         // Prípad 3: Presunuté na NESKORŠÍ čas. Vytvor alebo aktualizuj trvalý voľný slot na starom mieste.
@@ -1097,9 +1098,9 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
         if (event.isBlocked === true) {
             displayText = 'Zablokovaný interval';
             const blockedIntervalStartHour = String(Math.floor(event.startInMinutes / 60)).padStart(2, '0');
-            const blockedIntervalStartMinute = String(event.startInMinutes % 60).padStart(2, '0');
-            const blockedIntervalEndHour = String(Math.floor(event.endInMinutes / 60)).padStart(2, '0');
-            const blockedIntervalEndMinute = String(event.endInMinutes % 60).padStart(2, '0');
+            const blockedIntervalStartMinute = String(blockedInterval.startInMinutes % 60).padStart(2, '0');
+            const blockedIntervalEndHour = String(Math.floor(blockedInterval.endInMinutes / 60)).padStart(2, '0');
+            const blockedIntervalEndMinute = String(blockedInterval.endInMinutes % 60).padStart(2, '0');
             return `${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}|${displayText}`;
         } else {
             displayText = 'Voľný interval dostupný'; 
@@ -2124,7 +2125,7 @@ async function editPlace(placeName, placeType) {
             deletePlaceButtonModal.style.display = 'inline-block';
             if (deletePlaceButtonModal && deletePlaceButtonModal._currentHandler) {
                 deletePlaceButtonModal.removeEventListener('click', deletePlaceButtonModal._currentHandler);
-                delete deletePlaceButtonButtonModal._currentHandler;
+                delete deletePlaceButtonModal._currentHandler;
             }
             const handler = () => deletePlace(placeData.name, placeData.type);
             deletePlaceButtonModal.addEventListener('click', handler);
@@ -2166,7 +2167,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchForm = document.getElementById('matchForm');
 
     const allSettings = currentAllSettings;
-    console.log("[openMatchModal] Aktuálne allSettings:", allSettings);
+    console.log("[openMatchModal] Aktuálne allSettings (pred spracovaním kategórií):", allSettings);
 
     // Odstráň existujúce poslucháče udalostí pre tlačidlo vymazania
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
@@ -2754,14 +2755,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Nastav poslucháč na zmeny nastavení v reálnom čase
     const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-    onSnapshot(settingsDocRef, (docSnapshot) => {
+    onSnapshot(settingsDocRef, async (docSnapshot) => { // Zmenené na async
         if (docSnapshot.exists()) {
             allSettings = docSnapshot.data();
-            console.log("[onSnapshot] Nastavenia aktualizované v reálnom čase:", allSettings);
+            console.log("[onSnapshot] Nastavenia aktualizované v reálnom čase (základné):", allSettings);
         } else {
             allSettings = {}; // Resetuj, ak dokument nastavení neexistuje
             console.log("[onSnapshot] Dokument nastavení neexistuje.");
         }
+
+        // Kľúčová zmena: Načítanie nastavení kategórií a ich pridanie do allSettings
+        try {
+            const categoriesSnapshot = await getDocs(categoriesCollectionRef);
+            const categoryMatchSettings = {};
+            categoriesSnapshot.forEach(catDoc => {
+                const catData = catDoc.data();
+                categoryMatchSettings[catDoc.id] = {
+                    n: catData.n || 0,
+                    t: catData.t || 0,
+                    p: catData.p || 0,
+                    z: catData.z || 0,
+                    duration: catData.duration || 60, // Použi priamo 'duration' z DB
+                    bufferTime: catData.bufferTime || 5, // Použi priamo 'bufferTime' z DB
+                    color: catData.color || '#000000'
+                };
+            });
+            allSettings.categoryMatchSettings = categoryMatchSettings;
+            console.log("[onSnapshot] Načítané a pridané nastavenia kategórií do allSettings:", allSettings.categoryMatchSettings);
+
+        } catch (error) {
+            console.error("[onSnapshot] Chyba pri načítaní nastavení kategórií pre allSettings:", error);
+        }
+
         // Znova zobraz rozvrh pri každej zmene nastavení
         displayMatchesAsSchedule(allSettings);
     }, (error) => {
