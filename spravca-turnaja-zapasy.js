@@ -163,7 +163,7 @@ async function animateLoadingText(containerId, text) {
     animate();
 
     // Vráti funkciu na zastavenie animácie
-    return ()l => {
+    return () => {
         clearTimeout(animationId);
         container.innerHTML = ''; // Vymaže obsah
     };
