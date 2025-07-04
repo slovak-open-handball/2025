@@ -561,12 +561,14 @@ const getTeamName = async (categoryId, groupId, teamNumber, categoriesMap, group
  * @param {'process'|'cleanup'} purpose Indicates if this call is to 'process' the target location or 'cleanup' the original location after a move.
  * @param {object|null} movedMatchDetails Information about the match that was just moved.
  * { id, oldDate, oldLocation, oldStartTime, oldFootprintEndTime, newDate, newLocation, newStartTime, newFootprintEndTime }
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
 async function recalculateAndSaveScheduleForDateAndLocation(
     processDate,
     processLocation,
     purpose,
-    movedMatchDetails = null
+    movedMatchDetails = null,
+    allSettings // Pass allSettings to this function
 ) {
     console.log(`recalculateAndSaveScheduleForDateAndLocation: === SPUSTENÉ pre Dátum: ${processDate}, Miesto: ${processLocation}, Účel: ${purpose}. ` +
                 `Presunutý zápas ID: ${movedMatchDetails ? movedMatchDetails.id : 'žiadny'} ===`);
@@ -578,18 +580,21 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         const matchesSnapshot = await getDocs(matchesQuery);
         let currentMatches = matchesSnapshot.docs.map(doc => {
             const data = doc.data();
+            // Get duration and bufferTime from category settings if available, otherwise use match's own data or default
+            const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
+            const duration = categorySettings?.duration || Number(data.duration) || 60;
+            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
             const startInMinutes = parseTimeToMinutes(data.startTime);
-            const duration = Number(data.duration) || 0;
-            const bufferTime = Number(data.bufferTime) || 0;
+
             return {
                 id: doc.id,
                 type: 'match',
                 docRef: doc.ref,
                 ...data,
+                duration: duration, // Use updated duration
+                bufferTime: bufferTime, // Use updated bufferTime
                 startInMinutes: startInMinutes,
-                duration: duration,
-                bufferTime: bufferTime,
-                footprintEndInMinutes: startInMinutes + duration + bufferTime // Calculate footprint here
+                footprintEndInMinutes: startInMinutes + duration + bufferTime // Recalculate footprint
             };
         });
 
@@ -899,8 +904,9 @@ async function getMatchData(matchId) {
 /**
  * Deletes a match and creates a free interval in its place.
  * @param {string} matchId The ID of the match to delete.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function deleteMatch(matchId) {
+async function deleteMatch(matchId, allSettings) {
     console.log(`deleteMatch: === DELETE MATCH FUNCTION STARTED ===`);
     console.log(`deleteMatch: Attempting to delete match with ID: ${matchId}`);
     const matchModal = document.getElementById('matchModal');
@@ -925,8 +931,11 @@ async function deleteMatch(matchId) {
             const date = matchData.date;
             const location = matchData.location;
             const startTime = matchData.startTime;
-            const duration = Number(matchData.duration) || 0;
-            const bufferTime = Number(matchData.bufferTime) || 0;
+            
+            // Get duration and bufferTime from category settings if available, otherwise use match's own data or default
+            const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
+            const duration = categorySettings?.duration || Number(matchData.duration) || 60;
+            const bufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 5;
 
             const startInMinutes = parseTimeToMinutes(startTime);
             const endInMinutes = startInMinutes + duration + bufferTime;
@@ -959,7 +968,7 @@ async function deleteMatch(matchId) {
             
             // Recalculate schedule for the affected date and location
             // No movedMatchDetails needed here as it's a deletion, not a move.
-            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process');
+            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process', null, allSettings);
             console.log("deleteMatch: Schedule recalculated and displayed after match deletion.");
 
         } catch (error) {
@@ -978,8 +987,9 @@ async function deleteMatch(matchId) {
  * @param {string} targetDate The target date for the match.
  * @param {string} targetLocation The target location for the match.
  * @param {string|null} droppedProposedStartTime The proposed start time after dropping.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation, droppedProposedStartTime = null) {
+async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation, droppedProposedStartTime = null, allSettings) {
     console.log(`moveAndRescheduleMatch: === SPUSTENÉ pre zápas ID: ${draggedMatchId}, cieľ: ${targetDate}, ${targetLocation}, navrhovaný čas: ${droppedProposedStartTime} ===`);
     try {
         const draggedMatchDocRef = doc(matchesCollectionRef, draggedMatchId);
@@ -993,7 +1003,13 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
         const originalDate = draggedMatchData.date;
         const originalLocation = draggedMatchData.location;
         const originalStartTime = draggedMatchData.startTime;
-        const originalFootprintEndTime = calculateFootprintEndTime(originalStartTime, draggedMatchData.duration, draggedMatchData.bufferTime);
+
+        // Get duration and bufferTime from category settings for the original footprint calculation
+        const categorySettings = allSettings.categoryMatchSettings?.[draggedMatchData.categoryId];
+        const originalDuration = categorySettings?.duration || Number(draggedMatchData.duration) || 60;
+        const originalBufferTime = categorySettings?.bufferTime || Number(draggedMatchData.bufferTime) || 5;
+
+        const originalFootprintEndTime = calculateFootprintEndTime(originalStartTime, originalDuration, originalBufferTime);
 
         // Update the match's new location and time in DB
         const updatedMatchData = {
@@ -1005,7 +1021,7 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
         await setDoc(draggedMatchDocRef, updatedMatchData, { merge: true });
         console.log(`moveAndRescheduleMatch: Zápas ${draggedMatchId} aktualizovaný v DB s novými dátami:`, updatedMatchData);
 
-        const newFootprintEndTime = calculateFootprintEndTime(droppedProposedStartTime, draggedMatchData.duration, draggedMatchData.bufferTime);
+        const newFootprintEndTime = calculateFootprintEndTime(droppedProposedStartTime, originalDuration, originalBufferTime); // Use original duration/buffer for new footprint
 
         const movedMatchDetails = {
             id: draggedMatchId,
@@ -1024,7 +1040,8 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
             targetDate,
             targetLocation,
             'process', // Purpose: process the target location
-            movedMatchDetails
+            movedMatchDetails,
+            allSettings // Pass allSettings
         );
         console.log(`moveAndRescheduleMatch: Recalculation for target location (${targetDate}, ${targetLocation}) completed.`);
 
@@ -1034,7 +1051,8 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
                 originalDate,
                 originalLocation,
                 'cleanup', // Purpose: cleanup the original location
-                movedMatchDetails // Pass full details for context, though cleanup only uses old data
+                movedMatchDetails, // Pass full details for context, though cleanup only uses old data
+                allSettings // Pass allSettings
             );
             console.log(`moveAndRescheduleMatch: Recalculation for original location (${originalDate}, ${originalLocation}) completed.`);
         }
@@ -1057,7 +1075,7 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
  */
 function getEventDisplayString(event, allSettings, categoryColorsMap) {
     if (event.type === 'match') {
-        const matchDuration = event.duration || (allSettings.categoryMatchSettings?.[event.categoryId]?.duration || 60);
+        // Match duration and buffer time are now directly on the event object after initial processing
         const displayedMatchEndTimeInMinutes = event.endOfPlayInMinutes; 
         const formattedDisplayedEndTime = formatMinutesToTime(displayedMatchEndTimeInMinutes);
         
@@ -1128,28 +1146,6 @@ async function displayMatchesAsSchedule() {
         groupsSnapshot.forEach(doc => groupsMap.set(doc.id, doc.data().name || doc.id));
         console.log("displayMatchesAsSchedule: Načítané skupiny:", Array.from(groupsMap.entries()));
 
-        const updatedMatchesPromises = allMatches.map(async match => {
-            const [team1Data, team2Data] = await Promise.allSettled([
-                getTeamName(match.categoryId, match.groupId, match.team1Number, categoriesMap, groupsMap),
-                getTeamName(match.categoryId, match.groupId, match.team2Number, categoriesMap, groupsMap)
-            ]);
-
-            return {
-                ...match,
-                team1DisplayName: team1Data.status === 'fulfilled' ? team1Data.value.fullDisplayName : 'N/A',
-                team1ShortDisplayName: team1Data.status === 'fulfilled' ? team1Data.value.shortDisplayName : 'N/A',
-                team1ClubName: team1Data.status === 'fulfilled' ? team1Data.value.clubName : 'N/A',
-                team1ClubId: team1Data.status === 'fulfilled' ? team1Data.value.clubId : null,
-                team2DisplayName: team2Data.status === 'fulfilled' ? team2Data.value.fullDisplayName : 'N/A',
-                team2ShortDisplayName: team2Data.status === 'fulfilled' ? team2Data.value.shortDisplayName : 'N/A',
-                team2ClubName: team2Data.status === 'fulfilled' ? team2Data.value.clubName : 'N/A',
-                team2ClubId: team2Data.status === 'fulfilled' ? team2Data.value.clubId : null,
-            };
-        });
-
-        allMatches = await Promise.all(updatedMatchesPromises);
-        console.log("displayMatchesAsSchedule: Všetky zápasy s naplnenými zobrazovanými názvami:", JSON.stringify(allMatches.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, team1DisplayName: m.team1DisplayName}))));
-
         const playingDaysSnapshot = await getDocs(query(playingDaysCollectionRef, orderBy("date", "asc")));
         const allPlayingDayDates = playingDaysSnapshot.docs.map(doc => doc.data().date);
         allPlayingDayDates.sort();
@@ -1183,6 +1179,40 @@ async function displayMatchesAsSchedule() {
             endInMinutes: parseTimeToMinutes(doc.data().endTime)
         }));
         console.log("displayMatchesAsSchedule: Načítané zablokované intervaly:", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
+
+
+        // Pre-process all matches to include team display names and updated duration/buffer from settings
+        const processedMatchesPromises = allMatches.map(async match => {
+            const [team1Data, team2Data] = await Promise.allSettled([
+                getTeamName(match.categoryId, match.groupId, match.team1Number, categoriesMap, groupsMap),
+                getTeamName(match.categoryId, match.groupId, match.team2Number, categoriesMap, groupsMap)
+            ]);
+
+            const categorySettings = allSettings.categoryMatchSettings?.[match.categoryId];
+            const duration = categorySettings?.duration || Number(match.duration) || 60;
+            const bufferTime = categorySettings?.bufferTime || Number(match.bufferTime) || 5;
+            const startInMinutes = parseTimeToMinutes(match.startTime);
+
+            return {
+                ...match,
+                team1DisplayName: team1Data.status === 'fulfilled' ? team1Data.value.fullDisplayName : 'N/A',
+                team1ShortDisplayName: team1Data.status === 'fulfilled' ? team1Data.value.shortDisplayName : 'N/A',
+                team1ClubName: team1Data.status === 'fulfilled' ? team1Data.value.clubName : 'N/A',
+                team1ClubId: team1Data.status === 'fulfilled' ? team1Data.value.clubId : null,
+                team2DisplayName: team2Data.status === 'fulfilled' ? team2Data.value.fullDisplayName : 'N/A',
+                team2ShortDisplayName: team2Data.status === 'fulfilled' ? team2Data.value.shortDisplayName : 'N/A',
+                team2ClubName: team2Data.status === 'fulfilled' ? team2Data.value.clubName : 'N/A',
+                team2ClubId: team2Data.status === 'fulfilled' ? team2Data.value.clubId : null,
+                duration: duration, // Use updated duration from settings
+                bufferTime: bufferTime, // Use updated bufferTime from settings
+                startInMinutes: startInMinutes,
+                endOfPlayInMinutes: startInMinutes + duration, // Recalculate end of play
+                footprintEndInMinutes: startInMinutes + duration + bufferTime // Recalculate footprint end
+            };
+        });
+
+        allMatches = await Promise.all(processedMatchesPromises);
+        console.log("displayMatchesAsSchedule: Všetky zápasy s naplnenými zobrazovanými názvami a prepočítanou dĺžkou/bufferom:", JSON.stringify(allMatches.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, duration: m.duration, bufferTime: m.bufferTime, footprintEndInMinutes: m.footprintEndInMinutes}))));
 
 
         const groupedMatches = new Map();
@@ -1264,16 +1294,14 @@ async function displayMatchesAsSchedule() {
 
                         const currentEventsForRendering = [
                             ...matchesForDateAndLocation.map(m => {
-                                const startInMinutes = parseTimeToMinutes(m.startTime);
-                                const duration = (m.duration || (allSettings.categoryMatchSettings?.[m.categoryId]?.duration || 60));
-                                const bufferTime = (m.bufferTime || (allSettings.categoryMatchSettings?.[m.categoryId]?.bufferTime || 5));
+                                // Duration and bufferTime are already updated in allMatches array
                                 return {
                                     ...m,
                                     type: 'match',
-                                    startInMinutes: startInMinutes,
-                                    endOfPlayInMinutes: startInMinutes + duration,
-                                    footprintEndInMinutes: startInMinutes + duration + bufferTime,
-                                    bufferTime: bufferTime
+                                    startInMinutes: m.startInMinutes,
+                                    endOfPlayInMinutes: m.endOfPlayInMinutes,
+                                    footprintEndInMinutes: m.footprintEndInMinutes,
+                                    bufferTime: m.bufferTime
                                 };
                             }),
                             ...allBlockedIntervals.filter(bs => bs.date === date && bs.location === location)
@@ -1566,8 +1594,8 @@ async function displayMatchesAsSchedule() {
                         scheduleHtml += `<th>ID Hostia</th></tr></thead><tbody>`;
 
                         matchesForDate.forEach(match => {
-                            const matchDuration = match.duration || (allSettings.categoryMatchSettings?.[match.categoryId]?.duration || 60);
-                            const displayedMatchEndTimeInMinutes = parseTimeToMinutes(match.startTime) + matchDuration; 
+                            // Match duration and buffer time are already updated in allMatches array
+                            const displayedMatchEndTimeInMinutes = match.endOfPlayInMinutes; 
                             const formattedDisplayedEndTime = formatMinutesToTime(displayedMatchEndTimeInMinutes);
                             const categoryColor = categoryColorsMap.get(match.categoryId) || 'transparent';
 
@@ -1659,7 +1687,7 @@ async function displayMatchesAsSchedule() {
                     console.log(`Drag & Drop: Dropped AFTER target match. Proposed start time: ${droppedProposedStartTime}`);
                 }
 
-                await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime);
+                await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime, allSettings);
             });
         });
 
@@ -1706,7 +1734,7 @@ async function displayMatchesAsSchedule() {
                     }
                 }
                 
-                await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime);
+                await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime, allSettings);
             });
         });
 
@@ -1837,9 +1865,11 @@ async function displayMatchesAsSchedule() {
                         const fixedEventsSnapshot = await getDocs(fixedEventsQuery);
                         const fixedEvents = fixedEventsSnapshot.docs.map(doc => {
                             const data = doc.data();
+                            // Get duration and bufferTime from category settings if available, otherwise use match's own data or default
+                            const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
+                            const duration = categorySettings?.duration || Number(data.duration) || 60;
+                            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
                             const startInMinutes = parseTimeToMinutes(data.startTime);
-                            const duration = Number(data.duration) || 0;
-                            const bufferTime = Number(data.bufferTime) || 0;
                             return {
                                 id: doc.id,
                                 start: startInMinutes,
@@ -1877,7 +1907,7 @@ async function displayMatchesAsSchedule() {
                     }
 
                     console.log(`Drag & Drop: Attempting to move and reschedule match ${draggedMatchId} to Date: ${newDate}, Location: ${newLocation}, Proposed Start Time: ${droppedProposedStartTime}.`);
-                    await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime);
+                    await moveAndRescheduleMatch(draggedMatchId, newDate, newLocation, droppedProposedStartTime, allSettings);
                 }
             });
         });
@@ -1932,7 +1962,7 @@ async function deletePlayingDay(dateToDelete) {
             });
 
             const blockedIntervalsQuery = query(blockedSlotsCollectionRef, where("date", "==", dateToDelete));
-            const blockedIntervalsSnapshot = await getDocs(blockedSlotsCollectionRef);
+            const blockedIntervalsSnapshot = await getDocs(blockedSlotsCollectionRef); // Corrected this line
             blockedIntervalsSnapshot.docs.forEach(blockedIntervalDoc => {
                 batch.delete(doc(blockedSlotsCollectionRef, blockedIntervalDoc.id));
             });
@@ -1979,7 +2009,7 @@ async function deletePlace(placeNameToDelete, placeTypeToDelete) {
             });
 
             const blockedIntervalsQuery = query(blockedSlotsCollectionRef, where("location", "==", placeNameToDelete));
-            const blockedIntervalsSnapshot = await getDocs(blockedSlotsCollectionRef);
+            const blockedIntervalsSnapshot = await getDocs(blockedSlotsCollectionRef); // Corrected this line
             blockedIntervalsSnapshot.docs.forEach(blockedIntervalDoc => {
                 batch.delete(doc(blockedSlotsCollectionRef, blockedIntervalDoc.id));
             });
@@ -2111,6 +2141,14 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
+    // Fetch all settings to get category match settings
+    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
+    const settingsDoc = await getDoc(settingsDocRef);
+    let allSettings = {};
+    if (settingsDoc.exists()) {
+        allSettings = settingsDoc.data();
+    }
+
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
         deleteMatchButtonModal.removeEventListener('click', deleteMatchButtonModal._currentHandler);
         delete deleteMatchButtonModal._currentHandler;
@@ -2121,7 +2159,7 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
     deleteMatchButtonModal.style.display = matchId ? 'inline-block' : 'none';
     
     if (matchId) {
-        const handler = () => deleteMatch(matchId);
+        const handler = () => deleteMatch(matchId, allSettings); // Pass allSettings
         deleteMatchButtonModal.addEventListener('click', handler);
         deleteMatchButtonModal._currentHandler = handler;
     } else {
@@ -2146,8 +2184,12 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
             await populateSportHallSelects(matchLocationSelect, matchData.location);
         }
         matchStartTimeInput.value = matchData.startTime || '';
-        matchDurationInput.value = matchData.duration || '';
-        matchBufferTimeInput.value = matchData.bufferTime || '';
+        
+        // Use duration and bufferTime from settings for display in modal
+        const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
+        matchDurationInput.value = categorySettings?.duration || matchData.duration || 60;
+        matchBufferTimeInput.value = categorySettings?.bufferTime || matchData.bufferTime || 5;
+
         await populateCategorySelect(matchCategorySelect, matchData.categoryId);
         if (matchData.categoryId) {
             await populateGroupSelect(matchData.categoryId, matchGroupSelect, matchData.groupId);
@@ -2193,17 +2235,12 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
         let defaultDuration = 60;
         let defaultBufferTime = 5;
         
-        const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-        const settingsDoc = await getDoc(settingsDocRef);
-        if (settingsDoc.exists()) {
-            const data = settingsDoc.data();
-            const categorySettings = data.categoryMatchSettings;
-            if (categorySettings) {
-                const firstCategoryIdWithSettings = Object.keys(categorySettings)[0];
-                if (firstCategoryIdWithSettings) {
-                    defaultDuration = categorySettings[firstCategoryIdWithSettings].duration || defaultDuration;
-                    defaultBufferTime = categorySettings[firstCategoryIdWithSettings].bufferTime || defaultBufferTime;
-                }
+        // If there are category settings, try to get the first one's defaults
+        if (allSettings.categoryMatchSettings) {
+            const firstCategoryIdWithSettings = Object.keys(allSettings.categoryMatchSettings)[0];
+            if (firstCategoryIdWithSettings) {
+                defaultDuration = allSettings.categoryMatchSettings[firstCategoryIdWithSettings].duration || defaultDuration;
+                defaultBufferTime = allSettings.categoryMatchSettings[firstCategoryIdWithSettings].bufferTime || defaultBufferTime;
             }
         }
         matchDurationInput.value = defaultDuration;
@@ -2221,8 +2258,9 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
  * @param {string} startTime The start time of the interval.
  * @param {string} endTime The end time of the interval.
  * @param {string} blockedIntervalId The ID of the blocked interval document, or a generated ID for new placeholders.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId) {
+async function openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings) {
     console.log(`openFreeIntervalModal: Called for Date: ${date}, Location: ${location}, Time: ${startTime}-${endTime}, Interval ID: ${blockedIntervalId}`);
 
     const freeIntervalModal = document.getElementById('freeSlotModal');
@@ -2316,7 +2354,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             unblockButton.classList.remove('delete-button'); 
             const unblockHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Unblock' for blocked interval ID: ${blockedIntervalId}. Calling unblockBlockedInterval.`);
-                unblockBlockedInterval(blockedIntervalId, date, location);
+                unblockBlockedInterval(blockedIntervalId, date, location, allSettings); // Pass allSettings
             };
             unblockButton.addEventListener('click', unblockHandler);
             unblockButton._currentHandler = unblockHandler;
@@ -2328,7 +2366,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             deleteButton.classList.add('delete-button');
             const deleteHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Delete interval' for blocked interval ID: ${blockedIntervalId}. Calling handleDeleteInterval.`);
-                handleDeleteInterval(blockedIntervalId, date, location);
+                handleDeleteInterval(blockedIntervalId, date, location, allSettings); // Pass allSettings
             };
             deleteButton.addEventListener('click', deleteHandler); 
             deleteButton._currentHandler = deleteHandler; 
@@ -2356,7 +2394,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             blockButton.textContent = 'Zablokovať';
             const blockHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Block' for free interval from deleted match ID: ${blockedIntervalId}. Calling blockFreeInterval.`);
-                blockFreeInterval(blockedIntervalId, date, location, startTime, endTime);
+                blockFreeInterval(blockedIntervalId, date, location, startTime, endTime, allSettings); // Pass allSettings
             };
             blockButton.addEventListener('click', blockHandler);
             blockButton._currentHandler = blockHandler;
@@ -2368,7 +2406,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             deleteButton.classList.add('delete-button'); // Add delete button styling
             const deleteHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Delete interval' for free interval from deleted match ID: ${blockedIntervalId}. Calling handleDeleteInterval.`);
-                handleDeleteInterval(blockedIntervalId, date, location);
+                handleDeleteInterval(blockedIntervalId, date, location, allSettings); // Pass allSettings
             };
             deleteButton.addEventListener('click', deleteHandler); 
             deleteButton._currentHandler = deleteHandler; 
@@ -2410,7 +2448,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
                 blockButton.textContent = 'Zablokovať';
                 const blockHandler = () => {
                     console.log(`openFreeIntervalModal: Clicked 'Block' for auto-generated free interval ID: ${blockedIntervalId}. Calling blockFreeInterval.`);
-                    blockFreeInterval(blockedIntervalId, date, location, startTime, endTime);
+                    blockFreeInterval(blockedIntervalId, date, location, startTime, endTime, allSettings); // Pass allSettings
                 };
                 blockButton.addEventListener('click', blockHandler);
                 blockButton._currentHandler = blockHandler;
@@ -2422,7 +2460,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
                 deleteButton.classList.add('delete-button');
                 const deleteHandler = () => {
                     console.log(`openFreeIntervalModal: Clicked 'Delete interval' for auto-generated free interval ID: ${blockedIntervalId}. Calling handleDeleteInterval.`);
-                    handleDeleteInterval(blockedIntervalId, date, location);
+                    handleDeleteInterval(blockedIntervalId, date, location, allSettings); // Pass allSettings
                 };
                 deleteButton.addEventListener('click', deleteHandler); 
                 deleteButton._currentHandler = deleteHandler; 
@@ -2443,8 +2481,9 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
  * @param {string} location The location of the interval.
  * @param {string} startTime The start time of the interval.
  * @param {string} endTime The end time of the interval.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function blockFreeInterval(intervalId, date, location, startTime, endTime) {
+async function blockFreeInterval(intervalId, date, location, startTime, endTime, allSettings) {
     console.log(`blockFreeInterval: === BLOCK FREE INTERVAL FUNCTION STARTED ===`);
     console.log(`blockFreeInterval: Interval ID: ${intervalId}, Date: ${date}, Location: ${location}, Start: ${startTime}, End: ${endTime}`);
     const freeIntervalModal = document.getElementById('freeSlotModal'); 
@@ -2464,9 +2503,12 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime)
             // Perform overlap check in JavaScript
             const overlappingMatch = matchesSnapshot.docs.find(matchDoc => {
                 const matchData = matchDoc.data();
+                // Get duration and bufferTime from category settings if available, otherwise use match's own data or default
+                const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
+                const matchDuration = categorySettings?.duration || Number(matchData.duration) || 0;
+                const matchBufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 0;
+
                 const matchStartInMinutes = parseTimeToMinutes(matchData.startTime);
-                const matchDuration = Number(matchData.duration) || 0; 
-                const matchBufferTime = Number(matchData.bufferTime) || 0; 
                 const matchFootprintEndInMinutes = matchStartInMinutes + matchDuration + matchBufferTime; 
                 
                 // Check for overlap: interval starts before match ends AND interval ends after match starts
@@ -2480,9 +2522,12 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime)
                     return `${h}:${m}`;
                 };
                 const matchStartTime = overlappingMatch.data().startTime;
-                const matchDuration = Number(overlappingMatch.data().duration) || 0; 
-                const matchBufferTime = Number(overlappingMatch.data().bufferTime) || 0; 
-                const matchFootprintEndInMinutes = parseTimeToMinutes(matchStartTime) + matchDuration + matchBufferTime;
+                // Get duration and bufferTime from category settings for the overlapping match
+                const overlappingMatchCategorySettings = allSettings.categoryMatchSettings?.[overlappingMatch.data().categoryId];
+                const overlappingMatchDuration = overlappingMatchCategorySettings?.duration || Number(overlappingMatch.data().duration) || 0;
+                const overlappingMatchBufferTime = overlappingMatchCategorySettings?.bufferTime || Number(overlappingMatch.data().bufferTime) || 0;
+
+                const matchFootprintEndInMinutes = parseTimeToMinutes(matchStartTime) + overlappingMatchDuration + overlappingMatchBufferTime;
                 const formattedMatchEndTime = formatTime(matchFootprintEndInMinutes);
 
                 await showMessage('Chyba', `Interval nemôže byť zablokovaný, pretože sa prekrýva s existujúcim zápasom od ${matchStartTime} do ${formattedMatchEndTime}. Prosím, najprv presuňte alebo vymažte tento zápas.`);
@@ -2517,7 +2562,7 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime)
             await showMessage('Úspech', 'Interval bol úspešne zablokovaný!');
             closeModal(freeIntervalModal);
             console.log("blockFreeInterval: Modal closed.");
-            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process');
+            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process', null, allSettings); // Pass allSettings
             console.log("blockFreeInterval: Schedule recalculation completed.");
         } catch (error) {
             console.error("Chyba pri blokovaní intervalu:", error);
@@ -2531,8 +2576,9 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime)
  * @param {string} intervalId The ID of the interval to unblock.
  * @param {string} date The date of the interval.
  * @param {string} location The location of the interval.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function unblockBlockedInterval(intervalId, date, location) {
+async function unblockBlockedInterval(intervalId, date, location, allSettings) {
     console.log(`unblockBlockedInterval: === UNBLOCK INTERVAL FUNCTION STARTED ===`);
     console.log(`unblockBlockedInterval: Interval ID: ${intervalId}, Date: ${date}, Location: ${location}`);
     const freeIntervalModal = document.getElementById('freeSlotModal'); 
@@ -2545,7 +2591,7 @@ async function unblockBlockedInterval(intervalId, date, location) {
             console.log(`unblockBlockedInterval: Interval ID: ${intervalId} successfully unblocked.`);
             await showMessage('Úspech', 'Interval bol úspešne odblokovaný!');
             closeModal(freeIntervalModal);
-            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process'); 
+            await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process', null, allSettings); // Pass allSettings
             console.log("unblockBlockedInterval: Schedule display refreshed and recalculated.");
         }
         catch (error) {
@@ -2562,8 +2608,9 @@ async function unblockBlockedInterval(intervalId, date, location) {
  * @param {string} intervalId The ID of the interval to delete.
  * @param {string} date The date of the interval.
  * @param {string} location The location of the interval.
+ * @param {object} allSettings All tournament settings, including category match settings.
  */
-async function handleDeleteInterval(intervalId, date, location) {
+async function handleDeleteInterval(intervalId, date, location, allSettings) {
     console.log(`handleDeleteInterval: === INTERVAL DELETION PROCESSING FUNCTION STARTED ===`);
     console.log(`handleDeleteInterval: Interval ID: ${intervalId}, Date: ${date}, Location: ${location}`);
     const freeIntervalModal = document.getElementById('freeSlotModal');
@@ -2587,7 +2634,7 @@ async function handleDeleteInterval(intervalId, date, location) {
         
         // After deleting, trigger recalculation without any special flags.
         // This will allow the system to re-create a 'general' free interval if a gap appears.
-        await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process');
+        await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process', null, allSettings); // Pass allSettings
         console.log("handleDeleteInterval: Schedule recalculation completed after deleting a user-defined blocked interval or auto-generated free interval.");
 
     } catch (error) {
@@ -2648,6 +2695,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const closeFreeIntervalModalButton = document.getElementById('closeFreeSlotModal');
+
+    // Fetch all settings once on DOMContentLoaded
+    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
+    const settingsDoc = await getDoc(settingsDocRef);
+    let allSettings = {};
+    if (settingsDoc.exists()) {
+        allSettings = settingsDoc.data();
+    }
 
 
     if (categoriesContentSection) {
@@ -2798,8 +2853,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const matchDate = matchDateSelect.value;
         const matchLocationName = matchLocationSelect.value;
         const matchStartTime = matchStartTimeInput.value;
-        const matchDuration = parseInt(matchDurationInput.value);
-        const matchBufferTime = parseInt(matchBufferTimeInput.value);
+        const matchDuration = parseInt(matchDurationInput.value); // This is the value from the form
+        const matchBufferTime = parseInt(matchBufferTimeInput.value); // This is the value from the form
         let currentMatchId = matchIdInput.value; // Use 'let' as it might be updated for new matches
 
         // If no location is selected, set locationType to 'Nezadaná hala'
@@ -2908,8 +2963,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const matchData = {
             date: matchDate,
             startTime: matchStartTime,
-            duration: matchDuration,
-            bufferTime: matchBufferTime,
+            duration: matchDuration, // Save the values from the form
+            bufferTime: matchBufferTime, // Save the values from the form
             location: finalMatchLocationName, // Use the potentially modified location name
             locationType: finalMatchLocationType, // Use the potentially modified location type
             categoryId: matchCategory,
@@ -2948,7 +3003,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Recalculate only if a specific location is involved
             if (finalMatchLocationName !== 'Nezadaná hala') {
-                await recalculateAndSaveScheduleForDateAndLocation(matchDate, finalMatchLocationName, 'process', insertedMatchInfo);
+                await recalculateAndSaveScheduleForDateAndLocation(matchDate, finalMatchLocationName, 'process', insertedMatchInfo, allSettings); // Pass allSettings
             } else {
                 // If it's an unassigned match, just refresh the display
                 await displayMatchesAsSchedule();
