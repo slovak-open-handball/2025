@@ -2869,7 +2869,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', (event) => {
         if (!addButton.contains(event.target) && !addOptions.contains(event.target)) {
             addOptions.classList.remove('show');
-            console.log("[document.click] Kliknuté mimo addOptions alebo addButton. Trieda addOptions 'show' odstránená.");
         }
     });
 
