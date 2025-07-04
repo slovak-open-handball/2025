@@ -1174,6 +1174,7 @@ async function displayMatchesAsSchedule(currentAllSettings) {
         // --- NOVÁ LOGIKA: Aktualizuj dokumenty zápasov so správnym trvaním/bufferom z nastavení ---
         const updateMatchesBatch = writeBatch(db);
         let matchesToUpdateCount = 0;
+        const affectedDateLocations = new Set(); // Sledovanie dotknutých dátumov a miest
 
         const processedMatchesPromises = allMatchesRaw.map(async match => {
             const [team1Data, team2Data] = await Promise.allSettled([
@@ -1194,6 +1195,7 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                     bufferTime: calculatedBufferTime
                 });
                 matchesToUpdateCount++;
+                affectedDateLocations.add(`${match.date}:::${match.location}`); // Pridaj dotknutú kombináciu
             }
 
             return {
@@ -1220,6 +1222,14 @@ async function displayMatchesAsSchedule(currentAllSettings) {
             console.log(`[displayMatchesAsSchedule] Spúšťam batch pre aktualizáciu ${matchesToUpdateCount} zápasov.`);
             await updateMatchesBatch.commit();
             console.log(`[displayMatchesAsSchedule] Batch pre aktualizáciu zápasov úspešne dokončený.`);
+
+            // Po aktualizácii v DB, prepočítaj rozvrh pre dotknuté dátumy/miesta
+            console.log(`[displayMatchesAsSchedule] Spúšťam prepočet rozvrhu pre ${affectedDateLocations.size} dotknutých dátumov/miest.`);
+            for (const dateLocation of affectedDateLocations) {
+                const [date, location] = dateLocation.split(':::');
+                // Spusti prepočet, ale neobnovuj zobrazenie znova, pretože displayMatchesAsSchedule sa už volá
+                await recalculateAndSaveScheduleForDateAndLocation(date, location, 'process', null, allSettings);
+            }
         }
         
         console.log("[displayMatchesAsSchedule] Všetky zápasy s naplnenými zobrazovanými názvami a prepočítanou dĺžkou/bufferom:", JSON.stringify(allMatches.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, duration: m.duration, bufferTime: m.bufferTime, footprintEndInMinutes: m.footprintEndInMinutes}))));
