@@ -2148,7 +2148,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document('team2NumberInput'); // Chyba: document.getElementById chýba
+    const team2NumberInput = document.getElementById('team2NumberInput');
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
