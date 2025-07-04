@@ -829,22 +829,9 @@ async function openClubModal(identifier = null, mode = 'assign') {
                     filterSelect.appendChild(option);
                 });
             } else if (filterType === 'group') {
-                // Určenie, ktorú sadu tímov použiť pre generovanie možností skupín
-                // Ak je aktívny filter kategórie, zobrazia sa iba skupiny relevantné pre danú kategóriu.
-                // Inak sa zobrazia všetky unikátne skupiny zo všetkých tímov.
-                let teamsForGroupOptions = allTeams;
-                if (currentFilters.category !== null) {
-                    teamsForGroupOptions = allTeams.filter(team => {
-                        const teamCategoryId = team.categoryId;
-                        if (currentFilters.category === null) {
-                            return !teamCategoryId || (typeof teamCategoryId === 'string' && teamCategoryId.trim() === '');
-                        } else {
-                            return teamCategoryId === currentFilters.category;
-                        }
-                    });
-                }
-                
-                const uniqueGroups = getUniqueTeamGroups(teamsForGroupOptions, allAvailableGroups);
+                // ÚPRAVA: Získanie unikátnych skupín z aktuálne zobrazených tímov (teamsToDisplay)
+                // Namiesto allTeams alebo filtrovania podľa currentFilters.category
+                const uniqueGroups = getUniqueTeamGroups(teamsToDisplay, allAvailableGroups);
                 
                 uniqueGroups.forEach(group => {
                     const option = document.createElement('option');
@@ -1163,12 +1150,14 @@ async function displayCreatedTeams() {
                  teamName: null,
                  category: null,
                  group: null,
-                 groupType: null // Resetujeme aj filter typu skupiny
+                 group: null // Resetujeme filter pre skupiny
              };
              currentSort = {
                  column: null,
                  direction: 'asc'
              };
+             // ÚPRAVA: Neresetujeme filter groupType pri kliknutí na "Vymazať filtre"
+             // currentFilters.groupType = null; 
              displayCreatedTeams();
          };
          clearFiltersButtonElement.addEventListener('click', newListener);
