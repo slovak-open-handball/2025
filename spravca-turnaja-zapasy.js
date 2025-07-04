@@ -289,14 +289,14 @@ function getCategoryMatchSettings(categoryId, currentAllSettings) {
         const categorySettings = currentAllSettings.categoryMatchSettings?.[categoryId];
         if (categorySettings) {
             return {
-                duration: categorySettings.duration || 0,
-                bufferTime: categorySettings.bufferTime || 0
+                duration: categorySettings.duration || 60,
+                bufferTime: categorySettings.bufferTime || 5
             };
         }
     } catch (error) {
         console.error("Chyba pri načítaní nastavení kategórie:", error);
     }
-    return { duration: 0, bufferTime: 0 };
+    return { duration: 60, bufferTime: 5 };
 }
 
 /**
@@ -315,9 +315,9 @@ async function updateMatchDurationAndBuffer(currentAllSettings) {
         matchDurationInput.value = settings.duration;
         matchBufferTimeInput.value = settings.bufferTime;
     } else {
-        // Ak nie je vybraná žiadna kategória, predvolené hodnoty sú 0/0
-        matchDurationInput.value = 0;
-        matchBufferTimeInput.value = 0;
+        // Ak nie je vybraná žiadna kategória, predvolené hodnoty sú 60/5
+        matchDurationInput.value = 60;
+        matchBufferTimeInput.value = 5;
     }
 }
 
@@ -585,8 +585,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             const data = doc.data();
             // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené hodnoty
             const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
-            const duration = categorySettings?.duration || Number(data.duration) || 0;
-            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 0;
+            const duration = categorySettings?.duration || Number(data.duration) || 60;
+            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
             const startInMinutes = parseTimeToMinutes(data.startTime);
 
             return {
@@ -935,8 +935,8 @@ async function deleteMatch(matchId, allSettings) {
             
             // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené
             const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
-            const duration = categorySettings?.duration || Number(matchData.duration) || 0;
-            const bufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 0;
+            const duration = categorySettings?.duration || Number(matchData.duration) || 60;
+            const bufferTime = categorySettings?.bufferTime || Number(matchData.bufferTime) || 5;
 
             const startInMinutes = parseTimeToMinutes(startTime);
             const endInMinutes = startInMinutes + duration + bufferTime;
@@ -1007,8 +1007,8 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
 
         // Získaj trvanie a čas medzi zápasmi z nastavení kategórie pre výpočet pôvodnej stopy
         const categorySettings = allSettings.categoryMatchSettings?.[draggedMatchData.categoryId];
-        const originalDuration = categorySettings?.duration || Number(draggedMatchData.duration) || 0;
-        const originalBufferTime = categorySettings?.bufferTime || Number(draggedMatchData.bufferTime) || 0;
+        const originalDuration = categorySettings?.duration || Number(draggedMatchData.duration) || 60;
+        const originalBufferTime = categorySettings?.bufferTime || Number(draggedMatchData.bufferTime) || 5;
 
         const originalFootprintEndTime = calculateFootprintEndTime(originalStartTime, originalDuration, originalBufferTime);
 
@@ -1878,8 +1878,8 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                             const data = doc.data();
                             // Získaj trvanie a čas medzi zápasmi z nastavení kategórie, ak sú k dispozícii, inak použi vlastné dáta zápasu alebo predvolené
                             const categorySettings = allSettings.categoryMatchSettings?.[data.categoryId];
-                            const duration = categorySettings?.duration || Number(data.duration) || 0;
-                            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 0;
+                            const duration = categorySettings?.duration || Number(data.duration) || 60;
+                            const bufferTime = categorySettings?.bufferTime || Number(data.bufferTime) || 5;
                             const startInMinutes = parseTimeToMinutes(data.startTime);
                             return {
                                 id: doc.id,
@@ -2835,8 +2835,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             team1NumberInput.disabled = true;
             team2NumberInput.value = '';
             team2NumberInput.disabled = true;
-            matchDurationInput.value = 0;
-            matchBufferTimeInput.value = 0;
+            matchDurationInput.value = 60;
+            matchBufferTimeInput.value = 5;
             matchStartTimeInput.value = '';
         }
     });
