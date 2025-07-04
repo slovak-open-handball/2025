@@ -573,7 +573,7 @@ const getTeamName = async (categoryId, groupId, teamNumber, categoriesMap, group
  * Táto funkcia teraz aktívne kompaktuje rozvrh posúvaním udalostí dopredu, aby vyplnila medzery.
  * @param {string} processDate Dátum, pre ktorý sa rozvrh spracováva.
  * @param {string} processLocation Miesto, pre ktoré sa rozvrh spracováva.
- * @param {'process'|'cleanup'} purpose Určuje, či sa toto volanie týka 'spracovania' cieľového miesta alebo 'vyčistenia' pôvodného miesta po presune.
+ * @param {'process'|'cleanup'} purpose Určuje, či sa toto volanie týka 'spracovania' cieľového miesta alebo 'vyčistenia' pôvodného miesta po presunoch.
  * @param {object|null} movedMatchDetails Informácie o zápase, ktorý bol práve presunutý.
  * { id, oldDate, oldLocation, oldStartTime, oldFootprintEndTime, newDate, newLocation, newStartTime, newFootprintEndTime }
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
@@ -608,8 +608,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 type: 'match',
                 docRef: doc.ref,
                 ...data,
-                duration: duration,
-                bufferTime: bufferTime,
+                duration: duration, // Ensure these are the *correct* (new) values
+                bufferTime: bufferTime, // Ensure these are the *correct* (new) values
                 startInMinutes: startInMinutes,
                 footprintEndInMinutes: startInMinutes + duration + bufferTime
             };
@@ -754,12 +754,21 @@ async function recalculateAndSaveScheduleForDateAndLocation(
 
             let newEventStartInMinutes = event.startInMinutes;
 
-            if (event.startInMinutes > currentTimePointer) {
+            // Ensure the event starts no earlier than the current time pointer
+            if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} posunutá dopredu. Nový Start: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
-            } else if (event.startInMinutes < currentTimePointer) {
-                newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+            } else if (event.startInMinutes > currentTimePointer) {
+                // If there's a gap, fill it with a placeholder (handled in Faza 4), but the current event still starts at its original time
+                // unless it's a match being moved to an earlier slot.
+                // For existing events, if their start is *after* currentTimePointer, they keep their start time
+                // unless they are explicitly being moved (handled by drag and drop logic).
+                // The compaction logic should primarily push things *forward*.
+                // If an event is naturally later, it stays later, and the gap is filled.
+                // The current logic `newEventStartInMinutes = currentTimePointer;` for `event.startInMinutes > currentTimePointer`
+                // effectively compacts everything to the earliest possible slot. This is generally desired.
+                newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
+                console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else {
                 console.log(`  -> Udalosť ${event.id} začína presne na currentTimePointer. Žiadna zmena začiatku.`);
             }
@@ -775,7 +784,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 event.footprintEndInMinutes = event.startInMinutes + event.duration + event.bufferTime;
                 console.log(`  -> Zápas ${event.id} aktualizovaný v batchi. Starý čas: ${oldStartTime}, Nový čas: ${newStartTimeFormatted}. End of Play: ${formatMinutesToTime(event.endOfPlayInMinutes)}, Footprint End: ${formatMinutesToTime(event.footprintEndInMinutes)}`);
             } else if (event.type === 'blocked_interval' && (event.isBlocked === true || event.originalMatchId)) {
-                const originalDuration = (event.originalStartInMinutes !== undefined && event.originalEndInMinutes !== undefined) ? (event.originalEndInMinutes - event.originalStartInMinutes) : (event.endInMinutes - originalEventStartInMinutes); // Use originalEventStartInMinutes for duration calculation if it was not adjusted yet
+                // For blocked intervals or placeholders, recalculate end time based on new start time and original duration
+                const originalDuration = event.endInMinutes - originalEventStartInMinutes; // Use original start for duration
                 const newEndTimeInMinutes = newEventStartInMinutes + originalDuration;
                 const newEndTimeFormatted = formatMinutesToTime(newEndTimeInMinutes);
                 batch.update(event.docRef, { startTime: newStartTimeFormatted, endTime: newEndTimeFormatted, startInMinutes: newEventStartInMinutes, endInMinutes: newEndTimeInMinutes });
@@ -852,8 +862,9 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         await batch.commit();
         console.log(`[recalculateAndSaveScheduleForDateAndLocation] Batch commit úspešný.`);
 
-        // Removed the direct call to displayMatchesAsSchedule here, as it's handled by the onSnapshot listener.
-        // This prevents redundant calls and potential race conditions.
+        // Kľúčová zmena: Explicitne zavolajte displayMatchesAsSchedule po dokončení prepočtu
+        await displayMatchesAsSchedule(allSettings); // Zabezpečí okamžitú aktualizáciu UI
+
     } catch (error) {
         console.error("[recalculateAndSaveScheduleForDateAndLocation] Chyba pri prepočítavaní a ukladaní rozvrhu:", error);
         await showMessage('Chyba', `Chyba pri prepočítavaní rozvrhu: ${error.message}`);
@@ -1642,8 +1653,6 @@ async function displayMatchesAsSchedule(currentAllSettings) {
                 scheduleHtml += `</div>`;
             }
         }
-        scheduleHtml += '</div>';
-
         matchesContainer.innerHTML = scheduleHtml;
         console.log('[displayMatchesAsSchedule] HTML rozvrhu aktualizované.');
 
