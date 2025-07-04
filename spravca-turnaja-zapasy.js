@@ -1,5 +1,5 @@
 import { db, categoriesCollectionRef, groupsCollectionRef, clubsCollectionRef, matchesCollectionRef, playingDaysCollectionRef, placesCollectionRef, openModal, closeModal, populateCategorySelect, populateGroupSelect, getDocs, doc, setDoc, addDoc, getDoc, query, where, orderBy, deleteDoc, writeBatch, settingsCollectionRef, showMessage, showConfirmation } from './spravca-turnaja-common.js';
-import { collection, deleteField, limit } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
+import { collection, deleteField, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 
 
 const SETTINGS_DOC_ID = 'matchTimeSettings';
@@ -281,21 +281,17 @@ async function populateAllPlaceSelects(selectElement, selectedPlaceCombined = ''
 /**
  * Gets match settings for a specific category.
  * @param {string} categoryId The ID of the category.
+ * @param {object} currentAllSettings The current allSettings object.
  * @returns {object} An object containing duration and bufferTime.
  */
-async function getCategoryMatchSettings(categoryId) {
+function getCategoryMatchSettings(categoryId, currentAllSettings) {
     try {
-        const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-        const settingsDoc = await getDoc(settingsDocRef);
-        if (settingsDoc.exists()) {
-            const data = settingsDoc.data();
-            const categorySettings = data.categoryMatchSettings && data.categoryMatchSettings[categoryId];
-            if (categorySettings) {
-                return {
-                    duration: categorySettings.duration || 60,
-                    bufferTime: categorySettings.bufferTime || 5
-                };
-            }
+        const categorySettings = currentAllSettings.categoryMatchSettings?.[categoryId];
+        if (categorySettings) {
+            return {
+                duration: categorySettings.duration || 60,
+                bufferTime: categorySettings.bufferTime || 5
+            };
         }
     } catch (error) {
         console.error("Chyba pri načítaní nastavení kategórie:", error);
@@ -305,8 +301,9 @@ async function getCategoryMatchSettings(categoryId) {
 
 /**
  * Updates match duration and buffer inputs based on selected category settings.
+ * @param {object} currentAllSettings The current allSettings object.
  */
-async function updateMatchDurationAndBuffer() {
+async function updateMatchDurationAndBuffer(currentAllSettings) {
     const matchDurationInput = document.getElementById('matchDuration');
     const matchBufferTimeInput = document.getElementById('matchBufferTime');
     const matchCategorySelect = document.getElementById('matchCategory');
@@ -314,7 +311,7 @@ async function updateMatchDurationAndBuffer() {
     const selectedCategoryId = matchCategorySelect.value;
 
     if (selectedCategoryId) {
-        const settings = await getCategoryMatchSettings(selectedCategoryId);
+        const settings = getCategoryMatchSettings(selectedCategoryId, currentAllSettings);
         matchDurationInput.value = settings.duration;
         matchBufferTimeInput.value = settings.bufferTime;
     } else {
@@ -329,8 +326,9 @@ async function updateMatchDurationAndBuffer() {
  * prioritizing explicit "Voľný slot dostupný" entries if they don't overlap with fixed events.
  * It does NOT consider if the match "fits" into the suggested slot; `recalculateAndSaveScheduleForDateAndLocation`
  * handles pushing subsequent events if the match overflows.
+ * @param {object} currentAllSettings The current allSettings object.
  */
-async function findFirstAvailableTime() {
+async function findFirstAvailableTime(currentAllSettings) {
     const matchDateSelect = document.getElementById('matchDateSelect');
     const matchLocationSelect = document.getElementById('matchLocationSelect');
     const matchStartTimeInput = document.getElementById('matchStartTime');
@@ -362,7 +360,7 @@ async function findFirstAvailableTime() {
     }
 
     try {
-        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(selectedDate);
+        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(selectedDate, currentAllSettings);
         console.log("Initial pointer minutes for selected day (from settings):", initialScheduleStartMinutes);
 
         // Fetch all matches and all blocked intervals (both blocked and free placeholders)
@@ -375,8 +373,11 @@ async function findFirstAvailableTime() {
         matchesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const startInMinutes = parseTimeToMinutes(data.startTime);
-            const duration = Number(data.duration) || 0;
-            const bufferTime = Number(data.bufferTime) || 0;
+            // Use category settings for duration and buffer time
+            const categorySettings = getCategoryMatchSettings(data.categoryId, currentAllSettings);
+            const duration = categorySettings.duration;
+            const bufferTime = categorySettings.bufferTime;
+
             allEvents.push({
                 id: doc.id,
                 start: startInMinutes,
@@ -734,7 +735,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
         console.log(`Fáza 2.6: Zoradené fixedEvents po spracovaní placeholderov:`, fixedEvents.map(e => ({id: e.id, type: e.type, startInMinutes: e.startInMinutes, isBlocked: e.isBlocked || 'N/A', originalMatchId: e.originalMatchId || 'N/A'})));
 
 
-        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(processDate);
+        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(processDate, allSettings);
         let currentTimePointer = initialScheduleStartMinutes;
         console.log(`Fáza 3 (Kompakcia): Počiatočný ukazovateľ času (currentTimePointer): ${currentTimePointer} minút.`);
 
@@ -862,18 +863,16 @@ async function recalculateAndSaveScheduleForDateAndLocation(
 /**
  * Gets the initial schedule start time in minutes for a given date.
  * @param {string} date The date.
+ * @param {object} currentAllSettings The current allSettings object.
  * @returns {Promise<number>} The initial start time in minutes.
  */
-async function getInitialScheduleStartMinutes(date) {
-    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-    const settingsDoc = await getDoc(settingsDocRef);
+async function getInitialScheduleStartMinutes(date, currentAllSettings) {
     let firstDayStartTime = '08:00';
     let otherDaysStartTime = '08:00';
 
-    if (settingsDoc.exists()) {
-        const data = settingsDoc.data();
-        firstDayStartTime = data.firstDayStartTime || '08:00';
-        otherDaysStartTime = data.otherDaysStartTime || '08:00';
+    if (currentAllSettings) {
+        firstDayStartTime = currentAllSettings.firstDayStartTime || '08:00';
+        otherDaysStartTime = currentAllSettings.otherDaysStartTime || '08:00';
     }
 
     const playingDaysSnapshot = await getDocs(query(playingDaysCollectionRef, orderBy("date", "asc")));
@@ -1099,8 +1098,9 @@ function getEventDisplayString(event, allSettings, categoryColorsMap) {
 
 /**
  * Displays matches as a schedule, grouped by location and date.
+ * @param {object} currentAllSettings The current allSettings object, passed from the onSnapshot listener.
  */
-async function displayMatchesAsSchedule() {
+async function displayMatchesAsSchedule(currentAllSettings) {
     const matchesContainer = document.getElementById('matchesContainer');
     if (!matchesContainer) return;
 
@@ -1155,17 +1155,10 @@ async function displayMatchesAsSchedule() {
         const allSportHalls = sportHallsSnapshot.docs.map(doc => doc.data().name);
         console.log("displayMatchesAsSchedule: Načítané športové haly:", allSportHalls);
 
-        const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-        const settingsDoc = await getDoc(settingsDocRef);
-        let globalFirstDayStartTime = '08:00';
-        let globalOtherDaysStartTime = '08:00';
-        let allSettings = {};
-        if (settingsDoc.exists()) {
-            const data = settingsDoc.data();
-            globalFirstDayStartTime = data.firstDayStartTime || '08:00';
-            globalOtherDaysStartTime = data.otherDaysStartTime || '08:00';
-            allSettings = data;
-        }
+        // Use the currentAllSettings passed as a parameter
+        const allSettings = currentAllSettings;
+        let globalFirstDayStartTime = allSettings.firstDayStartTime || '08:00';
+        let globalOtherDaysStartTime = allSettings.otherDaysStartTime || '08:00';
         console.log(`displayMatchesAsSchedule: Globálny čas začiatku (prvý deň): ${globalFirstDayStartTime}, (ostatné dni): ${globalOtherDaysStartTime}`);
 
         const blockedIntervalsSnapshot = await getDocs(query(blockedSlotsCollectionRef));
@@ -1188,9 +1181,9 @@ async function displayMatchesAsSchedule() {
                 getTeamName(match.categoryId, match.groupId, match.team2Number, categoriesMap, groupsMap)
             ]);
 
-            const categorySettings = allSettings.categoryMatchSettings?.[match.categoryId];
-            const duration = categorySettings?.duration || Number(match.duration) || 60;
-            const bufferTime = categorySettings?.bufferTime || Number(match.bufferTime) || 5;
+            const categorySettings = getCategoryMatchSettings(match.categoryId, allSettings);
+            const duration = categorySettings.duration;
+            const bufferTime = categorySettings.bufferTime;
             const startInMinutes = parseTimeToMinutes(match.startTime);
 
             return {
@@ -1311,7 +1304,7 @@ async function displayMatchesAsSchedule() {
 
 
                         const finalEventsToRender = [];
-                        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(date); 
+                        const initialScheduleStartMinutes = await getInitialScheduleStartMinutes(date, allSettings); 
                         let currentTimePointerInMinutes = initialScheduleStartMinutes;
                         
                         // Ensure that if there are no events for the day, a placeholder from initial start to end of day is created
@@ -1629,7 +1622,7 @@ async function displayMatchesAsSchedule() {
         matchesContainer.querySelectorAll('.match-row').forEach(row => {
             row.addEventListener('click', (event) => {
                 const matchId = event.currentTarget.dataset.id;
-                openMatchModal(matchId);
+                openMatchModal(matchId, allSettings); // Pass allSettings
             });
             row.addEventListener('dragstart', (event) => {
                 console.log(`Drag & Drop: dragstart - ID zápasu: ${event.target.dataset.id}, Target:`, event.target);
@@ -1699,7 +1692,7 @@ async function displayMatchesAsSchedule() {
                 const endTime = event.currentTarget.dataset.endTime; 
                 const blockedIntervalId = event.currentTarget.dataset.id;
 
-                openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId); 
+                openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings); // Pass allSettings
             });
             row.addEventListener('dragover', (event) => {
                 event.preventDefault(); // Crucial for allowing drop
@@ -1745,7 +1738,7 @@ async function displayMatchesAsSchedule() {
                 const location = event.currentTarget.dataset.location;
                 const startTime = event.currentTarget.dataset.startTime;
                 const endTime = event.currentTarget.dataset.endTime;
-                openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId);
+                openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings); // Pass allSettings
             });
             row.addEventListener('dragover', (event) => {
                 event.preventDefault();
@@ -1854,7 +1847,7 @@ async function displayMatchesAsSchedule() {
                         droppedProposedStartTime = draggedMatchData.startTime;
                         console.log(`Drag & Drop: Dropped onto unassigned section. Using original match start time: ${droppedProposedStartTime}`);
                     } else {
-                        const initialScheduleStartMinutesForDrop = await getInitialScheduleStartMinutes(newDate);
+                        const initialScheduleStartMinutesForDrop = await getInitialScheduleStartMinutes(newDate, allSettings);
                         let currentPointerForDrop = initialScheduleStartMinutesForDrop;
 
                         const fixedEventsQuery = query(
@@ -1971,6 +1964,7 @@ async function deletePlayingDay(dateToDelete) {
             await batch.commit();
             await showMessage('Úspech', `Hrací deň ${dateToDelete} a všetky súvisiace zápasy/intervaly boli vymazané!`);
             closeModal(document.getElementById('playingDayModal'));
+            // No need to pass allSettings here, as it's a full delete and displayMatchesAsSchedule will fetch latest.
             await displayMatchesAsSchedule();
         } catch (error) {
             console.error("Chyba pri mazaní hracieho dňa:", error);
@@ -2018,6 +2012,7 @@ async function deletePlace(placeNameToDelete, placeTypeToDelete) {
             await batch.commit();
             await showMessage('Úspech', `Miesto ${placeNameToDelete} (${placeTypeToDelete}) a všetky súvisiace zápasy boli vymazané!`);
             closeModal(document.getElementById('placeModal'));
+            // No need to pass allSettings here, as it's a full delete and displayMatchesAsSchedule will fetch latest.
             await displayMatchesAsSchedule();
         } catch (error) {
                 console.error("Chyba pri mazaní miesta:", error);
@@ -2121,11 +2116,12 @@ async function editPlace(placeName, placeType) {
 /**
  * Opens the match modal for adding a new match or editing an existing one.
  * @param {string|null} matchId The ID of the match to edit, or null for a new match.
+ * @param {object} currentAllSettings The current allSettings object.
  * @param {string} prefillDate Date to pre-fill the date select.
  * @param {string} prefillLocation Location to pre-fill the location select.
  * @param {string} prefillStartTime Start time to pre-fill the start time input.
  */
-async function openMatchModal(matchId = null, prefillDate = '', prefillLocation = '', prefillStartTime = '') {
+async function openMatchModal(matchId = null, currentAllSettings, prefillDate = '', prefillLocation = '', prefillStartTime = '') {
     const matchModal = document.getElementById('matchModal');
     const matchIdInput = document.getElementById('matchId');
     const matchModalTitle = document.getElementById('matchModalTitle');
@@ -2141,13 +2137,8 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
-    // Fetch all settings to get category match settings
-    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-    const settingsDoc = await getDoc(settingsDocRef);
-    let allSettings = {};
-    if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
-    }
+    // Use the currentAllSettings passed as a parameter
+    const allSettings = currentAllSettings;
 
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
         deleteMatchButtonModal.removeEventListener('click', deleteMatchButtonModal._currentHandler);
@@ -2186,9 +2177,9 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
         matchStartTimeInput.value = matchData.startTime || '';
         
         // Use duration and bufferTime from settings for display in modal
-        const categorySettings = allSettings.categoryMatchSettings?.[matchData.categoryId];
-        matchDurationInput.value = categorySettings?.duration || matchData.duration || 60;
-        matchBufferTimeInput.value = categorySettings?.bufferTime || matchData.bufferTime || 5;
+        const categorySettings = getCategoryMatchSettings(matchData.categoryId, allSettings);
+        matchDurationInput.value = categorySettings.duration;
+        matchBufferTimeInput.value = categorySettings.bufferTime;
 
         await populateCategorySelect(matchCategorySelect, matchData.categoryId);
         if (matchData.categoryId) {
@@ -2246,7 +2237,7 @@ async function openMatchModal(matchId = null, prefillDate = '', prefillLocation 
         matchDurationInput.value = defaultDuration;
         matchBufferTimeInput.value = defaultBufferTime;
         
-        await findFirstAvailableTime();
+        await findFirstAvailableTime(allSettings); // Pass allSettings
     }
     openModal(matchModal);
 }
@@ -2383,7 +2374,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             const addMatchHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Add match' for free interval. Calling openMatchModal.`);
                 closeModal(freeIntervalModal);
-                openMatchModal(null, date, location, startTime);
+                openMatchModal(null, allSettings, date, location, startTime); // Pass allSettings
             };
             addMatchButton.addEventListener('click', addMatchHandler);
             addMatchButton._currentHandler = addMatchHandler;
@@ -2423,7 +2414,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             const addMatchHandler = () => {
                 console.log(`openFreeIntervalModal: Clicked 'Add match' for free interval. Calling openMatchModal.`);
                 closeModal(freeIntervalModal);
-                openMatchModal(null, date, location, startTime);
+                openMatchModal(null, allSettings, date, location, startTime); // Pass allSettings
             };
             addMatchButton.addEventListener('click', addMatchHandler);
             addMatchButton._currentHandler = addMatchHandler;
@@ -2437,7 +2428,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
                 const addMatchHandler = () => {
                     console.log(`openFreeIntervalModal: Clicked 'Add match' for free interval. Calling openMatchModal.`);
                     closeModal(freeIntervalModal);
-                    openMatchModal(null, date, location, startTime);
+                    openMatchModal(null, allSettings, date, location, startTime); // Pass allSettings
                 };
                 addMatchButton.addEventListener('click', addMatchHandler);
                 addMatchButton._currentHandler = addMatchHandler;
@@ -2664,7 +2655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchIdInput = document.getElementById('matchId');
     const matchModalTitle = document.getElementById('matchModalTitle');
     const matchDateSelect = document.getElementById('matchDateSelect');
-    const matchLocationSelect = document.getElementById('matchLocationSelect'); 
+    const matchLocationSelect = document('matchLocationSelect'); 
     const matchStartTimeInput = document.getElementById('matchStartTime');
     const matchDurationInput = document.getElementById('matchDuration');
     const matchBufferTimeInput = document.getElementById('matchBufferTime');
@@ -2696,13 +2687,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const closeFreeIntervalModalButton = document.getElementById('closeFreeSlotModal');
 
-    // Fetch all settings once on DOMContentLoaded
-    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
-    const settingsDoc = await getDoc(settingsDocRef);
+    // Initialize allSettings as an empty object
     let allSettings = {};
-    if (settingsDoc.exists()) {
-        allSettings = settingsDoc.data();
-    }
+
+    // Set up real-time listener for settings
+    const settingsDocRef = doc(settingsCollectionRef, SETTINGS_DOC_ID);
+    onSnapshot(settingsDocRef, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+            allSettings = docSnapshot.data();
+            console.log("Settings updated in real-time:", allSettings);
+        } else {
+            allSettings = {}; // Reset if settings document doesn't exist
+            console.log("Settings document does not exist.");
+        }
+        // Re-display the schedule whenever settings change
+        displayMatchesAsSchedule(allSettings);
+    }, (error) => {
+        console.error("Error listening to settings changes:", error);
+        showMessage('Chyba', `Chyba pri načítaní nastavení: ${error.message}`);
+    });
 
 
     if (categoriesContentSection) {
@@ -2715,8 +2718,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Corrected function call: displayMatchesAsSchedule instead of displayMatchesSchedule
-    await displayMatchesAsSchedule();
+    // Initial display of matches (will be updated by onSnapshot)
+    // await displayMatchesAsSchedule(allSettings); // This initial call might be redundant if onSnapshot fires immediately
+
 
     if (!document.getElementById('add-options-show-style')) {
         const style = document.createElement('style');
@@ -2778,28 +2782,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     addMatchButton.addEventListener('click', async () => {
-        openMatchModal();
+        openMatchModal(null, allSettings); // Pass allSettings when opening for new match
         addOptions.classList.remove('show');
     });
 
     closePlayingDayModalButton.addEventListener('click', () => {
         closeModal(playingDayModal);
-        displayMatchesAsSchedule();
+        // displayMatchesAsSchedule() will be called by onSnapshot if settings change
     });
 
     closePlaceModalButton.addEventListener('click', () => {
         closeModal(placeModal);
-        displayMatchesAsSchedule();
+        // displayMatchesAsSchedule() will be called by onSnapshot if settings change
     });
 
     closeMatchModalButton.addEventListener('click', () => {
         closeModal(matchModal);
-        displayMatchesAsSchedule();
+        // displayMatchesAsSchedule() will be called by onSnapshot if settings change
     });
 
     closeFreeIntervalModalButton.addEventListener('click', () => {
         closeModal(freeIntervalModal);
-        displayMatchesAsSchedule();
+        // displayMatchesAsSchedule() will be called by onSnapshot if settings change
     });
 
     matchCategorySelect.addEventListener('change', async () => {
@@ -2811,8 +2815,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             team1NumberInput.disabled = true;
             team2NumberInput.value = '';
             team2NumberInput.disabled = true;
-            await updateMatchDurationAndBuffer();
-            await findFirstAvailableTime();
+            await updateMatchDurationAndBuffer(allSettings); // Pass allSettings
+            await findFirstAvailableTime(allSettings); // Pass allSettings
         } else {
             matchGroupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
             matchGroupSelect.disabled = true;
@@ -2839,10 +2843,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    matchDateSelect.addEventListener('change', findFirstAvailableTime);
-    matchLocationSelect.addEventListener('change', findFirstAvailableTime);
-    matchDurationInput.addEventListener('change', findFirstAvailableTime);
-    matchBufferTimeInput.addEventListener('change', findFirstAvailableTime);
+    matchDateSelect.addEventListener('change', () => findFirstAvailableTime(allSettings)); // Pass allSettings
+    matchLocationSelect.addEventListener('change', () => findFirstAvailableTime(allSettings)); // Pass allSettings
+    matchDurationInput.addEventListener('change', () => findFirstAvailableTime(allSettings)); // Pass allSettings
+    matchBufferTimeInput.addEventListener('change', () => findFirstAvailableTime(allSettings)); // Pass allSettings
 
     matchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -3006,7 +3010,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await recalculateAndSaveScheduleForDateAndLocation(matchDate, finalMatchLocationName, 'process', insertedMatchInfo, allSettings); // Pass allSettings
             } else {
                 // If it's an unassigned match, just refresh the display
-                await displayMatchesAsSchedule();
+                await displayMatchesAsSchedule(allSettings); // Pass allSettings
             }
         }
         catch (error) {
@@ -3066,7 +3070,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await showMessage('Úspech', 'Miesto úspešne pridané!');
             }
             closeModal(placeModal);
-            await displayMatchesAsSchedule();
+            await displayMatchesAsSchedule(allSettings); // Pass allSettings
         } catch (error) {
             console.error("Error saving place:", error);
             await showMessage('Chyba', `Chyba pri ukladaní miesta. Detaily: ${error.message}`);
@@ -3104,7 +3108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await showMessage('Úspech', 'Hrací deň úspešne pridaný!');
             }
             closeModal(playingDayModal);
-            await displayMatchesAsSchedule();
+            await displayMatchesAsSchedule(allSettings); // Pass allSettings
         } catch (error) {
             console.error("Error saving playing day:", error);
             await showMessage('Chyba', `Chyba pri ukladaní hracieho dňa. Detaily: ${error.message}`);
