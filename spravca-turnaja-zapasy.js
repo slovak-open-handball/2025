@@ -1454,7 +1454,21 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
 
 
                         if (!contentAddedForThisDate) {
-                            scheduleHtml += `<tr><td colspan="5" style="text-align: center; color: #888; font-style: italic; padding: 15px;">Voľný interval dostupný</td></tr>`;
+                            // NOVÁ ZMENA: Pridanie tried a dátových atribútov pre klikateľnosť
+                            const generatedId = `generated-empty-day-interval-${date}-${location}`;
+                            const startTimeForEmptyDay = formatMinutesToTime(initialScheduleStartMinutesForDate);
+                            const endTimeForEmptyDay = formatMinutesToTime(24 * 60); // End of day
+                            scheduleHtml += `
+                                <tr class="empty-interval-row free-interval-available-row" 
+                                    data-id="${generatedId}" 
+                                    data-date="${date}" 
+                                    data-location="${location}" 
+                                    data-start-time="${startTimeForEmptyDay}" 
+                                    data-end-time="${endTimeForEmptyDay}" 
+                                    data-is-blocked="false">
+                                    <td>${startTimeForEmptyDay} - ${endTimeForEmptyDay}</td>
+                                    <td colspan="4" style="text-align: center; color: #888; font-style: italic; padding: 15px; background-color: #f0f0f0;">Voľný interval dostupný</td>
+                                </tr>`;
                         }
 
                         scheduleHtml += `</tbody></table></div>`;
@@ -1642,7 +1656,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
 
                 console.log(`[Drag & Drop] drop na empty-interval-row - Presunutý zápas ID: ${draggedMatchId}, Nový dátum: ${newDate}, Nové miesto: ${newLocation}, Navrhovaný čas: ${droppedProposedStartTime}, Cieľový interval ID: ${targetBlockedIntervalId}, Cieľ:`, event.currentTarget);
                 
-                if (targetBlockedIntervalId) {
+                if (targetBlockedIntervalId && !targetBlockedIntervalId.startsWith('generated-empty-day-interval-')) { // Len ak to nie je generované ID pre prázdny deň
                     try {
                         // Vymaž starý automaticky generovaný voľný slot, pretože je nahradený pusteným zápasom
                         // Toto je dôležité pre vyčistenie, aby recalculateAndSaveScheduleForDateAndLocation ho okamžite znova nevytvoril.
@@ -2069,7 +2083,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     if (deleteMatchButtonModal && deleteMatchButtonModal._currentHandler) {
         deleteMatchButtonModal.removeEventListener('click', deleteMatchButtonModal._currentHandler);
         delete deleteMatchButtonModal._currentHandler;
-        console.log("[openMatchModal] Odstránený starý poslucháč pre tlačidlo vymazania.");
+        console.log("[openMatchModal] Odstránený starý poslucháč pre 'deleteMatchButtonModal'.");
     }
 
     matchForm.reset(); // Resetuj formulár na začiatku
@@ -2194,7 +2208,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
             matchStartTimeInput.value = prefillStartTime;
             console.log(`[openMatchModal] Predvyplnený počiatočný čas z parametra: ${prefillStartTime}`);
         } else {
-            console.log("[openMatchModal] Volám findFirstAvailableTime, pretože prefillStartTime je prázdny.");
+            console.log("[openMatchModal] Volám findFirstAvailableTime požiadavku na nájdenie prvého dostupného času.");
             await findFirstAvailableTime(allSettings);
         }
     }
@@ -2273,7 +2287,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
     let isUserBlockedFromDB = false;
     let originalMatchId = null;
 
-    if (blockedIntervalId && !blockedIntervalId.startsWith('generated-interval-') && !blockedIntervalId.startsWith('generated-initial-interval-') && !blockedIntervalId.startsWith('generated-final-interval-')) {
+    if (blockedIntervalId && !blockedIntervalId.startsWith('generated-interval-') && !blockedIntervalId.startsWith('generated-initial-interval-') && !blockedIntervalId.startsWith('generated-final-interval-') && !blockedIntervalId.startsWith('generated-empty-day-interval-')) {
         try {
             const blockedIntervalDoc = await getDoc(doc(blockedSlotsCollectionRef, blockedIntervalId));
             if (blockedIntervalDoc.exists()) {
@@ -2487,7 +2501,7 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime,
                 return;
             }
 
-            const isNewPlaceholderOrGenerated = intervalId.startsWith('generated-interval-') || intervalId.startsWith('generated-initial-interval-') || intervalId.startsWith('generated-final-interval-');
+            const isNewPlaceholderOrGenerated = intervalId.startsWith('generated-interval-') || intervalId.startsWith('generated-initial-interval-') || intervalId.startsWith('generated-final-interval-') || intervalId.startsWith('generated-empty-day-interval-');
             let intervalDataToSave = {
                 date: date,
                 location: location,
@@ -2645,6 +2659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
     const deletePlaceButtonModal = document.getElementById('deletePlaceButtonModal');
+    const placeModalTitle = document.getElementById('placeModalTitle'); // Získaj element názvu
 
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const closeFreeIntervalModalButton = document.getElementById('closeFreeSlotModal');
