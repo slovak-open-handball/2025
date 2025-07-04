@@ -842,7 +842,16 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             const formattedGapStartTime = formatMinutesToTime(gapStart);
             const formattedGapEndTime = formatMinutesToTime(gapEnd);
 
-            if (gapEnd > gapStart) {
+            // Pridaná kontrola: Vytvor konečný zástupný symbol len ak už neexistuje podobný
+            const existingFinalPlaceholder = currentBlockedAndFreeSlots.find(s => 
+                s.date === processDate && 
+                s.location === processLocation && 
+                s.isBlocked === false && 
+                s.startInMinutes === gapStart && 
+                s.endInMinutes === gapEnd
+            );
+
+            if (gapEnd > gapStart && !existingFinalPlaceholder) { // Pridaná podmienka !existingFinalPlaceholder
                 const newPlaceholderRef = doc(blockedSlotsCollectionRef);
                 batch.set(newPlaceholderRef, {
                     date: processDate,
@@ -1321,7 +1330,17 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                             const gapEnd = 24 * 60; // Koniec dňa
                             const formattedGapStartTime = formatMinutesToTime(gapStart);
                             const formattedGapEndTime = formatMinutesToTime(gapEnd);
-                            if (gapEnd > gapStart) {
+                            
+                            // Kontrola, či už takýto interval neexistuje v allBlockedIntervals
+                            const existingInitialPlaceholder = allBlockedIntervals.find(s => 
+                                s.date === date && 
+                                s.location === location && 
+                                s.isBlocked === false && 
+                                s.startInMinutes === gapStart && 
+                                s.endInMinutes === gapEnd
+                            );
+
+                            if (gapEnd > gapStart && !existingInitialPlaceholder) { // Pridaná podmienka !existingInitialPlaceholder
                                 finalEventsToRender.push({
                                     type: 'blocked_interval',
                                     id: 'generated-initial-interval-' + Math.random().toString(36).substr(2, 9),
@@ -1372,7 +1391,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     const isFromDeletedMatch = existingFreeInterval && existingFreeInterval.originalMatchId;
                                     const isLongerThanPreviousBuffer = (gapEnd - gapStart) > previousMatchBufferTime;
 
-                                    if (isFromDeletedMatch || isLongerThanPreviousBuffer) {
+                                    if ((isFromDeletedMatch || isLongerThanPreviousBuffer) && !existingFreeInterval) { // Pridaná podmienka !existingFreeInterval
                                         finalEventsToRender.push({
                                             type: 'blocked_interval',
                                             id: existingFreeInterval ? existingFreeInterval.id : 'generated-interval-' + Math.random().toString(36).substr(2, 9),
@@ -1387,7 +1406,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                         });
                                         console.log(`[displayMatchesAsSchedule] Pridávam zástupný symbol medzery (${formattedGapStartTime}-${formattedGapEndTime}). Z vymazaného zápasu: ${isFromDeletedMatch}, Dlhšie ako buffer: ${isLongerThanPreviousBuffer}`);
                                     } else {
-                                        console.log(`[displayMatchesAsSchedule] Preskakujem medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože je to čisto čas medzi zápasmi alebo je príliš krátka.`);
+                                        console.log(`[displayMatchesAsSchedule] Preskakujem medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože je to čisto čas medzi zápasmi alebo je príliš krátka, alebo už existuje.`);
                                     }
                                 }
                                 
@@ -1403,14 +1422,16 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 const formattedGapStartTime = formatMinutesToTime(gapStart);
                                 const formattedGapEndTime = formatMinutesToTime(gapEnd);
 
-                                if ((gapEnd - gapStart) > 0) { // Pridaj len, ak je trvanie > 0
-                                    const existingFinalPlaceholder = allBlockedIntervals.find(s => 
-                                        s.date === date && 
-                                        s.location === location && 
-                                        s.isBlocked === false && 
-                                        s.startInMinutes === gapStart && 
-                                        s.endInMinutes === gapEnd
-                                    );
+                                // Kontrola, či už takýto interval neexistuje v allBlockedIntervals
+                                const existingFinalPlaceholder = allBlockedIntervals.find(s => 
+                                    s.date === date && 
+                                    s.location === location && 
+                                    s.isBlocked === false && 
+                                    s.startInMinutes === gapStart && 
+                                    s.endInMinutes === gapEnd
+                                );
+
+                                if ((gapEnd - gapStart) > 0 && !existingFinalPlaceholder) { // Pridaná podmienka !existingFinalPlaceholder
                                     finalEventsToRender.push({
                                         type: 'blocked_interval',
                                         id: existingFinalPlaceholder ? existingFinalPlaceholder.id : 'generated-final-interval-' + Math.random().toString(36).substr(2, 9),
@@ -1425,7 +1446,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     });
                                     console.log(`[displayMatchesAsSchedule] Pridávam konečný zástupný symbol medzery: ${formattedGapStartTime}-${formattedGapEndTime}.`);
                                 } else {
-                                    console.log(`[displayMatchesAsSchedule] Preskakujem konečnú medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože jej trvanie je 0.`);
+                                    console.log(`[displayMatchesAsSchedule] Preskakujem konečnú medzeru ${formattedGapStartTime}-${formattedGapEndTime}, pretože jej trvanie je 0 alebo už existuje.`);
                                 }
                             }
                         }
@@ -1500,7 +1521,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     dataAttributes += ` data-original-match-id="${blockedInterval.originalMatchId}"`;
                                 }
 
-                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
+                                let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedInterval.startMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
                                 if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
@@ -2453,15 +2474,17 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         if (endH === 24 && endM === 0) { // Ak ide o úplne posledný interval dňa
             console.log("[openFreeIntervalModal] Interval končí o 24:00. Toto je zvyčajne koncový zástupný symbol, žiadne špeciálne akcie.");
             freeIntervalModalTitle.textContent = 'Voľný interval do konca dňa';
-            // Žiadne tlačidlá pre úplne posledný koncový zástupný symbol
-            if (addMatchButton) { addMatchButton.style.display = 'inline-block'; } // Stále povoľ pridanie zápasu
-            const addMatchHandler = () => {
-                console.log(`[openFreeIntervalModal] Kliknuté 'Pridať zápas' pre voľný interval. Volám openMatchModal.`);
-                closeModal(freeIntervalModal);
-                openMatchModal(null, allSettings, date, location, startTime); // Odovzdaj allSettings
-            };
-            addMatchButton.addEventListener('click', addMatchHandler);
-            addMatchButton._currentHandler = addMatchHandler;
+            // Stále povoľ pridanie zápasu
+            if (addMatchButton) { 
+                addMatchButton.style.display = 'inline-block'; 
+                const addMatchHandler = () => {
+                    console.log(`[openFreeIntervalModal] Kliknuté 'Pridať zápas' pre voľný interval. Volám openMatchModal.`);
+                    closeModal(freeIntervalModal);
+                    openMatchModal(null, allSettings, date, location, startTime); // Odovzdaj allSettings
+                };
+                addMatchButton.addEventListener('click', addMatchHandler);
+                addMatchButton._currentHandler = addMatchHandler;
+            }
         } else {
             freeIntervalModalTitle.textContent = 'Spravovať voľný interval';
             console.log("[openFreeIntervalModal] Typ intervalu: Automaticky generovaný prázdny interval.");
@@ -2690,7 +2713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addButton = document.getElementById('addButton');
     const addOptions = document.getElementById('addOptions');
     const addPlayingDayButton = document.getElementById('addPlayingDayButton');
-    const addPlaceButton = document.getElementById('addPlaceButton');
+    const addPlaceButton = document = document.getElementById('addPlaceButton');
     const addMatchButton = document.getElementById('addMatchButton');
 
     const matchModal = document.getElementById('matchModal');
@@ -2722,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closePlaceModalButton = document.getElementById('closePlaceModal');
     const placeForm = document.getElementById('placeForm'); 
     const placeIdInput = document.getElementById('placeId');
-    const placeTypeSelect = document.getElementById('placeTypeSelect');
+    const placeTypeSelect = document = document.getElementById('placeTypeSelect');
     const placeNameInput = document.getElementById('placeName');
     const placeAddressInput = document.getElementById('placeAddress');
     const googleMapsUrlInput = document.getElementById('placeGoogleMapsUrl');
