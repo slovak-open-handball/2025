@@ -1454,7 +1454,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
 
 
                         if (!contentAddedForThisDate) {
-                            scheduleHtml += `<tr><td colspan="5" style="text-align: center; color: #888; font-style: italic; padding: 15px;">Žiadne zápasy ani zablokované intervaly pre tento deň.</td></tr>`;
+                            scheduleHtml += `<tr><td colspan="5" style="text-align: center; color: #888; font-style: italic; padding: 15px;">Voľný interval dostupný</td></tr>`;
                         }
 
                         scheduleHtml += `</tbody></table></div>`;
