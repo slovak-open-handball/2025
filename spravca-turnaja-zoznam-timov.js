@@ -1437,19 +1437,7 @@ function renderGroupTypeFilterButtons() {
         return indexA - indexB; // Zoradíme podľa poradia v orderedTypes
     });
 
-    // Vytvorenie tlačidla "Všetky skupiny" pre resetovanie filtra
-    const allGroupsButton = document.createElement('button');
-    allGroupsButton.textContent = 'Všetky skupiny';
-    allGroupsButton.classList.add('action-button');
-    if (currentFilters.groupType === null) {
-        allGroupsButton.classList.add('active-filter-button');
-    }
-    allGroupsButton.addEventListener('click', () => {
-        currentFilters.groupType = null; // Resetuje filter typu skupiny
-        displayCreatedTeams();
-    });
-    groupTypeFilterButtons.appendChild(allGroupsButton);
-
+    // Ponecháme len tlačidlá pre jednotlivé typy skupín, bez tlačidla "Všetky skupiny"
     sortedUniqueTypes.forEach(type => {
         const button = document.createElement('button');
         button.textContent = groupTypeDisplayMap[type] || type; // Zobrazíme preložený názov
@@ -1463,6 +1451,16 @@ function renderGroupTypeFilterButtons() {
         });
         groupTypeFilterButtons.appendChild(button);
     });
+
+    // Ak nie je vybraný žiadny filter typu skupiny, automaticky vyberieme prvý dostupný typ
+    if (currentFilters.groupType === null && sortedUniqueTypes.length > 0) {
+        currentFilters.groupType = sortedUniqueTypes[0];
+        // Pre-select the first button
+        const firstButton = groupTypeFilterButtons.querySelector('.action-button');
+        if (firstButton) {
+            firstButton.classList.add('active-filter-button');
+        }
+    }
 }
 
 
