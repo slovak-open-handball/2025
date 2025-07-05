@@ -138,12 +138,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const current_t = parseInt(t_input.value) || 0;
                     const current_p = parseInt(p_input.value) || 0;
                     const new_c = calculateTotalMatchDuration(current_n, current_t, current_p);
-                    calculated_c_display.textContent = `Celkový čas zápasu: ${new_c} minút<br>+ ${z_val} minút (medzi zápasmi)`;
+                    const current_z = parseInt(document.getElementById(`z-${categoryId}`).value) || 0; // Získanie aktuálnej hodnoty z
+                    calculated_c_display.innerHTML = `Celkový čas zápasu: ${new_c} minút<br>+ ${current_z} minút (medzi zápasmi)`;
                 };
 
                 n_input.addEventListener('input', updateCalculatedCDuration);
                 t_input.addEventListener('input', updateCalculatedCDuration);
                 p_input.addEventListener('input', updateCalculatedCDuration);
+                // Pridať aj listener na z_input, aby sa aktualizoval text aj pri zmene z
+                document.getElementById(`z-${categoryId}`).addEventListener('input', updateCalculatedCDuration);
             });
         } catch (error) {
             console.error("Chyba pri načítaní nastavení kategórií:", error);
