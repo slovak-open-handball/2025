@@ -632,9 +632,11 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             docRef: doc.ref,
             ...doc.data(),
             startInMinutes: parseTimeToMinutes(doc.data().startTime),
-            endInMinutes: parseTimeToMinutes(doc.data().endTime)
+            endInMinutes: parseTimeToMinutes(doc.data().endTime),
+            // NEW: Načítaj associatedBufferTime
+            associatedBufferTime: doc.data().associatedBufferTime !== undefined ? doc.data().associatedBufferTime : 5 // Predvolené na 5 pre staré dáta
         }));
-        console.log("Fáza 1: Načítané blokované/voľné sloty:", currentBlockedAndFreeSlots.map(s => ({id: s.id, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId, startInMinutes: s.startInMinutes, endInMinutes: s.endInMinutes})));
+        console.log("Fáza 1: Načítané blokované/voľné sloty:", currentBlockedAndFreeSlots.map(s => ({id: s.id, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId, startInMinutes: s.startInMinutes, endInMinutes: s.endInMinutes, associatedBufferTime: s.associatedBufferTime})));
 
 
         // 2. Oddeľ skutočne pevné udalosti a automaticky generované flexibilné zástupné symboly.
@@ -685,7 +687,9 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                     originalMatchId: movedMatchDetails.id,
                     startInMinutes: parseTimeToMinutes(movedMatchDetails.oldStartTime),
                     endInMinutes: parseTimeToMinutes(movedMatchDetails.oldFootprintEndTime),
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    // NEW: Pri vyčistení pôvodného miesta, zachovaj buffer pôvodného zápasu
+                    associatedBufferTime: movedMatchDetails.originalBufferTime // Uistite sa, že toto je odovzdané z moveAndRescheduleMatch
                 };
 
                 if (existingPermanentPlaceholderRef) {
@@ -714,7 +718,9 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                             originalMatchId: movedMatchDetails.id,
                             startInMinutes: oldStartInMinutes,
                             endInMinutes: parseTimeToMinutes(movedMatchDetails.oldFootprintEndTime),
-                            createdAt: new Date()
+                            createdAt: new Date(),
+                            // NEW: Pri spracovaní rovnakého dňa/miesta, zachovaj buffer pôvodného zápasu
+                            associatedBufferTime: movedMatchDetails.originalBufferTime // Uistite sa, že toto je odovzdané z moveAndRescheduleMatch
                         };
 
                         if (existingPermanentPlaceholderRef) {
@@ -770,7 +776,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 } else {
                     // Inak použite používateľom zadaný čas
                     newEventStartInMinutes = userStartInMinutes;
-                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
@@ -841,7 +847,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                         startInMinutes: gapStart,
                         endInMinutes: gapEnd,
                         originalMatchId: null,
-                        createdAt: new Date()
+                        createdAt: new Date(),
+                        associatedBufferTime: 0 // Gaps don't have an associated buffer to subtract for display
                     });
                     console.log(`Fáza 4: VYTVORENÝ nový voľný interval (medzera po kompakcii): ${formattedGapStartTime}-${formattedGapEndTime}.`);
                 }
@@ -879,7 +886,8 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                     startInMinutes: gapStart,
                     endInMinutes: gapEnd,
                     originalMatchId: null,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    associatedBufferTime: 0 // Gaps don't have an associated buffer to subtract for display
                 });
                 console.log(`Fáza 4: VYTVORENÝ konečný voľný interval (po kompakcii): ${formattedGapStartTime}-${formattedGapEndTime}.`);
             }
@@ -977,7 +985,7 @@ async function deleteMatch(matchId, allSettings) {
             const bufferTime = categorySettings?.bufferTime !== undefined ? categorySettings.bufferTime : (Number(matchData.bufferTime) || 5);
 
             const startInMinutes = parseTimeToMinutes(startTime);
-            const endInMinutes = startInMinutes + duration + bufferTime;
+            const endInMinutes = startInMinutes + duration + bufferTime; // Toto je koniec stopy zápasu
             const endTime = formatMinutesToTime(endInMinutes);
 
             const batch = writeBatch(db);
@@ -991,12 +999,14 @@ async function deleteMatch(matchId, allSettings) {
                 date: date,
                 location: location,
                 startTime: startTime,
-                endTime: endTime,
+                endTime: endTime, // Ukladáme koniec stopy (footprint end)
                 isBlocked: false, // Je to teraz voľný interval
                 originalMatchId: matchId, // Ulož pôvodné ID zápasu pre referenciu, aby bol "trvalý"
                 startInMinutes: startInMinutes,
                 endInMinutes: endInMinutes,
-                createdAt: new Date()
+                createdAt: new Date(),
+                associatedBufferTime: bufferTime, // NOVÉ: Ulož buffer, ktorý bol použitý pre tento zápas
+                associatedCategoryId: matchData.categoryId // NOVÉ: Ulož ID kategórie pre kontext
             };
             batch.set(newFreeIntervalRef, freeIntervalData);
             console.log(`[deleteMatch] Pridaný nový voľný interval do batchu pre vymazaný zápas:`, freeIntervalData);
@@ -1068,6 +1078,8 @@ async function moveAndRescheduleMatch(draggedMatchId, targetDate, targetLocation
             oldLocation: originalLocation,
             oldStartTime: originalStartTime,
             oldFootprintEndTime: originalFootprintEndTime,
+            // NOVÉ: Pridaj originalBufferTime pre použitie pri vytváraní placeholderu
+            originalBufferTime: originalBufferTime, 
             newDate: targetDate,
             newLocation: targetLocation,
             newStartTime: droppedProposedStartTime,
@@ -1117,7 +1129,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
 
     console.log("[displayMatchesAsSchedule] START. Current allSettings:", JSON.stringify(currentAllSettings));
     console.log("[displayMatchesAsSchedule] Prijaté matchesData:", JSON.stringify(matchesData.map(m => ({id: m.id, date: m.date, location: m.location, startTime: m.startTime, storedDuration: m.duration, storedBufferTime: m.bufferTime}))));
-    console.log("[displayMatchesAsSchedule] Prijaté blockedSlotsData:", JSON.stringify(blockedSlotsData.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
+    console.log("[displayMatchesAsSchedule] Prijaté blockedSlotsData:", JSON.stringify(blockedSlotsData.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId, associatedBufferTime: s.associatedBufferTime}))));
 
 
     // Ulož funkciu zastavenia animácie z predchádzajúceho volania
@@ -1173,7 +1185,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
         console.log(`[displayMatchesAsSchedule] Globálny čas začiatku (prvý deň): ${globalFirstDayStartTime}, (ostatné dni): ${globalOtherDaysStartTime}`);
 
         const allBlockedIntervals = blockedSlotsData; // Použi prijaté dáta
-        console.log("[displayMatchesAsSchedule] Použité zablokované intervaly (z parametra):", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId}))));
+        console.log("[displayMatchesAsSchedule] Použité zablokované intervaly (z parametra):", JSON.stringify(allBlockedIntervals.map(s => ({id: s.id, date: s.date, location: s.location, startTime: s.startTime, endTime: s.endTime, isBlocked: s.isBlocked, originalMatchId: s.originalMatchId, associatedBufferTime: s.associatedBufferTime}))));
 
         // --- NOVÁ LOGIKA: Aktualizuj dokumenty zápasov so správnym trvaním/bufferom z nastavení ---
         // Táto časť sa teraz spúšťa v rámci onSnapshot pre settings, ale jej výsledok (aktualizované zápasy)
@@ -1337,12 +1349,12 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                             ...allBlockedIntervals.filter(bs => bs.date === date && bs.location === location)
                         ];
                         currentEventsForRendering.sort((a, b) => a.startInMinutes - b.startInMinutes);
-                        console.log(`[displayMatchesAsSchedule] Udalosti pre render pre ${location} na ${date} (zoradené):`, JSON.stringify(currentEventsForRendering.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
+                        console.log(`[displayMatchesAsSchedule] Udalosti pre render pre ${location} na ${date} (zoradené):`, JSON.stringify(currentEventsForRendering.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes, associatedBufferTime: e.associatedBufferTime}))));
 
 
                         // === ZMENA TU: finalEventsToRender je teraz priamo currentEventsForRendering ===
                         const finalEventsToRender = currentEventsForRendering;
-                        console.log(`[displayMatchesAsSchedule] FinalEventsToRender (priamo z currentEventsForRendering):`, JSON.stringify(finalEventsToRender.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes}))));
+                        console.log(`[displayMatchesAsSchedule] FinalEventsToRender (priamo z currentEventsForRendering):`, JSON.stringify(finalEventsToRender.map(e => ({id: e.id, type: e.type, startTime: e.startTime || e.startInMinutes, endTime: e.endTime || e.endInMinutes, isBlocked: e.isBlocked, originalMatchId: e.originalMatchId, endOfPlayInMinutes: e.endOfPlayInMinutes, footprintEndInMinutes: e.footprintEndInMinutes, associatedBufferTime: e.associatedBufferTime}))));
 
                         
                         scheduleHtml += `<div class="date-group" data-date="${date}" data-location="${location}" data-initial-start-time="${formatMinutesToTime(initialScheduleStartMinutesForDate)}">`;
@@ -1388,8 +1400,22 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 const blockedInterval = event;
                                 const blockedIntervalStartHour = String(Math.floor(blockedInterval.startInMinutes / 60)).padStart(2, '0');
                                 const blockedIntervalStartMinute = String(blockedInterval.startInMinutes % 60).padStart(2, '0');
-                                const blockedIntervalEndHour = String(Math.floor(blockedInterval.endInMinutes / 60)).padStart(2, '0');
-                                const blockedIntervalEndMinute = String(blockedInterval.endInMinutes % 60).padStart(2, '0');
+                                
+                                let displayedBlockedIntervalEndMinutes = blockedInterval.endInMinutes;
+                                let bufferToSubtract = 0;
+
+                                // NOVÁ LOGIKA: Odčítaj buffer pre zobrazenie, ak ide o zablokovaný interval alebo placeholder po vymazanom zápase
+                                if (blockedInterval.isBlocked === true || blockedInterval.originalMatchId) {
+                                    bufferToSubtract = blockedInterval.associatedBufferTime !== undefined ? blockedInterval.associatedBufferTime : 5; // Použi uložený buffer alebo predvolený 5
+                                    displayedBlockedIntervalEndMinutes = blockedInterval.endInMinutes - bufferToSubtract;
+                                    console.log(`[displayMatchesAsSchedule] Zablokovaný/Voľný interval z vymazaného zápasu ID ${blockedInterval.id}: Pôvodný koniec: ${formatMinutesToTime(blockedInterval.endInMinutes)}, Buffer na odčítanie: ${bufferToSubtract}, Zobrazený koniec: ${formatMinutesToTime(displayedBlockedIntervalEndMinutes)}`);
+                                } else {
+                                    // Pre automaticky generované medzery (gaps) sa buffer neodčítava
+                                    console.log(`[displayMatchesAsSchedule] Automaticky generovaný voľný interval (medzera) ID ${blockedInterval.id}: Zobrazený koniec je rovnaký ako uložený koniec: ${formatMinutesToTime(blockedInterval.endInMinutes)}`);
+                                }
+
+                                const blockedIntervalEndHour = String(Math.floor(displayedBlockedIntervalEndMinutes / 60)).padStart(2, '0');
+                                const blockedIntervalEndMinute = String(displayedBlockedIntervalEndMinutes % 60).padStart(2, '0');
                                 
                                 const isUserBlocked = blockedInterval.isBlocked === true; 
 
@@ -1691,7 +1717,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                 const date = event.currentTarget.dataset.date;
                 const location = event.currentTarget.dataset.location;
                 const startTime = event.currentTarget.dataset.startTime;
-                const endTime = event.currentTarget.dataset.endTime;
+                const endTime = event.currentTarget.dataset.endTime; // Toto je už upravený čas
                 openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings); // Odovzdaj allSettings
             });
             row.addEventListener('dragover', (event) => {
@@ -2235,7 +2261,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
  * @param {string} date Dátum intervalu.
  * @param {string} location Miesto intervalu.
  * @param {string} startTime Počiatočný čas intervalu.
- * @param {string} endTime Koncový čas intervalu.
+ * @param {string} endTime Koncový čas intervalu (už upravený, ak je to potrebné).
  * @param {string} blockedIntervalId ID dokumentu zablokovaného intervalu alebo generované ID pre nové zástupné symboly.
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
  */
@@ -2285,12 +2311,13 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
     freeIntervalDateDisplay.textContent = formattedDate;
     freeIntervalLocationDisplay.textContent = location;
     
-    // PÔVODNÝ KÓD: let displayedEndTime = endTime;
-    // PÔVODNÝ KÓD: let isUserBlockedFromDB = false;
-    // PÔVODNÝ KÓD: let originalMatchId = null;
+    // NOVÁ ZMENA: endTime je už upravené z data-end-time atribútu, takže ho použijeme priamo
+    freeIntervalTimeRangeDisplay.textContent = `${startTime} - ${endTime}`;
+
 
     let isUserBlockedFromDB = false;
     let originalMatchId = null;
+    let associatedBufferTime = 0; // Predvolená hodnota pre prípady, keď sa nenačíta z DB
 
     if (blockedIntervalId && !blockedIntervalId.startsWith('generated-interval-') && !blockedIntervalId.startsWith('generated-initial-interval-') && !blockedIntervalId.startsWith('generated-final-interval-') && !blockedIntervalId.startsWith('generated-empty-day-interval-')) {
         try {
@@ -2299,23 +2326,23 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
                 const data = blockedIntervalDoc.data();
                 isUserBlockedFromDB = data.isBlocked === true;
                 originalMatchId = data.originalMatchId || null;
-                console.log(`[openFreeIntervalModal] Načítané dáta pre blockedIntervalId=${blockedIntervalId}: isBlocked=${isUserBlockedFromDB}, originalMatchId=${originalMatchId}`);
+                associatedBufferTime = data.associatedBufferTime !== undefined ? data.associatedBufferTime : 5; // Načítaj buffer z DB
+                console.log(`[openFreeIntervalModal] Načítané dáta pre blockedIntervalId=${blockedIntervalId}: isBlocked=${isUserBlockedFromDB}, originalMatchId=${originalMatchId}, associatedBufferTime=${associatedBufferTime}`);
             } else {
                 console.warn(`[openFreeIntervalModal] Dokument blockedIntervalId=${blockedIntervalId} neexistuje (možno už bol odstránený?). Považujem ho za zástupný symbol.`);
                 isUserBlockedFromDB = false;
+                associatedBufferTime = 0; // Pre generované/neexistujúce by nemal byť buffer
             }
         } catch (error) {
             console.error(`[openFreeIntervalModal] Chyba pri načítaní dokumentu pre blockedIntervalId=${blockedIntervalId}:`, error);
             isUserBlockedFromDB = false;
+            associatedBufferTime = 0; // V prípade chyby tiež bez bufferu
         }
     } else {
         isUserBlockedFromDB = false;
+        associatedBufferTime = 0; // Generované ID nemajú buffer
         console.log(`[openFreeIntervalModal] Zistené generované ID intervalu (${blockedIntervalId}). Považujem ho za zástupný symbol.`);
     }
-
-    // NOVÁ ZMENA: Zobrazí endTime tak, ako je prijaté, bez odpočítania bufferu.
-    freeIntervalTimeRangeDisplay.textContent = `${startTime} - ${endTime}`;
-
 
     // Skry všetky tlačidlá predvolene
     if (addMatchButton) addMatchButton.style.display = 'none';
@@ -2380,7 +2407,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
             blockButton.textContent = 'Zablokovať';
             const blockHandler = () => {
                 console.log(`[openFreeIntervalModal] Kliknuté 'Zablokovať' pre voľný interval z vymazaného zápasu ID: ${blockedIntervalId}. Volám blockFreeInterval.`);
-                blockFreeInterval(blockedIntervalId, date, location, startTime, endTime, allSettings); // Odovzdaj allSettings
+                blockFreeInterval(blockedIntervalId, date, location, startTime, formatMinutesToTime(parseTimeToMinutes(endTime) + associatedBufferTime), allSettings); // Odovzdaj pôvodný endTime (footprint end)
             };
             blockButton.addEventListener('click', blockHandler);
             blockButton._currentHandler = blockHandler;
@@ -2441,7 +2468,8 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
                 blockButton.textContent = 'Zablokovať';
                 const blockHandler = () => {
                     console.log(`[openFreeIntervalModal] Kliknuté 'Zablokovať' pre automaticky generovaný voľný interval ID: ${blockedIntervalId}. Volám blockFreeInterval.`);
-                    blockFreeInterval(blockedIntervalId, date, location, startTime, endTime, allSettings); // Odovzdaj allSettings
+                    // Pri blokovaní automaticky generovaného intervalu použijeme jeho pôvodný endTime, pretože to je koniec jeho "footprintu"
+                    blockFreeInterval(blockedIntervalId, date, location, startTime, formatMinutesToTime(parseTimeToMinutes(endTime) + associatedBufferTime), allSettings); // Odovzdaj pôvodný endTime (footprint end)
                 };
                 blockButton.addEventListener('click', blockHandler);
                 blockButton._currentHandler = blockHandler;
@@ -2473,7 +2501,7 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
  * @param {string} date Dátum intervalu.
  * @param {string} location Miesto intervalu.
  * @param {string} startTime Počiatočný čas intervalu.
- * @param {string} endTime Koncový čas intervalu.
+ * @param {string} endTime Koncový čas intervalu (footprint end).
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
  */
 async function blockFreeInterval(intervalId, date, location, startTime, endTime, allSettings) {
@@ -2528,15 +2556,21 @@ async function blockFreeInterval(intervalId, date, location, startTime, endTime,
             }
 
             const isNewPlaceholderOrGenerated = intervalId.startsWith('generated-interval-') || intervalId.startsWith('generated-initial-interval-') || intervalId.startsWith('generated-final-interval-') || intervalId.startsWith('generated-empty-day-interval-');
+            
+            // NOVÉ: Urči buffer pre zablokovaný interval. Použi predvolený 5 minút.
+            const defaultBufferForBlocked = 5; 
+
             let intervalDataToSave = {
                 date: date,
                 location: location,
                 startTime: startTime,
-                endTime: endTime,
+                endTime: endTime, // Toto je už koniec stopy (footprint end)
                 isBlocked: true,
                 startInMinutes: parseTimeToMinutes(startTime),
                 endInMinutes: parseTimeToMinutes(endTime),
-                createdAt: new Date()
+                createdAt: new Date(),
+                associatedBufferTime: defaultBufferForBlocked, // NOVÉ: Ulož predvolený buffer
+                associatedCategoryId: null // Žiadna kategória pre používateľom zablokovaný interval
             };
 
             if (isNewPlaceholderOrGenerated) {
@@ -2580,7 +2614,8 @@ async function unblockBlockedInterval(intervalId, date, location, allSettings) {
         try {
             const intervalRef = doc(blockedSlotsCollectionRef, intervalId);
             console.log(`[unblockBlockedInterval] Pokúšam sa aktualizovať interval ID: ${intervalId} na isBlocked: false`);
-            await setDoc(intervalRef, { isBlocked: false, originalMatchId: deleteField() }, { merge: true });
+            // Pri odblokovaní nastav isBlocked na false a odstráň originalMatchId a associatedBufferTime
+            await setDoc(intervalRef, { isBlocked: false, originalMatchId: deleteField(), associatedBufferTime: deleteField(), associatedCategoryId: deleteField() }, { merge: true });
             console.log(`[unblockBlockedInterval] Interval ID: ${intervalId} úspešne odblokovaný.`);
             await showMessage('Úspech', 'Interval bol úspešne odblokovaný!');
             closeModal(freeIntervalModal);
@@ -2756,7 +2791,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             docRef: doc.ref,
             ...doc.data(),
             startInMinutes: parseTimeToMinutes(doc.data().startTime),
-            endInMinutes: parseTimeToMinutes(doc.data().endTime)
+            endInMinutes: parseTimeToMinutes(doc.data().endTime),
+            // NOVÉ: Načítaj associatedBufferTime
+            associatedBufferTime: doc.data().associatedBufferTime !== undefined ? doc.data().associatedBufferTime : 5 // Predvolené na 5 pre staré dáta
         }));
         console.log("[onSnapshot] Blocked slots data updated in real-time.");
         // Re-render the schedule with the latest data and settings
