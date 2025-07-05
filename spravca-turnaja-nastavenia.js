@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const current_t = parseInt(t_input.value) || 0;
                     const current_p = parseInt(p_input.value) || 0;
                     const new_c = calculateTotalMatchDuration(current_n, current_t, current_p);
-                    calculated_c_display.textContent = `Celkový čas zápasu: ${new_c} minút`;
+                    calculated_c_display.textContent = `Celkový čas zápasu: ${new_c} minút<br>+ ${z_val} minút (medzi zápasmi)`;
                 };
 
                 n_input.addEventListener('input', updateCalculatedCDuration);
