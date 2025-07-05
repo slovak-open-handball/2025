@@ -770,7 +770,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 } else {
                     // Inak použite používateľom zadaný čas
                     newEventStartInMinutes = userStartInMinutes;
-                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
@@ -2420,9 +2420,12 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         }
 
     } else { // Automaticky generovaný prázdny interval (všeobecná medzera)
-        const [endH, endM] = parseTimeToMinutes(endTime); // Use parsed minutes
-        if (endH === 24 && endM === 0) { // Ak ide o úplne posledný interval dňa
-            console.log("[openFreeIntervalModal] Interval končí o 24:00. Toto je zvyčajne koncový zástupný symbol, žiadne špeciálne akcie.");
+        const initialScheduleStartMinutesForDate = await getInitialScheduleStartMinutes(date, allSettings);
+        const intervalStartMinutes = parseTimeToMinutes(startTime);
+        const intervalEndMinutes = parseTimeToMinutes(endTime);
+
+        if (intervalStartMinutes === initialScheduleStartMinutesForDate && intervalEndMinutes === 24 * 60) { // Ak ide o úplne posledný interval dňa od začiatku hracieho dňa
+            console.log("[openFreeIntervalModal] Interval pokrýva celý deň od začiatku hracieho dňa. Žiadne špeciálne akcie.");
             freeIntervalModalTitle.textContent = 'Voľný interval do konca dňa';
             // Stále povoľ pridanie zápasu
             if (addMatchButton) { 
