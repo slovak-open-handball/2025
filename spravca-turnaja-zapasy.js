@@ -453,7 +453,7 @@ async function findFirstAvailableTime(currentAllSettings) {
             if (fixedOccupiedPeriods.length > 0) {
                 let currentMerged = { ...fixedOccupiedPeriods[0] };
                 for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                    const nextPeriod = fixedOccupiedPeriods[i];
+                    const nextPeriod = fixedFixedOccupiedPeriods[i];
                     if (nextPeriod.start <= currentMerged.end) {
                         currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
                     } else {
@@ -776,11 +776,11 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 } else {
                     // Inak použite používateľom zadaný čas
                     newEventStartInMinutes = userStartInMinutes;
-                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
                 console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
@@ -2699,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document.getElementById('team2NumberInput');
+    const team2NumberInput = document.getElementById('team2NumberInput'); 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
 
 
@@ -3010,8 +3010,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const groupsSnapshot = await getDocs(groupsCollectionRef);
         const groupsMap = new Map();
-        groupsSnapshot.forEach(doc => groupsMap.set(doc.id, doc.data().name || doc.id));
+        const groupsData = []; // Pole pre všetky skupiny
+        groupsSnapshot.forEach(doc => {
+            const groupData = { id: doc.id, name: doc.data().name || doc.id };
+            groupsMap.set(doc.id, groupData.name);
+            groupsData.push(groupData);
+        });
         console.log("[matchForm] Načítané skupiny pre mapovanie:", groupsMap);
+        console.log("[matchForm] Načítané skupiny dáta:", groupsData);
+
+
+        // Funkcia na určenie, či je skupina základná (napr. Skupina A, B, C, D) alebo nadstavbová
+        const isBasicGroup = (groupName) => {
+            return /^(?:Skupina\s*)?[A-Z]$/i.test(groupName.trim());
+        };
+
+        const currentGroupData = groupsData.find(g => g.id === matchGroup);
+        const currentGroupName = currentGroupData ? currentGroupData.name : '';
+        const isCurrentGroupPlayoff = !isBasicGroup(currentGroupName);
+        console.log(`[matchForm] Aktuálna skupina: ${currentGroupName}, Je nadstavbová: ${isCurrentGroupPlayoff}`);
+
 
         let team1Result = null;
         let team2Result = null;
@@ -3032,6 +3050,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn("[matchForm] Jeden alebo oba tímy sa nenašli.");
             return;
         }
+
+        // --- NOVÁ KONTROLA: Tímy už hrali proti sebe v základnej skupine ---
+        if (isCurrentGroupPlayoff) {
+            console.log("[matchForm] Nový zápas je v nadstavbovej skupine. Kontrolujem, či tímy už hrali v základnej skupine.");
+            const basicGroupMatchesQuery = query(
+                matchesCollectionRef,
+                where("categoryId", "==", matchCategory)
+            );
+            const basicGroupMatchesSnapshot = await getDocs(basicGroupMatchesQuery);
+
+            let alreadyPlayedInBasicGroup = false;
+            for (const docSnapshot of basicGroupMatchesSnapshot.docs) {
+                const existingMatch = docSnapshot.data();
+                const existingMatchGroupId = existingMatch.groupId;
+                const existingGroupName = groupsMap.get(existingMatchGroupId);
+
+                // Preskoč aktuálny upravovaný zápas
+                if (currentMatchId && docSnapshot.id === currentMatchId) {
+                    continue;
+                }
+
+                // Skontroluj, či existujúci zápas je v základnej skupine
+                if (isBasicGroup(existingGroupName)) {
+                    const existingTeam1Number = existingMatch.team1Number;
+                    const existingTeam2Number = existingMatch.team2Number;
+
+                    // Skontroluj, či tímy v existujúcom zápase sú rovnaké ako tímy v novom zápase (bez ohľadu na poradie)
+                    const teamsMatch = 
+                        (existingTeam1Number === team1Number && existingTeam2Number === team2Number) ||
+                        (existingTeam1Number === team2Number && existingTeam2Number === team1Number);
+
+                    if (teamsMatch) {
+                        alreadyPlayedInBasicGroup = true;
+                        console.log(`[matchForm] Nájdený predchádzajúci zápas v základnej skupine (${existingGroupName}) medzi týmito tímami. Zápas ID: ${docSnapshot.id}`);
+                        break;
+                    }
+                }
+            }
+
+            if (alreadyPlayedInBasicGroup) {
+                await showMessage('Chyba', `Tímy ${team1Result.fullDisplayName} a ${team2Result.fullDisplayName} už hrali proti sebe v základnej skupine. Nie je možné ich spárovať v nadstavbovej skupine.`);
+                console.warn("[matchForm] Tímy už hrali proti sebe v základnej skupine.");
+                return;
+            }
+        }
+        // --- KONIEC NOVEJ KONTROLY: Tímy už hrali proti sebe v základnej skupine ---
+
 
         let existingDuplicateMatchId = null;
         let existingDuplicateMatchDetails = null;
@@ -3156,7 +3221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             categoryId: matchCategory,
             categoryName: categoriesMap.get(matchCategory) || matchCategory,
             groupId: matchGroup || null,
-            groupName: matchGroup ? groupsMap.get(matchGroup).replace(/skupina /gi, '').trim() : null,
+            groupName: currentGroupName, // Ulož plný názov skupiny
             team1Category: matchCategory,
             team1Group: matchGroup,
             team1Number: team1Number,
