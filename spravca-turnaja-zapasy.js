@@ -2112,7 +2112,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document = document.getElementById('team2NumberInput'); 
+    const team2NumberInput = document.getElementById('team2NumberInput'); 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
@@ -2699,7 +2699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document = document.getElementById('team2NumberInput'); 
+    const team2NumberInput = document.getElementById('team2NumberInput'); 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
 
 
