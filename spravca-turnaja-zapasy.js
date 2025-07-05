@@ -774,10 +774,10 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
-                console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventInMinutes)} (${newEventInMinutes}).`);
             } else {
                 console.log(`  -> Udalosť ${event.id} začína presne na currentTimePointer. Žiadna zmena začiatku.`);
             }
@@ -1473,20 +1473,12 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
 
 
                         if (!contentAddedForThisDate) {
-                            // NOVÁ ZMENA: Pridanie tried a dátových atribútov pre klikateľnosť
                             const generatedId = `generated-empty-day-interval-${date}-${location}`;
                             const startTimeForEmptyDay = formatMinutesToTime(initialScheduleStartMinutesForDate);
                             const endTimeForEmptyDay = formatMinutesToTime(24 * 60); // End of day
                             
-                            let emptyDayDisplayTimeHtml = `<td>${startTimeForEmptyDay} - ${endTimeForEmptyDay}</td>`;
-                            
-                            // Úprava: Ak v hracom dni nie je žiadny zápas, časový stĺpec je prázdny.
-                            if (matchesForDateAndLocation.length === 0 && initialScheduleStartMinutesForDate === 0 && 24 * 60 === 24 * 60) { 
-                                emptyDayDisplayTimeHtml = `<td></td>`;
-                            } else if (matchesForDateAndLocation.length === 0 && initialScheduleStartMinutesForDate !== 0 && 24 * 60 === 24 * 60) {
-                                emptyDayDisplayTimeHtml = `<td></td>`;
-                            }
-
+                            // Úprava: Ak v hracom dni nie je žiadny zápas alebo iný obsah, časový stĺpec je prázdny.
+                            let emptyDayDisplayTimeHtml = `<td></td>`; 
 
                             scheduleHtml += `
                                 <tr class="empty-interval-row free-interval-available-row" 
