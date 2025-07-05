@@ -1426,7 +1426,13 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
-                                if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
+                                // Zmena: Ak interval pokrýva celý deň od initialScheduleStartMinutesForDate do 24:00, nezobrazuj čas
+                                if (!isUserBlocked && !blockedInterval.originalMatchId && 
+                                    blockedInterval.startInMinutes === initialScheduleStartMinutesForDate && 
+                                    blockedInterval.endInMinutes === 24 * 60) {
+                                    displayTimeHtml = `<td></td>`; 
+                                    textColspan = '4';
+                                } else if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
                                     displayTimeHtml = `<td></td>`; 
                                     textColspan = '4';
                                 } else if (blockedInterval.endInMinutes === 24 * 60) { // Interval do konca dňa
@@ -1471,6 +1477,12 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                             const generatedId = `generated-empty-day-interval-${date}-${location}`;
                             const startTimeForEmptyDay = formatMinutesToTime(initialScheduleStartMinutesForDate);
                             const endTimeForEmptyDay = formatMinutesToTime(24 * 60); // End of day
+                            
+                            let emptyDayDisplayTimeHtml = `<td>${startTimeForEmptyDay} - ${endTimeForEmptyDay}</td>`;
+                            if (initialScheduleStartMinutesForDate === 0 && 24 * 60 === 24 * 60) { // Check if it's truly 00:00 to 24:00
+                                emptyDayDisplayTimeHtml = `<td></td>`;
+                            }
+
                             scheduleHtml += `
                                 <tr class="empty-interval-row free-interval-available-row" 
                                     data-id="${generatedId}" 
@@ -1479,7 +1491,7 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     data-start-time="${startTimeForEmptyDay}" 
                                     data-end-time="${endTimeForEmptyDay}" 
                                     data-is-blocked="false">
-                                    <td>${startTimeForEmptyDay} - ${endTimeForEmptyDay}</td>
+                                    ${emptyDayDisplayTimeHtml}
                                     <td colspan="4" style="text-align: center; color: #888; font-style: italic; padding: 15px; background-color: #f0f0f0;">Voľný interval dostupný</td>
                                 </tr>`;
                         }
