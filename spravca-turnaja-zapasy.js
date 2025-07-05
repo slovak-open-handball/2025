@@ -774,10 +774,10 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
-                console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventInMinutes)} (${newEventInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else {
                 console.log(`  -> Udalosť ${event.id} začína presne na currentTimePointer. Žiadna zmena začiatku.`);
             }
@@ -1386,13 +1386,14 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 const blockedIntervalStartHour = String(Math.floor(blockedInterval.startInMinutes / 60)).padStart(2, '0');
                                 const blockedIntervalStartMinute = String(blockedInterval.startInMinutes % 60).padStart(2, '0');
                                 
-                                // NEW CHANGE: Calculate display end time for free intervals by subtracting bufferTime
                                 let displayEndTimeInMinutes = blockedInterval.endInMinutes;
-                                if (!blockedInterval.isBlocked && !blockedInterval.originalMatchId) { // Only for general free intervals
-                                    // Get buffer time from settings, or default if not found
-                                    const bufferTimeForDisplay = currentAllSettings.categoryMatchSettings?.['default']?.bufferTime || 5; // Assuming a 'default' category or similar for general buffer
+                                const isUserBlocked = blockedInterval.isBlocked === true; 
+                                const hasOriginalMatchId = blockedInterval.originalMatchId !== null;
+
+                                // Adjust displayedEndTime for general free intervals (not user-blocked, not from deleted match)
+                                if (!isUserBlocked && !hasOriginalMatchId) { 
+                                    const bufferTimeForDisplay = currentAllSettings.categoryMatchSettings?.['default']?.bufferTime || 5; 
                                     displayEndTimeInMinutes = blockedInterval.endInMinutes - bufferTimeForDisplay;
-                                    // Ensure displayEndTimeInMinutes doesn't go below startTimeInMinutes
                                     if (displayEndTimeInMinutes < blockedInterval.startInMinutes) {
                                         displayEndTimeInMinutes = blockedInterval.startInMinutes;
                                     }
@@ -1401,16 +1402,14 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 const blockedIntervalEndHour = String(Math.floor(displayEndTimeInMinutes / 60)).padStart(2, '0');
                                 const blockedIntervalEndMinute = String(displayEndTimeInMinutes % 60).padStart(2, '0');
                                 
-                                const isUserBlocked = blockedInterval.isBlocked === true; 
-
                                 // Vykresli tento voľný interval len, ak bol vytvorený z vymazaného zápasu,
                                 // alebo ak je jeho trvanie väčšie ako 0 (t.j. nie medzera s nulovou dĺžkou).
                                 // Automaticky generované všeobecné medzery, ktoré sú po zohľadnení bufferu efektívne 0 trvania, sa preskakujú.
                                 const intervalDuration = blockedInterval.endInMinutes - blockedInterval.startInMinutes;
 
-                                if (!isUserBlocked && !blockedInterval.originalMatchId && intervalDuration === 0) {
+                                if (!isUserBlocked && !hasOriginalMatchId && intervalDuration === 0) {
                                     console.log(`[displayMatchesAsSchedule] Preskakujem vykreslenie čisto kozmetického/nulového zástupného symbolu: ${blockedIntervalStartHour}:${blockedIntervalStartMinute}-${blockedIntervalEndHour}:${blockedIntervalEndMinute}`);
-                                    continue; // Preskoč vykreslenie tohto riadku, ak ide o generovaný voľný interval bez skutočného trvania
+                                    continue; 
                                 }
 
 
@@ -1422,12 +1421,11 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                     dataAttributes += ` data-original-match-id="${blockedInterval.originalMatchId}"`;
                                 }
 
-                                // OPRAVA: Použi blockedIntervalStartMinute namiesto blockedInterval.startMinute
                                 let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
                                 // Zmena: Ak interval pokrýva celý deň od initialScheduleStartMinutesForDate do 24:00, nezobrazuj čas
-                                if (!isUserBlocked && !blockedInterval.originalMatchId && 
+                                if (!isUserBlocked && !hasOriginalMatchId && 
                                     blockedInterval.startInMinutes === initialScheduleStartMinutesForDate && 
                                     blockedInterval.endInMinutes === 24 * 60) {
                                     displayTimeHtml = `<td></td>`; 
@@ -2319,9 +2317,9 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         console.log(`[openFreeIntervalModal] Zistené generované ID intervalu (${blockedIntervalId}). Považujem ho za zástupný symbol.`);
     }
 
-    // Adjust displayedEndTime for free intervals
-    if (!isUserBlockedFromDB && !originalMatchId) { // Only for general free intervals (not user-blocked, not from deleted match)
-        const bufferTimeForDisplay = allSettings.categoryMatchSettings?.['default']?.bufferTime || 5; // Assuming a 'default' category or similar for general buffer
+    // Adjust displayedEndTime for general free intervals (not user-blocked, not from deleted match)
+    if (!isUserBlockedFromDB && !originalMatchId) { 
+        const bufferTimeForDisplay = allSettings.categoryMatchSettings?.['default']?.bufferTime || 5; 
         const startInMinutes = parseTimeToMinutes(startTime);
         const endInMinutes = parseTimeToMinutes(endTime);
         let calculatedDisplayedEndTimeInMinutes = endInMinutes - bufferTimeForDisplay;
