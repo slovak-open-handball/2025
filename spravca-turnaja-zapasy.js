@@ -770,7 +770,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 } else {
                     // Inak použite používateľom zadaný čas
                     newEventStartInMinutes = userStartInMinutes;
-                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
@@ -1479,9 +1479,14 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                             const endTimeForEmptyDay = formatMinutesToTime(24 * 60); // End of day
                             
                             let emptyDayDisplayTimeHtml = `<td>${startTimeForEmptyDay} - ${endTimeForEmptyDay}</td>`;
-                            if (initialScheduleStartMinutesForDate === 0 && 24 * 60 === 24 * 60) { // Check if it's truly 00:00 to 24:00
+                            
+                            // Úprava: Ak v hracom dni nie je žiadny zápas, časový stĺpec je prázdny.
+                            if (matchesForDateAndLocation.length === 0 && initialScheduleStartMinutesForDate === 0 && 24 * 60 === 24 * 60) { 
+                                emptyDayDisplayTimeHtml = `<td></td>`;
+                            } else if (matchesForDateAndLocation.length === 0 && initialScheduleStartMinutesForDate !== 0 && 24 * 60 === 24 * 60) {
                                 emptyDayDisplayTimeHtml = `<td></td>`;
                             }
+
 
                             scheduleHtml += `
                                 <tr class="empty-interval-row free-interval-available-row" 
