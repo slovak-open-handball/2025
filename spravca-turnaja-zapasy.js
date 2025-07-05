@@ -2251,7 +2251,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
  */
 async function openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings) {
-    console.log(`[openFreeIntervalModal] Volané pre Dátum: ${date}, Miesto: ${location}, Čas: ${startTime}-${endTime}, ID intervalu: ${blockedIntervalId}`);
+    console.log(`[openFreeIntervalModal] Volené pre Dátum: ${date}, Miesto: ${location}, Čas: ${startTime}-${endTime}, ID intervalu: ${blockedIntervalId}`);
 
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const freeIntervalModalTitle = document.getElementById('freeSlotModalTitle');
