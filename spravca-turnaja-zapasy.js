@@ -774,7 +774,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
                 console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
@@ -850,9 +850,12 @@ async function recalculateAndSaveScheduleForDateAndLocation(
             console.log(`Fáza 4: Po spracovaní udalosti ${event.id || 'N/A'}, currentTimePointer je teraz: ${formatMinutesToTime(currentTimePointer)} (${currentTimePointer}).`);
         }
 
-        if (currentTimePointer < 24 * 60) {
+        // NOVÁ ZMENA: Koncový čas pre voľný interval dňa je 23:55
+        const END_OF_DAY_DISPLAY_IN_MINUTES = 23 * 60 + 55; // 23:55
+
+        if (currentTimePointer < END_OF_DAY_DISPLAY_IN_MINUTES) {
             const gapStart = currentTimePointer;
-            const gapEnd = 24 * 60;
+            const gapEnd = END_OF_DAY_DISPLAY_IN_MINUTES; // Končí o 23:55
             const formattedGapStartTime = formatMinutesToTime(gapStart);
             const formattedGapEndTime = formatMinutesToTime(gapEnd);
 
@@ -865,7 +868,7 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 s.endInMinutes === gapEnd
             );
 
-            if (gapEnd > gapStart && !existingFinalPlaceholder) { // Pridaná podmienka !existingFinalPlaceholder
+            if (gapEnd > gapStart && !existingFinalPlaceholder) { 
                 const newPlaceholderRef = doc(blockedSlotsCollectionRef);
                 batch.set(newPlaceholderRef, {
                     date: processDate,
@@ -1385,32 +1388,22 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 const blockedInterval = event;
                                 const blockedIntervalStartHour = String(Math.floor(blockedInterval.startInMinutes / 60)).padStart(2, '0');
                                 const blockedIntervalStartMinute = String(blockedInterval.startInMinutes % 60).padStart(2, '0');
+                                const blockedIntervalEndHour = String(Math.floor(blockedInterval.endInMinutes / 60)).padStart(2, '0');
+                                const blockedIntervalEndMinute = String(blockedInterval.endInMinutes % 60).padStart(2, '0');
                                 
-                                let displayEndTimeInMinutes = blockedInterval.endInMinutes;
                                 const isUserBlocked = blockedInterval.isBlocked === true; 
-                                const hasOriginalMatchId = blockedInterval.originalMatchId !== null;
 
-                                // Get the general buffer time for display adjustment
-                                const bufferTimeForDisplay = currentAllSettings.categoryMatchSettings?.['default']?.bufferTime || 5; 
+                                // Vykresli tento voľný interval len, ak bol vytvorený z vymazaného zápasu,
+                                // alebo ak je jeho trvanie väčšie ako 0 (t.j. nie medzera s nulovou dĺžkou).
+                                // Automaticky generované všeobecné medzery, ktoré sú po zohľadnení bufferu efektívne 0 trvania, sa preskakujú.
+                                const intervalDuration = blockedInterval.endInMinutes - blockedInterval.startInMinutes;
 
-                                // Special case: If it's the "empty day" placeholder, time column is empty.
-                                // This is identified by its start time being initialScheduleStartMinutesForDate
-                                // and its end time being 24 * 60, and not being user-blocked or an original match ID.
-                                const isFullDayFreeIntervalPlaceholder = !isUserBlocked && !hasOriginalMatchId && 
-                                    blockedInterval.startInMinutes === initialScheduleStartMinutesForDate && 
-                                    blockedInterval.endInMinutes === 24 * 60;
-
-                                if (!isFullDayFreeIntervalPlaceholder) { // Apply buffer adjustment for all other blocked_interval types
-                                    displayEndTimeInMinutes = blockedInterval.endInMinutes - bufferTimeForDisplay;
-                                    // Ensure displayEndTimeInMinutes doesn't go below startTimeInMinutes
-                                    if (displayEndTimeInMinutes < blockedInterval.startInMinutes) {
-                                        displayEndTimeInMinutes = blockedInterval.startInMinutes;
-                                    }
+                                if (!isUserBlocked && !blockedInterval.originalMatchId && intervalDuration === 0) {
+                                    console.log(`[displayMatchesAsSchedule] Preskakujem vykreslenie čisto kozmetického/nulového zástupného symbolu: ${blockedIntervalStartHour}:${blockedIntervalStartMinute}-${blockedIntervalEndHour}:${blockedIntervalEndMinute}`);
+                                    continue; // Preskoč vykreslenie tohto riadku, ak ide o generovaný voľný interval bez skutočného trvania
                                 }
 
-                                const blockedIntervalEndHour = String(Math.floor(displayEndTimeInMinutes / 60)).padStart(2, '0');
-                                const blockedIntervalEndMinute = String(displayEndTimeInMinutes % 60).padStart(2, '0');
-                                
+
                                 let rowClass = '';
                                 let cellStyle = '';
                                 let displayText = ''; 
@@ -1422,10 +1415,25 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                                 let displayTimeHtml = `<td>${blockedIntervalStartHour}:${blockedIntervalStartMinute} - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`;
                                 let textColspan = '4';
 
-                                if (isFullDayFreeIntervalPlaceholder) {
+                                // NOVÁ ZMENA: Ak je to posledný voľný interval dňa končiaci o 23:55, nezobrazuj čas
+                                const END_OF_DAY_DISPLAY_IN_MINUTES = 23 * 60 + 55; // 23:55
+                                const isLastFreeIntervalOfDay = (
+                                    blockedInterval.endInMinutes === END_OF_DAY_DISPLAY_IN_MINUTES && 
+                                    !isUserBlocked && 
+                                    !blockedInterval.originalMatchId
+                                );
+
+                                if (isLastFreeIntervalOfDay) {
                                     displayTimeHtml = `<td></td>`; 
+                                } else if (blockedInterval.endInMinutes === 24 * 60 && blockedInterval.startInMinutes === 0) { // Celodenný interval
+                                    displayTimeHtml = `<td></td>`; 
+                                } else if (blockedInterval.endInMinutes === 24 * 60) { // Interval do konca dňa (ak by bol nejaký)
+                                    displayTimeHtml = `<td></td>`;
+                                } else if (blockedInterval.startInMinutes === 0) { // Interval od začiatku dňa
+                                     displayTimeHtml = `<td>00:00 - ${blockedIntervalEndHour}:${blockedIntervalEndMinute}</td>`; 
                                 }
-                                
+                                // textColspan ostáva 4
+
                                 if (isUserBlocked) { 
                                     rowClass = 'blocked-interval-row'; 
                                     cellStyle = 'text-align: center; color: white; background-color: #dc3545; font-style: italic;';
@@ -1458,7 +1466,8 @@ async function displayMatchesAsSchedule(currentAllSettings, matchesData, blocked
                         if (!contentAddedForThisDate) {
                             const generatedId = `generated-empty-day-interval-${date}-${location}`;
                             const startTimeForEmptyDay = formatMinutesToTime(initialScheduleStartMinutesForDate);
-                            const endTimeForEmptyDay = formatMinutesToTime(24 * 60); // End of day
+                            // NOVÁ ZMENA: Koncový čas pre tento defaultný interval je 23:55
+                            const endTimeForEmptyDay = formatMinutesToTime(23 * 60 + 55); 
                             
                             // Úprava: Ak v hracom dni nie je žiadny zápas alebo iný obsah, časový stĺpec je prázdny.
                             let emptyDayDisplayTimeHtml = `<td></td>`; 
@@ -2077,7 +2086,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
     const matchCategorySelect = document.getElementById('matchCategory');
     const matchGroupSelect = document.getElementById('matchGroup');
     const team1NumberInput = document.getElementById('team1NumberInput');
-    const team2NumberInput = document.getElementById('team2NumberInput'); 
+    const team2NumberInput = document = document.getElementById('team2NumberInput'); 
     const deleteMatchButtonModal = document.getElementById('deleteMatchButtonModal');
     const matchForm = document.getElementById('matchForm');
 
@@ -2231,7 +2240,7 @@ async function openMatchModal(matchId = null, currentAllSettings, prefillDate = 
  * @param {object} allSettings Všetky nastavenia turnaja, vrátane nastavení zápasov kategórií.
  */
 async function openFreeIntervalModal(date, location, startTime, endTime, blockedIntervalId, allSettings) {
-    console.log(`[openFreeIntervalModal] Volené pre Dátum: ${date}, Miesto: ${location}, Čas: ${startTime}-${endTime}, ID intervalu: ${blockedIntervalId}`);
+    console.log(`[openFreeIntervalModal] Volané pre Dátum: ${date}, Miesto: ${location}, Čas: ${startTime}-${endTime}, ID intervalu: ${blockedIntervalId}`);
 
     const freeIntervalModal = document.getElementById('freeSlotModal');
     const freeIntervalModalTitle = document.getElementById('freeSlotModalTitle');
@@ -2276,7 +2285,10 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
     freeIntervalDateDisplay.textContent = formattedDate;
     freeIntervalLocationDisplay.textContent = location;
     
-    let displayedEndTime = endTime;
+    // PÔVODNÝ KÓD: let displayedEndTime = endTime;
+    // PÔVODNÝ KÓD: let isUserBlockedFromDB = false;
+    // PÔVODNÝ KÓD: let originalMatchId = null;
+
     let isUserBlockedFromDB = false;
     let originalMatchId = null;
 
@@ -2301,18 +2313,8 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         console.log(`[openFreeIntervalModal] Zistené generované ID intervalu (${blockedIntervalId}). Považujem ho za zástupný symbol.`);
     }
 
-    // Apply the buffer adjustment to the displayed end time for all blocked_interval types
-    const bufferTimeForDisplay = allSettings.categoryMatchSettings?.['default']?.bufferTime || 5; 
-    const startInMinutes = parseTimeToMinutes(startTime);
-    const endInMinutes = parseTimeToMinutes(endTime);
-    let calculatedDisplayedEndTimeInMinutes = endInMinutes - bufferTimeForDisplay;
-    if (calculatedDisplayedEndTimeInMinutes < startInMinutes) {
-        calculatedDisplayedEndTimeInMinutes = startInMinutes;
-    }
-    displayedEndTime = formatMinutesToTime(calculatedDisplayedEndTimeInMinutes);
-
-
-    freeIntervalTimeRangeDisplay.textContent = `${startTime} - ${displayedEndTime}`;
+    // NOVÁ ZMENA: Zobrazí endTime tak, ako je prijaté, bez odpočítania bufferu.
+    freeIntervalTimeRangeDisplay.textContent = `${startTime} - ${endTime}`;
 
 
     // Skry všetky tlačidlá predvolene
@@ -2402,8 +2404,10 @@ async function openFreeIntervalModal(date, location, startTime, endTime, blocked
         const intervalStartMinutes = parseTimeToMinutes(startTime);
         const intervalEndMinutes = parseTimeToMinutes(endTime);
 
-        if (intervalStartMinutes === initialScheduleStartMinutesForDate && intervalEndMinutes === 24 * 60) { // Ak ide o úplne posledný interval dňa od začiatku hracieho dňa
-            console.log("[openFreeIntervalModal] Interval pokrýva celý deň od začiatku hracieho dňa. Žiadne špeciálne akcie.");
+        // NOVÁ ZMENA: Podmienka pre "Voľný interval do konca dňa"
+        const END_OF_DAY_DISPLAY_IN_MINUTES = 23 * 60 + 55; // 23:55
+        if (intervalEndMinutes === END_OF_DAY_DISPLAY_IN_MINUTES) { 
+            console.log("[openFreeIntervalModal] Interval končí o 23:55. Toto je koncový zástupný symbol.");
             freeIntervalModalTitle.textContent = 'Voľný interval do konca dňa';
             // Stále povoľ pridanie zápasu
             if (addMatchButton) { 
