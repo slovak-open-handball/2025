@@ -776,11 +776,11 @@ async function recalculateAndSaveScheduleForDateAndLocation(
                 } else {
                     // Inak použite používateľom zadaný čas
                     newEventStartInMinutes = userStartInMinutes;
-                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                    console.log(`  -> Zápas ${event.id} (používateľom zadaný čas) nastavený na: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
                 }
             } else if (event.startInMinutes < currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer;
-                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToMinutes(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
+                console.log(`  -> Udalosť ${event.id} prekrýva alebo začína skôr, posunutá na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
             } else if (event.startInMinutes > currentTimePointer) {
                 newEventStartInMinutes = currentTimePointer; // This line ensures compaction.
                 console.log(`  -> Udalosť ${event.id} posunutá dopredu na currentTimePointer: ${formatMinutesToTime(newEventStartInMinutes)} (${newEventStartInMinutes}).`);
