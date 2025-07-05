@@ -2074,7 +2074,7 @@ async function editPlace(placeName, placeType) {
 
             deletePlaceButtonModal.style.display = 'inline-block';
             if (deletePlaceButtonModal && deletePlaceButtonModal._currentHandler) {
-                deletePlaceButtonModal.removeEventListener('click', deletePlaceButtonModal._currentHandler);
+                deletePlaceButtonModal.removeEventListener('click', deletePlaceButtonButtonModal._currentHandler);
                 delete deletePlaceButtonModal._currentHandler;
             }
             const handler = () => deletePlace(placeData.name, placeData.type);
