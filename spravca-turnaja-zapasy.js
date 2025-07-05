@@ -453,7 +453,7 @@ async function findFirstAvailableTime(currentAllSettings) {
             if (fixedOccupiedPeriods.length > 0) {
                 let currentMerged = { ...fixedOccupiedPeriods[0] };
                 for (let i = 1; i < fixedOccupiedPeriods.length; i++) {
-                    const nextPeriod = fixedFixedOccupiedPeriods[i];
+                    const nextPeriod = fixedOccupiedPeriods[i];
                     if (nextPeriod.start <= currentMerged.end) {
                         currentMerged.end = Math.max(currentMerged.end, nextPeriod.end);
                     } else {
@@ -3012,7 +3012,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const groupsMap = new Map();
         const groupsData = []; // Pole pre všetky skupiny
         groupsSnapshot.forEach(doc => {
-            const groupData = { id: doc.id, name: doc.data().name || doc.id };
+            const groupData = { id: doc.id, name: doc.data().name || doc.id, groupType: doc.data().type || null }; // Získaj groupType
             groupsMap.set(doc.id, groupData.name);
             groupsData.push(groupData);
         });
@@ -3021,14 +3021,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // Funkcia na určenie, či je skupina základná (napr. Skupina A, B, C, D) alebo nadstavbová
-        const isBasicGroup = (groupName) => {
+        const isBasicGroup = (groupType, groupName) => {
+            if (groupType) {
+                return groupType === 'basic'; // Predpokladáme, že typ je 'basic' pre základné skupiny
+            }
+            // Fallback na regex, ak groupType nie je definovaný
             return /^(?:Skupina\s*)?[A-Z]$/i.test(groupName.trim());
         };
 
         const currentGroupData = groupsData.find(g => g.id === matchGroup);
         const currentGroupName = currentGroupData ? currentGroupData.name : '';
-        const isCurrentGroupPlayoff = !isBasicGroup(currentGroupName);
-        console.log(`[matchForm] Aktuálna skupina: ${currentGroupName}, Je nadstavbová: ${isCurrentGroupPlayoff}`);
+        const isCurrentGroupPlayoff = !isBasicGroup(currentGroupData?.groupType, currentGroupName);
+        console.log(`[matchForm] Aktuálna skupina: ${currentGroupName}, Typ skupiny: ${currentGroupData?.groupType || 'N/A'}, Je nadstavbová: ${isCurrentGroupPlayoff}`);
 
 
         let team1Result = null;
@@ -3054,45 +3058,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- NOVÁ KONTROLA: Tímy už hrali proti sebe v základnej skupine ---
         if (isCurrentGroupPlayoff) {
             console.log("[matchForm] Nový zápas je v nadstavbovej skupine. Kontrolujem, či tímy už hrali v základnej skupine.");
-            const basicGroupMatchesQuery = query(
-                matchesCollectionRef,
-                where("categoryId", "==", matchCategory)
-            );
-            const basicGroupMatchesSnapshot = await getDocs(basicGroupMatchesQuery);
 
-            let alreadyPlayedInBasicGroup = false;
-            for (const docSnapshot of basicGroupMatchesSnapshot.docs) {
-                const existingMatch = docSnapshot.data();
-                const existingMatchGroupId = existingMatch.groupId;
-                const existingGroupName = groupsMap.get(existingMatchGroupId);
+            // Funkcia na extrahovanie písmena základnej skupiny zo shortDisplayName (napr. "D" z "D1")
+            const getOriginalBasicGroupLetter = (shortDisplayName) => {
+                const match = shortDisplayName.match(/^([A-Z])\d+$/);
+                return match ? match[1] : null;
+            };
 
-                // Preskoč aktuálny upravovaný zápas
-                if (currentMatchId && docSnapshot.id === currentMatchId) {
-                    continue;
-                }
+            const team1OriginalBasicGroupLetter = getOriginalBasicGroupLetter(team1Result.shortDisplayName);
+            const team2OriginalBasicGroupLetter = getOriginalBasicGroupLetter(team2Result.shortDisplayName);
 
-                // Skontroluj, či existujúci zápas je v základnej skupine
-                if (isBasicGroup(existingGroupName)) {
-                    const existingTeam1Number = existingMatch.team1Number;
-                    const existingTeam2Number = existingMatch.team2Number;
+            console.log(`[matchForm] Tím 1 pôvodná základná skupina (písmeno): ${team1OriginalBasicGroupLetter}`);
+            console.log(`[matchForm] Tím 2 pôvodná základná skupina (písmeno): ${team2OriginalBasicGroupLetter}`);
 
-                    // Skontroluj, či tímy v existujúcom zápase sú rovnaké ako tímy v novom zápase (bez ohľadu na poradie)
-                    const teamsMatch = 
-                        (existingTeam1Number === team1Number && existingTeam2Number === team2Number) ||
-                        (existingTeam1Number === team2Number && existingTeam2Number === team1Number);
+            if (team1OriginalBasicGroupLetter && team2OriginalBasicGroupLetter && team1OriginalBasicGroupLetter === team2OriginalBasicGroupLetter) {
+                console.log(`[matchForm] Obidva tímy pochádzajú z rovnakej základnej skupiny (podľa písmena): ${team1OriginalBasicGroupLetter}.`);
 
-                    if (teamsMatch) {
-                        alreadyPlayedInBasicGroup = true;
-                        console.log(`[matchForm] Nájdený predchádzajúci zápas v základnej skupine (${existingGroupName}) medzi týmito tímami. Zápas ID: ${docSnapshot.id}`);
-                        break;
+                // Nájdi ID základnej skupiny zodpovedajúce písmenu pre danú kategóriu
+                const basicGroupData = groupsData.find(g => 
+                    isBasicGroup(g.groupType, g.name) && 
+                    g.name.toUpperCase().includes(team1OriginalBasicGroupLetter.toUpperCase())
+                );
+                const basicGroupId = basicGroupData ? basicGroupData.id : null;
+                const basicGroupName = basicGroupData ? basicGroupData.name : 'Neznáma základná skupina';
+
+                if (basicGroupId) {
+                    console.log(`[matchForm] Nájdené ID základnej skupiny pre písmeno ${team1OriginalBasicGroupLetter}: ${basicGroupId} (${basicGroupName})`);
+                    const basicGroupMatchesQuery = query(
+                        matchesCollectionRef,
+                        where("categoryId", "==", matchCategory),
+                        where("groupId", "==", basicGroupId) // Query specifically for the basic group
+                    );
+                    const basicGroupMatchesSnapshot = await getDocs(basicGroupMatchesQuery);
+
+                    let alreadyPlayedInBasicGroup = false;
+                    for (const docSnapshot of basicGroupMatchesSnapshot.docs) {
+                        const existingMatch = docSnapshot.data();
+                        // Preskoč aktuálny upravovaný zápas
+                        if (currentMatchId && docSnapshot.id === currentMatchId) {
+                            continue;
+                        }
+
+                        // Skontroluj, či existujúci zápas v základnej skupine zahŕňa rovnaké dva tímy (bez ohľadu na poradie)
+                        const teamsMatch = 
+                            (existingMatch.team1Number === team1Number && existingMatch.team2Number === team2Number) ||
+                            (existingMatch.team1Number === team2Number && existingMatch.team2Number === team1Number);
+
+                        if (teamsMatch) {
+                            alreadyPlayedInBasicGroup = true;
+                            console.log(`[matchForm] Nájdený predchádzajúci zápas v základnej skupine (${basicGroupName}) medzi týmito tímami. Zápas ID: ${docSnapshot.id}`);
+                            break;
+                        }
                     }
-                }
-            }
 
-            if (alreadyPlayedInBasicGroup) {
-                await showMessage('Chyba', `Tímy ${team1Result.fullDisplayName} a ${team2Result.fullDisplayName} už hrali proti sebe v základnej skupine. Nie je možné ich spárovať v nadstavbovej skupine.`);
-                console.warn("[matchForm] Tímy už hrali proti sebe v základnej skupine.");
-                return;
+                    if (alreadyPlayedInBasicGroup) {
+                        await showMessage('Chyba', `Tímy ${team1Result.fullDisplayName} a ${team2Result.fullDisplayName} už hrali proti sebe v základnej skupine ${basicGroupName}. Nie je možné ich spárovať v nadstavbovej skupine.`);
+                        console.warn("[matchForm] Tímy už hrali proti sebe v základnej skupine.");
+                        return;
+                    }
+                } else {
+                    console.warn(`[matchForm] Nepodarilo sa nájsť ID základnej skupiny pre písmeno: ${team1OriginalBasicGroupLetter}. Kontrola preskočená.`);
+                }
+            } else {
+                console.log("[matchForm] Tímy nepochádzajú z rovnakej základnej skupiny (podľa písmena), alebo sa nepodarilo určiť pôvodnú skupinu. Kontrola preskočená.");
             }
         }
         // --- KONIEC NOVEJ KONTROLY: Tímy už hrali proti sebe v základnej skupine ---
