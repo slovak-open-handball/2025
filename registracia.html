@@ -93,7 +93,8 @@
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
-        <form id="registrationForm" action="https://formspree.io/f/xpwrgywn" method="POST">
+        <!-- Odstránili sme action a method, pretože formulár bude spracovaný JavaScriptom -->
+        <form id="registrationForm">
             <div class="form-group">
                 <label for="email">E-mailová adresa:</label>
                 <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required>
@@ -103,11 +104,10 @@
                 <textarea id="teamInfo" name="message" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
             </div>
 
-            <!-- DÔLEŽITÉ: Toto je skryté pole pre presmerovanie Formspree -->
-            <!-- Nahraďte hodnotu URL adresou stránky, na ktorú chcete presmerovať -->
-            <input type="hidden" name="_next" value="https://slovak-open-handball.github.io/2025/index.html" />
+            <!-- Skryté pole _next už nie je potrebné, ak presmerovanie riadi JS -->
+            <!-- <input type="hidden" name="_next" value="https://slovak-open-handball.github.io/2025/index.html" /> -->
 
-            <button type="submit">
+            <button type="submit" id="submitButton">
                 <i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu
             </button>
             <div id="message" class="message hidden"></div>
@@ -115,11 +115,6 @@
     </div>
 
     <!-- Link na JavaScript súbor -->
-    <!-- POZNÁMKA: Ak používate Formspree, váš registracia.js už nebude ukladať dáta do Firebase. -->
-    <!-- Ak chcete ukladať dáta do Firebase AJ odosielať e-maily cez Formspree, budete potrebovať dve samostatné akcie formulára, -->
-    <!-- alebo použiť JavaScript na odoslanie dát do Firebase a potom presmerovanie. -->
-    <!-- Pre jednoduchosť s Formspree, odstránil som odkaz na registracia.js, ak by ste sa spoliehali len na Formspree. -->
-    <!-- Ak chcete zachovať ukladanie do Firebase, dajte mi vedieť. -->
-    <!-- <script type="module" src="registracia.js"></script> -->
+    <script type="module" src="registracia.js"></script>
 </body>
 </html>
