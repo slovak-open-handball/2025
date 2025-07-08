@@ -93,19 +93,17 @@
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
-        <!-- Odstránili sme action a method, pretože formulár bude spracovaný JavaScriptom -->
+        <!-- Ak používate JS na odosielanie, action a method nie sú potrebné -->
         <form id="registrationForm">
             <div class="form-group">
                 <label for="email">E-mailová adresa:</label>
-                <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required>
+                <!-- Pridané name="_replyto" pre Formspree -->
+                <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required name="_replyto">
             </div>
             <div class="form-group">
                 <label for="teamInfo">Informácie o tíme (názov tímu, kategória, atď.):</label>
                 <textarea id="teamInfo" name="message" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
             </div>
-
-            <!-- Skryté pole _next už nie je potrebné, ak presmerovanie riadi JS -->
-            <!-- <input type="hidden" name="_next" value="https://slovak-open-handball.github.io/2025/index.html" /> -->
 
             <button type="submit" id="submitButton">
                 <i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu
