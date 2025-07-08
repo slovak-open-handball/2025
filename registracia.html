@@ -88,21 +88,29 @@
             color: #991b1b; /* Tmavocervený text */
             border: 1px solid #ef4444;
         }
+        .message.info {
+            background-color: #e0f2fe; /* Svetlomodré pozadie */
+            color: #0c4a6e; /* Tmavomodrý text */
+            border: 1px solid #38bdf8;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
-        <!-- Ak používate JS na odosielanie, action a method nie sú potrebné -->
         <form id="registrationForm">
             <div class="form-group">
+                <label for="meno">Meno (kontaktnej osoby alebo tímu):</label>
+                <input type="text" id="meno" name="meno" placeholder="zadajte vaše meno alebo názov tímu" required>
+            </div>
+            <div class="form-group">
                 <label for="email">E-mailová adresa:</label>
-                <!-- Názov poľa je opäť len "email" -->
                 <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required>
             </div>
             <div class="form-group">
                 <label for="teamInfo">Informácie o tíme (názov tímu, kategória, atď.):</label>
-                <textarea id="teamInfo" name="message" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
+                <!-- ZMENA: name="message" na name="sprava" -->
+                <textarea id="teamInfo" name="sprava" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
             </div>
 
             <button type="submit" id="submitButton">
