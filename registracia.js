@@ -1,5 +1,6 @@
-// Konfigurácia pre Formspree
-const FORMSPREE_FORM_URL = "https://formspree.io/f/xpwrgywn";
+// Konfigurácia pre Google Apps Script
+// NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz3Z6AqDcVY5xwsnHEl9VSlhXDuepf9lw0wT_j6-6NqXtPPbVJp_XHaSWMmBg-I2eyZtA/exec"; // Vložte sem vašu skopírovanú URL
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,17 +18,23 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Odosielam...', 'info'); // Zobrazí správu o odosielaní
 
             const formData = new FormData(registrationForm);
+            // Pre Google Apps Script je lepšie posielať dáta ako URL-encoded form data
+            // alebo ako JSON, ale pre jednoduchosť použijeme FormData a fetch API
+            // ktoré to spracuje správne pre doPost.
 
             try {
-                const response = await fetch(FORMSPREE_FORM_URL, {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json' // Dôležité pre získanie JSON odpovede od Formspree
-                    }
+                    body: formData, // FormData sa automaticky spracuje ako multipart/form-data
+                    // Ak by ste chceli posielať JSON, museli by ste to prekonvertovať:
+                    // body: JSON.stringify(Object.fromEntries(formData)),
+                    // headers: { 'Content-Type': 'application/json' }
                 });
 
-                if (response.ok) {
+                // Odpoveď z Google Apps Script je textová, musíme ju parsovať ako JSON
+                const result = await response.json();
+
+                if (result.status === "success") {
                     // Formulár bol úspešne odoslaný
                     showMessage('Úspešné odoslanie! Presmerovávam...', 'success');
                     // Presmerovanie na vašu vlastnú stránku po krátkej pauze
@@ -36,10 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 2000); // Presmeruje po 2 sekundách
                 } else {
                     // Chyba pri odosielaní formulára
-                    const data = await response.json();
                     let errorMessage = 'Nastala chyba pri odosielaní formulára.';
-                    if (data.errors && data.errors.length > 0) {
-                        errorMessage += ' ' + data.errors.map(err => err.message).join(', ');
+                    if (result.message) {
+                        errorMessage += ' ' + result.message;
                     }
                     showMessage(errorMessage, 'error');
                     submitButton.disabled = false;
