@@ -1,1 +1,115 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrácia tímu na turnaj</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Tailwind CSS CDN pre jednoduché štýlovanie -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome pre ikony -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Svetlošedé pozadie */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff; /* Biele pozadie pre formulár */
+            padding: 2.5rem; /* Väčší padding */
+            border-radius: 1rem; /* Zaoblené rohy */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Jemný tieň */
+            width: 100%;
+            max-width: 28rem; /* Maximálna šírka pre lepšiu čitateľnosť */
+            box-sizing: border-box; /* Zahrnie padding do šírky */
+        }
+        .form-group {
+            margin-bottom: 1.5rem; /* Väčší spodný okraj pre skupiny formulárov */
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600; /* Polotučné písmo pre popisky */
+            color: #374151; /* Tmavšia farba textu */
+        }
+        input[type="email"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
+            border: 1px solid #d1d5db; /* Svetlejší okraj */
+            border-radius: 0.5rem; /* Zaoblené rohy */
+            font-size: 1rem;
+            color: #4b5563; /* Farba textu vo vstupných poliach */
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        input[type="email"]:focus,
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #2563eb; /* Modrý okraj pri fokuse */
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); /* Jemný modrý tieň pri fokuse */
+        }
+        button {
+            width: 100%;
+            padding: 0.85rem 1.25rem; /* Väčší padding pre tlačidlo */
+            background-color: #2563eb; /* Modré pozadie */
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.1rem; /* Väčšia veľkosť písma */
+            font-weight: 700; /* Tučné písmo */
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        button:hover {
+            background-color: #1d4ed8; /* Tmavší odtieň modrej pri hoveri */
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); /* Väčší tieň pri hoveri */
+        }
+        .message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+        }
+        .message.success {
+            background-color: #d1fae5; /* Svetlozelené pozadie */
+            color: #065f46; /* Tmavozelený text */
+            border: 1px solid #34d399;
+        }
+        .message.error {
+            background-color: #fee2e2; /* Svetločervené pozadie */
+            color: #991b1b; /* Tmavocervený text */
+            border: 1px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="email">E-mailová adresa:</label>
+                <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required>
+            </div>
+            <div class="form-group">
+                <label for="teamInfo">Informácie o tíme (názov tímu, kategória, atď.):</label>
+                <textarea id="teamInfo" name="teamInfo" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
+            </div>
+            <button type="submit">
+                <i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu
+            </button>
+            <div id="message" class="message hidden"></div>
+        </form>
+    </div>
 
+    <!-- Link na JavaScript súbor -->
+    <script type="module" src="registracia.js"></script>
+</body>
+</html>
