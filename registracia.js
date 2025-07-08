@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykef4qqy5YPQrGJFCNlOfS1aKSmyprS359lxgiCm3KXfN7n5F4JhuRKNkv6vARdeGk/exec"; // Vložte sem vašu skopírovanú URL
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBcPuk0aUpU5GunK7xzgAoSFz7zvwnpnUykZnbV4nLK95wKp8mAhAy1EBQsjdyRaYW/exec"; // Vložte sem vašu skopírovanú URL
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 // Firebase imports
@@ -8,10 +8,22 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js';
 
+// ** EXPLICITNÁ FIREBASE KONFIGURÁCIA **
+// Táto konfigurácia je teraz priamo v kóde.
+const firebaseConfig = {
+    apiKey: "AIzaSyD0h0rQZiIGi0-UDb4-YU_JihRGpIlfz40",
+    authDomain: "turnaj-a28c5.firebaseapp.com",
+    projectId: "turnaj-a28c5",
+    storageBucket: "turnaj-a28c5.firebasestorage.app",
+    messagingSenderId: "13732191148",
+    appId: "1:13732191148:web:5ad78eaef2ad452a10f809"
+};
+
 let db;
 let auth;
 let currentUserId = null;
 let isAuthReady = false; // Flag to indicate if auth state is ready
+let firebaseInitialized = false; // Flag pre úspešnú inicializáciu Firebase
 
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
@@ -19,38 +31,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitButton = document.getElementById('submitButton');
     const userIdDisplay = document.getElementById('userIdDisplay');
 
+    // Používame appId z poskytnutej konfigurácie
+    const appId = firebaseConfig.appId;
+
     // Firebase Initialization
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            firebaseInitialized = true; // Firebase je úspešne inicializované
 
-    if (Object.keys(firebaseConfig).length > 0) {
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUserId = user.uid;
-                userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
-                userIdDisplay.classList.remove('hidden');
-            } else {
-                // Sign in anonymously if no custom token is provided
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (error) {
-                        console.error("Error signing in with custom token:", error);
-                        await signInAnonymously(auth); // Fallback to anonymous
-                    }
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
+                    userIdDisplay.classList.remove('hidden');
                 } else {
-                    await signInAnonymously(auth);
+                    // Prihlásenie anonymne, ak nie je k dispozícii vlastný token
+                    // V tomto scenári (s explicitnou konfiguráciou) sa __initial_auth_token
+                    // pravdepodobne nebude používať, ak aplikácia beží mimo Canvas.
+                    // Ak by sa používala v Canvas, token by bol poskytnutý.
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        try {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
+                            userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
+                            userIdDisplay.classList.remove('hidden');
+                        } catch (error) {
+                            console.error("Chyba pri prihlasovaní s vlastným tokenom:", error);
+                            await signInAnonymously(auth); // Fallback na anonymné
+                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
+                            userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
+                            userIdDisplay.classList.remove('hidden');
+                        }
+                    } else {
+                        await signInAnonymously(auth);
+                        currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
+                        userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
+                        userIdDisplay.classList.remove('hidden');
+                    }
                 }
-            }
-            isAuthReady = true; // Auth state is now ready
-        });
+                isAuthReady = true; // Stav autentifikácie je pripravený
+            });
+        } catch (error) {
+            console.error("Chyba pri inicializácii Firebase:", error);
+            showMessage('Chyba: Firebase sa nepodarilo inicializovať. Registrácia do databázy nebude fungovať.', 'error');
+            firebaseInitialized = false;
+        }
     } else {
-        console.error("Firebase config not found. Database functionality will be disabled.");
-        showMessage('Chyba: Firebase konfigurácia chýba. Registrácia do databázy nebude fungovať.', 'error');
+        // Tento blok by sa teraz nemal spustiť, pretože firebaseConfig je definovaná
+        console.warn("Firebase konfigurácia nebola nájdená (neočakávaná chyba). Funkcionalita databázy bude vypnutá.");
+        showMessage('Upozornenie: Firebase konfigurácia chýba. Registrácia do databázy nebude fungovať.', 'info');
+        firebaseInitialized = false;
     }
 
     if (registrationForm) {
@@ -94,8 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Uloženie dát do Firestore
-            if (db && isAuthReady && currentUserId) {
+            // Vykonajte ukladanie do DB len ak je Firebase inicializované a autentifikácia je pripravená
+            if (firebaseInitialized && db && isAuthReady && currentUserId) {
                 try {
+                    // Cesta k dátam: /artifacts/{appId}/public/data/registrations/{documentId}
                     const registrationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'registrations');
                     await addDoc(registrationsCollectionRef, registrationData);
                     dbSuccess = true;
@@ -105,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     dbMessage = `Chyba pri ukladaní dát do databázy: ${error.message}`;
                 }
             } else {
-                dbMessage = 'Databáza nie je inicializovaná alebo používateľ nie je prihlásený.';
+                dbMessage = 'Dáta neboli uložené do databázy (Firebase nie je inicializované alebo používateľ nie je prihlásený).';
                 console.warn(dbMessage);
             }
 
