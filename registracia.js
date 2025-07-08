@@ -18,23 +18,17 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Odosielam...', 'info'); // Zobrazí správu o odosielaní
 
             const formData = new FormData(registrationForm);
-            // Pre Google Apps Script je lepšie posielať dáta ako URL-encoded form data
-            // alebo ako JSON, ale pre jednoduchosť použijeme FormData a fetch API
-            // ktoré to spracuje správne pre doPost.
-
+            
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
                     body: formData, // FormData sa automaticky spracuje ako multipart/form-data
-                    // Ak by ste chceli posielať JSON, museli by ste to prekonvertovať:
-                    // body: JSON.stringify(Object.fromEntries(formData)),
-                    // headers: { 'Content-Type': 'application/json' }
                 });
 
                 // Odpoveď z Google Apps Script je textová, musíme ju parsovať ako JSON
                 const result = await response.json();
 
-                if (result.status === "success") {
+                if (result.success) { // ZMENA: Kontrolujeme result.success
                     // Formulár bol úspešne odoslaný
                     showMessage('Úspešné odoslanie! Presmerovávam...', 'success');
                     // Presmerovanie na vašu vlastnú stránku po krátkej pauze
