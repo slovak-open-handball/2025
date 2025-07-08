@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyAOMdnSBBijJ21mO5gRg0FrdDo7Bp0VRWQdrVffIsKPwpb_PpwQo5JIPVl1jrPrdw/exec"; // Vložte sem vašu skopírovanú URL
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNbD8Bt797YjuHP-i-R-DHFRlB1YnlUwq5eVA4FZXFD51ZUX70H7YWZ7Q8vUM_Gw3x/exec"; // Vložte sem vašu skopírovanú URL
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 document.addEventListener('DOMContentLoaded', () => {
