@@ -93,6 +93,13 @@
             color: #0c4a6e; /* Tmavomodrý text */
             border: 1px solid #38bdf8;
         }
+        .user-id-display {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #6b7280;
+            text-align: center;
+            word-break: break-all; /* Ensures long IDs wrap */
+        }
     </style>
 </head>
 <body>
@@ -109,7 +116,6 @@
             </div>
             <div class="form-group">
                 <label for="teamInfo">Informácie o tíme (názov tímu, kategória, atď.):</label>
-                <!-- ZMENA: name="message" na name="sprava" -->
                 <textarea id="teamInfo" name="sprava" rows="4" placeholder="zadajte názov tímu, kategóriu, mená hráčov, atď." required></textarea>
             </div>
 
@@ -118,6 +124,7 @@
             </button>
             <div id="message" class="message hidden"></div>
         </form>
+        <div id="userIdDisplay" class="user-id-display hidden"></div>
     </div>
 
     <!-- Link na JavaScript súbor -->
