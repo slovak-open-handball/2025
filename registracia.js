@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzNbD8Bt797YjuHP-i-R-DHFRlB1YnlUwq5eVA4FZXFD51ZUX70H7YWZ7Q8vUM_Gw3x/exec"; // Vložte sem vašu skopírovanú URL
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzMosQh59Yuy_miDMk-0EA9e_-X5046ENC5noDsJYNhNcqf8tSTUn1GPmfkvhCx-c4p/exec"; // Vložte sem vašu skopírovanú URL
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Zobrazí načítavanie
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Odosielam...';
-            showMessage('Odosielam...', 'info'); // Zobrazí správu o odosielaní
+            showMessage('Odosielam registráciu...', 'info'); // Zobrazí správu o odosielaní
 
             const formData = new FormData(registrationForm);
             
@@ -28,16 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Odpoveď z Google Apps Script je textová, musíme ju parsovať ako JSON
                 const result = await response.json();
 
-                if (result.success) { // ZMENA: Kontrolujeme result.success
+                if (result.success) { 
                     // Formulár bol úspešne odoslaný
-                    showMessage('Úspešné odoslanie! Presmerovávam...', 'success');
+                    showMessage('Registrácia bola úspešne odoslaná! Presmerovávam...', 'success'); // ZMENA: Jasná úspešná správa
                     // Presmerovanie na vašu vlastnú stránku po krátkej pauze
                     setTimeout(() => {
                         window.location.href = REDIRECT_URL;
                     }, 2000); // Presmeruje po 2 sekundách
                 } else {
                     // Chyba pri odosielaní formulára
-                    let errorMessage = 'Nastala chyba pri odosielaní formulára.';
+                    let errorMessage = 'Nastala chyba pri odosielaní registrácie.'; // ZMENA: Jasná chybová správa
                     if (result.message) {
                         errorMessage += ' ' + result.message;
                     }
