@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBcPuk0aUpU5GunK7xzgAoSFz7zvwnpnUykZnbV4nLK95wKp8mAhAy1EBQsjdyRaYW/exec"; // Vložte sem vašu skopírovanú URL
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyAOMdnSBBijJ21mO5gRg0FrdDo7Bp0VRWQdrVffIsKPwpb_PpwQo5JIPVl1jrPrdw/exec"; // Vložte sem vašu skopírovanú URL
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 // Firebase imports
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
-    const userIdDisplay = document.getElementById('userIdDisplay');
+    // userIdDisplay bol odstránený, pretože ho už nebudeme zobrazovať
 
     // Používame appId z poskytnutej konfigurácie
     const appId = firebaseConfig.appId;
@@ -45,31 +45,20 @@ document.addEventListener('DOMContentLoaded', () => {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUserId = user.uid;
-                    userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
-                    userIdDisplay.classList.remove('hidden');
+                    // userIdDisplay.textContent a .classList.remove('hidden') boli odstránené
                 } else {
-                    // Prihlásenie anonymne, ak nie je k dispozícii vlastný token
-                    // V tomto scenári (s explicitnou konfiguráciou) sa __initial_auth_token
-                    // pravdepodobne nebude používať, ak aplikácia beží mimo Canvas.
-                    // Ak by sa používala v Canvas, token by bol poskytnutý.
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try {
                             await signInWithCustomToken(auth, __initial_auth_token);
-                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
-                            userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
-                            userIdDisplay.classList.remove('hidden');
+                            currentUserId = auth.currentUser?.uid;
                         } catch (error) {
                             console.error("Chyba pri prihlasovaní s vlastným tokenom:", error);
-                            await signInAnonymously(auth); // Fallback na anonymné
-                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
-                            userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
-                            userIdDisplay.classList.remove('hidden');
+                            await signInAnonymously(auth);
+                            currentUserId = auth.currentUser?.uid;
                         }
                     } else {
                         await signInAnonymously(auth);
-                        currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
-                        userIdDisplay.textContent = `Váš ID používateľa: ${currentUserId}`;
-                        userIdDisplay.classList.remove('hidden');
+                        currentUserId = auth.currentUser?.uid;
                     }
                 }
                 isAuthReady = true; // Stav autentifikácie je pripravený
@@ -80,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
             firebaseInitialized = false;
         }
     } else {
-        // Tento blok by sa teraz nemal spustiť, pretože firebaseConfig je definovaná
         console.warn("Firebase konfigurácia nebola nájdená (neočakávaná chyba). Funkcionalita databázy bude vypnutá.");
         showMessage('Upozornenie: Firebase konfigurácia chýba. Registrácia do databázy nebude fungovať.', 'info');
         firebaseInitialized = false;
