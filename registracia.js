@@ -3,8 +3,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
 
+    // Získanie referencií na input polia pre validáciu
+    const icoInput = document.getElementById('ico');
+    const dicInput = document.getElementById('dic');
+    const icDphInput = document.getElementById('icDph');
+    const zipCodeInput = document.getElementById('zipCode');
+    const phoneInput = document.getElementById('contactPersonPhone');
+
+    // Funkcia na zobrazenie správy
+    function showMessage(message, type) {
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${type}`; // Nastaví triedu pre štýlovanie (success, error, info)
+        messageDiv.classList.remove('hidden'); // Zobrazí správu
+        // Skryje správu po 5 sekundách, ak nie je chyba
+        if (type !== 'error') {
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 5000);
+        }
+    }
+
+    // Funkcia na validáciu IČO a DIČ (len čísla)
+    function validateNumericInput(event) {
+        const input = event.target;
+        // Odstráni všetky znaky, ktoré nie sú čísla
+        input.value = input.value.replace(/[^0-9]/g, '');
+    }
+
+    // Funkcia na validáciu PSČ (len čísla, 5 znakov)
+    function validateZipCodeInput(event) {
+        const input = event.target;
+        // Odstráni všetky znaky, ktoré nie sú čísla
+        input.value = input.value.replace(/[^0-9]/g, '');
+        // Obmedzí dĺžku na 5 znakov
+        if (input.value.length > 5) {
+            input.value = input.value.slice(0, 5);
+        }
+    }
+
+    // Funkcia na validáciu IČ DPH (2 písmená, 10 číslic)
+    function validateIcDphInput(event) {
+        const input = event.target;
+        let value = input.value;
+
+        // Obmedzí celkovú dĺžku na 12 znakov
+        if (value.length > 12) {
+            value = value.slice(0, 12);
+        }
+
+        // Ak sú prvé dva znaky, povolí len písmená
+        if (value.length <= 2) {
+            input.value = value.replace(/[^A-Za-z]/g, '').toUpperCase(); // Len písmená, premení na veľké
+        } else {
+            // Pre zvyšných 10 znakov povolí len čísla
+            const prefix = value.substring(0, 2).replace(/[^A-Za-z]/g, '').toUpperCase();
+            const suffix = value.substring(2).replace(/[^0-9]/g, '');
+            input.value = prefix + suffix;
+        }
+    }
+
+    // Funkcia na validáciu telefónneho čísla
+    function validatePhoneInput(event) {
+        const input = event.target;
+        // Povolí čísla, medzery, +, - a zátvorky
+        input.value = input.value.replace(/[^0-9\s\+\-()]/g, '');
+    }
+
+
+    // Pridanie event listenerov pre real-time validáciu
+    icoInput.addEventListener('input', validateNumericInput);
+    dicInput.addEventListener('input', validateNumericInput);
+    zipCodeInput.addEventListener('input', validateZipCodeInput);
+    icDphInput.addEventListener('input', validateIcDphInput);
+    phoneInput.addEventListener('input', validatePhoneInput);
+
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault(); // Zabráni predvolenému odoslaniu formulára
+
+        // Dodatočná validácia pred odoslaním, ak by HTML pattern zlyhal alebo bol obídený
+        if (!form.checkValidity()) {
+            showMessage('Prosím, vyplňte všetky povinné polia správne.', 'error');
+            return; // Zastaví odosielanie, ak formulár nie je validný
+        }
 
         // Zobrazí správu o načítavaní
         showMessage('Odosielam registráciu...', 'info');
@@ -14,28 +95,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = {
             officialClubName: document.getElementById('officialClubName').value,
             billingName: document.getElementById('billingName').value,
-            ico: document.getElementById('ico').value,
-            dic: document.getElementById('dic').value,
-            icDph: document.getElementById('icDph').value,
-            // Zmeny tu: Zbierame 4 samostatné polia pre adresu
+            ico: icoInput.value, // Používame už validované hodnoty
+            dic: dicInput.value,
+            icDph: icDphInput.value,
             street: document.getElementById('street').value,
             houseNumber: document.getElementById('houseNumber').value,
             city: document.getElementById('city').value,
-            zipCode: document.getElementById('zipCode').value,
+            zipCode: zipCodeInput.value,
             contactPersonFirstName: document.getElementById('contactPersonFirstName').value,
             contactPersonLastName: document.getElementById('contactPersonLastName').value,
-            contactPersonPhone: document.getElementById('contactPersonPhone').value,
+            contactPersonPhone: phoneInput.value,
             contactPersonEmail: document.getElementById('contactPersonEmail').value,
             sprava: document.getElementById('sprava').value
         };
 
-        // Tu by ste normálne odoslali dáta na server/Google Apps Script
-        // Pre účely demonštrácie simulujeme odosielanie
         try {
-            // Predpokladáme, že Google Apps Script URL je definované niekde inde
-            // Napr. const GOOGLE_APPS_SCRIPT_URL = 'VAŠA_URL_GOOGLE_APPS_SCRIPT';
-            // Ak nemáte skutočnú URL, táto časť zlyhá, ale ukazuje, ako by to fungovalo
-            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynIBZv_hwIdU0ENt1nhlG72giaPxdE5LStnJNQXUXIVWm3HduMPyNc6jX8khvgAlU1/exec'; // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL
+            // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL Google Apps Scriptu
+            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynIBZv_hwIdU0ENt1nhlG72giaPxdE5LStnJNQXUXIVWm3HduMPyNc6jX8khvgAlU1/exec';
 
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
@@ -57,16 +133,4 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.disabled = false; // Odomkne tlačidlo po dokončení
         }
     });
-
-    function showMessage(message, type) {
-        messageDiv.textContent = message;
-        messageDiv.className = `message ${type}`; // Nastaví triedu pre štýlovanie (success, error, info)
-        messageDiv.classList.remove('hidden'); // Zobrazí správu
-        // Skryje správu po 5 sekundách, ak nie je chyba
-        if (type !== 'error') {
-            setTimeout(() => {
-                messageDiv.classList.add('hidden');
-            }, 5000);
-        }
-    }
 });
