@@ -26,15 +26,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="mb-4 md:mb-0">
                     <label for="ico" class="block text-gray-700 text-sm font-bold mb-2">IČO:</label>
-                    <input type="text" id="icoInput" name="company.ico" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="IČO (8 číslic)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="icoInput" name="company.ico" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div class="mb-4 md:mb-0">
                     <label for="dic" class="block text-gray-700 text-sm font-bold mb-2">DIČ:</label>
-                    <input type="text" id="dicInput" name="company.dic" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="DIČ (10 číslic)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="dicInput" name="company.dic" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div class="mb-4 md:mb-0">
                     <label for="icDph" class="block text-gray-700 text-sm font-bold mb-2">IČ DPH (ak ste platca):</label>
-                    <input type="text" id="icDPHInput" name="company.icDPH" pattern="[A-Z]{2}[0-9]{10}" maxlength="12" placeholder="IČ DPH (napr. SK1234567890)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="icDPHInput" name="company.icDPH" pattern="[A-Z]{2}[0-9]{10}" maxlength="12" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
 
@@ -46,7 +46,7 @@
                 </div>
                 <div class="mb-4 md:mb-0">
                     <label for="houseNumber" class="block text-gray-700 text-sm font-bold mb-2">Číslo domu:</label>
-                    <input type="text" id="houseNumberInput" name="address.houseNumber" pattern="[0-9/]*" placeholder="Číslo domu (napr. 123/A)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="houseNumberInput" name="address.houseNumber" pattern="[0-9/]*" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,7 +56,7 @@
                 </div>
                 <div class="mb-4 md:mb-0">
                     <label for="zipCode" class="block text-gray-700 text-sm font-bold mb-2">PSČ:</label>
-                    <input type="text" id="pscInput" name="address.psc" inputmode="numeric" pattern="[0-9]{3} [0-9]{2}" maxlength="6" placeholder="PSČ (napr. 841 01)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="pscInput" name="address.psc" inputmode="numeric" pattern="[0-9]{3} [0-9]{2}" maxlength="6" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
 
@@ -73,17 +73,18 @@
             </div>
 
             <div class="mb-4">
-                <label for="contactPersonPhone" class="block text-gray-700 text-sm font-bold mb-2">Telefón:</label>
+                <label for="contactPersonPhone" class="block text-gray-700 text-sm font-bold mb-2">Predvoľba:</label>
                 <div class="flex">
-                    <select id="phonePrefix" name="contactPerson.phonePrefix" class="shadow appearance-none border rounded-l py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline rounded-l-md w-1/2 md:w-1/3 max-w-[450px]">
-                        </select>
-                    <input type="text" id="phoneNumberInput" name="contactPerson.phone" inputmode="tel" pattern="[0-9]{3} [0-9]{3} [0-9]{3}" maxlength="11" placeholder="Telefónne číslo (napr. 900 123 456)" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="phonePrefix" class="block text-sm font-medium text-gray-700">Predvoľba</label>
+                    <select id="phonePrefix" name="contactPerson.phonePrefix" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    <label for="phoneNumberInput" class="block text-sm font-medium text-gray-700">Telefónne číslo bez predvoľby</label>
+                    <input type="text" id="phoneNumberInput" name="contactPerson.phone" inputmode="tel" pattern="[0-9]{3} [0-9]{3} [0-9]{3}" maxlength="11" placeholder="Telefónne číslo (napr. 900 123 456)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
 
             <div class="mb-4">
                 <label for="contactPersonEmail" class="block text-gray-700 text-sm font-bold mb-2">E-mail:</label>
-                <input type="email" id="emailInput" name="contactPerson.email" placeholder="E-mail" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="email" id="emailInput" name="contactPerson.email" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
 
             <div class="mb-6">
