@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = formattedValue;
     }
 
-    // NOVÁ Funkcia na validáciu a formátovanie telefónneho čísla (flexibilné medzinárodné)
+    // Opravená Funkcia na validáciu a formátovanie telefónneho čísla (flexibilné medzinárodné)
     function validatePhoneInput(event) {
         const input = event.target;
         let value = input.value;
@@ -117,12 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 digits = '9'; // Ak ešte nie sú žiadne číslice, pridá '9'
             }
 
-            // Formátovanie: +421 9xxx xxx xxx
+            // Formátovanie: +421 9xx xxx xxx
             formattedValue = '+421';
             if (digits.length > 0) formattedValue += ' ' + digits.substring(0, 1); // '9'
-            if (digits.length > 1) formattedValue += digits.substring(1, 4);
-            if (digits.length > 4) formattedValue += ' ' + digits.substring(4, 7);
-            if (digits.length > 7) formattedValue += ' ' + digits.substring(7, 10);
+            if (digits.length > 1) formattedValue += digits.substring(1, 4); // Prvá skupina 3 číslic (napr. 055)
+            if (digits.length > 4) formattedValue += ' ' + digits.substring(4, 7); // Druhá skupina 3 číslic (napr. 154)
+            if (digits.length > 7) formattedValue += ' ' + digits.substring(7, 10); // Tretia skupina 3 číslic (napr. 822)
 
             // Obmedzenie na 17 znakov (+421 9xxx xxx xxx)
             if (formattedValue.length > 17) {
@@ -151,10 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             formattedValue = '+';
             // Jednoduché formátovanie po 3-4 čísliciach pre medzinárodné čísla
+            // Snažíme sa o skupiny po troch, ale ak to nie je možné, prispôsobíme sa
             for (let i = 0; i < digits.length; i++) {
                 formattedValue += digits[i];
                 // Pridá medzeru po každých 3 čísliciach, ale nie na konci a nie po príliš dlhom čísle
-                if ((i + 1) % 3 === 0 && i + 1 !== digits.length && i < 12) {
+                if ((i + 1) % 3 === 0 && i + 1 !== digits.length && i < 15) { // Zvýšený limit pre medzery
                     formattedValue += ' ';
                 }
             }
@@ -216,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL Google Apps Scriptu
-            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEPiUWYz_IhAqnqBMgmlg-yznD-4NVzsi27GfHpg35HuqrXXSUaV4uRFxYvZT_u_22/exec';
+            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
