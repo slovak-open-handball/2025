@@ -82,71 +82,96 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = formattedValue;
     }
 
-    // NOVÁ Funkcia na validáciu a formátovanie telefónneho čísla (+421 9xxx xxx xxx)
+    // NOVÁ Funkcia na validáciu a formátovanie telefónneho čísla (flexibilné medzinárodné)
     function validatePhoneInput(event) {
         const input = event.target;
         let value = input.value;
+        let formattedValue = '';
 
         // 1. Odstráni všetky znaky, ktoré nie sú číslice, okrem '+' na začiatku
         let cleanedValue = value.replace(/[^0-9+]/g, '');
 
         // Zabezpečí, že '+' je len na začiatku
         if (cleanedValue.indexOf('+') > 0) {
-            cleanedValue = cleanedValue.replace(/\+/g, ''); // Odstráni všetky '+'
-            if (value.startsWith('+')) { // Ak pôvodná hodnota začínala s '+', pridá ho späť
+            cleanedValue = cleanedValue.replace(/\+/g, '');
+            if (value.startsWith('+')) {
                 cleanedValue = '+' + cleanedValue;
             }
         }
 
-        const requiredPrefix = '+421';
-        let currentDigits = '';
+        // Ak je hodnota príliš krátka na spracovanie, vráti vyčistenú hodnotu
+        if (cleanedValue.length < 1) {
+            input.value = cleanedValue;
+            return;
+        }
 
-        // 2. Zabezpečí, že hodnota začína s '+421'
-        if (!cleanedValue.startsWith(requiredPrefix)) {
-            // Ak začína s '+', ale nie '+421', pokúsi sa to opraviť
-            if (cleanedValue.startsWith('+')) {
-                currentDigits = cleanedValue.substring(1).replace(/^421/, ''); // Odstráni akékoľvek čiastočné '421'
-                cleanedValue = requiredPrefix + currentDigits;
-            } else {
-                cleanedValue = requiredPrefix + cleanedValue;
+        // Ak začína na '+421'
+        if (cleanedValue.startsWith('+421')) {
+            let digits = cleanedValue.substring(4); // Číslice po '+421'
+            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
+
+            // Vynúti '9' ako prvú číslicu po +421, ak je dostatok číslic
+            if (digits.length > 0 && digits[0] !== '9') {
+                digits = '9' + digits.substring(1);
+            } else if (digits.length === 0) {
+                digits = '9'; // Ak ešte nie sú žiadne číslice, pridá '9'
+            }
+
+            // Formátovanie: +421 9xxx xxx xxx
+            formattedValue = '+421';
+            if (digits.length > 0) formattedValue += ' ' + digits.substring(0, 1); // '9'
+            if (digits.length > 1) formattedValue += digits.substring(1, 4);
+            if (digits.length > 4) formattedValue += ' ' + digits.substring(4, 7);
+            if (digits.length > 7) formattedValue += ' ' + digits.substring(7, 10);
+
+            // Obmedzenie na 17 znakov (+421 9xxx xxx xxx)
+            if (formattedValue.length > 17) {
+                formattedValue = formattedValue.slice(0, 17);
+            }
+
+        } else if (cleanedValue.startsWith('+420')) {
+            let digits = cleanedValue.substring(4); // Číslice po '+420'
+            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
+
+            // Formátovanie: +420 xxx xxx xxx
+            formattedValue = '+420';
+            if (digits.length > 0) formattedValue += ' ' + digits.substring(0, 3);
+            if (digits.length > 3) formattedValue += ' ' + digits.substring(3, 6);
+            if (digits.length > 6) formattedValue += ' ' + digits.substring(6, 9);
+
+            // Obmedzenie na 16 znakov (+420 xxx xxx xxx)
+            if (formattedValue.length > 16) {
+                formattedValue = formattedValue.slice(0, 16);
+            }
+
+        } else if (cleanedValue.startsWith('+')) {
+            // Pre iné medzinárodné predvoľby: len čísla a '+' na začiatku, s jednoduchým formátovaním
+            let digits = cleanedValue.substring(1); // Číslice po '+'
+            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
+
+            formattedValue = '+';
+            // Jednoduché formátovanie po 3-4 čísliciach pre medzinárodné čísla
+            for (let i = 0; i < digits.length; i++) {
+                formattedValue += digits[i];
+                // Pridá medzeru po každých 3 čísliciach, ale nie na konci a nie po príliš dlhom čísle
+                if ((i + 1) % 3 === 0 && i + 1 !== digits.length && i < 12) {
+                    formattedValue += ' ';
+                }
+            }
+            // Obmedzenie na max 25 znakov pre všeobecné medzinárodné čísla
+            if (formattedValue.length > 25) {
+                formattedValue = formattedValue.slice(0, 25);
+            }
+        } else {
+            // Ak nezačína na '+', len odstráni nečíselné znaky
+            formattedValue = cleanedValue.replace(/[^0-9]/g, '');
+            // Ak užívateľ zadá čísla bez +, necháme ich tak.
+            // Validáciu formátu (+ predvoľba) zabezpečí HTML pattern pri odoslaní.
+            if (formattedValue.length > 25) { // Obmedzenie dĺžky aj pre neformátované čísla
+                formattedValue = formattedValue.slice(0, 25);
             }
         }
-
-        // 3. Extrahovanie číslic po '+421'
-        currentDigits = cleanedValue.substring(requiredPrefix.length).replace(/[^0-9]/g, '');
-
-        // 4. Zabezpečí, že prvá číslica po '+421' je '9'
-        if (currentDigits.length === 0) {
-            currentDigits = '9';
-        } else if (currentDigits[0] !== '9') {
-            currentDigits = '9' + currentDigits.substring(1);
-        }
-
-        // 5. Obmedzenie na 10 číslic po '+421' (vrátane '9')
-        currentDigits = currentDigits.substring(0, 10);
-
-        // 6. Formátovanie číslic: 9xxx xxx xxx
-        let formattedPhoneNumber = requiredPrefix + ' '; // Začína s "+421 "
-
-        if (currentDigits.length > 0) {
-            formattedPhoneNumber += currentDigits.substring(0, 1); // Číslica '9'
-        }
-        if (currentDigits.length > 1) {
-            formattedPhoneNumber += currentDigits.substring(1, 4); // Prvá skupina 3 číslic po '9'
-        }
-        if (currentDigits.length > 4) {
-            formattedPhoneNumber += ' ' + currentDigits.substring(4, 7); // Druhá skupina 3 číslic
-        }
-        if (currentDigits.length > 7) {
-            formattedPhoneNumber += ' ' + currentDigits.substring(7, 10); // Tretia skupina 3 číslic
-        }
-
-        // 7. Vynútenie maximálnej dĺžky (17 znakov: +421 9xxx xxx xxx)
-        if (formattedPhoneNumber.length > 17) {
-            formattedPhoneNumber = formattedPhoneNumber.slice(0, 17);
-        }
-
-        input.value = formattedPhoneNumber;
+        input.value = formattedValue;
     }
 
 
@@ -191,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL Google Apps Scriptu
-            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEPiUWYz_IhAqnqBMgmlg-yznD-4NVzsi27GfHpg35HuqrXXSUaV4uRFxYvZT_u_22/exec';
 
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
