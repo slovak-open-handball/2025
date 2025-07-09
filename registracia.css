@@ -1,51 +1,90 @@
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #f3f4f6; /* Light gray background */
+    background-color: #f3f4f6; /* Svetlošedé pozadie */
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Align items to the top */
+    align-items: center;
     min-height: 100vh;
-    padding: 2rem 1rem; /* Add some padding for mobile */
+    margin: 0;
 }
 .container {
-    background-color: #ffffff;
-    padding: 2.5rem;
-    border-radius: 0.75rem; /* Rounded corners */
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Soft shadow */
-    max-width: 800px; /* Max width for larger screens */
+    background-color: #ffffff; /* Biele pozadie pre formulár */
+    padding: 2.5rem; /* Väčší padding */
+    border-radius: 1rem; /* Zaoblené rohy */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Jemný tieň */
     width: 100%;
+    max-width: 28rem; /* Maximálna šírka pre lepšiu čitateľnosť */
+    box-sizing: border-box; /* Zahrnie padding do šírky */
 }
-input[type="text"],
+.form-group {
+    margin-bottom: 1.5rem; /* Väčší spodný okraj pre skupiny formulárov */
+}
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600; /* Polotučné písmo pre popisky */
+    color: #374151; /* Tmavšia farba textu */
+}
 input[type="email"],
-input[type="tel"],
-textarea,
-select {
-    outline: none;
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
+    border: 1px solid #d1d5db; /* Svetlejší okraj */
+    border-radius: 0.5rem; /* Zaoblené rohy */
+    font-size: 1rem;
+    color: #4b5563; /* Farba textu vo vstupných poliach */
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
-input:focus,
-textarea:focus,
-select:focus {
+input[type="email"]:focus,
+input[type="text"]:focus,
+textarea:focus {
+    border-color: #2563eb; /* Modrý okraj pri fokuse */
     outline: none;
-    border-color: #6366f1; /* Indigo focus border */
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Indigo focus ring */
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); /* Jemný modrý tieň pri fokuse */
 }
-.btn-primary {
-    background-color: #6366f1; /* Indigo background */
-    color: #ffffff;
-    padding: 0.75rem 1.5rem;
+button {
+    width: 100%;
+    padding: 0.85rem 1.25rem; /* Väčší padding pre tlačidlo */
+    background-color: #2563eb; /* Modré pozadie */
+    color: white;
+    border: none;
     border-radius: 0.5rem;
-    transition: background-color 0.2s ease-in-out;
+    font-size: 1.1rem; /* Väčšia veľkosť písma */
+    font-weight: 700; /* Tučné písmo */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
-.btn-primary:hover {
-    background-color: #4f46e5; /* Darker indigo on hover */
+button:hover {
+    background-color: #1d4ed8; /* Tmavší odtieň modrej pri hoveri */
+    box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); /* Väčší tieň pri hoveri */
 }
-.error-message {
-    color: #ef4444; /* Red for error messages */
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
+.message {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    font-weight: 600;
 }
-.success-message {
-    color: #22c55e; /* Green for success messages */
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
+.message.success {
+    background-color: #d1fae5; /* Svetlozelené pozadie */
+    color: #065f46; /* Tmavozelený text */
+    border: 1px solid #34d399;
+}
+.message.error {
+    background-color: #fee2e2; /* Svetločervené pozadie */
+    color: #991b1b; /* Tmavocervený text */
+    border: 1px solid #ef4444;
+}
+.message.info {
+    background-color: #e0f2fe; /* Svetlomodré pozadie */
+    color: #0c4a6e; /* Tmavomodrý text */
+    border: 1px solid #38bdf8;
+}
+.user-id-display {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-align: center;
+    word-break: break-all; /* Ensures long IDs wrap */
 }
