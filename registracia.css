@@ -13,7 +13,7 @@ body {
             border-radius: 1rem; /* Zaoblené rohy */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Jemný tieň */
             width: 100%;
-            max-width: 28rem; /* Maximálna šírka pre lepšiu čitateľnosť */
+            max-width: 36rem; /* Zväčšená maximálna šírka pre širší formulár */
             box-sizing: border-box; /* Zahrnie padding do šírky */
         }
         /* Štýly pre nadpis h1, ktoré boli predtým z Tailwindu */
@@ -36,7 +36,7 @@ body {
         input[type="email"],
         input[type="text"],
         textarea {
-            width: 100%;
+            width: 100%; /* Zabezpečuje, že inputy budú mať rovnakú šírku ako tlačidlo */
             padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
             border: 1px solid #d1d5db; /* Svetlejší okraj */
             border-radius: 0.5rem; /* Zaoblené rohy */
@@ -52,7 +52,7 @@ body {
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); /* Jemný modrý tieň pri fokuse */
         }
         button {
-            width: 100%;
+            width: 100%; /* Zabezpečuje, že tlačidlo bude mať rovnakú šírku ako inputy */
             padding: 0.85rem 1.25rem; /* Väčší padding pre tlačidlo */
             background-color: #2563eb; /* Modré pozadie */
             color: white;
