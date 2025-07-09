@@ -82,10 +82,51 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Odosielam registráciu a ukladám dáta...', 'info'); // Zobrazí správu o odosielaní
 
             const formData = new FormData(registrationForm);
+
+            // Získanie hodnôt nových polí a ich orezanie bielych znakov
+            const ico = formData.get('ico').trim();
+            const dic = formData.get('dic').trim();
+            const icDPH = formData.get('icDPH').trim();
+
+            // VALIDÁCIA: Minimálne jedno pole z IČO, DIČ, IČ DPH musí byť vyplnené
+            if (!ico && !dic && !icDPH) {
+                showMessage('Prosím vyplňte aspoň jedno z polí IČO, DIČ alebo IČ DPH.', 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu';
+                return; // Zastaví odosielanie formulára
+            }
+
+            // VALIDÁCIA: Formát IČO (ak je vyplnené)
+            if (ico && !/^\d{8}$/.test(ico)) {
+                showMessage('IČO musí obsahovať presne 8 číslic.', 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu';
+                return;
+            }
+
+            // VALIDÁCIA: Formát DIČ (ak je vyplnené)
+            if (dic && !/^\d{10}$/.test(dic)) {
+                showMessage('DIČ musí obsahovať presne 10 číslic.', 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu';
+                return;
+            }
+
+            // VALIDÁCIA: Formát IČ DPH (ak je vyplnené)
+            if (icDPH && !/^[A-Z]{2}\d{10}$/.test(icDPH)) {
+                showMessage('IČ DPH musí začínať 2 veľkými písmenami a nasledovať musí 10 číslic.', 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu';
+                return;
+            }
+
             // Dáta pre Firestore (objekt)
             const registrationDataForFirestore = {
                 officialClubName: formData.get('officialClubName'),
-                organizationName: formData.get('organizationName'), // <--- NOVÉ POLE PRIDANÉ
+                organizationName: formData.get('organizationName'),
+                ico: ico, // Používame validované a orezané hodnoty
+                dic: dic,
+                icDPH: icDPH,
                 meno: formData.get('meno'),
                 email: formData.get('email'),
                 sprava: formData.get('sprava'),
@@ -101,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData,
+                    body: formData, // formData obsahuje všetky polia z formulára
                 });
                 const result = await response.json();
                 if (result.success) {
