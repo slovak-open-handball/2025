@@ -30,15 +30,23 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = input.value.replace(/[^0-9]/g, '');
     }
 
-    // Funkcia na validáciu PSČ (len čísla, 5 znakov)
-    function validateZipCodeInput(event) {
+    // Funkcia na validáciu a formátovanie PSČ (len čísla, 5 znakov, formát 000 00)
+    function validateAndFormatZipCodeInput(event) {
         const input = event.target;
-        // Odstráni všetky znaky, ktoré nie sú čísla
-        input.value = input.value.replace(/[^0-9]/g, '');
+        let value = input.value.replace(/\s/g, ''); // Odstráni existujúce medzery pre spracovanie
+        value = value.replace(/[^0-9]/g, ''); // Odstráni všetky znaky, ktoré nie sú čísla
+
         // Obmedzí dĺžku na 5 znakov
-        if (input.value.length > 5) {
-            input.value = input.value.slice(0, 5);
+        if (value.length > 5) {
+            value = value.slice(0, 5);
         }
+
+        // Formátovanie pre zobrazenie: 000 00
+        let formattedValue = value;
+        if (value.length > 3) {
+            formattedValue = value.substring(0, 3) + ' ' + value.substring(3);
+        }
+        input.value = formattedValue;
     }
 
     // Funkcia na validáciu IČ DPH (2 písmená, 10 číslic)
@@ -73,7 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pridanie event listenerov pre real-time validáciu
     icoInput.addEventListener('input', validateNumericInput);
     dicInput.addEventListener('input', validateNumericInput);
-    zipCodeInput.addEventListener('input', validateZipCodeInput);
+    // Zmenený listener pre PSČ
+    zipCodeInput.addEventListener('input', validateAndFormatZipCodeInput);
     icDphInput.addEventListener('input', validateIcDphInput);
     phoneInput.addEventListener('input', validatePhoneInput);
 
@@ -101,7 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
             street: document.getElementById('street').value,
             houseNumber: document.getElementById('houseNumber').value,
             city: document.getElementById('city').value,
-            zipCode: zipCodeInput.value,
+            // Pre PSČ odstránime medzeru pred odoslaním
+            zipCode: zipCodeInput.value.replace(/\s/g, ''),
             contactPersonFirstName: document.getElementById('contactPersonFirstName').value,
             contactPersonLastName: document.getElementById('contactPersonLastName').value,
             contactPersonPhone: phoneInput.value,
