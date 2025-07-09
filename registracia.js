@@ -424,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
             statusMessage.className = 'mt-4 text-center error-message';
             console.error('ID používateľa nie je k dispozícii.');
             return;
+            // Poznámka: V reálnom scenári by ste tu mohli pridať logiku pre opätovné pokusy o prihlásenie alebo zobrazenie chybovej správy používateľovi.
         }
 
         const formData = {
@@ -458,7 +459,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Dokument úspešne zapísaný s ID: ", docRef.id);
 
             // Odoslanie e-mailu cez Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbxFSTqsrQ-fBPzFC789rdy2RFNHJFgAc00thLZeLEeIfeWIdDCUVxklx4i89TpInOh1/exec'; // ZMEŇTE TOTO!
+            // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbz0QHUrYaiKcDHE_AAu1iwII0DXDdwqZolhlh-gDiHI-4YkPwpqLn2u11bT5QAf9y62/exec'; // ZMEŇTE TOTO!
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
