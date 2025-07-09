@@ -60,7 +60,7 @@
                 </div>
             </div>
 
-            <h2 class="text-xl font-semibold mb-4 text-gray-800">Kontaktná osoba</h2>
+                        <h2 class="text-xl font-semibold mb-4 text-gray-800">Kontaktná osoba</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="mb-4 md:mb-0">
                     <label for="contactPersonFirstName" class="block text-gray-700 text-sm font-bold mb-2">Meno:</label>
@@ -72,16 +72,17 @@
                 </div>
             </div>
 
-            <div class="mb-4">
-                <label for="phonePrefix" class="block text-sm font-medium text-gray-700">Predvoľba</label>
-                <select id="phonePrefix" name="contactPerson.phonePrefix" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
-            </div>
-            <div class="mb-4">
-                <label for="phoneNumberInput" class="block text-sm font-medium text-gray-700">Telefónne číslo bez predvoľby</label>
-                <input type="text" id="phoneNumberInput" name="contactPerson.phone" inputmode="tel" pattern="[0-9]{3} [0-9]{3} [0-9]{3}" maxlength="11" placeholder="Telefónne číslo (napr. 900 123 456)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4 md:mb-0">
+                    <label for="phonePrefix" class="block text-sm font-medium text-gray-700">Predvoľba</label>
+                    <select id="phonePrefix" name="contactPerson.phonePrefix" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                </div>
+                <div class="mb-4 md:mb-0">
+                    <label for="phoneNumberInput" class="block text-sm font-medium text-gray-700">Telefónne číslo bez predvoľby</label>
+                    <input type="text" id="phoneNumberInput" name="contactPerson.phone" inputmode="tel" pattern="[0-9]{3} [0-9]{3} [0-9]{3}" maxlength="11" placeholder="Telefónne číslo (napr. 900 123 456)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
             </div>
             
-
             <div class="mb-4">
                 <label for="contactPersonEmail" class="block text-gray-700 text-sm font-bold mb-2">E-mail:</label>
                 <input type="email" id="emailInput" name="contactPerson.email" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
