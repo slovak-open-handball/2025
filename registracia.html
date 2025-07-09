@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
@@ -148,10 +149,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <div class="form-group">
                         <label for="contactPersonPhone" class="block text-gray-700 text-sm mb-2">Telefón:</label>
-                        <!-- Zmenené pre telefónne číslo: +421 9xxx xxx xxx -->
+                        <!-- Zmenené pre flexibilné telefónne číslo: +DDD XXX XXX XXX alebo iné medzinárodné formáty -->
                         <input type="tel" id="contactPersonPhone" name="contactPersonPhone" class="form-input"
-                               pattern="^\+421 9[0-9]{3} [0-9]{3} [0-9]{3}$" maxlength="17" inputmode="tel"
-                               title="Prosím zadajte telefónne číslo vo formáte +421 9xxx xxx xxx." required>
+                               pattern="^\+[0-9\s]{8,20}$" maxlength="25" inputmode="tel"
+                               title="Prosím zadajte telefónne číslo vo formáte +DDD XXX XXX XXX alebo podobnom medzinárodnom formáte (napr. +421 9xx xxx xxx, +420 xxx xxx xxx)." required>
                     </div>
                     <div class="form-group">
                         <label for="contactPersonEmail" class="block text-gray-700 text-sm mb-2">E-mail:</label>
