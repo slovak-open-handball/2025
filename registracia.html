@@ -59,6 +59,10 @@
                     <input type="text" id="pscInput" name="address.psc" inputmode="numeric" pattern="[0-9]{3} [0-9]{2}" maxlength="6" placeholder="900 12" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                 </div>
             </div>
+            <div class="mb-4">
+                <label for="state" class="block text-gray-700 text-sm font-bold mb-2">Štát:</label>
+                <input type="text" id="state" name="address.state" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
 
             <h2 class="text-xl font-semibold mb-4 text-gray-800">Kontaktná osoba</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -75,8 +79,7 @@
                 <div class="mb-4 md:mb-0">
                     <label for="phonePrefix" class="block text-gray-700 text-sm font-bold mb-2">Predvoľba:</label>
                     <select id="phonePrefix" name="contactPerson.phonePrefix" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <!-- Options will be populated by JavaScript -->
-                    </select>
+                        </select>
                 </div>
                 <div>
                     <label for="phoneNumberInput" class="block text-gray-700 text-sm font-bold mb-2">Telefónne číslo bez predvoľby:</label>
