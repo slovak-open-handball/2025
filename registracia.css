@@ -49,3 +49,11 @@ select:focus {
     font-size: 0.875rem;
     margin-top: 0.25rem;
 }
+
+/* Nové pravidlo pre prispôsobenie šírky select boxu obsahu */
+#phonePrefix {
+    width: auto; /* Allow width to be determined by content */
+    min-width: 150px; /* Minimum width to prevent it from being too small */
+    flex-grow: 0; /* Prevent it from growing unnecessarily */
+    flex-shrink: 0; /* Prevent it from shrinking too much */
+}
