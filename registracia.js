@@ -268,44 +268,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Nastavenie predvolenej predvoľby na +421 (Slovensko)
     phonePrefixSelect.value = '+421';
 
-    // Funkcia na výpočet maximálnej šírky zo všetkých možností a nastavenie fixnej šírky
-    function setInitialSelectWidth() {
-        let maxWidth = 0;
-        const tempSpan = document.createElement('span');
-        tempSpan.style.visibility = 'hidden';
-        tempSpan.style.position = 'absolute';
-        tempSpan.style.whiteSpace = 'nowrap';
-        tempSpan.style.pointerEvents = 'none'; // Zabezpečí, že neinterferuje s rozložením/udalosťami
-
-        // Skopírujeme všetky relevantné vypočítané štýly z pôvodného select boxu pre presné meranie
-        const computedStyle = window.getComputedStyle(phonePrefixSelect);
-        for (let i = 0; i < computedStyle.length; i++) {
-            const prop = computedStyle[i];
-            // Skopírujte vlastnosti, ktoré ovplyvňujú vykresľovanie textu a box model
-            if (prop.startsWith('font') || prop.startsWith('padding') || prop.startsWith('border') || prop.startsWith('text') || prop.startsWith('word') || prop === 'boxSizing' || prop === 'letterSpacing' || prop === 'lineHeight') {
-                tempSpan.style[prop] = computedStyle[prop];
-            }
-        }
-        
-        document.body.appendChild(tempSpan);
-
-        // Prejdeme všetky možnosti a nájdeme najdlhší text
-        Array.from(phonePrefixSelect.options).forEach(option => {
-            tempSpan.textContent = option.textContent;
-            if (tempSpan.offsetWidth > maxWidth) {
-                maxWidth = tempSpan.offsetWidth;
-            }
-        });
-        
-        // Nastavíme šírku select boxu na vypočítanú maximálnu šírku + dostatočný offset pre šípku a vnútorné paddingy
-        // Zvýšený offset na 50px pre bezpečnosť, môžete ho upraviť podľa vizuálnej potreby.
-        phonePrefixSelect.style.width = (maxWidth + 50) + 'px'; 
-        
-        document.body.removeChild(tempSpan);
-    }
-
-    // Zavoláme funkciu pri načítaní stránky, aby sa nastavila fixná šírka
-    setInitialSelectWidth();
+    // Pôvodná funkcia setInitialSelectWidth bola odstránená,
+    // pretože Tailwind CSS grid sa postará o rozloženie.
+    // Ak by ste ju chceli vrátiť pre špecifické prípady,
+    // zvážte menší offset alebo dynamickejší výpočet.
 
     // --- Validácia IČO (presne 8 číslic) ---
     if (icoInput) {
