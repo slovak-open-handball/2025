@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 meno: formData.get('meno'),
                 email: formData.get('email'),
                 sprava: formData.get('sprava'),
+                officialClubName: formData.get('officialClubName'), // <--- PRIDANÉ NOVÉ POLE
                 timestamp: serverTimestamp() // Uloží čas odoslania
             };
 
@@ -98,9 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Odoslanie e-mailu cez Google Apps Script
             try {
+                // Pre Google Apps Script musíme poslať JSON, nie FormData priamo,
+                // ak chceme mať prístup k jednotlivým poliam ako objekt.
+                // Upravíme to tak, aby sa posielal JSON.
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/json' // Dôležité pre JSON
+                    },
+                    body: JSON.stringify(registrationData), // Posielame celý objekt registrationData
                 });
                 const result = await response.json();
                 if (result.success) {
