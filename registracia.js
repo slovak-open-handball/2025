@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Predpokladáme, že Google Apps Script URL je definované niekde inde
             // Napr. const GOOGLE_APPS_SCRIPT_URL = 'VAŠA_URL_GOOGLE_APPS_SCRIPT';
             // Ak nemáte skutočnú URL, táto časť zlyhá, ale ukazuje, ako by to fungovalo
-            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL
+            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynIBZv_hwIdU0ENt1nhlG72giaPxdE5LStnJNQXUXIVWm3HduMPyNc6jX8khvgAlU1/exec'; // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL
 
             const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
