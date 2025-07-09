@@ -21,7 +21,6 @@ input[type="tel"],
 textarea,
 select {
     outline: none;
-    border-color: #6366f1; /* Indigo focus border */
 }
 input:focus,
 textarea:focus,
