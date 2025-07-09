@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusMessage = document.getElementById('statusMessage');
     const phonePrefixSelect = document.getElementById('phonePrefix');
 
+    // Získanie referencií na input polia pre validáciu
+    const icoInput = document.getElementById('icoInput');
+    const dicInput = document.getElementById('dicInput');
+    const icDPHInput = document.getElementById('icDPHInput');
+
     // Kompletný zoznam svetových predvolieb zoradený abecedne podľa názvu krajiny
     const phonePrefixes = [
         { code: '+93', name: 'Afganistan (+93)' },
@@ -289,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Nastavíme šírku select boxu na vypočítanú maximálnu šírku + dostatočný offset pre šípku a vnútorné paddingy
-        // Zvýšený offset na 50px, môžete ho upraviť podľa vizuálnej potreby.
+        // Zvýšený offset na 50px pre bezpečnosť, môžete ho upraviť podľa vizuálnej potreby.
         phonePrefixSelect.style.width = (maxWidth + 50) + 'px'; 
         
         document.body.removeChild(tempSpan);
@@ -298,8 +303,50 @@ document.addEventListener('DOMContentLoaded', function() {
     // Zavoláme funkciu pri načítaní stránky, aby sa nastavila fixná šírka
     setInitialSelectWidth();
 
-    // Event listener pre zmenu výberu už nie je potrebný, pretože šírka je fixná
-    // phonePrefixSelect.addEventListener('change', adjustSelectWidth);
+    // --- Validácia IČO (presne 8 číslic) ---
+    if (icoInput) {
+        icoInput.addEventListener('input', function(event) {
+            // Odstráni všetky znaky, ktoré nie sú čísla
+            let value = this.value.replace(/[^0-9]/g, '');
+            // Obmedzí dĺžku na 8 číslic
+            this.value = value.substring(0, 8);
+        });
+    }
+
+    // --- Validácia DIČ (presne 10 číslic) ---
+    if (dicInput) {
+        dicInput.addEventListener('input', function(event) {
+            // Odstráni všetky znaky, ktoré nie sú čísla
+            let value = this.value.replace(/[^0-9]/g, '');
+            // Obmedzí dĺžku na 10 číslic
+            this.value = value.substring(0, 10);
+        });
+    }
+
+    // --- Validácia IČ DPH (2 písmená + 10 číslic) ---
+    if (icDPHInput) {
+        icDPHInput.addEventListener('input', function(event) {
+            let value = this.value;
+            let formattedValue = '';
+
+            // Prvé dva znaky: iba písmená, prevedené na veľké
+            if (value.length > 0) {
+                let firstTwo = value.substring(0, 2).toUpperCase();
+                firstTwo = firstTwo.replace(/[^A-Z]/g, ''); // Ponechá len veľké písmená A-Z
+                formattedValue += firstTwo;
+            }
+
+            // Zvyšných 10 znakov: iba čísla
+            if (value.length > 2) {
+                let remaining = value.substring(2);
+                remaining = remaining.replace(/[^0-9]/g, ''); // Ponechá len čísla
+                remaining = remaining.substring(0, 10); // Obmedzí na 10 číslic
+                formattedValue += remaining;
+            }
+
+            this.value = formattedValue;
+        });
+    }
 
 
     form.addEventListener('submit', async function(event) {
