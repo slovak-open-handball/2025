@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrácia tímu na turnaj</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Font Awesome pre ikony -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="registracia.css">
@@ -22,6 +23,10 @@
                 <input type="text" id="organizationName" name="organizationName" placeholder="Zadajte názov organizácie (nepovinné)">
             </div>
 
+            <!-- NOVÝ NADPIS "Fakturačné údaje" -->
+            <h2 style="font-size: 1.5rem; font-weight: 600; color: #374151; margin-top: 2rem; margin-bottom: 1rem;">Fakturačné údaje</h2>
+
+            <!-- NOVÁ SEKCIA PRE IČO, DIČ, IČ DPH -->
             <div class="form-group-triple">
                 <div class="form-group">
                     <label for="ico">IČO:</label>
@@ -36,6 +41,8 @@
                     <input type="text" id="icDPH" name="icDPH" placeholder="2 veľké písmená a 10 číslic" pattern="^[A-Z]{2}\d{10}$" title="IČ DPH musí začínať 2 veľkými písmenami a nasledovať musí 10 číslic.">
                 </div>
             </div>
+            <!-- KONIEC NOVEJ SEKCE -->
+
             <div class="form-group">
                 <label for="meno">Meno kontaktnej osoby:</label>
                 <input type="text" id="meno" name="meno" placeholder="zadajte vaše meno alebo názov tímu" required>
@@ -57,6 +64,7 @@
         <div id="userIdDisplay" class="user-id-display hidden"></div>
     </div>
 
+    <!-- Link na JavaScript súbor -->
     <script type="module" src="registracia.js"></script>
 </body>
 </html>
