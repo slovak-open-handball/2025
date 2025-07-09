@@ -13,7 +13,7 @@
             border-radius: 1rem; /* Zaoblené rohy */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Jemný tieň */
             width: 100%;
-            max-width: 36rem; /* Zväčšená maximálna šírka pre širší formulár */
+            max-width: 48rem; /* Zväčšená maximálna šírka pre širší formulár */
             box-sizing: border-box; /* Zahrnie padding do šírky */
         }
         /* Štýly pre nadpis h1, ktoré boli predtým z Tailwindu */
