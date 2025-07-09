@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; // Vložte sem vašu skopírovanú URL
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "VLOŽTE_SEMP_NOVÚ_A_AKTUÁLNU_URL_Z_GOOGLE_APPS_SCRIPT"; // <--- TÚTO URL AKTUALIZUJTE!
 const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 // Firebase imports
@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
-    // userIdDisplay bol odstránený, pretože ho už nebudeme zobrazovať
 
     // Používame appId z poskytnutej konfigurácie
     const appId = firebaseConfig.appId;
@@ -45,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUserId = user.uid;
-                    // userIdDisplay.textContent a .classList.remove('hidden') boli odstránené
                 } else {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try {
@@ -84,11 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Odosielam registráciu a ukladám dáta...', 'info'); // Zobrazí správu o odosielaní
 
             const formData = new FormData(registrationForm);
-            const registrationData = {
+            // Dáta pre Firestore (objekt)
+            const registrationDataForFirestore = {
                 meno: formData.get('meno'),
                 email: formData.get('email'),
                 sprava: formData.get('sprava'),
-                officialClubName: formData.get('officialClubName'), // <--- PRIDANÉ NOVÉ POLE
+                officialClubName: formData.get('officialClubName'),
                 timestamp: serverTimestamp() // Uloží čas odoslania
             };
 
@@ -99,15 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Odoslanie e-mailu cez Google Apps Script
             try {
-                // Pre Google Apps Script musíme poslať JSON, nie FormData priamo,
-                // ak chceme mať prístup k jednotlivým poliam ako objekt.
-                // Upravíme to tak, aby sa posielal JSON.
+                // Vrátenie k odosielaniu FormData pre Google Apps Script
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json' // Dôležité pre JSON
-                    },
-                    body: JSON.stringify(registrationData), // Posielame celý objekt registrationData
+                    body: formData, // <--- ZMENA: Posielame FormData
+                    // Content-Type sa automaticky nastaví na multipart/form-data
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -122,12 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Uloženie dát do Firestore
-            // Vykonajte ukladanie do DB len ak je Firebase inicializované a autentifikácia je pripravená
             if (firebaseInitialized && db && isAuthReady && currentUserId) {
                 try {
-                    // Cesta k dátam: /artifacts/{appId}/public/data/registrations/{documentId}
                     const registrationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'registrations');
-                    await addDoc(registrationsCollectionRef, registrationData);
+                    await addDoc(registrationsCollectionRef, registrationDataForFirestore); // Používame objekt pre Firestore
                     dbSuccess = true;
                     dbMessage = 'Dáta boli úspešne uložené do databázy.';
                 } catch (error) {
