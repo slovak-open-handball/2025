@@ -1,4 +1,4 @@
-body {
+        body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Svetlošedé pozadie */
             display: flex;
@@ -54,7 +54,7 @@ body {
         button {
             width: 100%; /* Zabezpečuje, že tlačidlo bude mať rovnakú šírku ako inputy */
             padding: 0.85rem 1.25rem; /* Väčší padding pre tlačidlo */
-            background-color: #2563eb; /* Modré pozadie */
+            background-color: #3A8D41; /* Zmenená farba pozadia tlačidla */
             color: white;
             border: none;
             border-radius: 0.5rem;
@@ -70,7 +70,7 @@ body {
             margin-right: 0.5rem; /* mr-2 (približne 8px) pre ikonu */
         }
         button:hover {
-            background-color: #1d4ed8; /* Tmavší odtieň modrej pri hoveri */
+            background-color: #C46F50; /* Zmenená farba pozadia tlačidla pri hoveri */
             box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); /* Väčší tieň pri hoveri */
         }
         .message {
