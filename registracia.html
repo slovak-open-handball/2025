@@ -49,7 +49,8 @@
                 </div>
                 <div class="mb-4 md:mb-0">
                     <label for="houseNumber" class="block text-gray-700 text-sm font-bold mb-2">Číslo domu:</label>
-                    <input type="text" id="houseNumberInput" name="address.houseNumber" pattern="[0-9/]*" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Opravený pattern atribút: escapovaný '/' -->
+                    <input type="text" id="houseNumberInput" name="address.houseNumber" pattern="[0-9\/]*" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
