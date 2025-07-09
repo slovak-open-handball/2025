@@ -1,242 +1,188 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('registrationForm');
-    const messageDiv = document.getElementById('message');
-    const submitButton = document.getElementById('submitButton');
+// Získanie referencií na elementy formulára a správové pole
+const registrationForm = document.getElementById('registrationForm');
+const submitButton = document.getElementById('submitButton');
+const messageDiv = document.getElementById('message');
 
-    // Získanie referencií na input polia pre validáciu
-    const icoInput = document.getElementById('ico');
-    const dicInput = document.getElementById('dic');
-    const icDphInput = document.getElementById('icDph');
-    const zipCodeInput = document.getElementById('zipCode');
-    const phoneInput = document.getElementById('contactPersonPhone');
+/**
+ * Zobrazí správu v špeciálnom div elemente.
+ * @param {string} type Typ správy ('success', 'error', 'info'). Určuje farbu pozadia.
+ * @param {string} text Text správy, ktorý sa má zobraziť.
+ */
+function showMessage(type, text) {
+    // Odstráni všetky predchádzajúce triedy a skrytie
+    messageDiv.classList.remove('hidden', 'success', 'error', 'info');
+    // Nastaví text správy
+    messageDiv.textContent = text;
+    // Pridá triedu pre typ správy (success, error, info)
+    messageDiv.classList.add(type);
+    // Zobrazí správu
+    messageDiv.classList.remove('hidden');
 
-    // Funkcia na zobrazenie správy
-    function showMessage(message, type) {
-        messageDiv.textContent = message;
-        messageDiv.className = `message ${type}`; // Nastaví triedu pre štýlovanie (success, error, info)
-        messageDiv.classList.remove('hidden'); // Zobrazí správu
-        // Skryje správu po 5 sekundách, ak nie je chyba
-        if (type !== 'error') {
-            setTimeout(() => {
-                messageDiv.classList.add('hidden');
-            }, 5000);
-        }
+    // Skryje správu po 5 sekundách
+    setTimeout(() => {
+        messageDiv.classList.add('hidden');
+    }, 5000);
+}
+
+/**
+ * Validuje IČO. Musí byť presne 8 číslic.
+ * @param {string} ico Vstupná hodnota IČO.
+ * @returns {boolean} True, ak je IČO platné, inak false.
+ */
+function validateICO(ico) {
+    return /^\d{8}$/.test(ico);
+}
+
+/**
+ * Validuje DIČ. Musí byť presne 10 číslic.
+ * @param {string} dic Vstupná hodnota DIČ.
+ * @returns {boolean} True, ak je DIČ platné, inak false.
+ */
+function validateDIC(dic) {
+    return /^\d{10}$/.test(dic);
+}
+
+/**
+ * Validuje IČ DPH. Musí začať 2 písmenami a nasledovať 10 číslic.
+ * @param {string} icDph Vstupná hodnota IČ DPH.
+ * @returns {boolean} True, ak je IČ DPH platné, inak false.
+ */
+function validateICDPH(icDph) {
+    return /^[A-Za-z]{2}\d{10}$/.test(icDph);
+}
+
+/**
+ * Validuje PSČ. Musí byť vo formáte "XXX XX" (3 číslice, medzera, 2 číslice).
+ * @param {string} zipCode Vstupná hodnota PSČ.
+ * @returns {boolean} True, ak je PSČ platné, inak false.
+ */
+function validateZipCode(zipCode) {
+    return /^\d{3}\s\d{2}$/.test(zipCode);
+}
+
+/**
+ * Validuje lokálne telefónne číslo. Musí obsahovať 9 až 15 číslic a môže obsahovať medzery.
+ * @param {string} phoneNumber Vstupná hodnota telefónneho čísla.
+ * @returns {boolean} True, ak je telefónne číslo platné, inak false.
+ */
+function validatePhoneNumber(phoneNumber) {
+    return /^[0-9\s]{9,15}$/.test(phoneNumber);
+}
+
+// Event listener pre odoslanie formulára
+registrationForm.addEventListener('submit', async function(event) {
+    event.preventDefault(); // Zabraňuje predvolenému odoslaniu formulára
+
+    // Získanie hodnôt z formulára a odstránenie bielych znakov na začiatku/konci
+    const officialClubName = document.getElementById('officialClubName').value.trim();
+    const billingName = document.getElementById('billingName').value.trim();
+    const ico = document.getElementById('ico').value.trim();
+    const dic = document.getElementById('dic').value.trim();
+    const icDph = document.getElementById('icDph').value.trim();
+    const street = document.getElementById('street').value.trim();
+    const houseNumber = document.getElementById('houseNumber').value.trim();
+    const city = document.getElementById('city').value.trim();
+    const zipCode = document.getElementById('zipCode').value.trim();
+    const contactPersonFirstName = document.getElementById('contactPersonFirstName').value.trim();
+    const contactPersonLastName = document.getElementById('contactPersonLastName').value.trim();
+    const countryCode = document.getElementById('countryCode').value; // Predvoľba sa netrimuje, je to select
+    const localPhoneNumber = document.getElementById('localPhoneNumber').value.trim();
+    const contactPersonEmail = document.getElementById('contactPersonEmail').value.trim();
+    const sprava = document.getElementById('sprava').value.trim();
+
+    // Validácia všetkých povinných polí a ich formátov
+    if (!officialClubName) {
+        showMessage('error', 'Prosím, zadajte oficiálny názov klubu.');
+        return;
+    }
+    if (!validateICO(ico)) {
+        showMessage('error', 'Prosím, zadajte platné IČO (presne 8 číslic).');
+        return;
+    }
+    if (!validateDIC(dic)) {
+        showMessage('error', 'Prosím, zadajte platné DIČ (presne 10 číslic).');
+        return;
+    }
+    if (!validateICDPH(icDph)) {
+        showMessage('error', 'Prosím, zadajte platné IČ DPH (2 písmená a 10 číslic, napr. SK1234567890).');
+        return;
+    }
+    if (!street || !houseNumber || !city) {
+        showMessage('error', 'Prosím, vyplňte kompletnú adresu (Ulica, Číslo domu, Mesto).');
+        return;
+    }
+    if (!validateZipCode(zipCode)) {
+        showMessage('error', 'Prosím, zadajte platné PSČ vo formáte "XXX XX" (napr. 811 01).');
+        return;
+    }
+    if (!contactPersonFirstName || !contactPersonLastName) {
+        showMessage('error', 'Prosím, zadajte meno a priezvisko kontaktnej osoby.');
+        return;
+    }
+    if (!validatePhoneNumber(localPhoneNumber)) {
+        showMessage('error', 'Prosím, zadajte platné telefónne číslo (9-15 číslic, povolené medzery).');
+        return;
+    }
+    // Základná validácia e-mailu
+    if (!contactPersonEmail || !contactPersonEmail.includes('@') || !contactPersonEmail.includes('.')) {
+        showMessage('error', 'Prosím, zadajte platnú e-mailovú adresu.');
+        return;
     }
 
-    // Funkcia na validáciu IČO a DIČ (len čísla)
-    function validateNumericInput(event) {
-        const input = event.target;
-        // Odstráni všetky znaky, ktoré nie sú čísla
-        input.value = input.value.replace(/[^0-9]/g, '');
+    // Zostavenie dát pre odoslanie (objekt, ktorý sa pošle na server)
+    const formData = {
+        officialClubName: officialClubName,
+        billingName: billingName,
+        ico: ico,
+        dic: dic,
+        icDph: icDph,
+        address: {
+            street: street,
+            houseNumber: houseNumber,
+            city: city,
+            zipCode: zipCode
+        },
+        contactPerson: {
+            firstName: contactPersonFirstName,
+            lastName: contactPersonLastName,
+            phone: countryCode + localPhoneNumber.replace(/\s/g, ''), // Spojenie predvoľby a lokálneho čísla bez medzier
+            email: contactPersonEmail
+        },
+        message: sprava
+    };
+
+    // Zablokovanie tlačidla odoslať, aby sa predišlo viacnásobnému odoslaniu
+    submitButton.disabled = true;
+    showMessage('info', 'Odosielam registráciu...'); // Zobrazí správu, že sa odosiela
+
+    try {
+        // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL Google Apps Scriptu
+        // Túto URL získate po nasadení vášho Google Apps Scriptu ako webovej aplikácie.
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz0QHUrYaiKcDHE_AAu1iwII0DXDdwqZolhlh-gDiHI-4YkPwpqLn2u11bT5QAf9y62/exec';
+
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            // 'no-cors' je dôležité, ak váš Google Apps Script neposiela CORS hlavičky.
+            // Znamená to, že nebudete môcť čítať odpoveď zo servera (response.json() alebo response.text()),
+            // ale požiadavka sa odošle.
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        // Kvôli 'no-cors' módu nemôžeme priamo čítať odpoveď (response.ok, response.json()).
+        // Predpokladáme úspech, ak nedošlo k chybe siete.
+        // Ak by ste chceli čítať odpoveď, museli by ste povoliť CORS na strane Google Apps Scriptu.
+        console.log('Formulár odoslaný. Odpoveď servera (ak je povolené CORS):', response);
+        showMessage('success', 'Registrácia bola úspešne odoslaná!');
+        registrationForm.reset(); // Vyčistí formulár po úspešnom odoslaní
+
+    } catch (error) {
+        console.error('Chyba pri odosielaní formulára:', error);
+        showMessage('error', 'Nastala chyba pri odosielaní registrácie. Skúste to prosím znova.');
+    } finally {
+        submitButton.disabled = false; // Odomkne tlačidlo po dokončení (či už úspešnom alebo s chybou)
     }
-
-    // Funkcia na validáciu IČ DPH (2 písmená, 10 číslic)
-    function validateIcDphInput(event) {
-        const input = event.target;
-        let value = input.value;
-
-        // Odstráni všetky znaky, ktoré nie sú písmená alebo čísla
-        value = value.replace(/[^A-Za-z0-9]/g, '');
-
-        // Ak sú prvé dva znaky, povolí len písmená a premení na veľké
-        let formattedValue = '';
-        if (value.length > 0) {
-            formattedValue += value[0].toUpperCase();
-        }
-        if (value.length > 1) {
-            formattedValue += value[1].toUpperCase();
-        }
-        // Pre zvyšných 10 znakov povolí len čísla
-        if (value.length > 2) {
-            formattedValue += value.substring(2).replace(/[^0-9]/g, '');
-        }
-
-        // Obmedzí celkovú dĺžku na 12 znakov
-        if (formattedValue.length > 12) {
-            formattedValue = formattedValue.slice(0, 12);
-        }
-
-        input.value = formattedValue;
-    }
-
-    // Funkcia na validáciu a formátovanie PSČ (XXX XX)
-    function validateZipCodeInput(event) {
-        const input = event.target;
-        let value = input.value.replace(/\s/g, ''); // Odstráni všetky medzery pre spracovanie
-        let formattedValue = '';
-
-        // Odstráni všetky znaky, ktoré nie sú čísla
-        value = value.value.replace(/[^0-9]/g, '');
-
-        if (value.length > 3) {
-            formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 5);
-        } else {
-            formattedValue = value;
-        }
-
-        // Obmedzí celkovú dĺžku na 6 znakov (vrátane medzery)
-        if (formattedValue.length > 6) {
-            formattedValue = formattedValue.slice(0, 6);
-        }
-
-        input.value = formattedValue;
-    }
-
-    // Opravená Funkcia na validáciu a formátovanie telefónneho čísla (flexibilné medzinárodné)
-    function validatePhoneInput(event) {
-        const input = event.target;
-        let value = input.value;
-        let formattedValue = '';
-
-        // 1. Odstráni všetky znaky, ktoré nie sú číslice, okrem '+' na začiatku
-        let cleanedValue = value.replace(/[^0-9+]/g, '');
-
-        // Zabezpečí, že '+' je len na začiatku
-        if (cleanedValue.indexOf('+') > 0) {
-            cleanedValue = cleanedValue.replace(/\+/g, '');
-            if (value.startsWith('+')) {
-                cleanedValue = '+' + cleanedValue;
-            }
-        }
-
-        // Ak je hodnota príliš krátka na spracovanie, vráti vyčistenú hodnotu
-        if (cleanedValue.length < 1) {
-            input.value = cleanedValue;
-            return;
-        }
-
-        // Ak začína na '+421'
-        if (cleanedValue.startsWith('+421')) {
-            let digits = cleanedValue.substring(4); // Číslice po '+421'
-            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
-
-            // Vynúti '9' ako prvú číslicu po +421, ak je dostatok číslic
-            if (digits.length > 0 && digits[0] !== '9') {
-                digits = '9' + digits.substring(1);
-            } else if (digits.length === 0) {
-                digits = '9'; // Ak ešte nie sú žiadne číslice, pridá '9'
-            }
-
-            // Formátovanie: +421 9xx xxx xxx
-            formattedValue = '+421';
-            if (digits.length > 0) formattedValue += ' ' + digits.substring(0, 1); // '9'
-            if (digits.length > 1) formattedValue += digits.substring(1, 4); // Prvá skupina 3 číslic (napr. 055)
-            if (digits.length > 4) formattedValue += ' ' + digits.substring(4, 7); // Druhá skupina 3 číslic (napr. 154)
-            if (digits.length > 7) formattedValue += ' ' + digits.substring(7, 10); // Tretia skupina 3 číslic (napr. 822)
-
-            // Obmedzenie na 17 znakov (+421 9xxx xxx xxx)
-            if (formattedValue.length > 17) {
-                formattedValue = formattedValue.slice(0, 17);
-            }
-
-        } else if (cleanedValue.startsWith('+420')) {
-            let digits = cleanedValue.substring(4); // Číslice po '+420'
-            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
-
-            // Formátovanie: +420 xxx xxx xxx
-            formattedValue = '+420';
-            if (digits.length > 0) formattedValue += ' ' + digits.substring(0, 3);
-            if (digits.length > 3) formattedValue += ' ' + digits.substring(3, 6);
-            if (digits.length > 6) formattedValue += ' ' + digits.substring(6, 9);
-
-            // Obmedzenie na 16 znakov (+420 xxx xxx xxx)
-            if (formattedValue.length > 16) {
-                formattedValue = formattedValue.slice(0, 16);
-            }
-
-        } else if (cleanedValue.startsWith('+')) {
-            // Pre iné medzinárodné predvoľby: len čísla a '+' na začiatku, s jednoduchým formátovaním
-            let digits = cleanedValue.substring(1); // Číslice po '+'
-            digits = digits.replace(/[^0-9]/g, ''); // Zabezpečí len číslice
-
-            formattedValue = '+';
-            // Jednoduché formátovanie po 3-4 čísliciach pre medzinárodné čísla
-            // Snažíme sa o skupiny po troch, ale ak to nie je možné, prispôsobíme sa
-            for (let i = 0; i < digits.length; i++) {
-                formattedValue += digits[i];
-                // Pridá medzeru po každých 3 čísliciach, ale nie na konci a nie po príliš dlhom čísle
-                if ((i + 1) % 3 === 0 && i + 1 !== digits.length && i < 15) { // Zvýšený limit pre medzery
-                    formattedValue += ' ';
-                }
-            }
-            // Obmedzenie na max 25 znakov pre všeobecné medzinárodné čísla
-            if (formattedValue.length > 25) {
-                formattedValue = formattedValue.slice(0, 25);
-            }
-        } else {
-            // Ak nezačína na '+', len odstráni nečíselné znaky
-            formattedValue = cleanedValue.replace(/[^0-9]/g, '');
-            // Ak užívateľ zadá čísla bez +, necháme ich tak.
-            // Validáciu formátu (+ predvoľba) zabezpečí HTML pattern pri odoslaní.
-            if (formattedValue.length > 25) { // Obmedzenie dĺžky aj pre neformátované čísla
-                formattedValue = formattedValue.slice(0, 25);
-            }
-        }
-        input.value = formattedValue;
-    }
-
-
-    // Pridanie event listenerov pre real-time validáciu
-    icoInput.addEventListener('input', validateNumericInput);
-    dicInput.addEventListener('input', validateNumericInput);
-    zipCodeInput.addEventListener('input', validateZipCodeInput);
-    icDphInput.addEventListener('input', validateIcDphInput);
-    phoneInput.addEventListener('input', validatePhoneInput); // Aktualizovaný listener
-
-
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Zabráni predvolenému odoslaniu formulára
-
-        // Dodatočná validácia pred odoslaním, ak by HTML pattern zlyhal alebo bol obídený
-        if (!form.checkValidity()) {
-            showMessage('Prosím, vyplňte všetky povinné polia správne.', 'error');
-            return; // Zastaví odosielanie, ak formulár nie je validný
-        }
-
-        // Zobrazí správu o načítavaní
-        showMessage('Odosielam registráciu...', 'info');
-        submitButton.disabled = true; // Zablokuje tlačidlo počas odosielania
-
-        // Získanie dát z formulára
-        const formData = {
-            officialClubName: document.getElementById('officialClubName').value,
-            billingName: document.getElementById('billingName').value,
-            ico: icoInput.value,
-            dic: dicInput.value,
-            icDph: icDphInput.value,
-            street: document.getElementById('street').value,
-            houseNumber: document.getElementById('houseNumber').value,
-            city: document.getElementById('city').value,
-            zipCode: zipCodeInput.value,
-            contactPersonFirstName: document.getElementById('contactPersonFirstName').value,
-            contactPersonLastName: document.getElementById('contactPersonLastName').value,
-            contactPersonPhone: phoneInput.value, // Zabezpečí, že sa odošle formátovaná hodnota
-            contactPersonEmail: document.getElementById('contactPersonEmail').value,
-            sprava: document.getElementById('sprava').value
-        };
-
-        try {
-            // ZMEŇTE TOTO NA VAŠU SKUTOČNÚ URL Google Apps Scriptu
-            const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
-
-            const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Dôležité pre Google Apps Script, ak nevracia CORS hlavičky
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
-
-            // Kvôli 'no-cors' módu nemôžeme priamo čítať odpoveď.
-            // Predpokladáme úspech, ak nedošlo k chybe siete.
-            showMessage('Registrácia bola úspešne odoslaná!', 'success');
-            form.reset(); // Vyčistí formulár po úspešnom odoslaní
-        } catch (error) {
-            console.error('Chyba pri odosielaní formulára:', error);
-            showMessage('Nastala chyba pri odosielaní registrácie. Skúste to prosím znova.', 'error');
-        } finally {
-            submitButton.disabled = false; // Odomkne tlačidlo po dokončení
-        }
-    });
 });
