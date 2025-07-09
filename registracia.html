@@ -155,15 +155,36 @@
                 </div>
                 <div>
                     <label for="ico">IČO:</label>
-                    <input type="text" id="ico" name="ico" required>
+                    <input
+                        type="text"
+                        id="ico"
+                        name="ico"
+                        pattern="^\d{8}$"
+                        title="IČO musí obsahovať presne 8 číslic."
+                        inputmode="numeric"
+                        required
+                    >
                 </div>
                 <div>
                     <label for="dic">DIČ:</label>
-                    <input type="text" id="dic" name="dic">
+                    <input
+                        type="text"
+                        id="dic"
+                        name="dic"
+                        pattern="^\d{10}$"
+                        title="DIČ musí obsahovať presne 10 číslic."
+                        inputmode="numeric"
+                    >
                 </div>
                 <div>
                     <label for="icDph">IČ DPH:</label>
-                    <input type="text" id="icDph" name="icDph">
+                    <input
+                        type="text"
+                        id="icDph"
+                        name="icDph"
+                        pattern="^[A-Z]{2}\d{10}$"
+                        title="IČ DPH musí začínať dvoma veľkými písmenami, nasledovanými presne 10 číslicami (napr. SK1234567890)."
+                    >
                 </div>
                 <div>
                     <label for="billingAddress">Adresa sídla (ulica, číslo, mesto, PSČ):</label>
