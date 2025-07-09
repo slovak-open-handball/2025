@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const houseNumberInput = document.getElementById('houseNumberInput');
     const pscInput = document.getElementById('pscInput');
     const phoneNumberInput = document.getElementById('phoneNumberInput');
-    const emailInput = document.getElementById('emailInput'); // Nový input pre e-mail
+    const emailInput = document.getElementById('emailInput');
 
     // Kompletný zoznam svetových predvolieb zoradený abecedne podľa názvu krajiny
     const phonePrefixes = [
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { code: '+962', name: 'Jordánsko (+962)' },
         { code: '+7', name: 'Kazachstan (+7)' },
         { code: '+254', name: 'Keňa (+254)' },
-        { code: '+686', name: 'Kiribati (+686)',
+        { code: '+686', name: 'Kiribati (+686)' },
         { code: '+383', name: 'Kosovo (+383)' },
         { code: '+965', name: 'Kuvajt (+965)' },
         { code: '+996', name: 'Kirgizsko (+996)' },
@@ -271,9 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia IČO (presne 8 číslic) ---
     if (icoInput) {
         icoInput.addEventListener('input', function(event) {
-            // Odstráni všetky znaky, ktoré nie sú čísla
             let value = this.value.replace(/[^0-9]/g, '');
-            // Obmedzí dĺžku na 8 číslic
             this.value = value.substring(0, 8);
         });
     }
@@ -281,9 +279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia DIČ (presne 10 číslic) ---
     if (dicInput) {
         dicInput.addEventListener('input', function(event) {
-            // Odstráni všetky znaky, ktoré nie sú čísla
             let value = this.value.replace(/[^0-9]/g, '');
-            // Obmedzí dĺžku na 10 číslic
             this.value = value.substring(0, 10);
         });
     }
@@ -294,18 +290,16 @@ document.addEventListener('DOMContentLoaded', function() {
             let value = this.value;
             let formattedValue = '';
 
-            // Prvé dva znaky: iba písmená, prevedené na veľké
             if (value.length > 0) {
                 let firstTwo = value.substring(0, 2).toUpperCase();
-                firstTwo = firstTwo.replace(/[^A-Z]/g, ''); // Ponechá len veľké písmená A-Z
+                firstTwo = firstTwo.replace(/[^A-Z]/g, '');
                 formattedValue += firstTwo;
             }
 
-            // Zvyšných 10 znakov: iba čísla
             if (value.length > 2) {
                 let remaining = value.substring(2);
-                remaining = remaining.replace(/[^0-9]/g, ''); // Ponechá len čísla
-                remaining = remaining.substring(0, 10); // Obmedzí na 10 číslic
+                remaining = remaining.replace(/[^0-9]/g, '');
+                remaining = remaining.substring(0, 10);
                 formattedValue += remaining;
             }
 
@@ -316,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia čísla domu (čísla a '/') ---
     if (houseNumberInput) {
         houseNumberInput.addEventListener('input', function(event) {
-            // Ponechá iba číslice a znak '/'
             this.value = this.value.replace(/[^0-9/]/g, '');
         });
     }
@@ -324,10 +317,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia PSČ (xxx xx, presne 6 znakov) ---
     if (pscInput) {
         pscInput.addEventListener('input', function(event) {
-            let value = this.value.replace(/\s/g, ''); // Odstráni existujúce medzery
+            let value = this.value.replace(/\s/g, '');
             let formattedValue = '';
 
-            // Ponechá iba číslice
             value = value.replace(/[^0-9]/g, '');
 
             if (value.length > 3) {
@@ -336,7 +328,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 formattedValue = value;
             }
             
-            // Obmedzí celkovú dĺžku na 6 znakov (vrátane medzery)
             this.value = formattedValue.substring(0, 6);
         });
     }
@@ -344,10 +335,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia telefónneho čísla (xxx xxx xxx, presne 11 znakov) ---
     if (phoneNumberInput) {
         phoneNumberInput.addEventListener('input', function(event) {
-            let value = this.value.replace(/\s/g, ''); // Odstráni existujúce medzery
+            let value = this.value.replace(/\s/g, '');
             let formattedValue = '';
 
-            // Ponechá iba číslice
             value = value.replace(/[^0-9]/g, '');
 
             if (value.length > 6) {
@@ -358,7 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 formattedValue = value;
             }
 
-            // Obmedzí celkovú dĺžku na 11 znakov (vrátane medzier)
             this.value = formattedValue.substring(0, 11);
         });
     }
@@ -389,11 +378,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (emailInput && !emailInput.value.includes('@')) {
             statusMessage.textContent = 'Chyba: E-mailová adresa musí obsahovať znak "@".';
             statusMessage.className = 'mt-4 text-center error-message';
-            emailInput.focus(); // Zameria sa na pole e-mailu
-            return; // Zastaví odosielanie formulára
+            emailInput.focus();
+            return;
         }
 
-        // --- NOVÁ VALIDÁCIA: Minimálne jedno z IČO, DIČ, IČ DPH musí byť vyplnené ---
+        // --- Validácia: Minimálne jedno z IČO, DIČ, IČ DPH musí byť vyplnené ---
         const icoValue = icoInput ? icoInput.value.trim() : '';
         const dicValue = dicInput ? dicInput.value.trim() : '';
         const icDPHValue = icDPHInput ? icDPHInput.value.trim() : '';
@@ -401,14 +390,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!icoValue && !dicValue && !icDPHValue) {
             statusMessage.textContent = 'Chyba: Vyplňte prosím aspoň jedno z polí IČO, DIČ alebo IČ DPH.';
             statusMessage.className = 'mt-4 text-center error-message';
-            // Môžete zamerať na prvé prázdne pole, ak chcete
             if (!icoValue) icoInput.focus();
             else if (!dicValue) dicInput.focus();
             else if (!icDPHValue) icDPHInput.focus();
-            return; // Zastaví odosielanie formulára
+            return;
         }
-        // --- KONIEC NOVEJ VALIDÁCIE ---
-
 
         statusMessage.textContent = 'Odosielam...';
         statusMessage.className = 'mt-4 text-center text-gray-600';
@@ -433,20 +419,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Špeciálne spracovanie pre telefónne číslo s predvoľbou
-        // Zabezpečí, že predvoľba je súčasťou telefónneho čísla
-        // Kontroluje, či contactPerson a phonePrefix existujú pred prístupom
         if (formData.contactPerson && formData.contactPerson.phonePrefix) {
             formData.contactPerson.phone = `${formData.contactPerson.phonePrefix}${formData.contactPerson.phone}`;
-            delete formData.contactPerson.phonePrefix; // Odstráni samostatnú predvoľbu, ak už je spojená
+            delete formData.contactPerson.phonePrefix;
+        }
+
+        let firebaseSuccess = false;
+        let emailSuccess = false;
+        let overallMessage = '';
+
+        try {
+            // --- Uloženie dát do Firebase Firestore ---
+            const db = window.firebaseDb;
+            const userId = window.getFirebaseUserId();
+            const appId = window.getFirebaseAppId();
+            const addDoc = window.getAddDoc();
+            const collection = window.getCollection();
+
+            if (!db || !userId) {
+                throw new Error('Firebase databáza nie je pripravená alebo ID používateľa nie je k dispozícii.');
+            }
+
+            const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/registrations`), {
+                ...formData,
+                timestamp: new Date()
+            });
+            console.log("Dokument úspešne zapísaný do Firestore s ID: ", docRef.id);
+            firebaseSuccess = true;
+            overallMessage += 'Registrácia bola úspešne uložená do databázy. ';
+
+        } catch (error) {
+            console.error('Chyba pri ukladaní do Firebase Firestore:', error);
+            overallMessage += `Chyba pri ukladaní do databázy: ${error.message}. `;
         }
 
         try {
-            // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbw8vy_vpXN6rWjD9taZaJG03onWsJHWKEIZ6XkN2k3dD4-qatrT1dtmYu7jtd9m5Y99/exec'; // ZMEŇTE TOTO!
+            // --- Odoslanie dát na Google Apps Script pre e-mail ---
+            // Použi tvoju URL pre Google Apps Script
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbw8vy_vpXN6rWjD9taZaJG03onWsJHWKEIZ6XkN2k3dD4-qatrT1dtmYu7jtd9m5Y99/exec'; 
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
-                mode: 'cors', // Dôležité pre komunikáciu medzi doménami
+                mode: 'cors',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -456,17 +470,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if (result.success) {
-                statusMessage.textContent = result.message;
-                statusMessage.className = 'mt-4 text-center success-message';
-                form.reset(); // Vymaže formulár po úspešnom odoslaní
-                phonePrefixSelect.value = '+421'; // Reset predvolenej predvoľby
+                console.log("E-mail úspešne odoslaný cez Apps Script:", result.message);
+                emailSuccess = true;
+                overallMessage += 'E-mail s potvrdením bol odoslaný. ';
             } else {
-                statusMessage.textContent = `Chyba: ${result.message}`;
-                statusMessage.className = 'mt-4 text-center error-message';
+                throw new Error(result.message || 'Neznáma chyba pri odosielaní e-mailu.');
             }
         } catch (error) {
-            console.error('Chyba pri odosielaní formulára:', error);
-            statusMessage.textContent = 'Nastala chyba pri odosielaní formulára. Skúste to prosím znova.';
+            console.error('Chyba pri odosielaní e-mailu cez Apps Script:', error);
+            overallMessage += `Chyba pri odosielaní e-mailu: ${error.message}. `;
+        }
+
+        // Zobrazenie celkového stavu
+        if (firebaseSuccess && emailSuccess) {
+            statusMessage.textContent = 'Registrácia úspešná! ' + overallMessage;
+            statusMessage.className = 'mt-4 text-center success-message';
+            form.reset();
+            phonePrefixSelect.value = '+421';
+        } else if (firebaseSuccess || emailSuccess) {
+            statusMessage.textContent = 'Registrácia čiastočne úspešná: ' + overallMessage;
+            statusMessage.className = 'mt-4 text-center warning-message'; // Môžeš pridať aj triedu pre varovanie
+        } else {
+            statusMessage.textContent = 'Registrácia zlyhala: ' + overallMessage;
             statusMessage.className = 'mt-4 text-center error-message';
         }
     });
