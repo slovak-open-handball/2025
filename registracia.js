@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const icoInput = document.getElementById('icoInput');
     const dicInput = document.getElementById('dicInput');
     const icDPHInput = document.getElementById('icDPHInput');
+    const houseNumberInput = document.getElementById('houseNumberInput'); // Nový input pre číslo domu
+    const pscInput = document.getElementById('pscInput');             // Nový input pre PSČ
+    const phoneNumberInput = document.getElementById('phoneNumberInput'); // Nový input pre telefónne číslo
 
     // Kompletný zoznam svetových predvolieb zoradený abecedne podľa názvu krajiny
     const phonePrefixes = [
@@ -345,6 +348,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             this.value = formattedValue;
+        });
+    }
+
+    // --- Validácia čísla domu (čísla a '/') ---
+    if (houseNumberInput) {
+        houseNumberInput.addEventListener('input', function(event) {
+            // Ponechá iba číslice a znak '/'
+            this.value = this.value.replace(/[^0-9/]/g, '');
+        });
+    }
+
+    // --- Validácia PSČ (xxx xx, presne 6 znakov) ---
+    if (pscInput) {
+        pscInput.addEventListener('input', function(event) {
+            let value = this.value.replace(/\s/g, ''); // Odstráni existujúce medzery
+            let formattedValue = '';
+
+            // Ponechá iba číslice
+            value = value.replace(/[^0-9]/g, '');
+
+            if (value.length > 3) {
+                formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 5);
+            } else {
+                formattedValue = value;
+            }
+            
+            // Obmedzí celkovú dĺžku na 6 znakov (vrátane medzery)
+            this.value = formattedValue.substring(0, 6);
+        });
+    }
+
+    // --- Validácia telefónneho čísla (xxx xxx xxx, presne 11 znakov) ---
+    if (phoneNumberInput) {
+        phoneNumberInput.addEventListener('input', function(event) {
+            let value = this.value.replace(/\s/g, ''); // Odstráni existujúce medzery
+            let formattedValue = '';
+
+            // Ponechá iba číslice
+            value = value.replace(/[^0-9]/g, '');
+
+            if (value.length > 6) {
+                formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 6) + ' ' + value.substring(6, 9);
+            } else if (value.length > 3) {
+                formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 6);
+            } else {
+                formattedValue = value;
+            }
+
+            // Obmedzí celkovú dĺžku na 11 znakov (vrátane medzier)
+            this.value = formattedValue.substring(0, 11);
         });
     }
 
