@@ -20,7 +20,9 @@ input[type="email"],
 input[type="tel"],
 textarea,
 select {
-    border-color: #d1d5db; /* Light border color */
+    outline: none;
+    border-color: #6366f1; /* Indigo focus border */
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Indigo focus ring */
 }
 input:focus,
 textarea:focus,
