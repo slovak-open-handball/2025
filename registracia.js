@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { code: '+962', name: 'Jordánsko (+962)' },
         { code: '+7', name: 'Kazachstan (+7)' },
         { code: '+254', name: 'Keňa (+254)' },
-        { code: '+686', name: 'Kiribati (+686)' 대비
+        { code: '+686', name: 'Kiribati (+686)',
         { code: '+383', name: 'Kosovo (+383)' },
         { code: '+965', name: 'Kuvajt (+965)' },
         { code: '+996', name: 'Kirgizsko (+996)' },
