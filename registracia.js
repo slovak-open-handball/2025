@@ -7,9 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const icoInput = document.getElementById('icoInput');
     const dicInput = document.getElementById('dicInput');
     const icDPHInput = document.getElementById('icDPHInput');
-    const houseNumberInput = document.getElementById('houseNumberInput'); // Nový input pre číslo domu
-    const pscInput = document.getElementById('pscInput');             // Nový input pre PSČ
-    const phoneNumberInput = document.getElementById('phoneNumberInput'); // Nový input pre telefónne číslo
+    const houseNumberInput = document.getElementById('houseNumberInput');
+    const pscInput = document.getElementById('pscInput');
+    const phoneNumberInput = document.getElementById('phoneNumberInput');
+    const emailInput = document.getElementById('emailInput'); // Nový input pre e-mail
 
     // Kompletný zoznam svetových predvolieb zoradený abecedne podľa názvu krajiny
     const phonePrefixes = [
@@ -401,9 +402,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // --- Validácia e-mailu (musí obsahovať @) ---
+    if (emailInput) {
+        emailInput.addEventListener('input', function(event) {
+            // Pre jednoduchú validáciu na prítomnosť '@'
+            // Pre komplexnejšiu validáciu by sa použil pattern alebo regex
+            if (this.value.includes('@')) {
+                this.setCustomValidity(''); // Vynuluje chybovú správu, ak je platné
+            } else {
+                this.setCustomValidity('E-mailová adresa musí obsahovať znak "@"'); // Nastaví chybovú správu
+            }
+        });
+        // Pridáme aj validáciu pri odosielaní formulára, ak by používateľ nechal pole prázdne alebo neplatné
+        emailInput.addEventListener('blur', function() {
+            if (!this.value.includes('@') && this.value.length > 0) {
+                this.setCustomValidity('E-mailová adresa musí obsahovať znak "@"');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+
 
     form.addEventListener('submit', async function(event) {
         event.preventDefault(); // Zabráni predvolenému odoslaniu formulára
+
+        // Dodatočná kontrola e-mailu pred odoslaním formulára
+        if (emailInput && !emailInput.value.includes('@')) {
+            statusMessage.textContent = 'Chyba: E-mailová adresa musí obsahovať znak "@".';
+            statusMessage.className = 'mt-4 text-center error-message';
+            emailInput.focus(); // Zameria sa na pole e-mailu
+            return; // Zastaví odosielanie formulára
+        }
 
         statusMessage.textContent = 'Odosielam...';
         statusMessage.className = 'mt-4 text-center text-gray-600';
