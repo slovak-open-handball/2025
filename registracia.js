@@ -11,7 +11,7 @@ import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.g
 // ** EXPLICITNÁ FIREBASE KONFIGURÁCIA **
 // Táto konfigurácia je teraz priamo v kóde.
 const firebaseConfig = {
-    apiKey: "AIzaSyD0h0rQZiIGi0-UDb4-YU_JihRGpIlfz40",
+    apiKey: "AIzaSyD0h0rQZiIGi0-UDb4-YU_JihRGvIlfz40",
     authDomain: "turnaj-a28c5.firebaseapp.com",
     projectId: "turnaj-a28c5",
     storageBucket: "turnaj-a28c5.firebasestorage.app",
@@ -83,11 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Odosielam...';
             showMessage('Odosielam registráciu a ukladám dáta...', 'info'); // Zobrazí správu o odosielaní
 
-            const formData = new FormData(registrationForm);
+            // Získanie dát z formulára
             const registrationData = {
-                meno: formData.get('meno'),
-                email: formData.get('email'),
-                sprava: formData.get('sprava'),
+                officialClubName: document.getElementById('officialClubName').value, // Nové pole
+                meno: document.getElementById('meno').value,
+                email: document.getElementById('email').value,
+                sprava: document.getElementById('teamInfo').value,
                 timestamp: serverTimestamp() // Uloží čas odoslania
             };
 
@@ -100,7 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/json' // Nastaví Content-Type na JSON
+                    },
+                    body: JSON.stringify(registrationData), // Odošle dáta ako JSON reťazec
                 });
                 const result = await response.json();
                 if (result.success) {
