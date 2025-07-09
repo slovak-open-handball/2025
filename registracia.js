@@ -1,7 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
 const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; // <--- TÚTO URL AKTUALIZUJTE!
-const REDIRECT_URL = "https://slovak-open-handball.github.io/2025/index.html"; // Vaša cieľová URL
 
 // Firebase imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
@@ -29,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
+    const container = document.querySelector('.container'); // Získame kontajner formulára
 
     // Používame appId z poskytnutej konfigurácie
     const appId = firebaseConfig.appId;
@@ -98,11 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Odoslanie e-mailu cez Google Apps Script
             try {
-                // Vrátenie k odosielaniu FormData pre Google Apps Script
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData, // <--- ZMENA: Posielame FormData
-                    // Content-Type sa automaticky nastaví na multipart/form-data
+                    body: formData,
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -120,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (firebaseInitialized && db && isAuthReady && currentUserId) {
                 try {
                     const registrationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'registrations');
-                    await addDoc(registrationsCollectionRef, registrationDataForFirestore); // Používame objekt pre Firestore
+                    await addDoc(registrationsCollectionRef, registrationDataForFirestore);
                     dbSuccess = true;
                     dbMessage = 'Dáta boli úspešne uložené do databázy.';
                 } catch (error) {
@@ -134,10 +132,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Zobrazenie výsledku
             if (emailSuccess && dbSuccess) {
-                showMessage('Registrácia úspešná! ' + emailMessage + ' ' + dbMessage + ' Presmerovávam...', 'success');
-                setTimeout(() => {
-                    window.location.href = REDIRECT_URL;
-                }, 2000);
+                // Skryjeme formulár
+                registrationForm.classList.add('hidden');
+                // Zobrazíme správu s poďakovaním
+                showMessage(`
+                    <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Ďakujeme za registráciu!</h2>
+                    <p class="text-gray-700 mb-2">Vaša registrácia klubu/tímu bola úspešne prijatá.</p>
+                    <p class="text-gray-700">Potvrdenie registrácie bolo odoslané na vašu e-mailovú adresu: <strong>${registrationDataForFirestore.email}</strong>.</p>
+                    <p class="text-gray-700 mt-4">V prípade akýchkoľvek otázok nás neváhajte kontaktovať.</p>
+                `, 'success');
+                // Odstránime shadow z kontajnera pre čistejší vzhľad správy
+                container.style.boxShadow = 'none';
+
             } else if (emailSuccess && !dbSuccess) {
                 showMessage(`E-mail odoslaný, ale chyba pri ukladaní do DB: ${dbMessage}`, 'error');
             } else if (!emailSuccess && dbSuccess) {
@@ -153,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Zobrazí správu používateľovi.
-     * @param {string} msg Text správy.
+     * @param {string} msg Text správy (môže obsahovať HTML).
      * @param {string} type Typ správy ('success', 'error', 'info').
      */
     function showMessage(msg, type) {
-        messageDiv.textContent = msg;
+        messageDiv.innerHTML = msg; // Používame innerHTML, aby sme mohli vložiť HTML obsah
         messageDiv.className = `message ${type}`; // Nastaví triedu pre štýlovanie
         messageDiv.classList.remove('hidden');
     }
