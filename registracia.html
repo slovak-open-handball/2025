@@ -175,28 +175,7 @@
     <script src="registracia.js"></script>
 </body>
 </html>
-```
-**Kľúčové zmeny v `registracia.html`:**
 
-* **Firebase SDKs:** Pridal som `<script>` tagy pre `firebase-app-compat.js`, `firebase-auth-compat.js` a `firebase-firestore-compat.js` *pred* tvojim `registracia.js` skriptom. Toto zabezpečí, že Firebase knižnice sú načítané a dostupné.
-* **Firebase Konfigurácia a Inicializácia:** Tvoju `firebaseConfig` som presunul priamo do HTML súboru do `<script>` bloku. Potom som pridal `firebase.initializeApp(firebaseConfig);` na inicializáciu Firebase.
-* **Globálne premenné pre `registracia.js`:**
-    * `window.firebaseDb = db;` sprístupní inštanciu Firestore globálne.
-    * `window.getAddDoc = firebase.firestore.addDoc;` a `window.getCollection = firebase.firestore.collection;` sprístupnia funkcie Firestore priamo.
-    * `window.getFirebaseAppId = () => firebaseConfig.appId;` sprístupňuje `appId`.
-    * `window.getFirebaseUserId = () => currentUserId;` vytvorí funkciu na získanie ID aktuálneho používateľa.
-* **Autentifikácia (`onAuthStateChanged` a Anonymné prihlásenie):**
-    * Používam `firebase.auth().onAuthStateChanged(user => { ... });` na sledovanie stavu autentifikácie používateľa. Tento kód sa spustí vždy, keď sa stav prihlásenia zmení (napríklad po inicializácii Firebase alebo po prihlásení/odhlásení používateľa).
-    * Ak používateľ nie je prihlásený (`!user`), pokúsim sa ho anonymne prihlásiť pomocou `auth.signInAnonymously()`. Toto zabezpečí, že vždy budeme mať `userId`, aj keď používateľ nemá explicitný účet. Je to dôležité pre ukladanie dát, ktoré majú byť spojené s jedinečným návštevníkom.
-    * Formulár (`registrationForm`) je spočiatku skrytý (`display: none;`) a zobrazí sa až po úspešnej inicializácii Firebase a prihlásení používateľa (vrátane anonymného). Toto zabráni pokusom o odoslanie dát, keď Firebase ešte nie je pripravený.
-* **Správa o stave Firebase:** Pridal som `firebaseStatus` div na zobrazenie správ o stave inicializácie Firebase a autentifikácie.
-
-**2. Aktualizovaný `registracia.js`:**
-
-Tento súbor bude teraz predpokladať, že Firebase inštancie sú dostupné cez `window` objekt a bude sa spoliehať na to, že používateľ je už autentifikovaný (alebo sa autentifikuje anonymne) pred odoslaním formulára.
-
-
-```javascript
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('registrationForm');
     const statusMessage = document.getElementById('statusMessage');
