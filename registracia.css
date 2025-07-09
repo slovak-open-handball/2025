@@ -1,4 +1,4 @@
-        body {
+body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Svetlošedé pozadie */
             display: flex;
@@ -60,7 +60,7 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); /* Jemný modrý tieň pri fokuse */
         }
-        /* NOVÉ ŠTÝLY PRE form-group-triple */
+        /* Štýly pre IČO, DIČ, IČ DPH skupinu */
         .form-group-triple {
             display: flex;
             flex-wrap: wrap; /* Umožňuje zalomenie na menších obrazovkách */
@@ -77,6 +77,18 @@
         .form-group-triple input[type="text"] {
             width: 100%; /* Zabezpečí, že inputy v tejto skupine zaberú plnú šírku ich flex kontajnera */
             box-sizing: border-box; /* Zahrnie padding do šírky, aby nepretekal */
+        }
+
+        /* NOVÉ ŠTÝLY PRE form-group-grid (pre adresné údaje) */
+        .form-group-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 2 stĺpce na väčších, 1 na menších */
+            gap: 1.5rem; /* Medzera medzi gridovými položkami */
+            margin-bottom: 1.5rem; /* Konzistentný spodný okraj */
+        }
+
+        .form-group-grid .form-group {
+            margin-bottom: 0; /* Odstráni spodný okraj z vnútorných form-group */
         }
         /* KONIEC NOVÝCH ŠTÝLOV */
         
