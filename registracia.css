@@ -1,4 +1,4 @@
-body {
+        body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6; /* Svetlošedé pozadie */
             display: flex;
@@ -82,13 +82,20 @@ body {
         /* NOVÉ ŠTÝLY PRE form-group-grid (pre adresné údaje) */
         .form-group-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 2 stĺpce na väčších, 1 na menších */
+            grid-template-columns: 1fr 1fr; /* Explicitne 2 stĺpce */
             gap: 1.5rem; /* Medzera medzi gridovými položkami */
             margin-bottom: 1.5rem; /* Konzistentný spodný okraj */
         }
 
         .form-group-grid .form-group {
             margin-bottom: 0; /* Odstráni spodný okraj z vnútorných form-group */
+        }
+
+        /* Media query pre responzivitu: na menších obrazovkách 1 stĺpec */
+        @media (max-width: 768px) {
+            .form-group-grid {
+                grid-template-columns: 1fr; /* Na menších obrazovkách 1 stĺpec */
+            }
         }
         /* KONIEC NOVÝCH ŠTÝLOV */
         
