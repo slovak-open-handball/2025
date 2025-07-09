@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Odoslanie e-mailu cez Google Apps Script
             // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbxFSTqsrQ-fBPzFC789rdy2RFNHJFgAc00thLZeLEeIfeWIdDCUVxklx4i89TpInOh1/exec'; // ZMEŇTE TOTO!
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbwOt0jHZNV9ZpzrGZnGxaFPxVWV133HcFk1OzDJA_BG0a5x0f80_hA5DFsFqo-gRBzi/exec'; // ZMEŇTE TOTO!
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
