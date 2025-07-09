@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Zobrazenie výsledku
             if (emailSuccess && dbSuccess) {
                 // Skryjeme formulár
-                registrationForm.classList.add('hidden');
+                registrationForm.classList.add('hidden'); // Tento riadok skryje celý formulár
                 // Zobrazíme správu s poďakovaním
                 showMessage(`
                     <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Ďakujeme za registráciu!</h2>
