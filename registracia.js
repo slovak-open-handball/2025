@@ -365,6 +365,44 @@ document.addEventListener('DOMContentLoaded', function() {
         return emailRegex.test(email);
     }
 
+    // Funkcia na formátovanie telefónneho čísla s automatickou medzerou
+    function formatPhoneNumber(input) {
+        let value = input.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+        let formattedValue = '';
+        if (value.length > 0) {
+            formattedValue += value.substring(0, 3);
+        }
+        if (value.length > 3) {
+            formattedValue += ' ' + value.substring(3, 6);
+        }
+        if (value.length > 6) {
+            formattedValue += ' ' + value.substring(6, 9);
+        }
+        input.value = formattedValue;
+    }
+
+    // Funkcia na formátovanie PSČ s automatickou medzerou
+    function formatPsc(input) {
+        let value = input.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+        let formattedValue = '';
+        if (value.length > 0) {
+            formattedValue += value.substring(0, 3);
+        }
+        if (value.length > 3) {
+            formattedValue += ' ' + value.substring(3, 5);
+        }
+        input.value = formattedValue;
+    }
+
+    // Pridanie event listenerov pre automatické formátovanie
+    phoneNumberInput.addEventListener('input', function() {
+        formatPhoneNumber(this);
+    });
+
+    pscInput.addEventListener('input', function() {
+        formatPsc(this);
+    });
+
     form.addEventListener('submit', async function(event) {
         event.preventDefault(); // Zabraňuje predvolenému odoslaniu formulára
 
@@ -460,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Odoslanie e-mailu cez Google Apps Script
             // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbz0QHUrYaiKcDHE_AAu1iwII0DXDdwqZolhlh-gDiHI-4YkPwpqLn2u11bT5QAf9y62/exec'; // ZMEŇTE TOTO!
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbxFSTqsrQ-fBPzFC789rdy2RFNHJFgAc00thLZeLEeIfeWIdDCUVxklx4i89TpInOh1/exec'; // ZMEŇTE TOTO!
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
