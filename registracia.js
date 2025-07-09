@@ -355,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funkcia na validáciu formátu čísla domu (napr. 123, 123/A, 123/B)
     function validateHouseNumber(houseNumber) {
+        // Opravený regex pre JS, aby zodpovedal HTML patternu
         const houseNumberRegex = /^[0-9]+(\/[A-Za-z])?$/;
         return houseNumberRegex.test(houseNumber);
     }
@@ -435,11 +436,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Validácia čísla domu
         const houseNumber = houseNumberInput.value.trim();
-        if (!validateHouseNumber(houseNumber)) {
+        if (!houseNumberInput.value.length > 0 && !validateHouseNumber(houseNumber)) { // Pridaná kontrola, či je pole vyplnené
             statusMessage.textContent = 'Zadajte platné číslo domu (napr. 123 alebo 123/A).';
             statusMessage.className = 'mt-4 text-center error-message';
             return;
         }
+
 
         // Validácia e-mailu
         const email = emailInput.value.trim();
@@ -492,8 +494,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Uloženie dát do Firestore
-            // Cesta: /artifacts/{appId}/public/registrations/{docId}
-            const docRef = await db.collection(`artifacts/${appId}/public/registrations`).add(formData);
+            // OPRAVENÁ CESTA: db.collection('artifacts').doc(appId).collection('registrations_public').add(formData);
+            // Táto cesta má 3 segmenty: 'artifacts' (kolekcia), 'appId' (dokument), 'registrations_public' (kolekcia)
+            // Toto je v súlade s pravidlami Firestore pre nepárny počet segmentov pre kolekciu.
+            const docRef = await db.collection('artifacts').doc(appId).collection('registrations_public').add(formData);
             console.log("Dokument úspešne zapísaný s ID: ", docRef.id);
 
             // Odoslanie e-mailu cez Google Apps Script
