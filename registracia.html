@@ -23,10 +23,8 @@
                 <input type="text" id="organizationName" name="organizationName" placeholder="Zadajte názov organizácie (nepovinné)">
             </div>
 
-            <!-- NOVÝ NADPIS "Fakturačné údaje" -->
             <h2 style="font-size: 1.5rem; font-weight: 600; color: #374151; margin-top: 2rem; margin-bottom: 1rem;">Fakturačné údaje</h2>
 
-            <!-- NOVÁ SEKCIA PRE IČO, DIČ, IČ DPH -->
             <div class="form-group-triple">
                 <div class="form-group">
                     <label for="ico">IČO:</label>
@@ -40,6 +38,31 @@
                     <label for="icDPH">IČ DPH:</label>
                     <input type="text" id="icDPH" name="icDPH" placeholder="2 veľké písmená a 10 číslic" pattern="^[A-Z]{2}\d{10}$" title="IČ DPH musí začínať 2 veľkými písmenami a nasledovať musí 10 číslic.">
                 </div>
+            </div>
+
+            <!-- NOVÁ SEKCIA PRE ADRESU -->
+            <h2 style="font-size: 1.5rem; font-weight: 600; color: #374151; margin-top: 2rem; margin-bottom: 1rem;">Adresa</h2>
+            <div class="form-group-grid">
+                <div class="form-group">
+                    <label for="street">Ulica:</label>
+                    <input type="text" id="street" name="street" placeholder="Zadajte ulicu" required>
+                </div>
+                <div class="form-group">
+                    <label for="houseNumber">Popisné číslo:</label>
+                    <input type="text" id="houseNumber" name="houseNumber" placeholder="Zadajte popisné číslo" required>
+                </div>
+                <div class="form-group">
+                    <label for="city">Mesto:</label>
+                    <input type="text" id="city" name="city" placeholder="Zadajte mesto" required>
+                </div>
+                <div class="form-group">
+                    <label for="psc">PSČ:</label>
+                    <input type="text" id="psc" name="psc" placeholder="Formát: xxx xx" pattern="^\d{3}\s\d{2}$" title="PSČ musí byť vo formáte xxx xx (napr. 010 01)" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="country">Krajina:</label>
+                <input type="text" id="country" name="country" placeholder="Zadajte krajinu" required>
             </div>
             <!-- KONIEC NOVEJ SEKCE -->
 
