@@ -259,13 +259,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Nastavenie predvolenej predvoľby na +421 (Slovensko)
     phonePrefixSelect.value = '+421';
 
-    // Funkcia na dynamickú úpravu šírky select boxu
-    function adjustSelectWidth() {
-        // Vytvoríme dočasný element, aby sme zmerali šírku textu
+    // Funkcia na výpočet maximálnej šírky zo všetkých možností a nastavenie fixnej šírky
+    function setInitialSelectWidth() {
+        let maxWidth = 0;
         const tempSpan = document.createElement('span');
         tempSpan.style.visibility = 'hidden';
         tempSpan.style.position = 'absolute';
         tempSpan.style.whiteSpace = 'nowrap';
+        
         // Skopírujeme štýly z pôvodného select boxu pre presné meranie
         const computedStyle = window.getComputedStyle(phonePrefixSelect);
         for (const prop of computedStyle) {
@@ -273,22 +274,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 tempSpan.style[prop] = computedStyle[prop];
             }
         }
-        
-        // Nastavíme text na aktuálne vybranú možnosť
-        tempSpan.textContent = phonePrefixSelect.options[phonePrefixSelect.selectedIndex].textContent;
         document.body.appendChild(tempSpan);
+
+        // Prejdeme všetky možnosti a nájdeme najdlhší text
+        Array.from(phonePrefixSelect.options).forEach(option => {
+            tempSpan.textContent = option.textContent;
+            if (tempSpan.offsetWidth > maxWidth) {
+                maxWidth = tempSpan.offsetWidth;
+            }
+        });
         
-        // Nastavíme šírku select boxu na šírku textu + malý offset pre šípku
-        phonePrefixSelect.style.width = (tempSpan.offsetWidth + 30) + 'px'; // +30px pre šípku a padding
+        // Nastavíme šírku select boxu na vypočítanú maximálnu šírku + malý offset pre šípku
+        // Offset 30px je odhad pre šípku a nejaký padding, môžete ho upraviť
+        phonePrefixSelect.style.width = (maxWidth + 30) + 'px'; 
         
         document.body.removeChild(tempSpan);
     }
 
-    // Zavoláme funkciu pri načítaní stránky
-    adjustSelectWidth();
+    // Zavoláme funkciu pri načítaní stránky, aby sa nastavila fixná šírka
+    setInitialSelectWidth();
 
-    // Zavoláme funkciu pri každej zmene výberu
-    phonePrefixSelect.addEventListener('change', adjustSelectWidth);
+    // Event listener pre zmenu výberu už nie je potrebný, pretože šírka je fixná
+    // phonePrefixSelect.addEventListener('change', adjustSelectWidth); // Toto už nepotrebujeme
 
 
     form.addEventListener('submit', async function(event) {
@@ -341,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusMessage.className = 'mt-4 text-center success-message';
                 form.reset(); // Vymaže formulár po úspešnom odoslaní
                 phonePrefixSelect.value = '+421'; // Reset predvolenej predvoľby
-                adjustSelectWidth(); // Znova upravíme šírku po resete
+                // setInitialSelectWidth(); // Už nie je potrebné volať po resete, šírka je fixná
             } else {
                 statusMessage.textContent = `Chyba: ${result.message}`;
                 statusMessage.className = 'mt-4 text-center error-message';
