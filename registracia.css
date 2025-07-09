@@ -36,7 +36,7 @@
         input[type="email"],
         input[type="text"],
         textarea {
-            width: 96%; /* Zabezpečuje, že inputy budú mať rovnakú šírku ako tlačidlo */
+            width: 96%; /* ZMENA: Nastavené späť na 96% */
             padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
             border: 1px solid #d1d5db; /* Svetlejší okraj */
             border-radius: 0.5rem; /* Zaoblené rohy */
@@ -102,6 +102,7 @@
             text-align: center;
             word-break: break-all; /* Ensures long IDs wrap */
         }
+        /* Nová trieda pre skrytie elementov */
         .hidden {
-            display: none !important;
+            display: none !important; /* Dôležité pre prebitie iných štýlov */
         }
