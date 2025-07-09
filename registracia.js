@@ -1,6 +1,6 @@
 // Konfigurácia pre Google Apps Script
 // NAHRADTE TUTO URL VASOU SKUTOCNOU URL WEB APLIKACIE Z GOOGLE APPS SCRIPT!
-const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; // <--- TÚTO URL AKTUALIZUJTE!
+const GOOGLE_APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; // <--- TÚTO URL SOM AKTUALIZOVAL
 
 // Firebase imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js';
@@ -84,10 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(registrationForm);
             // Dáta pre Firestore (objekt)
             const registrationDataForFirestore = {
+                officialClubName: formData.get('officialClubName'),
+                organizationName: formData.get('organizationName'), // <--- NOVÉ POLE PRIDANÉ
                 meno: formData.get('meno'),
                 email: formData.get('email'),
                 sprava: formData.get('sprava'),
-                officialClubName: formData.get('officialClubName'),
                 timestamp: serverTimestamp() // Uloží čas odoslania
             };
 
@@ -133,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Zobrazenie výsledku
             if (emailSuccess && dbSuccess) {
                 // Skryjeme formulár
-                registrationForm.classList.add('hidden'); // Tento riadok skryje celý formulár
+                registrationForm.classList.add('hidden');
                 // Zobrazíme správu s poďakovaním
                 showMessage(`
                     <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Ďakujeme za registráciu!</h2>
