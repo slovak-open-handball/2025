@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
@@ -16,6 +16,12 @@
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
         <form id="registrationForm">
+            <!-- Nové pole: Oficiálny názov klubu -->
+            <div class="form-group">
+                <label for="officialClubName">Oficiálny názov klubu:</label>
+                <input type="text" id="officialClubName" name="officialClubName" placeholder="zadajte oficiálny názov vášho klubu" required>
+            </div>
+
             <div class="form-group">
                 <label for="meno">Meno (kontaktnej osoby alebo tímu):</label>
                 <input type="text" id="meno" name="meno" placeholder="zadajte vaše meno alebo názov tímu" required>
