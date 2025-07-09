@@ -61,7 +61,7 @@ auth.onAuthStateChanged(user => {
                 const errorCode = error.code;
                 const errorMessage = error.message;
                 firebaseStatusDiv.textContent = `Chyba pri anonymnom prihlásení: ${errorMessage}`;
-                firebaseStatusDiv.className = 'mt-4 text-center error-message';
+                statusMessage.className = 'mt-4 text-center error-message';
                 console.error("Chyba pri anonymnom prihlásení:", errorCode, errorMessage);
             });
     }
@@ -436,7 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Validácia čísla domu
         const houseNumber = houseNumberInput.value.trim();
-        if (!houseNumberInput.value.length > 0 && !validateHouseNumber(houseNumber)) { // Pridaná kontrola, či je pole vyplnené
+        // Kontrolujeme, či je pole vyplnené A či je formát správny, ak je vyplnené.
+        if (houseNumber.length > 0 && !validateHouseNumber(houseNumber)) {
             statusMessage.textContent = 'Zadajte platné číslo domu (napr. 123 alebo 123/A).';
             statusMessage.className = 'mt-4 text-center error-message';
             return;
@@ -464,7 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
             statusMessage.className = 'mt-4 text-center error-message';
             console.error('ID používateľa nie je k dispozícii.');
             return;
-            // Poznámka: V reálnom scenári by ste tu mohli pridať logiku pre opätovné pokusy o prihlásenie alebo zobrazenie chybovej správy používateľovi.
         }
 
         const formData = {
@@ -494,15 +494,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Uloženie dát do Firestore
-            // OPRAVENÁ CESTA: db.collection('artifacts').doc(appId).collection('registrations_public').add(formData);
-            // Táto cesta má 3 segmenty: 'artifacts' (kolekcia), 'appId' (dokument), 'registrations_public' (kolekcia)
-            // Toto je v súlade s pravidlami Firestore pre nepárny počet segmentov pre kolekciu.
             const docRef = await db.collection('artifacts').doc(appId).collection('registrations_public').add(formData);
             console.log("Dokument úspešne zapísaný s ID: ", docRef.id);
 
             // Odoslanie e-mailu cez Google Apps Script
-            // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbwOt0jHZNV9ZpzrGZnGxaFPxVWV133HcFk1OzDJA_BG0a5x0f80_hA5DFsFqo-gRBzi/exec'; // ZMEŇTE TOTO!
+            // ZMEŇTE TÚTO URL na vašu URL adresu nasadenej webovej aplikácie Google Apps Script!
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbwOt0jHZNV9ZpzrGZnGxaFPxVWV133HcFk1OzDJA_BG0a5x0f80_hA5DFsFqo-gRBzi/exec'; 
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
@@ -512,6 +509,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify(formData),
             });
+
+            // Kontrola, či bola odpoveď úspešná (status 2xx)
+            if (!response.ok) {
+                const errorText = await response.text(); // Získaj text chyby z odpovede
+                throw new Error(`HTTP chyba! Status: ${response.status}, Odpoveď: ${errorText}`);
+            }
 
             const result = await response.json();
 
@@ -526,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Chyba pri odosielaní formulára alebo ukladaní do Firestore:', error);
-            statusMessage.textContent = 'Nastala chyba pri odosielaní formulára. Skúste to znova.';
+            statusMessage.textContent = `Nastala chyba pri odosielaní formulára. Skúste to znova. Detail: ${error.message}`;
             statusMessage.className = 'mt-4 text-center error-message';
         }
     });
