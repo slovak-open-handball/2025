@@ -74,13 +74,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pscInput) {
         pscInput.addEventListener('input', function() {
             let value = this.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+
+            if (value.length > 5) { // Obmedzí surové číslice na 5
+                value = value.substring(0, 5);
+            }
+
             let formattedValue = '';
             if (value.length > 3) {
-                formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 5);
+                formattedValue = value.substring(0, 3) + ' ' + value.substring(3); // Vloží medzeru po 3 čísliciach
             } else {
                 formattedValue = value;
             }
-            this.value = formattedValue.substring(0, 6).trim(); // Obmedzenie celkovej dĺžky na 6 vrátane medzery
+            this.value = formattedValue;
+        });
+
+        // Pridáme 'keydown' listener, aby sa zabránilo písaniu za 6 znakov (vrátane medzery)
+        pscInput.addEventListener('keydown', function(event) {
+            // Povoliť backspace, delete, šípky, tab
+            if (event.key === 'Backspace' || event.key === 'Delete' || event.key.startsWith('Arrow') || event.key === 'Tab') {
+                return;
+            }
+
+            // Získať aktuálnu hodnotu bez medzier pre kontrolu dĺžky
+            const currentValueWithoutSpace = this.value.replace(/\s/g, '');
+
+            // Ak je aktuálna hodnota už 5 číslic a používateľ sa pokúša zadať ďalšiu číslicu, zabrániť tomu
+            // Toto zabráni "010 012"
+            if (currentValueWithoutSpace.length >= 5 && /\d/.test(event.key)) {
+                event.preventDefault();
+            }
+
+            // Ak je aktuálna hodnota už 6 znakov (napr. "010 01"), zabrániť ďalšiemu písaniu (okrem backspace/delete)
+            if (this.value.length >= 6 && event.key !== 'Backspace' && event.key !== 'Delete') {
+                event.preventDefault();
+            }
         });
     }
 
