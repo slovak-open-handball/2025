@@ -29,6 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
     const container = document.querySelector('.container'); // Získame kontajner formulára
+    const icDPHInput = document.getElementById('icDPH'); // Získame element IČ DPH
+
+    // Pridáme event listener pre automatický prevod na veľké písmená pre IČ DPH
+    if (icDPHInput) {
+        icDPHInput.addEventListener('input', function() {
+            this.value = this.value.toUpperCase();
+        });
+    }
 
     // Používame appId z poskytnutej konfigurácie
     const appId = firebaseConfig.appId;
@@ -86,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Získanie hodnôt nových polí a ich orezanie bielych znakov
             const ico = formData.get('ico').trim();
             const dic = formData.get('dic').trim();
-            const icDPH = formData.get('icDPH').trim();
+            const icDPH = formData.get('icDPH').trim(); // Hodnota už bude automaticky veľkými písmenami vďaka event listeneru
 
             // VALIDÁCIA: Minimálne jedno pole z IČO, DIČ, IČ DPH musí byť vyplnené
             if (!ico && !dic && !icDPH) {
@@ -113,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // VALIDÁCIA: Formát IČ DPH (ak je vyplnené)
+            // Vďaka .toUpperCase() už nemusíme kontrolovať malé písmená v regexe, stačí formát
             if (icDPH && !/^[A-Z]{2}\d{10}$/.test(icDPH)) {
                 showMessage('IČ DPH musí začínať 2 veľkými písmenami a nasledovať musí 10 číslic.', 'error');
                 submitButton.disabled = false;
