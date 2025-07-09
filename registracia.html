@@ -147,12 +147,170 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div class="form-group">
-                        <label for="contactPersonPhone" class="block text-gray-700 text-sm mb-2">Telefón:</label>
-                        <!-- Zmenené pre flexibilné telefónne číslo: +DDD XXX XXX XXX alebo iné medzinárodné formáty -->
-                        <input type="tel" id="contactPersonPhone" name="contactPersonPhone" class="form-input"
-                               pattern="^\+[0-9\s]{8,20}$" maxlength="25" inputmode="tel"
-                               title="Prosím zadajte telefónne číslo vo formáte +DDD XXX XXX XXX alebo podobnom medzinárodnom formáte (napr. +421 9xx xxx xxx, +420 xxx xxx xxx)." required>
+                    <div class="form-group flex flex-col">
+                        <div class="flex space-x-2">
+                            <div class="flex-1">
+                                <label for="countryCode" class="block text-gray-700 text-sm mb-2">Predvoľba:</label>
+                                <!-- Selectbox pre medzinárodné predvoľby -->
+                                <select id="countryCode" name="countryCode" class="form-input w-full">
+                                    <option value="+93">Afganistan (+93)</option>
+                                    <option value="+355">Albánsko (+355)</option>
+                                    <option value="+213">Alžírsko (+213)</option>
+                                    <option value="+376">Andorra (+376)</option>
+                                    <option value="+244">Angola (+244)</option>
+                                    <option value="+54">Argentína (+54)</option>
+                                    <option value="+374">Arménsko (+374)</option>
+                                    <option value="+297">Aruba (+297)</option>
+                                    <option value="+61">Austrália (+61)</option>
+                                    <option value="+672">Austrálske externé územia (+672)</option>
+                                    <option value="+43">Rakúsko (+43)</option>
+                                    <option value="+994">Azerbajdžan (+994)</option>
+                                    <option value="+973">Bahrajn (+973)</option>
+                                    <option value="+880">Bangladéš (+880)</option>
+                                    <option value="+32">Belgicko (+32)</option>
+                                    <option value="+501">Belize (+501)</option>
+                                    <option value="+229">Benin (+229)</option>
+                                    <option value="+375">Bielorusko (+375)</option>
+                                    <option value="+975">Bhután (+975)</option>
+                                    <option value="+591">Bolívia (+591)</option>
+                                    <option value="+387">Bosna a Hercegovina (+387)</option>
+                                    <option value="+267">Botswana (+267)</option>
+                                    <option value="+55">Brazília (+55)</option>
+                                    <option value="+246">Britské indickooceánske územie (+246)</option>
+                                    <option value="+673">Brunej (+673)</option>
+                                    <option value="+359">Bulharsko (+359)</option>
+                                    <option value="+226">Burkina Faso (+226)</option>
+                                    <option value="+257">Burundi (+257)</option>
+                                    <option value="+238">Kapverdy (+238)</option>
+                                    <option value="+237">Kamerun (+237)</option>
+                                    <option value="+236">Stredoafrická republika (+236)</option>
+                                    <option value="+235">Čad (+235)</option>
+                                    <option value="+56">Čile (+56)</option>
+                                    <option value="+86">Čína (+86)</option>
+                                    <option value="+382">Čierna Hora (+382)</option>
+                                    <option value="+420">Česko (+420)</option>
+                                    <option value="+57">Kolumbia (+57)</option>
+                                    <option value="+269">Komory (+269)</option>
+                                    <option value="+242">Kongo-Brazzaville (+242)</option>
+                                    <option value="+243">Kongo-Kinshasa (+243)</option>
+                                    <option value="+682">Cookove ostrovy (+682)</option>
+                                    <option value="+506">Kostarika (+506)</option>
+                                    <option value="+53">Kuba (+53)</option>
+                                    <option value="+599">Curaçao, Sint Maarten (+599)</option>
+                                    <option value="+357">Cyprus (+357)</option>
+                                    <option value="+45">Dánsko (+45)</option>
+                                    <option value="+253">Džibutsko (+253)</option>
+                                    <option value="+20">Egypt (+20)</option>
+                                    <option value="+291">Eritrea (+291)</option>
+                                    <option value="+372">Estónsko (+372)</option>
+                                    <option value="+251">Etiópia (+251)</option>
+                                    <option value="+268">Eswatini (+268)</option>
+                                    <option value="+500">Falklandy (+500)</option>
+                                    <option value="+298">Faerské ostrovy (+298)</option>
+                                    <option value="+679">Fidži (+679)</option>
+                                    <option value="+358">Fínsko (+358)</option>
+                                    <option value="+33">Francúzsko (+33)</option>
+                                    <option value="+594">Francúzska Guyana (+594)</option>
+                                    <option value="+689">Francúzska Polynézia (+689)</option>
+                                    <option value="+241">Gabon (+241)</option>
+                                    <option value="+220">Gambia (+220)</option>
+                                    <option value="+995">Gruzínsko (+995)</option>
+                                    <option value="+233">Ghana (+233)</option>
+                                    <option value="+350">Gibraltár (+350)</option>
+                                    <option value="+30">Grécko (+30)</option>
+                                    <option value="+299">Grónsko (+299)</option>
+                                    <option value="+590">Guadeloupe (+590)</option>
+                                    <option value="+502">Guatemala (+502)</option>
+                                    <option value="+224">Guinea (+224)</option>
+                                    <option value="+245">Guinea-Bissau (+245)</option>
+                                    <option value="+592">Guyana (+592)</option>
+                                    <option value="+509">Haiti (+509)</option>
+                                    <option value="+31">Holandsko (+31)</option>
+                                    <option value="+504">Honduras (+504)</option>
+                                    <option value="+852">Hongkong (+852)</option>
+                                    <option value="+385">Chorvátsko (+385)</option>
+                                    <option value="+91">India (+91)</option>
+                                    <option value="+62">Indonézia (+62)</option>
+                                    <option value="+98">Irán (+98)</option>
+                                    <option value="+964">Irak (+964)</option>
+                                    <option value="+353">Írsko (+353)</option>
+                                    <option value="+972">Izrael (+972)</option>
+                                    <option value="+39">Taliansko (+39)</option>
+                                    <option value="+81">Japonsko (+81)</option>
+                                    <option value="+967">Jemen (+967)</option>
+                                    <option value="+962">Jordánsko (+962)</option>
+                                    <option value="+27">Južná Afrika (+27)</option>
+                                    <option value="+82">Južná Kórea (+82)</option>
+                                    <option value="+855">Kambodža (+855)</option>
+                                    <option value="+254">Keňa (+254)</option>
+                                    <option value="+686">Kiribati (+686)</option>
+                                    <option value="+996">Kirgizsko (+996)</option>
+                                    <option value="+507">Panama (+507)</option>
+                                    <option value="+675">Papua-Nová Guinea (+675)</option>
+                                    <option value="+595">Paraguaj (+595)</option>
+                                    <option value="+970">Palestínske územia (+970)</option>
+                                    <option value="+51">Peru (+51)</option>
+                                    <option value="+63">Filipíny (+63)</option>
+                                    <option value="+48">Poľsko (+48)</option>
+                                    <option value="+351">Portugalsko (+351)</option>
+                                    <option value="+974">Katar (+974)</option>
+                                    <option value="+262">Réunion (+262)</option>
+                                    <option value="+40">Rumunsko (+40)</option>
+                                    <option value="+250">Rwanda (+250)</option>
+                                    <option value="+508">Saint-Pierre a Miquelon (+508)</option>
+                                    <option value="+503">Salvádor (+503)</option>
+                                    <option value="+685">Samoa (+685)</option>
+                                    <option value="+378">San Maríno (+378)</option>
+                                    <option value="+966">Saudská Arábia (+966)</option>
+                                    <option value="+221">Senegal (+221)</option>
+                                    <option value="+381">Srbsko (+381)</option>
+                                    <option value="+248">Seychely (+248)</option>
+                                    <option value="+232">Sierra Leone (+232)</option>
+                                    <option value="+65">Singapur (+65)</option>
+                                    <option value="+421" selected>Slovensko (+421)</option>
+                                    <option value="+386">Slovinsko (+386)</option>
+                                    <option value="+252">Somálsko (+252)</option>
+                                    <option value="+34">Španielsko (+34)</option>
+                                    <option value="+94">Srí Lanka (+94)</option>
+                                    <option value="+249">Sudán (+249)</option>
+                                    <option value="+597">Surinam (+597)</option>
+                                    <option value="+41">Švajčiarsko (+41)</option>
+                                    <option value="+46">Švédsko (+46)</option>
+                                    <option value="+963">Sýria (+963)</option>
+                                    <option value="+886">Taiwan (+886)</option>
+                                    <option value="+992">Tadžikistan (+992)</option>
+                                    <option value="+255">Tanzánia (+255)</option>
+                                    <option value="+66">Thajsko (+66)</option>
+                                    <option value="+670">Východný Timor (+670)</option>
+                                    <option value="+228">Togo (+228)</option>
+                                    <option value="+690">Tokelau (+690)</option>
+                                    <option value="+676">Tonga (+676)</option>
+                                    <option value="+216">Tunisko (+216)</option>
+                                    <option value="+90">Turecko (+90)</option>
+                                    <option value="+993">Turkménsko (+993)</option>
+                                    <option value="+688">Tuvalu (+688)</option>
+                                    <option value="+256">Uganda (+256)</option>
+                                    <option value="+380">Ukrajina (+380)</option>
+                                    <option value="+1">USA/Kanada (+1)</option>
+                                    <option value="+598">Uruguaj (+598)</option>
+                                    <option value="+998">Uzbekistan (+998)</option>
+                                    <option value="+678">Vanuatu (+678)</option>
+                                    <option value="+379">Vatikán (+379)</option>
+                                    <option value="+58">Venezuela (+58)</option>
+                                    <option value="+84">Vietnam (+84)</option>
+                                    <option value="+681">Wallis a Futuna (+681)</option>
+                                    <option value="+260">Zambia (+260)</option>
+                                    <option value="+263">Zimbabwe (+263)</option>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label for="localPhoneNumber" class="block text-gray-700 text-sm mb-2">Telefónne číslo:</label>
+                                <!-- Input pre lokálne telefónne číslo -->
+                                <input type="tel" id="localPhoneNumber" name="localPhoneNumber" class="form-input w-full"
+                                       pattern="[0-9\s]{9,15}" maxlength="15" inputmode="numeric"
+                                       title="Prosím zadajte lokálne telefónne číslo (napr. 9xx xxx xxx alebo xxx xxx xxx)." required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="contactPersonEmail" class="block text-gray-700 text-sm mb-2">E-mail:</label>
