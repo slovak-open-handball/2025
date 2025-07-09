@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const icoInput = document.getElementById('ico');
     const dicInput = document.getElementById('dic');
     const icDPHInput = document.getElementById('icDPH');
+    const pscInput = document.getElementById('psc'); // Referencia na PSČ input
 
     // Pridáme event listener pre IČO: iba čísla, max 8 znakov
     if (icoInput) {
@@ -66,6 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             this.value = formattedValue.substring(0, 12); // Obmedzenie celkovej dĺžky na 12
+        });
+    }
+
+    // Pridáme event listener pre PSČ: iba čísla, formát xxx xx, celkom 6 znakov
+    if (pscInput) {
+        pscInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Odstráni všetky nečíselné znaky
+            let formattedValue = '';
+            if (value.length > 3) {
+                formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 5);
+            } else {
+                formattedValue = value;
+            }
+            this.value = formattedValue.substring(0, 6).trim(); // Obmedzenie celkovej dĺžky na 6 vrátane medzery
         });
     }
 
@@ -126,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ico = formData.get('ico').trim();
             const dic = formData.get('dic').trim();
             const icDPH = formData.get('icDPH').trim();
+            const psc = formData.get('psc').trim(); // Získanie hodnoty PSČ
 
             // VALIDÁCIA: Minimálne jedno pole z IČO, DIČ, IČ DPH musí byť vyplnené
             if (!ico && !dic && !icDPH) {
@@ -159,6 +175,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // VALIDÁCIA: Formát PSČ (ak je vyplnené, aj keď je required v HTML)
+            if (psc && !/^\d{3}\s\d{2}$/.test(psc)) {
+                showMessage('PSČ musí byť vo formáte xxx xx (napr. 010 01).', 'error');
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu';
+                return;
+            }
+
+
             // Dáta pre Firestore (objekt)
             const registrationDataForFirestore = {
                 officialClubName: formData.get('officialClubName'),
@@ -166,6 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 ico: ico, // Používame validované a orezané hodnoty
                 dic: dic,
                 icDPH: icDPH,
+                address: { // Nový objekt pre adresné údaje
+                    street: formData.get('street'),
+                    houseNumber: formData.get('houseNumber'),
+                    city: formData.get('city'),
+                    psc: psc, // Používame validovanú a orezanú hodnotu
+                    country: formData.get('country')
+                },
                 meno: formData.get('meno'),
                 email: formData.get('email'),
                 sprava: formData.get('sprava'),
