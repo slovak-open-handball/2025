@@ -30,44 +30,56 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = input.value.replace(/[^0-9]/g, '');
     }
 
-    // Funkcia na validáciu a formátovanie PSČ (len čísla, 5 znakov, formát 000 00)
-    function validateAndFormatZipCodeInput(event) {
-        const input = event.target;
-        let value = input.value.replace(/\s/g, ''); // Odstráni existujúce medzery pre spracovanie
-        value = value.replace(/[^0-9]/g, ''); // Odstráni všetky znaky, ktoré nie sú čísla
-
-        // Obmedzí dĺžku na 5 znakov
-        if (value.length > 5) {
-            value = value.slice(0, 5);
-        }
-
-        // Formátovanie pre zobrazenie: 000 00
-        let formattedValue = value;
-        if (value.length > 3) {
-            formattedValue = value.substring(0, 3) + ' ' + value.substring(3);
-        }
-        input.value = formattedValue;
-    }
-
     // Funkcia na validáciu IČ DPH (2 písmená, 10 číslic)
     function validateIcDphInput(event) {
         const input = event.target;
         let value = input.value;
 
-        // Obmedzí celkovú dĺžku na 12 znakov
-        if (value.length > 12) {
-            value = value.slice(0, 12);
+        // Odstráni všetky znaky, ktoré nie sú písmená alebo čísla
+        value = value.replace(/[^A-Za-z0-9]/g, '');
+
+        // Ak sú prvé dva znaky, povolí len písmená a premení na veľké
+        let formattedValue = '';
+        if (value.length > 0) {
+            formattedValue += value[0].toUpperCase();
+        }
+        if (value.length > 1) {
+            formattedValue += value[1].toUpperCase();
+        }
+        // Pre zvyšných 10 znakov povolí len čísla
+        if (value.length > 2) {
+            formattedValue += value.substring(2).replace(/[^0-9]/g, '');
         }
 
-        // Ak sú prvé dva znaky, povolí len písmená
-        if (value.length <= 2) {
-            input.value = value.replace(/[^A-Za-z]/g, '').toUpperCase(); // Len písmená, premení na veľké
-        } else {
-            // Pre zvyšných 10 znakov povolí len čísla
-            const prefix = value.substring(0, 2).replace(/[^A-Za-z]/g, '').toUpperCase();
-            const suffix = value.substring(2).replace(/[^0-9]/g, '');
-            input.value = prefix + suffix;
+        // Obmedzí celkovú dĺžku na 12 znakov
+        if (formattedValue.length > 12) {
+            formattedValue = formattedValue.slice(0, 12);
         }
+
+        input.value = formattedValue;
+    }
+
+    // NOVÁ Funkcia na validáciu a formátovanie PSČ (XXX XX)
+    function validateZipCodeInput(event) {
+        const input = event.target;
+        let value = input.value.replace(/\s/g, ''); // Odstráni všetky medzery pre spracovanie
+        let formattedValue = '';
+
+        // Odstráni všetky znaky, ktoré nie sú čísla
+        value = value.replace(/[^0-9]/g, '');
+
+        if (value.length > 3) {
+            formattedValue = value.substring(0, 3) + ' ' + value.substring(3, 5);
+        } else {
+            formattedValue = value;
+        }
+
+        // Obmedzí celkovú dĺžku na 6 znakov (vrátane medzery)
+        if (formattedValue.length > 6) {
+            formattedValue = formattedValue.slice(0, 6);
+        }
+
+        input.value = formattedValue;
     }
 
     // Funkcia na validáciu telefónneho čísla
@@ -81,8 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pridanie event listenerov pre real-time validáciu
     icoInput.addEventListener('input', validateNumericInput);
     dicInput.addEventListener('input', validateNumericInput);
-    // Zmenený listener pre PSČ
-    zipCodeInput.addEventListener('input', validateAndFormatZipCodeInput);
+    zipCodeInput.addEventListener('input', validateZipCodeInput); // Aktualizovaný listener
     icDphInput.addEventListener('input', validateIcDphInput);
     phoneInput.addEventListener('input', validatePhoneInput);
 
@@ -104,14 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = {
             officialClubName: document.getElementById('officialClubName').value,
             billingName: document.getElementById('billingName').value,
-            ico: icoInput.value, // Používame už validované hodnoty
+            ico: icoInput.value,
             dic: dicInput.value,
             icDph: icDphInput.value,
             street: document.getElementById('street').value,
             houseNumber: document.getElementById('houseNumber').value,
             city: document.getElementById('city').value,
-            // Pre PSČ odstránime medzeru pred odoslaním
-            zipCode: zipCodeInput.value.replace(/\s/g, ''),
+            zipCode: zipCodeInput.value, // Zabezpečí, že sa odošle formátovaná hodnota
             contactPersonFirstName: document.getElementById('contactPersonFirstName').value,
             contactPersonLastName: document.getElementById('contactPersonLastName').value,
             contactPersonPhone: phoneInput.value,
