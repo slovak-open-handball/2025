@@ -1,17 +1,73 @@
+// Firebase konfigurácia
+const firebaseConfig = {
+    apiKey: "AIzaSyD0h0rQZiIGi0-UDb4-YU_JihRGpIlfz40",
+    authDomain: "turnaj-a28c5.firebaseapp.com",
+    projectId: "turnaj-a28c5",
+    storageBucket: "turnaj-a28c5.firebasestorage.app",
+    messagingSenderId: "13732191148",
+    appId: "1:13732191148:web:5ad78eaef2ad452a10f809"
+};
+
+// Inicializácia Firebase aplikácie
+firebase.initializeApp(firebaseConfig);
+
+// Získanie referencií na Firebase služby
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Globálne premenné pre ID používateľa a ID aplikácie
+let currentUserId = null;
+const appId = firebaseConfig.appId;
+
+// Referencie na DOM elementy
+const firebaseStatusDiv = document.getElementById('firebaseStatus');
+const registrationForm = document.getElementById('registrationForm');
+const form = document.getElementById('registrationForm');
+const statusMessage = document.getElementById('statusMessage');
+const phonePrefixSelect = document.getElementById('phonePrefix');
+
+// Získanie referencií na input polia pre validáciu
+const icoInput = document.getElementById('icoInput');
+const dicInput = document.getElementById('dicInput');
+const icDPHInput = document.getElementById('icDPHInput');
+const houseNumberInput = document.getElementById('houseNumberInput');
+const pscInput = document.getElementById('pscInput');
+const phoneNumberInput = document.getElementById('phoneNumberInput');
+const emailInput = document.getElementById('emailInput');
+
+// Sledujeme stav autentifikácie Firebase
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // Používateľ je prihlásený.
+        currentUserId = user.uid;
+        firebaseStatusDiv.textContent = 'Firebase pripravené. Používateľ prihlásený.';
+        firebaseStatusDiv.className = 'mt-4 text-center success-message';
+        registrationForm.style.display = 'block'; // Zobraz formulár
+        console.log("Firebase initialized and user logged in. User ID:", currentUserId);
+    } else {
+        // Používateľ nie je prihlásený.
+        currentUserId = null;
+        firebaseStatusDiv.textContent = 'Firebase pripravené, ale používateľ nie je prihlásený. Prihlasujem anonymne...';
+        firebaseStatusDiv.className = 'mt-4 text-center text-yellow-600';
+        registrationForm.style.display = 'none'; // Skry formulár, ak nie je prihlásený
+
+        // Anonymné prihlásenie
+        auth.signInAnonymously()
+            .then(() => {
+                console.log("Anonymné prihlásenie úspešné.");
+                // onAuthStateChanged sa znova spustí s informáciami o anonymnom používateľovi
+            })
+            .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                firebaseStatusDiv.textContent = `Chyba pri anonymnom prihlásení: ${errorMessage}`;
+                firebaseStatusDiv.className = 'mt-4 text-center error-message';
+                console.error("Chyba pri anonymnom prihlásení:", errorCode, errorMessage);
+            });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('registrationForm');
-    const statusMessage = document.getElementById('statusMessage');
-    const phonePrefixSelect = document.getElementById('phonePrefix');
-
-    // Získanie referencií na input polia pre validáciu
-    const icoInput = document.getElementById('icoInput');
-    const dicInput = document.getElementById('dicInput');
-    const icDPHInput = document.getElementById('icDPHInput');
-    const houseNumberInput = document.getElementById('houseNumberInput');
-    const pscInput = document.getElementById('pscInput');
-    const phoneNumberInput = document.getElementById('phoneNumberInput');
-    const emailInput = document.getElementById('emailInput');
-
     // Kompletný zoznam svetových predvolieb zoradený abecedne podľa názvu krajiny
     const phonePrefixes = [
         { code: '+93', name: 'Afganistan (+93)' },
@@ -355,22 +411,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Získanie referencií na Firebase inštancie z globálneho objektu window
-        const db = window.firebaseDb;
-        const getUserId = window.getFirebaseUserId;
-        const getAppId = window.getFirebaseAppId;
-        const addDoc = window.getAddDoc;
-        const collection = window.getCollection;
-
         // Skontrolujte, či je databáza a ID používateľa k dispozícii
         if (!db) {
-            statusMessage.textContent = 'Chyba: Firebase databáza nie je inicializovaná.';
+            statusMessage.textContent = 'Chyba: Firebase databáza nie je inicializovaná. Skúste to znova.';
             statusMessage.className = 'mt-4 text-center error-message';
             console.error('Firebase databáza (db) nie je k dispozícii.');
             return;
         }
 
-        let currentUserId = getUserId();
         if (!currentUserId) {
             statusMessage.textContent = 'Chyba: ID používateľa nie je k dispozícii. Skúste to znova.';
             statusMessage.className = 'mt-4 text-center error-message';
@@ -389,10 +437,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 houseNumber: houseNumberInput.value,
                 city: document.getElementById('city').value,
                 psc: pscInput.value,
-                country: document.getElementById('country').value
+                country: 'Slovenská republika' // Prednastavená hodnota pre krajinu
             },
             contactPerson: {
-                name: document.getElementById('contactPersonName').value,
+                firstName: document.getElementById('contactPersonFirstName').value,
+                lastName: document.getElementById('contactPersonLastName').value,
                 phonePrefix: phonePrefixSelect.value,
                 phone: phoneNumberInput.value,
                 email: emailInput.value
@@ -404,14 +453,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Uloženie dát do Firestore
-            // Používame verejnú cestu, aby sa dáta mohli zdieľať (ak je to zámer)
-            // Ak by mali byť dáta súkromné pre používateľa, cesta by bola:
-            // `/artifacts/${getAppId()}/users/${currentUserId}/registrations`
-            const docRef = await addDoc(collection(db, `artifacts/${getAppId()}/public/registrations`), formData);
+            // Cesta: /artifacts/{appId}/public/registrations/{docId}
+            const docRef = await db.collection(`artifacts/${appId}/public/registrations`).add(formData);
             console.log("Dokument úspešne zapísaný s ID: ", docRef.id);
 
             // Odoslanie e-mailu cez Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbwXAkdF4d79c5pniAUt1t9NGi0p_y3TdedqxEmPyFflCi0l6iiJZE7OtxasxSXViLqs/exec'; // ZMEŇTE TOTO!
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbxFSTqsrQ-fBPzFC789rdy2RFNHJFgAc00thLZeLEeIfeWIdDCUVxklx4i89TpInOh1/exec'; // ZMEŇTE TOTO!
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
