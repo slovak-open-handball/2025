@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registračný formulár</title>
+    <title>Registrácia na Turnaj</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome pre ikony (napr. spinner) -->
+    <!-- Font Awesome pre ikony -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
@@ -22,18 +22,21 @@
             background-color: #ffffff;
             padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 700px;
         }
-        .form-group {
-            margin-bottom: 20px;
+        h1 {
+            color: #1a202c;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 700;
         }
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #333;
+            color: #4a5568;
         }
         input[type="text"],
         input[type="email"],
@@ -41,147 +44,169 @@
         textarea {
             width: 100%;
             padding: 12px;
-            border: 1px solid #e0e0e0;
+            margin-bottom: 20px;
+            border: 1px solid #cbd5e0;
             border-radius: 8px;
+            box-sizing: border-box;
             font-size: 16px;
-            transition: border-color 0.2s;
+            transition: border-color 0.3s ease;
         }
         input[type="text"]:focus,
         input[type="email"]:focus,
         input[type="tel"]:focus,
         textarea:focus {
             outline: none;
-            border-color: #6366f1; /* Indigo-500 */
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
         }
         textarea {
             resize: vertical;
             min-height: 100px;
         }
-        .btn-submit {
+        button {
             width: 100%;
             padding: 14px;
-            background-color: #6366f1; /* Indigo-500 */
+            background-color: #4299e1;
             color: white;
             border: none;
             border-radius: 8px;
             font-size: 18px;
             font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: background-color 0.3s ease, transform 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .btn-submit:hover {
-            background-color: #4f46e5; /* Indigo-600 */
-            transform: translateY(-1px);
+        button:hover {
+            background-color: #3182ce;
+            transform: translateY(-2px);
         }
-        .btn-submit:disabled {
-            background-color: #a7a7f7; /* Lighter indigo when disabled */
+        button:disabled {
+            background-color: #a0aec0;
             cursor: not-allowed;
+            transform: none;
         }
         .message {
+            margin-top: 20px;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 20px;
-            font-weight: 500;
             text-align: center;
+            font-weight: 600;
+            transition: opacity 0.3s ease;
+        }
+        .message.hidden {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            overflow: hidden;
         }
         .message.success {
-            background-color: #d1fae5; /* Green-100 */
-            color: #065f46; /* Green-800 */
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
         }
         .message.error {
-            background-color: #fee2e2; /* Red-100 */
-            color: #991b1b; /* Red-800 */
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
         .message.info {
-            background-color: #e0f2fe; /* Blue-100 */
-            color: #0c4a6e; /* Blue-800 */
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
-        .hidden {
-            display: none;
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background-color: #f7fafc;
+        }
+        .form-section-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Registračný formulár</h2>
-        <form id="registrationForm">
-            <!-- Pôvodné polia -->
-            <div class="form-group">
-                <label for="meno">Vaše meno:</label>
-                <input type="text" id="meno" name="meno" placeholder="Zadajte vaše meno" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="email">Váš e-mail:</label>
-                <input type="email" id="email" name="email" placeholder="Zadajte váš e-mail" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+        <h1>Registrácia klubu na turnaj</h1>
+        <form id="registrationForm" class="space-y-6">
+
+            <!-- Oficiálny názov klubu -->
+            <div class="form-section">
+                <h2 class="form-section-title">Informácie o klube</h2>
+                <div>
+                    <label for="officialClubName">Oficiálny názov klubu:</label>
+                    <input type="text" id="officialClubName" name="officialClubName" required>
+                </div>
             </div>
 
-            <!-- Nové polia - Oficiálny názov klubu -->
-            <div class="form-group">
-                <label for="officialClubName">Oficiálny názov klubu:</label>
-                <input type="text" id="officialClubName" name="officialClubName" placeholder="Zadajte oficiálny názov klubu" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            <!-- Fakturačné údaje -->
+            <div class="form-section">
+                <h2 class="form-section-title">Fakturačné údaje</h2>
+                <div>
+                    <label for="billingName">Názov klubu/organizácie (fakturačné):</label>
+                    <input type="text" id="billingName" name="billingName" required>
+                </div>
+                <div>
+                    <label for="ico">IČO:</label>
+                    <input type="text" id="ico" name="ico" required>
+                </div>
+                <div>
+                    <label for="dic">DIČ:</label>
+                    <input type="text" id="dic" name="dic">
+                </div>
+                <div>
+                    <label for="icDph">IČ DPH:</label>
+                    <input type="text" id="icDph" name="icDph">
+                </div>
+                <div>
+                    <label for="billingAddress">Adresa sídla (ulica, číslo, mesto, PSČ):</label>
+                    <input type="text" id="billingAddress" name="billingAddress" required>
+                </div>
             </div>
 
-            <h3 class="text-2xl font-semibold text-gray-700 mb-6 mt-8">Fakturačné údaje</h3>
-
-            <!-- Nové polia - Fakturačné údaje -->
-            <div class="form-group">
-                <label for="billingName">Názov klubu/organizácie (fakturačné):</label>
-                <input type="text" id="billingName" name="billingName" placeholder="Zadajte fakturačný názov klubu/organizácie" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="ico">IČO (8 číslic):</label>
-                <input type="text" id="ico" name="ico" placeholder="Zadajte IČO (napr. 12345678)" pattern="^\d{8}$" title="IČO musí obsahovať presne 8 číslic" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="dic">DIČ (10 číslic):</label>
-                <input type="text" id="dic" name="dic" placeholder="Zadajte DIČ (napr. 1234567890)" pattern="^\d{10}$" title="DIČ musí obsahovať presne 10 číslic" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="icDph">IČ DPH (formát SKyyyyyyyy):</label>
-                <input type="text" id="icDph" name="icDph" placeholder="Zadajte IČ DPH (napr. SK12345678)" pattern="^SK\d{8}$" title="IČ DPH musí začínať 'SK' a nasledovať 8 číslic" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="billingAddress">Adresa sídla (ulica, číslo, mesto, krajina):</label>
-                <input type="text" id="billingAddress" name="billingAddress" placeholder="Zadajte adresu sídla (napr. Hlavná 1, Bratislava, Slovensko)" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            <!-- Kontaktná osoba -->
+            <div class="form-section">
+                <h2 class="form-section-title">Kontaktná osoba</h2>
+                <div>
+                    <label for="contactPersonFirstName">Meno kontaktnej osoby:</label>
+                    <input type="text" id="contactPersonFirstName" name="contactPersonFirstName" required>
+                </div>
+                <div>
+                    <label for="contactPersonLastName">Priezvisko kontaktnej osoby:</label>
+                    <input type="text" id="contactPersonLastName" name="contactPersonLastName" required>
+                </div>
+                <div>
+                    <label for="contactPersonPhone">Telefónne číslo kontaktnej osoby:</label>
+                    <input type="tel" id="contactPersonPhone" name="contactPersonPhone" required>
+                </div>
+                <div>
+                    <label for="contactPersonEmail">E-mailová adresa kontaktnej osoby:</label>
+                    <input type="email" id="contactPersonEmail" name="contactPersonEmail" required>
+                </div>
             </div>
 
-            <h3 class="text-2xl font-semibold text-gray-700 mb-6 mt-8">Kontaktná osoba</h3>
-
-            <!-- Nové polia - Kontaktná osoba -->
-            <div class="form-group">
-                <label for="contactPersonFirstName">Meno kontaktnej osoby:</label>
-                <input type="text" id="contactPersonFirstName" name="contactPersonFirstName" placeholder="Zadajte meno kontaktnej osoby" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="contactPersonLastName">Priezvisko kontaktnej osoby:</label>
-                <input type="text" id="contactPersonLastName" name="contactPersonLastName" placeholder="Zadajte priezvisko kontaktnej osoby" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="contactPersonPhone">Telefónne číslo kontaktnej osoby:</label>
-                <input type="tel" id="contactPersonPhone" name="contactPersonPhone" placeholder="Zadajte telefónne číslo (napr. +421 9xx xxx xxx)" pattern="^[+]?[0-9\s-()]{7,20}$" title="Zadajte platné telefónne číslo" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            </div>
-            <div class="form-group">
-                <label for="contactPersonEmail">E-mailová adresa kontaktnej osoby:</label>
-                <input type="email" id="contactPersonEmail" name="contactPersonEmail" placeholder="Zadajte e-mail kontaktnej osoby" required class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            <!-- Správa (voliteľná) -->
+            <div class="form-section">
+                <h2 class="form-section-title">Doplňujúce informácie (voliteľné)</h2>
+                <div>
+                    <label for="sprava">Vaša správa:</label>
+                    <textarea id="sprava" name="sprava" rows="4"></textarea>
+                </div>
             </div>
 
-            <!-- Pôvodné pole pre správu -->
-            <div class="form-group">
-                <label for="sprava">Vaša správa (voliteľné):</label>
-                <textarea id="sprava" name="sprava" placeholder="Zadajte vašu správu (napr. špeciálne požiadavky)" rows="4" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-            </div>
-
-            <button type="submit" id="submitButton" class="btn-submit">
+            <button type="submit" id="submitButton">
                 <i class="fas fa-paper-plane mr-2"></i> Odoslať registráciu
             </button>
         </form>
-
         <div id="message" class="message hidden"></div>
     </div>
-
     <script type="module" src="registracia.js"></script>
 </body>
 </html>
