@@ -34,15 +34,24 @@
             color: #374151; /* Tmavšia farba textu */
         }
         input[type="email"],
-        input[type="text"],
-        textarea {
-            width: 96%; /* ZMENA: Nastavené späť na 96% */
+        input[type="text"] { /* Upravený selektor, textarea je oddelená */
+            width: 96%; /* Nastavené späť na 96% */
             padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
             border: 1px solid #d1d5db; /* Svetlejší okraj */
             border-radius: 0.5rem; /* Zaoblené rohy */
             font-size: 1rem;
             color: #4b5563; /* Farba textu vo vstupných poliach */
             transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        textarea { /* Samostatné štýly pre textarea */
+            width: 96%; /* Nastavené späť na 96% */
+            padding: 0.75rem 1rem; /* Väčší padding pre vstupné polia */
+            border: 1px solid #d1d5db; /* Svetlejší okraj */
+            border-radius: 0.5rem; /* Zaoblené rohy */
+            font-size: 1rem;
+            color: #4b5563; /* Farba textu vo vstupných poliach */
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            resize: vertical; /* Umožňuje zmenu veľkosti iba vertikálne */
         }
         input[type="email"]:focus,
         input[type="text"]:focus,
