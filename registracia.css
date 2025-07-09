@@ -60,6 +60,26 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); /* Jemný modrý tieň pri fokuse */
         }
+        /* NOVÉ ŠTÝLY PRE form-group-triple */
+        .form-group-triple {
+            display: flex;
+            flex-wrap: wrap; /* Umožňuje zalomenie na menších obrazovkách */
+            gap: 1.5rem; /* Medzera medzi stĺpcami */
+            margin-bottom: 1.5rem; /* Konzistentný spodný okraj */
+        }
+
+        .form-group-triple .form-group {
+            flex: 1; /* Každá skupina zaberie rovnaký priestor */
+            min-width: 200px; /* Minimálna šírka pre každé pole */
+            margin-bottom: 0; /* Odstráni spodný okraj z vnútorných form-group */
+        }
+
+        .form-group-triple input[type="text"] {
+            width: 100%; /* Zabezpečí, že inputy v tejto skupine zaberú plnú šírku ich flex kontajnera */
+            box-sizing: border-box; /* Zahrnie padding do šírky, aby nepretekal */
+        }
+        /* KONIEC NOVÝCH ŠTÝLOV */
+        
         button {
             width: 100%; /* Zabezpečuje, že tlačidlo bude mať rovnakú šírku ako inputy */
             padding: 0.85rem 1.25rem; /* Väčší padding pre tlačidlo */
