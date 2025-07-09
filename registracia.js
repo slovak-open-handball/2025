@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
-            const scriptUrl = 'https://script.google.com/macros/s/AKfycbz0QHUrYaiKcDHE_AAu1iwII0DXDdwqZolhlh-gDiHI-4YkPwpqLn2u11bT5QAf9y62/exec'; // ZMEŇTE TOTO!
+            const scriptUrl = 'https://script.google.com/macros/s/AKfycbw8vy_vpXN6rWjD9taZaJG03onWsJHWKEIZ6XkN2k3dD4-qatrT1dtmYu7jtd9m5Y99/exec'; // ZMEŇTE TOTO!
 
             const response = await fetch(scriptUrl, {
                 method: 'POST',
