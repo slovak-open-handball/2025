@@ -15,16 +15,16 @@
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Registrácia tímu na turnaj</h1>
         <form id="registrationForm">
             <div class="form-group">
-                <label for="meno">Meno (kontaktnej osoby alebo tímu):</label>
+                <label for="officialClubName">Oficiálny názov klubu:</label>
+                <input type="text" id="officialClubName" name="officialClubName" placeholder="Zadajte oficiálny názov klubu" required>
+            </div>
+            <div class="form-group">
+                <label for="meno">Meno kontaktnej osoby:</label>
                 <input type="text" id="meno" name="meno" placeholder="zadajte vaše meno alebo názov tímu" required>
             </div>
             <div class="form-group">
                 <label for="email">E-mailová adresa:</label>
                 <input type="email" id="email" name="email" placeholder="zadajte váš e-mail" required>
-            </div>
-            <div class="form-group">
-                <label for="officialClubName">Oficiálny názov klubu:</label>
-                <input type="text" id="officialClubName" name="officialClubName" placeholder="Zadajte oficiálny názov klubu" required>
             </div>
             <div class="form-group">
                 <label for="teamInfo">Informácie o tíme (názov tímu, kategória, atď.):</label>
