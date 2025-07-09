@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { code: '+962', name: 'Jordánsko (+962)' },
         { code: '+7', name: 'Kazachstan (+7)' },
         { code: '+254', name: 'Keňa (+254)' },
-        { code: '+686', name: 'Kiribati (+686)' },
+        { code: '+686', name: 'Kiribati (+686)' 대비
         { code: '+383', name: 'Kosovo (+383)' },
         { code: '+965', name: 'Kuvajt (+965)' },
         { code: '+996', name: 'Kirgizsko (+996)' },
@@ -268,11 +268,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Nastavenie predvolenej predvoľby na +421 (Slovensko)
     phonePrefixSelect.value = '+421';
 
-    // Pôvodná funkcia setInitialSelectWidth bola odstránená,
-    // pretože Tailwind CSS grid sa postará o rozloženie.
-    // Ak by ste ju chceli vrátiť pre špecifické prípady,
-    // zvážte menší offset alebo dynamickejší výpočet.
-
     // --- Validácia IČO (presne 8 číslic) ---
     if (icoInput) {
         icoInput.addEventListener('input', function(event) {
@@ -371,15 +366,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Validácia e-mailu (musí obsahovať @) ---
     if (emailInput) {
         emailInput.addEventListener('input', function(event) {
-            // Pre jednoduchú validáciu na prítomnosť '@'
-            // Pre komplexnejšiu validáciu by sa použil pattern alebo regex
             if (this.value.includes('@')) {
-                this.setCustomValidity(''); // Vynuluje chybovú správu, ak je platné
+                this.setCustomValidity('');
             } else {
-                this.setCustomValidity('E-mailová adresa musí obsahovať znak "@"'); // Nastaví chybovú správu
+                this.setCustomValidity('E-mailová adresa musí obsahovať znak "@"');
             }
         });
-        // Pridáme aj validáciu pri odosielaní formulára, ak by používateľ nechal pole prázdne alebo neplatné
         emailInput.addEventListener('blur', function() {
             if (!this.value.includes('@') && this.value.length > 0) {
                 this.setCustomValidity('E-mailová adresa musí obsahovať znak "@"');
@@ -400,6 +392,23 @@ document.addEventListener('DOMContentLoaded', function() {
             emailInput.focus(); // Zameria sa na pole e-mailu
             return; // Zastaví odosielanie formulára
         }
+
+        // --- NOVÁ VALIDÁCIA: Minimálne jedno z IČO, DIČ, IČ DPH musí byť vyplnené ---
+        const icoValue = icoInput ? icoInput.value.trim() : '';
+        const dicValue = dicInput ? dicInput.value.trim() : '';
+        const icDPHValue = icDPHInput ? icDPHInput.value.trim() : '';
+
+        if (!icoValue && !dicValue && !icDPHValue) {
+            statusMessage.textContent = 'Chyba: Vyplňte prosím aspoň jedno z polí IČO, DIČ alebo IČ DPH.';
+            statusMessage.className = 'mt-4 text-center error-message';
+            // Môžete zamerať na prvé prázdne pole, ak chcete
+            if (!icoValue) icoInput.focus();
+            else if (!dicValue) dicInput.focus();
+            else if (!icDPHValue) icDPHInput.focus();
+            return; // Zastaví odosielanie formulára
+        }
+        // --- KONIEC NOVEJ VALIDÁCIE ---
+
 
         statusMessage.textContent = 'Odosielam...';
         statusMessage.className = 'mt-4 text-center text-gray-600';
@@ -425,8 +434,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Špeciálne spracovanie pre telefónne číslo s predvoľbou
         // Zabezpečí, že predvoľba je súčasťou telefónneho čísla
-        formData.contactPerson.phone = `${formData.contactPerson.phonePrefix}${formData.contactPerson.phone}`;
-        delete formData.contactPerson.phonePrefix; // Odstráni samostatnú predvoľbu, ak už je spojená
+        // Kontroluje, či contactPerson a phonePrefix existujú pred prístupom
+        if (formData.contactPerson && formData.contactPerson.phonePrefix) {
+            formData.contactPerson.phone = `${formData.contactPerson.phonePrefix}${formData.contactPerson.phone}`;
+            delete formData.contactPerson.phonePrefix; // Odstráni samostatnú predvoľbu, ak už je spojená
+        }
 
         try {
             // Nahraďte túto URL vašou URL adresou nasadenej webovej aplikácie Google Apps Script
