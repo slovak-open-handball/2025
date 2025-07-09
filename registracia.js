@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const messageDiv = document.getElementById('message');
     const submitButton = document.getElementById('submitButton');
-    // userIdDisplay bol odstránený, pretože ho už nebudeme zobrazovať
 
     // Používame appId z poskytnutej konfigurácie
     const appId = firebaseConfig.appId;
@@ -45,20 +44,23 @@ document.addEventListener('DOMContentLoaded', () => {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUserId = user.uid;
-                    // userIdDisplay.textContent a .classList.remove('hidden') boli odstránené
                 } else {
+                    // Prihlásenie anonymne, ak nie je k dispozícii vlastný token
+                    // V tomto scenári (s explicitnou konfiguráciou) sa __initial_auth_token
+                    // pravdepodobne nebude používať, ak aplikácia beží mimo Canvas.
+                    // Ak by sa používala v Canvas, token by bol poskytnutý.
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         try {
                             await signInWithCustomToken(auth, __initial_auth_token);
-                            currentUserId = auth.currentUser?.uid;
+                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
                         } catch (error) {
                             console.error("Chyba pri prihlasovaní s vlastným tokenom:", error);
-                            await signInAnonymously(auth);
-                            currentUserId = auth.currentUser?.uid;
+                            await signInAnonymously(auth); // Fallback na anonymné
+                            currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
                         }
                     } else {
                         await signInAnonymously(auth);
-                        currentUserId = auth.currentUser?.uid;
+                        currentUserId = auth.currentUser?.uid; // Získanie UID po prihlásení
                     }
                 }
                 isAuthReady = true; // Stav autentifikácie je pripravený
@@ -69,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             firebaseInitialized = false;
         }
     } else {
+        // Tento blok by sa teraz nemal spustiť, pretože firebaseConfig je definovaná
         console.warn("Firebase konfigurácia nebola nájdená (neočakávaná chyba). Funkcionalita databázy bude vypnutá.");
         showMessage('Upozornenie: Firebase konfigurácia chýba. Registrácia do databázy nebude fungovať.', 'info');
         firebaseInitialized = false;
@@ -85,9 +88,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const formData = new FormData(registrationForm);
             const registrationData = {
+                // Pôvodné polia
                 meno: formData.get('meno'),
                 email: formData.get('email'),
-                sprava: formData.get('sprava'),
+                sprava: formData.get('sprava'), // Správa je voliteľná
+
+                // Nové polia - Oficiálny názov klubu
+                officialClubName: formData.get('officialClubName'),
+
+                // Nové polia - Fakturačné údaje
+                billingName: formData.get('billingName'),
+                ico: formData.get('ico'),
+                dic: formData.get('dic'),
+                icDph: formData.get('icDph'),
+                billingAddress: formData.get('billingAddress'),
+
+                // Nové polia - Kontaktná osoba
+                contactPersonFirstName: formData.get('contactPersonFirstName'),
+                contactPersonLastName: formData.get('contactPersonLastName'),
+                contactPersonPhone: formData.get('contactPersonPhone'),
+                contactPersonEmail: formData.get('contactPersonEmail'),
+                
                 timestamp: serverTimestamp() // Uloží čas odoslania
             };
 
@@ -100,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
                     method: 'POST',
-                    body: formData,
+                    body: formData, // formData už obsahuje všetky nové polia vďaka ich 'name' atribútom v HTML
                 });
                 const result = await response.json();
                 if (result.success) {
