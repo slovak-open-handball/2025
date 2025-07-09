@@ -44,7 +44,7 @@
         textarea {
             width: 100%;
             padding: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Adjusted for grid layout */
             border: 1px solid #cbd5e0;
             border-radius: 8px;
             box-sizing: border-box;
@@ -130,6 +130,20 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        /* Flexbox for address fields on small screens, grid for larger */
+        .address-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem; /* Gap between items */
+        }
+        .address-grid > div {
+            flex: 1 1 calc(50% - 0.5rem); /* Two columns on larger screens */
+        }
+        @media (max-width: 640px) { /* Adjust for smaller screens if needed */
+            .address-grid > div {
+                flex: 1 1 100%; /* Single column on very small screens */
+            }
+        }
     </style>
 </head>
 <body>
@@ -186,9 +200,24 @@
                         title="IČ DPH musí začínať dvoma veľkými písmenami, nasledovanými presne 10 číslicami (napr. SK1234567890)."
                     >
                 </div>
-                <div>
-                    <label for="billingAddress">Adresa sídla (ulica, číslo, mesto, PSČ):</label>
-                    <input type="text" id="billingAddress" name="billingAddress" required>
+                <!-- Adresa sídla - rozdelené na 4 polia a naformátované do 2 stĺpcov -->
+                <div class="address-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="street">Ulica:</label>
+                        <input type="text" id="street" name="street" required>
+                    </div>
+                    <div>
+                        <label for="houseNumber">Číslo:</label>
+                        <input type="text" id="houseNumber" name="houseNumber" required>
+                    </div>
+                    <div>
+                        <label for="city">Mesto:</label>
+                        <input type="text" id="city" name="city" required>
+                    </div>
+                    <div>
+                        <label for="zipCode">PSČ:</label>
+                        <input type="text" id="zipCode" name="zipCode" required>
+                    </div>
                 </div>
             </div>
 
