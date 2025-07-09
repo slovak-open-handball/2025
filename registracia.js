@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // userIdDisplay bol odstránený, pretože ho už nebudeme zobrazovať
 
     // Používame appId z poskytnutej konfigurácie
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const appId = firebaseConfig.appId;
 
     // Firebase Initialization
     if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
