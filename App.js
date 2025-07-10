@@ -1,6 +1,4 @@
 // Odstránené všetky importy, pretože Firebase SDKs, React a ReactDOM sa načítavajú globálne z CDN
-// import React, { useState, useEffect } from 'react';
-// import { initializeApp, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider, getFirestore } from 'firebase/app';
 // Všetky funkcie sa teraz pristupujú cez globálny objekt 'firebase'
 
 // Global variables provided by the Canvas environment (používame ich priamo)
