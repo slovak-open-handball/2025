@@ -15,7 +15,16 @@ import { getFirestore } from 'firebase/firestore'; // Although not strictly need
 
 // Global variables provided by the Canvas environment
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+// Use the provided firebaseConfig directly
+const firebaseConfig = {
+  apiKey: "AIzaSyB_hlvVpnG-9VAr-VGXiT8J7DuPXx8k-eA",
+  authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
+  projectId: "prihlasovanie-a3f5f",
+  storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
+  messagingSenderId: "181851240506",
+  appId: "1:181851240506:web:768e27fb15b805ee7b9d03",
+  measurementId: "G-C3XPTT7F4D"
+};
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Dummy domain for internal email construction
