@@ -105,16 +105,14 @@ function App() {
       setError("Prosím, vyplňte používateľské meno a heslo.");
       return;
     }
-    // Zmena minimálnej dĺžky hesla na 5 znakov
     if (password.length < 5) {
       setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov.");
       return;
     }
 
-    const email = username + DUMMY_DOMAIN;
-
+    setLoading(true);
     try {
-      setLoading(true);
+      const email = username + DUMMY_DOMAIN;
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: username });
       setMessage("Registrácia úspešná! Prihlásený ako " + username);
@@ -127,7 +125,7 @@ function App() {
       if (e.code === 'auth/email-already-in-use') {
         setError("Používateľské meno už existuje. Prosím, zvoľte iné.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov."); // Upravená správa
+        setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov.");
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
@@ -148,10 +146,9 @@ function App() {
       return;
     }
 
-    const email = username + DUMMY_DOMAIN;
-
+    setLoading(true);
     try {
-      setLoading(true);
+      const email = username + DUMMY_DOMAIN;
       await auth.signInWithEmailAndPassword(email, password);
       setMessage("Prihlásenie úspešné!");
       setError('');
@@ -199,10 +196,9 @@ function App() {
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
       if (user.email && currentPassword) {
-        // Používame firebase.auth.EmailAuthProvider namiesto importovaného
         const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
         await user.reauthenticateWithCredential(credential);
       } else {
@@ -241,14 +237,13 @@ function App() {
       setError("Prosím, zadajte nové heslo a aktuálne heslo.");
       return;
     }
-    // Zmena minimálnej dĺžky hesla na 5 znakov
     if (newPassword.length < 5) {
       setError("Nové heslo musí mať aspoň 5 znakov.");
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
       const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
       await user.reauthenticateWithCredential(credential);
 
@@ -372,7 +367,7 @@ function App() {
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     required: true,
-                    placeholder: "Zvoľte heslo (min. 5 znakov)" // Upravená správa
+                    placeholder: "Zvoľte heslo (min. 5 znakov)"
                   })
                 ),
                 React.createElement("button", {
@@ -442,7 +437,7 @@ function App() {
                   value: newPassword,
                   onChange: (e) => setNewPassword(e.target.value),
                   required: true,
-                  placeholder: "Zadajte nové heslo (min. 5 znakov)" // Upravená správa
+                  placeholder: "Zadajte nové heslo (min. 5 znakov)"
                 })
               ),
               React.createElement("div", null,
@@ -460,7 +455,7 @@ function App() {
               React.createElement("button", {
                 type: "submit",
                 className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                disabled: loading
+                  disabled: loading
               }, loading ? 'Ukladám...' : 'Zmeniť heslo')
             )
           )
