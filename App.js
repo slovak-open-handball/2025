@@ -396,7 +396,7 @@ function App() {
                   React.createElement("input", {
                     type: showPassword ? "text" : "password",
                     id: "password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14 pre ikonu
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16 pre ikonu
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     onCopy: (e) => e.preventDefault(),
@@ -408,7 +408,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowPassword(!showPassword),
-                    className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                   },
                     showPassword ? EyeOffIcon : EyeIcon
                   )
@@ -440,7 +440,7 @@ function App() {
                   React.createElement("input", {
                     type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword pre prvé heslo v registrácii
                     id: "reg-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     onCopy: (e) => e.preventDefault(),
@@ -452,7 +452,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -462,7 +462,7 @@ function App() {
                   React.createElement("input", {
                     type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword aj tu
                     id: "reg-confirm-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                     value: confirmPassword,
                     onChange: (e) => setConfirmPassword(e.target.value),
                     onCopy: (e) => e.preventDefault(),
@@ -474,7 +474,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -520,7 +520,7 @@ function App() {
                 React.createElement("input", {
                   type: showCurrentPassword ? "text" : "password",
                   id: "current-password-username-change",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                   value: currentPassword,
                   onChange: (e) => setCurrentPassword(e.target.value),
                   onCopy: (e) => e.preventDefault(),
@@ -532,7 +532,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                  className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -552,7 +552,7 @@ function App() {
                 React.createElement("input", {
                   type: showCurrentPassword ? "text" : "password", // Používame showCurrentPassword aj tu
                   id: "current-password-password-change",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                   value: currentPassword,
                   onChange: (e) => setCurrentPassword(e.target.value),
                   onCopy: (e) => e.preventDefault(),
@@ -564,7 +564,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword), // Prepínanie showCurrentPassword
-                  className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -574,7 +574,7 @@ function App() {
                 React.createElement("input", {
                   type: showNewPassword ? "text" : "password",
                   id: "new-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                   value: newPassword,
                   onChange: (e) => setNewPassword(e.target.value),
                   onCopy: (e) => e.preventDefault(),
@@ -586,7 +586,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowNewPassword(!showNewPassword),
-                  className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                 },
                   showNewPassword ? EyeOffIcon : EyeIcon
                 )
@@ -596,7 +596,7 @@ function App() {
                 React.createElement("input", {
                   type: showConfirmNewPassword ? "text" : "password",
                   id: "confirm-new-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-14", // Zvýšené pr-14
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16", // Zvýšené pr-16
                   value: confirmNewPassword,
                   onChange: (e) => setConfirmNewPassword(e.target.value),
                   onCopy: (e) => e.preventDefault(),
@@ -608,7 +608,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
-                  className: "absolute right-3 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-3 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
                 },
                   showConfirmNewPassword ? EyeOffIcon : EyeIcon
                 )
