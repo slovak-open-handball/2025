@@ -6,13 +6,12 @@
 // Pre funkčnosť ich preto definujeme pevne.
 const appId = 'default-app-id'; // Toto je len zástupná hodnota, pre Canvas by sa použila __app_id
 const firebaseConfig = {
-  apiKey: "AIzaSyB_hlvVpnG-9VAr-VGXiT8J7DuPXx8k-eA",
-  authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
-  projectId: "prihlasovanie-a3f5f",
-  storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
-  messagingSenderId: "181851240506",
-  appId: "1:181851240506:web:768e27fb15b805ee7b9d03",
-  measurementId: "G-C3XPTT7F4D"
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+  projectId: "prihlasovanie-4f3f3",
+  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+  messagingSenderId: "26454452024",
+  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
 const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
 
