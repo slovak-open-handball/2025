@@ -107,6 +107,11 @@ function App() {
       setError("Prosím, vyplňte používateľské meno a heslo.");
       return;
     }
+    // Zmena minimálnej dĺžky hesla na 5 znakov
+    if (password.length < 5) {
+      setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov.");
+      return;
+    }
 
     const email = username + DUMMY_DOMAIN;
 
@@ -124,7 +129,7 @@ function App() {
       if (e.code === 'auth/email-already-in-use') {
         setError("Používateľské meno už existuje. Prosím, zvoľte iné.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. Musí mať aspoň 6 znakov.");
+        setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov."); // Upravená správa
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
@@ -238,8 +243,9 @@ function App() {
       setError("Prosím, zadajte nové heslo a aktuálne heslo.");
       return;
     }
-    if (newPassword.length < 6) {
-      setError("Nové heslo musí mať aspoň 6 znakov.");
+    // Zmena minimálnej dĺžky hesla na 5 znakov
+    if (newPassword.length < 5) {
+      setError("Nové heslo musí mať aspoň 5 znakov.");
       return;
     }
 
@@ -368,7 +374,7 @@ function App() {
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     required: true,
-                    placeholder: "Zvoľte heslo (min. 6 znakov)"
+                    placeholder: "Zvoľte heslo (min. 5 znakov)" // Upravená správa
                   })
                 ),
                 React.createElement("button", {
@@ -438,7 +444,7 @@ function App() {
                   value: newPassword,
                   onChange: (e) => setNewPassword(e.target.value),
                   required: true,
-                  placeholder: "Zadajte nové heslo (min. 6 znakov)"
+                  placeholder: "Zadajte nové heslo (min. 5 znakov)" // Upravená správa
                 })
               ),
               React.createElement("div", null,
@@ -458,15 +464,6 @@ function App() {
                 className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
                 disabled: loading
               }, loading ? 'Ukladám...' : 'Zmeniť heslo')
-            ),
-
-            // Logout Button
-            React.createElement("div", { className: "border-t pt-4 mt-4" },
-              React.createElement("button", {
-                onClick: handleLogout,
-                className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                disabled: loading
-              }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
             )
           )
         )
