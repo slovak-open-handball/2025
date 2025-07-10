@@ -121,7 +121,8 @@ function App() {
     if (errors.length === 0) {
       return null; // Heslo je platné
     } else {
-      return "Heslo musí obsahovať: " + errors.join(", ") + ".";
+      // Upravená formátovanie pre zobrazenie všetkých požiadaviek
+      return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
   };
 
