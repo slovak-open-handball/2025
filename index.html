@@ -24,18 +24,20 @@
     <!-- React a ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel Standalone pre preklad JSX v prehliadači -->
+    <!-- Babel Standalone pre preklad JSX v prehliadači (už nie je potrebné, ale ponechávam pre kompatibilitu) -->
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- reCAPTCHA v2 script - ODSTRÁNENÉ -->
 </head>
 <body class="bg-gray-100">
     <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
     <div id="root"></div>
 
     <!-- Váš React kód (App.js) -->
-    <!-- Dôležité: App.js už nebude používať import/export -->
+    <!-- Dôležité: App.js už nebude používať import/export a bude používať React.createElement -->
     <script src="App.js"></script>
 
-    <script type="text/babel">
+    <script type="text/javascript">
         // Tento skript sa spustí po načítaní App.js
         // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
         window.onload = function() {
