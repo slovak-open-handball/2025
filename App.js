@@ -100,22 +100,29 @@ function App() {
 
   // Funkcia na validáciu hesla podľa požiadaviek
   const validatePassword = (pwd) => {
+    const errors = [];
+
     if (pwd.length < 10) {
-      return "Heslo musí mať minimálne 10 znakov.";
+      errors.push("minimálne 10 znakov");
     }
     if (pwd.length > 4096) {
-      return "Heslo môže mať maximálne 4096 znakov.";
+      errors.push("maximálne 4096 znakov");
     }
     if (!/[A-Z]/.test(pwd)) {
-      return "Heslo musí obsahovať aspoň jedno veľké písmeno.";
+      errors.push("aspoň jedno veľké písmeno");
     }
     if (!/[a-z]/.test(pwd)) {
-      return "Heslo musí obsahovať aspoň jedno malé písmeno.";
+      errors.push("aspoň jedno malé písmeno");
     }
     if (!/[0-9]/.test(pwd)) {
-      return "Heslo musí obsahovať aspoň jednu číslicu.";
+      errors.push("aspoň jednu číslicu");
     }
-    return null; // Heslo je platné
+
+    if (errors.length === 0) {
+      return null; // Heslo je platné
+    } else {
+      return "Heslo musí obsahovať: " + errors.join(", ") + ".";
+    }
   };
 
   const handleRegister = async (e) => {
