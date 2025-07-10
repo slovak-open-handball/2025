@@ -1,21 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider // Import EmailAuthProvider for reauthentication
-} from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'; // Although not strictly needed for auth, good practice to include if using Firestore later
+// Odstránené všetky importy, pretože Firebase SDKs, React a ReactDOM sa načítavajú globálne z CDN
+// import React, { useState, useEffect } from 'react';
+// import { initializeApp, getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider, getFirestore } from 'firebase/app';
+// Všetky funkcie sa teraz pristupujú cez globálny objekt 'firebase'
 
-// Global variables provided by the Canvas environment
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-// Use the provided firebaseConfig directly
+// Global variables provided by the Canvas environment (používame ich priamo)
+// Ak toto spúšťate priamo na GitHub Pages, tieto premenné nebudú definované.
+// Pre funkčnosť ich preto definujeme pevne.
+const appId = 'default-app-id'; // Toto je len zástupná hodnota, pre Canvas by sa použila __app_id
 const firebaseConfig = {
   apiKey: "AIzaSyB_hlvVpnG-9VAr-VGXiT8J7DuPXx8k-eA",
   authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
@@ -25,49 +16,55 @@ const firebaseConfig = {
   appId: "1:181851240506:web:768e27fb15b805ee7b9d03",
   measurementId: "G-C3XPTT7F4D"
 };
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
 
 // Dummy domain for internal email construction
-const DUMMY_DOMAIN = "@slovakhandball.com"; // You can change this to your actual domain if you own one
+const DUMMY_DOMAIN = "@slovakhandball.com";
 
+// Definujeme App ako globálnu funkciu, nie ako export
 function App() {
-  const [app, setApp] = useState(null);
-  const [auth, setAuth] = useState(null);
-  const [db, setDb] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  // Používame React.useState a React.useEffect namiesto importovaných
+  const [app, setApp] = React.useState(null);
+  const [auth, setAuth] = React.useState(null);
+  const [db, setDb] = React.useState(null);
+  const [user, setUser] = React.useState(null);
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [message, setMessage] = React.useState('');
+  const [error, setError] = React.useState('');
 
   // Form states
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState(''); // For reauthentication
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [newUsername, setNewUsername] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState(''); // For reauthentication
 
   // State to manage which view is active
-  const [view, setView] = useState('login'); // 'login', 'register', 'profile'
+  const [view, setView] = React.useState('login'); // 'login', 'register', 'profile'
 
-  useEffect(() => {
+  React.useEffect(() => {
     try {
-      // Initialize Firebase App
-      const firebaseApp = initializeApp(firebaseConfig);
+      // Uistite sa, že 'firebase' je definované globálne z CDN skriptov
+      if (typeof firebase === 'undefined') {
+        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
+        setLoading(false);
+        return;
+      }
+
+      const firebaseApp = firebase.initializeApp(firebaseConfig);
       setApp(firebaseApp);
 
-      // Initialize Firebase Auth and Firestore
-      const authInstance = getAuth(firebaseApp);
+      const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      setDb(getFirestore(firebaseApp));
+      setDb(firebase.firestore(firebaseApp)); // Ak by ste chceli používať Firestore
 
-      // Sign in with custom token if available, otherwise anonymously
       const signIn = async () => {
         try {
           if (initialAuthToken) {
-            await signInWithCustomToken(authInstance, initialAuthToken);
+            await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            await signInAnonymously(authInstance);
+            await authInstance.signInAnonymously();
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -77,33 +74,28 @@ function App() {
         }
       };
 
-      // Set up authentication state listener
-      const unsubscribe = onAuthStateChanged(authInstance, (currentUser) => {
+      const unsubscribe = authInstance.onAuthStateChanged((currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        if (loading) setLoading(false); // Stop loading once auth state is determined
+        if (loading) setLoading(false);
       });
 
-      signIn(); // Perform initial sign-in
+      signIn();
 
-      // Cleanup listener on unmount
       return () => unsubscribe();
     } catch (e) {
       console.error("Failed to initialize Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, []); // Run only once on component mount
+  }, []);
 
-  // Helper to clear messages after a delay
   const clearMessages = () => {
     setTimeout(() => {
       setMessage('');
       setError('');
     }, 5000);
   };
-
-  // --- Authentication Functions ---
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -116,17 +108,17 @@ function App() {
       return;
     }
 
-    const email = username + DUMMY_DOMAIN; // Construct email from username
+    const email = username + DUMMY_DOMAIN;
 
     try {
       setLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: username }); // Set display name
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      await userCredential.user.updateProfile({ displayName: username });
       setMessage("Registrácia úspešná! Prihlásený ako " + username);
       setError('');
       setUsername('');
       setPassword('');
-      setView('profile'); // Automatically go to profile after registration
+      setView('profile');
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -153,16 +145,16 @@ function App() {
       return;
     }
 
-    const email = username + DUMMY_DOMAIN; // Construct email from username
+    const email = username + DUMMY_DOMAIN;
 
     try {
       setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
+      await auth.signInWithEmailAndPassword(email, password);
       setMessage("Prihlásenie úspešné!");
       setError('');
       setUsername('');
       setPassword('');
-      setView('profile'); // Go to profile after login
+      setView('profile');
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       if (e.code === 'auth/invalid-credential') {
@@ -180,10 +172,10 @@ function App() {
     if (!auth) return;
     try {
       setLoading(true);
-      await signOut(auth);
+      await auth.signOut();
       setMessage("Úspešne odhlásené.");
       setError('');
-      setView('login'); // Go back to login view
+      setView('login');
     } catch (e) {
       console.error("Chyba pri odhlasovaní:", e);
       setError(`Chyba pri odhlasovaní: ${e.message}`);
@@ -206,18 +198,17 @@ function App() {
 
     try {
       setLoading(true);
-      // Reauthenticate if user's last sign-in was too long ago
-      // This is a good security practice before sensitive operations
       if (user.email && currentPassword) {
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
+        // Používame firebase.auth.EmailAuthProvider namiesto importovaného
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        await user.reauthenticateWithCredential(credential);
       } else {
         setError("Pre zmenu používateľského mena je potrebné zadať aktuálne heslo pre overenie.");
         setLoading(false);
         return;
       }
 
-      await updateProfile(user, { displayName: newUsername });
+      await user.updateProfile({ displayName: newUsername });
       setMessage("Používateľské meno úspešne zmenené na " + newUsername);
       setError('');
       setNewUsername('');
@@ -254,11 +245,10 @@ function App() {
 
     try {
       setLoading(true);
-      // Reauthenticate user before changing password
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
 
-      await updatePassword(user, newPassword);
+      await user.updatePassword(newPassword);
       setMessage("Heslo úspešne zmenené!");
       setError('');
       setNewPassword('');
@@ -280,238 +270,209 @@ function App() {
 
   if (loading || !isAuthReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-xl font-semibold text-gray-700">Načítava sa...</div>
-      </div>
+      React.createElement("div", { className: "flex items-center justify-center min-h-screen bg-gray-100" },
+        React.createElement("div", { className: "text-xl font-semibold text-gray-700" }, "Načítava sa...")
+      )
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-inter">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-          {user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : "Prihlásenie / Registrácia"}
-        </h1>
+    React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-inter" },
+      React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md" },
+        React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
+          user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : "Prihlásenie / Registrácia"
+        ),
 
-        {message && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            {error}
-          </div>
-        )}
+        message && (
+          React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
+            message
+          )
+        ),
+        error && (
+          React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4", role: "alert" },
+            error
+          )
+        ),
 
-        {!user ? (
-          <>
-            <div className="flex justify-center mb-6">
-              <button
-                onClick={() => setView('login')}
-                className={`px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 ${
+        !user ? (
+          React.createElement(React.Fragment, null,
+            React.createElement("div", { className: "flex justify-center mb-6" },
+              React.createElement("button", {
+                onClick: () => setView('login'),
+                className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 ${
                   view === 'login' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Prihlásenie
-              </button>
-              <button
-                onClick={() => setView('register')}
-                className={`px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 ${
+                }`
+              }, "Prihlásenie"),
+              React.createElement("button", {
+                onClick: () => setView('register'),
+                className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 ${
                   view === 'register' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Registrácia
-              </button>
-            </div>
+                }`
+              }, "Registrácia")
+            ),
 
-            {view === 'login' && (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-                    Používateľské meno
-                  </label>
-                  <input
-                    type="text"
-                    id="username"
-                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    placeholder="Zadajte používateľské meno"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                    Heslo
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Zadajte heslo"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                  disabled={loading}
-                >
-                  {loading ? 'Prihlasujem...' : 'Prihlásiť sa'}
-                </button>
-              </form>
-            )}
+            view === 'login' && (
+              React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "username" }, "Používateľské meno"),
+                  React.createElement("input", {
+                    type: "text",
+                    id: "username",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: username,
+                    onChange: (e) => setUsername(e.target.value),
+                    required: true,
+                    placeholder: "Zadajte používateľské meno"
+                  })
+                ),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "password" }, "Heslo"),
+                  React.createElement("input", {
+                    type: "password",
+                    id: "password",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: password,
+                    onChange: (e) => setPassword(e.target.value),
+                    required: true,
+                    placeholder: "Zadajte heslo"
+                  })
+                ),
+                React.createElement("button", {
+                  type: "submit",
+                  className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                  disabled: loading
+                }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
+              )
+            ),
 
-            {view === 'register' && (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-username">
-                    Používateľské meno
-                  </label>
-                  <input
-                    type="text"
-                    id="reg-username"
-                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    placeholder="Zvoľte používateľské meno"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-password">
-                    Heslo
-                  </label>
-                  <input
-                    type="password"
-                    id="reg-password"
-                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Zvoľte heslo (min. 6 znakov)"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                  disabled={loading}
-                >
-                  {loading ? 'Registrujem...' : 'Registrovať sa'}
-                </button>
-              </form>
-            )}
-          </>
+            view === 'register' && (
+              React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-username" }, "Používateľské meno"),
+                  React.createElement("input", {
+                    type: "text",
+                    id: "reg-username",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: username,
+                    onChange: (e) => setUsername(e.target.value),
+                    required: true,
+                    placeholder: "Zvoľte používateľské meno"
+                  })
+                ),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-password" }, "Heslo"),
+                  React.createElement("input", {
+                    type: "password",
+                    id: "reg-password",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: password,
+                    onChange: (e) => setPassword(e.target.value),
+                    required: true,
+                    placeholder: "Zvoľte heslo (min. 6 znakov)"
+                  })
+                ),
+                React.createElement("button", {
+                  type: "submit",
+                  className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                  disabled: loading
+                }, loading ? 'Registrujem...' : 'Registrovať sa')
+              )
+            )
+          )
         ) : (
           // User is logged in - Profile View
-          <div className="space-y-6">
-            <div className="text-center">
-              <p className="text-lg text-gray-700">
-                Prihlásený ako: <span className="font-semibold">{user.displayName || 'Neznámy používateľ'}</span>
-              </p>
-              <p className="text-sm text-gray-500">
-                (ID: {user.uid})
-              </p>
-            </div>
+          React.createElement("div", { className: "space-y-6" },
+            React.createElement("div", { className: "text-center" },
+              React.createElement("p", { className: "text-lg text-gray-700" },
+                "Prihlásený ako: ",
+                React.createElement("span", { className: "font-semibold" }, user.displayName || 'Neznámy používateľ')
+              ),
+              React.createElement("p", { className: "text-sm text-gray-500" },
+                "(ID: ", user.uid, ")"
+              )
+            ),
 
-            {/* Change Username */}
-            <form onSubmit={handleChangeUsername} className="space-y-4 border-t pt-4 mt-4">
-              <h2 className="text-xl font-semibold text-gray-800">Zmeniť používateľské meno</h2>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-username">
-                  Nové používateľské meno
-                </label>
-                <input
-                  type="text"
-                  id="new-username"
-                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  required
-                  placeholder="Zadajte nové používateľské meno"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="current-password-username-change">
-                  Aktuálne heslo (pre overenie)
-                </label>
-                <input
-                  type="password"
-                  id="current-password-username-change"
-                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  placeholder="Zadajte svoje aktuálne heslo"
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Ukladám...' : 'Zmeniť používateľské meno'}
-              </button>
-            </form>
+            // Change Username
+            React.createElement("form", { onSubmit: handleChangeUsername, className: "space-y-4 border-t pt-4 mt-4" },
+              React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť používateľské meno"),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-username" }, "Nové používateľské meno"),
+                React.createElement("input", {
+                  type: "text",
+                  id: "new-username",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: newUsername,
+                  onChange: (e) => setNewUsername(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte nové používateľské meno"
+                })
+              ),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-username-change" }, "Aktuálne heslo (pre overenie)"),
+                React.createElement("input", {
+                  type: "password",
+                  id: "current-password-username-change",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: currentPassword,
+                  onChange: (e) => setCurrentPassword(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte svoje aktuálne heslo"
+                })
+              ),
+              React.createElement("button", {
+                type: "submit",
+                className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                disabled: loading
+              }, loading ? 'Ukladám...' : 'Zmeniť používateľské meno')
+            ),
 
-            {/* Change Password */}
-            <form onSubmit={handleChangePassword} className="space-y-4 border-t pt-4 mt-4">
-              <h2 className="text-xl font-semibold text-gray-800">Zmeniť heslo</h2>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-password">
-                  Nové heslo
-                </label>
-                <input
-                  type="password"
-                  id="new-password"
-                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  placeholder="Zadajte nové heslo (min. 6 znakov)"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="current-password-password-change">
-                  Aktuálne heslo (pre overenie)
-                </label>
-                <input
-                  type="password"
-                  id="current-password-password-change"
-                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  placeholder="Zadajte svoje aktuálne heslo"
-                />
-              </div>
-              <button
-                type="submit"
-                className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Ukladám...' : 'Zmeniť heslo'}
-              </button>
-            </form>
+            // Change Password
+            React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
+              React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-password" }, "Nové heslo"),
+                React.createElement("input", {
+                  type: "password",
+                  id: "new-password",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: newPassword,
+                  onChange: (e) => setNewPassword(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte nové heslo (min. 6 znakov)"
+                })
+              ),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-password-change" }, "Aktuálne heslo (pre overenie)"),
+                React.createElement("input", {
+                  type: "password",
+                  id: "current-password-password-change",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: currentPassword,
+                  onChange: (e) => setCurrentPassword(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte svoje aktuálne heslo"
+                })
+              ),
+              React.createElement("button", {
+                type: "submit",
+                className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                disabled: loading
+              }, loading ? 'Ukladám...' : 'Zmeniť heslo')
+            ),
 
-            {/* Logout Button */}
-            <div className="border-t pt-4 mt-4">
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Odhlasujem...' : 'Odhlásiť sa'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+            // Logout Button
+            React.createElement("div", { className: "border-t pt-4 mt-4" },
+              React.createElement("button", {
+                onClick: handleLogout,
+                className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                disabled: loading
+              }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
+            )
+          )
+        )
+      )
+    )
   );
 }
 
-export default App;
+// export default App; // Odstránené export, App je teraz globálna
