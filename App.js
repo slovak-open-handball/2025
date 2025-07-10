@@ -33,8 +33,10 @@ function App() {
   // Form states
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState(''); // Nové pre registráciu
   const [newUsername, setNewUsername] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState(''); // Nové pre zmenu hesla
   const [currentPassword, setCurrentPassword] = React.useState(''); // For reauthentication
 
   // State to manage which view is active
@@ -96,19 +98,44 @@ function App() {
     }, 5000);
   };
 
+  // Funkcia na validáciu hesla podľa požiadaviek
+  const validatePassword = (pwd) => {
+    if (pwd.length < 10) {
+      return "Heslo musí mať minimálne 10 znakov.";
+    }
+    if (pwd.length > 4096) {
+      return "Heslo môže mať maximálne 4096 znakov.";
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      return "Heslo musí obsahovať aspoň jedno veľké písmeno.";
+    }
+    if (!/[a-z]/.test(pwd)) {
+      return "Heslo musí obsahovať aspoň jedno malé písmeno.";
+    }
+    if (!/[0-9]/.test(pwd)) {
+      return "Heslo musí obsahovať aspoň jednu číslicu.";
+    }
+    return null; // Heslo je platné
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!auth) {
       setError("Firebase Auth nie je inicializovaný.");
       return;
     }
-    if (!username || !password) {
-      setError("Prosím, vyplňte používateľské meno a heslo.");
+    if (!username || !password || !confirmPassword) {
+      setError("Prosím, vyplňte všetky polia.");
       return;
     }
-    // Zmena minimálnej dĺžky hesla na 10 znakov
-    if (password.length < 10) {
-      setError("Heslo je príliš slabé. Musí mať aspoň 10 znakov.");
+    if (password !== confirmPassword) {
+      setError("Heslá sa nezhodujú. Prosím, skontrolujte ich.");
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -121,13 +148,14 @@ function App() {
       setError('');
       setUsername('');
       setPassword('');
+      setConfirmPassword('');
       setView('profile');
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
         setError("Používateľské meno už existuje. Prosím, zvoľte iné.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. Musí mať aspoň 10 znakov."); // Upravená správa
+        setError("Heslo je príliš slabé. " + validatePassword(password)); // Použijeme detailnejšiu správu
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
@@ -236,13 +264,18 @@ function App() {
       setError("Nie ste prihlásený.");
       return;
     }
-    if (!newPassword || !currentPassword) {
-      setError("Prosím, zadajte nové heslo a aktuálne heslo.");
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setError("Prosím, vyplňte všetky polia.");
       return;
     }
-    // Zmena minimálnej dĺžky hesla na 10 znakov
-    if (newPassword.length < 10) {
-      setError("Nové heslo musí mať aspoň 10 znakov.");
+    if (newPassword !== confirmNewPassword) {
+      setError("Nové heslá sa nezhodujú. Prosím, skontrolujte ich.");
+      return;
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -255,6 +288,7 @@ function App() {
       setMessage("Heslo úspešne zmenené!");
       setError('');
       setNewPassword('');
+      setConfirmNewPassword('');
       setCurrentPassword('');
     } catch (e) {
       console.error("Chyba pri zmene hesla:", e);
@@ -372,7 +406,19 @@ function App() {
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     required: true,
-                    placeholder: "Zvoľte heslo (min. 10 znakov)" // Upravená správa
+                    placeholder: "Zvoľte heslo (min. 10 znakov)"
+                  })
+                ),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-confirm-password" }, "Potvrďte heslo"),
+                  React.createElement("input", {
+                    type: "password",
+                    id: "reg-confirm-password",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: confirmPassword,
+                    onChange: (e) => setConfirmPassword(e.target.value),
+                    required: true,
+                    placeholder: "Potvrďte heslo"
                   })
                 ),
                 React.createElement("button", {
@@ -434,19 +480,7 @@ function App() {
             React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
               React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-password" }, "Nové heslo"),
-                React.createElement("input", {
-                  type: "password",
-                  id: "new-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: newPassword,
-                  onChange: (e) => setNewPassword(e.target.value),
-                  required: true,
-                  placeholder: "Zadajte nové heslo (min. 10 znakov)" // Upravená správa
-                })
-              ),
-              React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-password-change" }, "Aktuálne heslo (pre overenie)"),
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-password-change" }, "Aktuálne heslo"),
                 React.createElement("input", {
                   type: "password",
                   id: "current-password-password-change",
@@ -455,6 +489,30 @@ function App() {
                   onChange: (e) => setCurrentPassword(e.target.value),
                   required: true,
                   placeholder: "Zadajte svoje aktuálne heslo"
+                })
+              ),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-password" }, "Nové heslo"),
+                React.createElement("input", {
+                  type: "password",
+                  id: "new-password",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: newPassword,
+                  onChange: (e) => setNewPassword(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte nové heslo (min. 10 znakov)"
+                })
+              ),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "confirm-new-password" }, "Potvrďte nové heslo"),
+                React.createElement("input", {
+                  type: "password",
+                  id: "confirm-new-password",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: confirmNewPassword,
+                  onChange: (e) => setConfirmNewPassword(e.target.value),
+                  required: true,
+                  placeholder: "Potvrďte nové heslo"
                 })
               ),
               React.createElement("button", {
