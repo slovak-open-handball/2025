@@ -159,8 +159,9 @@ function App() {
       setView('profile');
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
-      if (e.code === 'auth/invalid-credential') {
-        setError("Nesprávne používateľské meno alebo heslo.");
+      // Upravená chybová správa pre neplatné prihlasovacie údaje
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
+        setError("Zadané prihlasovacie údaje sú neplatné. Skontrolujte používateľské meno a heslo a skúste to prosím znova.");
       } else {
         setError(`Chyba pri prihlasovaní: ${e.message}`);
       }
