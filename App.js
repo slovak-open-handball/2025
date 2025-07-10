@@ -61,7 +61,6 @@ function App() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            // ODSTRÁNENÝ RIADOK: await authInstance.signInAnonymously();
             // Ak nechcete automatické prihlásenie anonymného používateľa,
             // odstráňte tento riadok. Používateľ bude musieť explicitne
             // prihlásiť sa alebo zaregistrovať.
@@ -280,8 +279,9 @@ function App() {
   }
 
   return (
-    React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-inter" },
-      React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md" },
+    // HLAVNÝ KONTANIER: Upravené triedy pre lepšie zobrazenie
+    React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter overflow-y-auto pb-10" }, // Odstránené justify-center, pridané overflow-y-auto a pb-10
+      React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md my-8" }, // Pridané my-8 pre vertikálny odstup
         React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
           user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : "Prihlásenie / Registrácia"
         ),
@@ -461,6 +461,15 @@ function App() {
                 className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
                   disabled: loading
               }, loading ? 'Ukladám...' : 'Zmeniť heslo')
+            ),
+
+            // Logout Button - TOTO JE TLAČIDLO, KTORÉ HĽADÁTE
+            React.createElement("div", { className: "border-t pt-4 mt-4" },
+              React.createElement("button", {
+                onClick: handleLogout,
+                className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                disabled: loading
+              }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
             )
           )
         )
