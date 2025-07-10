@@ -408,7 +408,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowPassword(!showPassword),
-                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                   },
                     showPassword ? EyeOffIcon : EyeIcon
                   )
@@ -452,7 +452,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -474,7 +474,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                    className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -532,7 +532,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -564,7 +564,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword), // Prepínanie showCurrentPassword
-                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -586,7 +586,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowNewPassword(!showNewPassword),
-                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                 },
                   showNewPassword ? EyeOffIcon : EyeIcon
                 )
@@ -607,8 +607,8 @@ function App() {
                 }),
                 React.createElement("button", {
                   type: "button",
-                  onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
-                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center" // Upravené: right-4 a top-1/2 -translate-y-1/2
+                  onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword), // Prepínanie showConfirmPassword
+                  className: "absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10" // Upravené: right-4, top-1/2, -translate-y-1/2 a pridané z-10
                 },
                   showConfirmNewPassword ? EyeOffIcon : EyeIcon
                 )
