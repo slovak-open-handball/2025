@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prihlasovanie - Slovak Open Handball</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
+    <div id="root"></div>
+
+    <!-- Firebase SDKs - Importované v React kóde, ale pre istotu ich tu spomínam.
+         V React appke sa spravujú cez npm/yarn závislosti.
+         Ak by ste chceli spúšťať React kód bez bundlera, potrebovali by ste ich načítať cez CDN.
+         V tomto prípade sú už v React kóde importy, takže ich tu nepotrebujete.
+    -->
+
+    <!-- React a ReactDOM CDN - pre jednoduché spustenie bez build nástroja -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Váš React kód (App.js) - dôležité je použiť type="text/babel" pre spracovanie JSX -->
+    <script type="text/babel" src="index.js"></script>
+</body>
+</html>
