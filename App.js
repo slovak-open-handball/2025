@@ -105,8 +105,9 @@ function App() {
       setError("Prosím, vyplňte používateľské meno a heslo.");
       return;
     }
-    if (password.length < 5) {
-      setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov.");
+    // Zmena minimálnej dĺžky hesla na 10 znakov
+    if (password.length < 10) {
+      setError("Heslo je príliš slabé. Musí mať aspoň 10 znakov.");
       return;
     }
 
@@ -125,7 +126,7 @@ function App() {
       if (e.code === 'auth/email-already-in-use') {
         setError("Používateľské meno už existuje. Prosím, zvoľte iné.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. Musí mať aspoň 5 znakov.");
+        setError("Heslo je príliš slabé. Musí mať aspoň 10 znakov."); // Upravená správa
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
@@ -237,8 +238,9 @@ function App() {
       setError("Prosím, zadajte nové heslo a aktuálne heslo.");
       return;
     }
-    if (newPassword.length < 5) {
-      setError("Nové heslo musí mať aspoň 5 znakov.");
+    // Zmena minimálnej dĺžky hesla na 10 znakov
+    if (newPassword.length < 10) {
+      setError("Nové heslo musí mať aspoň 10 znakov.");
       return;
     }
 
@@ -367,7 +369,7 @@ function App() {
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
                     required: true,
-                    placeholder: "Zvoľte heslo (min. 5 znakov)"
+                    placeholder: "Zvoľte heslo (min. 10 znakov)" // Upravená správa
                   })
                 ),
                 React.createElement("button", {
@@ -437,7 +439,7 @@ function App() {
                   value: newPassword,
                   onChange: (e) => setNewPassword(e.target.value),
                   required: true,
-                  placeholder: "Zadajte nové heslo (min. 5 znakov)"
+                  placeholder: "Zadajte nové heslo (min. 10 znakov)" // Upravená správa
                 })
               ),
               React.createElement("div", null,
