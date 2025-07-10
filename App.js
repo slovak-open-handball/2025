@@ -61,7 +61,10 @@ function App() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            await authInstance.signInAnonymously();
+            // ODSTRÁNENÝ RIADOK: await authInstance.signInAnonymously();
+            // Ak nechcete automatické prihlásenie anonymného používateľa,
+            // odstráňte tento riadok. Používateľ bude musieť explicitne
+            // prihlásiť sa alebo zaregistrovať.
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
