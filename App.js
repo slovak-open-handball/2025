@@ -408,7 +408,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowPassword(!showPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                    className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                   },
                     showPassword ? EyeOffIcon : EyeIcon
                   )
@@ -452,7 +452,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                    className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -474,7 +474,7 @@ function App() {
                   React.createElement("button", {
                     type: "button",
                     onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                    className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
@@ -532,7 +532,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                  className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -564,7 +564,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowCurrentPassword(!showCurrentPassword), // Prepínanie showCurrentPassword
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                  className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                 },
                   showCurrentPassword ? EyeOffIcon : EyeIcon
                 )
@@ -586,7 +586,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowNewPassword(!showNewPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                  className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                 },
                   showNewPassword ? EyeOffIcon : EyeIcon
                 )
@@ -608,7 +608,7 @@ function App() {
                 React.createElement("button", {
                   type: "button",
                   onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5" // Upravené: odstránené mt-6
+                  className: "absolute inset-y-0 right-0 pr-2 flex items-center" // Upravené: pr-2 a odstránené text-sm leading-5
                 },
                   showConfirmNewPassword ? EyeOffIcon : EyeIcon
                 )
