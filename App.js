@@ -415,6 +415,30 @@ function App() {
   // Podmienené renderovanie obsahu na základe aktuálnej URL a stavu prihlásenia
   const currentPath = window.location.pathname.split('/').pop();
 
+  // Renderovanie pre index.html (uvítacia stránka)
+  if (currentPath === '' || currentPath === 'index.html') {
+    return (
+      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
+        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
+          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
+            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
+            React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
+            React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
+              React.createElement("a", {
+                href: "login.html",
+                className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+              }, "Prihlásenie"),
+              React.createElement("a", {
+                href: "register.html",
+                className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+              }, "Registrácia")
+            )
+          )
+        )
+      )
+    );
+  }
+
   // Renderovanie pre register.html
   if (currentPath === 'register.html') {
     return (
@@ -505,7 +529,7 @@ function App() {
   }
 
   // Renderovanie pre login.html
-  if (currentPath === 'login.html' || currentPath === '') { // '' pre prípad, že je to root
+  if (currentPath === 'login.html') {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
