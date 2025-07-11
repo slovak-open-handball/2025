@@ -14,7 +14,7 @@ const initialAuthToken = null;
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   // !!! NAHRADTE TENTO URL VASIM DEPLOYED GOOGLE APPS SCRIPT WEB APP URL !!!
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VASE_DEPLOYED_SCRIPT_ID/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
