@@ -11,7 +11,7 @@ const firebaseConfig = {
   projectId: "prihlasovanie-a3f5f",
   storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
   messagingSenderId: "181851240506",
-  appId: "1:181851240506:web:768e27fb15b805ee7b9d03",
+  appId: "1:181851240506:web:768e27fb15b8055ee7b9d03",
   measurementId: "G-C3XPTT7F4D"
 };
 const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
@@ -21,6 +21,10 @@ const DUMMY_DOMAIN = "@slovakhandball.com";
 
 // Definujeme App ako globálnu funkciu, nie ako export
 function App() {
+  // reCAPTCHA Site Key - NAHRADENE S VASIM SKUTOCNYM SITE KEYOM!
+  // Presunuté sem, aby bolo definované v rozsahu funkcie App
+  const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Váš skutočný SITE KEY
+
   // Používame React.useState a React.useEffect namiesto importovaných
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
