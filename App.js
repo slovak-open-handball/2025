@@ -42,6 +42,9 @@ function App() {
   const [confirmNewPassword, setConfirmNewPassword] = React.useState(''); // Nové pre zmenu hesla
   const [currentPassword, setCurrentPassword] = React.useState(''); // For reauthentication
 
+  // State to manage which view is active for logged-in users
+  const [profileView, setProfileView] = React.useState('my-data'); // 'my-data' or 'change-password'
+
   // States for password visibility
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -611,8 +614,34 @@ function App() {
 
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
-          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" },
+        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" }, {/* Zväčšený max-w a pridaný flex */}
+          {/* Ľavé menu */}
+          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4" },
+            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
+            React.createElement("nav", null,
+              React.createElement("ul", { className: "space-y-2" },
+                React.createElement("li", null,
+                  React.createElement("button", {
+                    onClick: () => setProfileView('my-data'),
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 ${
+                      profileView === 'my-data' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`
+                  }, "Moje údaje")
+                ),
+                React.createElement("li", null,
+                  React.createElement("button", {
+                    onClick: () => setProfileView('change-password'),
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 ${
+                      profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`
+                  }, "Zmeniť heslo")
+                )
+              )
+            )
+          ),
+
+          {/* Pravý obsah */}
+          React.createElement("div", { className: "w-3/4 bg-white p-8 rounded-lg shadow-xl" },
             message && (
               React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
                 message
@@ -625,94 +654,117 @@ function App() {
             ),
 
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
-            React.createElement("div", { className: "text-center" },
+            React.createElement("div", { className: "text-center mb-6" },
               React.createElement("p", { className: "text-lg text-gray-700" },
                 "Prihlásený ako: ",
                 React.createElement("span", { className: "font-semibold" }, user.displayName || 'Neznámy používateľ')
-              ),
-              React.createElement("p", { className: "text-sm text-gray-500" },
-                "(ID: ", user.uid, ")"
               )
             ),
 
-            // Change Password
-            React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
-              React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-current-password-password-change" }, "Aktuálne heslo (pre overenie)"),
-                React.createElement("input", {
-                  type: showCurrentPassword ? "text" : "password",
-                  id: "modal-current-password-password-change",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: currentPassword,
-                  onChange: (e) => setCurrentPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Zadajte svoje aktuálne heslo",
-                  autoComplete: "current-password"
-                }),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showCurrentPassword ? EyeOffIcon : EyeIcon
+            {/* Podmienené zobrazenie obsahu podľa výberu v menu */}
+            {profileView === 'my-data' && (
+              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
+                React.createElement("p", { className: "text-gray-700" },
+                  React.createElement("span", { className: "font-semibold" }, "Používateľské meno: "), user.displayName || 'N/A'
+                ),
+                React.createElement("p", { className: "text-gray-700" },
+                  React.createElement("span", { className: "font-semibold" }, "Email: "), user.email || 'N/A'
                 )
-              ),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-new-password" }, "Nové heslo"),
-                React.createElement("input", {
-                  type: showNewPassword ? "text" : "password",
-                  id: "modal-new-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: newPassword,
-                  onChange: (e) => setNewPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Zadajte nové heslo (min. 10 znakov)",
-                  autoComplete: "new-password"
-                }),
+                // Tu môžete pridať ďalšie údaje zadané pri registrácii, ak ich ukladáte vo Firebase (napr. do Firestore)
+              )
+            )}
+
+            {profileView === 'change-password' && (
+              React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
+                React.createElement("div", { className: "relative" },
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-current-password-password-change" }, "Aktuálne heslo (pre overenie)"),
+                  React.createElement("input", {
+                    type: showCurrentPassword ? "text" : "password",
+                    id: "modal-current-password-password-change",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
+                    value: currentPassword,
+                    onChange: (e) => setCurrentPassword(e.target.value),
+                    onCopy: (e) => e.preventDefault(),
+                    onPaste: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    required: true,
+                    placeholder: "Zadajte svoje aktuálne heslo",
+                    autoComplete: "current-password"
+                  }),
+                  React.createElement("button", {
+                    type: "button",
+                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
+                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  },
+                    showCurrentPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
+                React.createElement("div", { className: "relative" },
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-new-password" }, "Nové heslo"),
+                  React.createElement("input", {
+                    type: showNewPassword ? "text" : "password",
+                    id: "modal-new-password",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
+                    value: newPassword,
+                    onChange: (e) => setNewPassword(e.target.value),
+                    onCopy: (e) => e.preventDefault(),
+                    onPaste: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    required: true,
+                    placeholder: "Zadajte nové heslo (min. 10 znakov)",
+                    autoComplete: "new-password"
+                  }),
+                  React.createElement("button", {
+                    type: "button",
+                    onClick: () => setShowNewPassword(!showNewPassword),
+                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  },
+                    showNewPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
+                React.createElement("div", { className: "relative" },
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-confirm-new-password" }, "Potvrďte nové heslo"),
+                  React.createElement("input", {
+                    type: showConfirmNewPassword ? "text" : "password",
+                    id: "modal-confirm-new-password",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
+                    value: confirmNewPassword,
+                    onChange: (e) => setConfirmNewPassword(e.target.value),
+                    onCopy: (e) => e.preventDefault(),
+                    onPaste: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    required: true,
+                    placeholder: "Potvrďte heslo",
+                    autoComplete: "new-password"
+                  }),
+                  React.createElement("button", {
+                    type: "button",
+                    onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
+                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  },
+                    showConfirmNewPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
                 React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowNewPassword(!showNewPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showNewPassword ? EyeOffIcon : EyeIcon
-                )
-              ),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-confirm-new-password" }, "Potvrďte nové heslo"),
-                React.createElement("input", {
-                  type: showConfirmNewPassword ? "text" : "password",
-                  id: "modal-confirm-new-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: confirmNewPassword,
-                  onChange: (e) => setConfirmNewPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Potvrďte heslo",
-                  autoComplete: "new-password"
-                }),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showConfirmNewPassword ? EyeOffIcon : EyeIcon
-                )
-              ),
-              React.createElement("button", {
-                type: "submit",
-                className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
-                disabled: loading
-              }, loading ? 'Ukladám...' : 'Zmeniť heslo')
-            )
+                  type: "submit",
+                  className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
+                  disabled: loading
+                }, loading ? 'Ukladám...' : 'Zmeniť heslo')
+              </form>
+            )}
+
+            {/* Logout Button */}
+            <div className="border-t pt-4 mt-4">
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                disabled={loading}
+              >
+                {loading ? 'Odhlasujem...' : 'Odhlásiť sa'}
+              </button>
+            </div>
           )
         )
       )
