@@ -12,8 +12,8 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            /* Pridajte odsadenie zhora pre pevnú hlavičku */
-            padding-top: 64px; /* Približne výška hlavičky */
+            /* Odstránené padding-top, pretože hlavička je teraz renderovaná Reactom a jej odsadenie sa riadi v App.js */
+            padding: 0;
         }
     </style>
 
@@ -33,33 +33,19 @@
     <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
 </head>
 <body class="bg-gray-100">
-    <!-- Placeholder pre hlavičku, ktorá sa načíta pomocou JavaScriptu -->
-    <div id="header-placeholder"></div>
+    <!-- Už nepotrebujeme placeholder pre hlavičku, pretože je integrovaná do App.js -->
+    <!-- <div id="header-placeholder"></div> -->
 
     <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
-    <div id="root" class="flex flex-col items-center p-4 font-inter overflow-y-auto pb-10">
-        <!-- Obsah React aplikácie bude vložený sem -->
+    <!-- Upravené triedy, aby App komponent mohol riadiť celý layout vrátane hlavičky -->
+    <div id="root" class="min-h-screen flex flex-col items-center font-inter overflow-y-auto">
+        <!-- Obsah React aplikácie (vrátane hlavičky) bude vložený sem -->
     </div>
 
     <!-- Váš React kód (App.js) -->
     <script type="text/babel" src="App.js"></script>
 
     <script type="text/javascript">
-        // Funkcia na načítanie a vloženie hlavičky
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html'); // Načítať obsah header.html
-                if (!response.ok) {
-                    throw new Error(`HTTP chyba! Status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml; // Vložiť do placeholderu
-            } catch (error) {
-                console.error('Chyba pri načítaní hlavičky:', error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-            }
-        }
-
         // Globálna funkcia, ktorú zavolá reCAPTCHA po načítaní
         // Táto funkcia bude volaná z App.js na renderovanie reCAPTCHA
         window.onloadCallback = function() {
@@ -69,8 +55,8 @@
 
         // Tento skript sa spustí po načítaní App.js a hlavičky
         window.onload = function() {
-            // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
+            // Už nenačítavame hlavičku samostatne, pretože je v React komponente
+            // loadHeader().then(() => {
                 // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
@@ -85,9 +71,9 @@
 
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(App, null));
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
+            // }).catch(error => {
+            //     console.error("Chyba pri inicializácii stránky:", error);
+            // });
         };
     </script>
 </body>
