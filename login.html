@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH - Prihlásenie</title>
+    <title>Prihlásenie / Registrácia - Slovak Open Handball</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -12,7 +12,47 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+        }
+        /* Štýly pre modálne okná */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            width: 90%;
+            max-width: 500px;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 
@@ -27,20 +67,57 @@
     <!-- Babel Standalone pre preklad JSX v prehliadači -->
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- reCAPTCHA v3 script -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa" async defer></script>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
 </head>
 <body class="bg-gray-100">
-    <div id="root"></div>
+    <!-- Placeholder pre hlavičku, ktorá sa načíta pomocou JavaScriptu -->
+    <div id="header-placeholder"></div>
+
+    <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
+    <div id="root" class="flex flex-col items-center p-4 font-inter overflow-y-auto pb-10">
+        <!-- Obsah React aplikácie bude vložený sem -->
+    </div>
+
+    <!-- Váš React kód (App.js) -->
     <script type="text/babel" src="App.js"></script>
-    <script type="text/babel">
-        window.onload = function() {
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof App === 'undefined') {
-                console.error("Chyba: React, ReactDOM alebo App komponent nie sú načítané.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
+
+    <script type="text/javascript">
+        // Funkcia na načítanie a vloženie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html'); // Načítať obsah header.html
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba! Status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml; // Vložiť do placeholderu
+            } catch (error) {
+                console.error('Chyba pri načítaní hlavičky:', error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
+        }
+
+        // Tento skript sa spustí po načítaní App.js a hlavičky
+        window.onload = function() {
+            // Načítať hlavičku ako prvú
+            loadHeader().then(() => {
+                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof App === 'undefined') {
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            }).catch(error => {
+                console.error("Chyba pri inicializácii stránky:", error);
+            });
         };
     </script>
 </body>
