@@ -32,7 +32,7 @@ function App() {
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
-  const [recaptchaId, setRecaptchaId] = React.useState(null); // ID pre reCAPTCHA widget
+  // const [recaptchaId, setRecaptchaId] = React.useState(null); // ODSTRÁNENÉ pre reCAPTCHA v3
 
   // Form states
   const [username, setUsername] = React.useState('');
@@ -127,56 +127,23 @@ function App() {
     }
   }, []);
 
-  // Effect pre renderovanie a resetovanie reCAPTCHA widgetu
-  React.useEffect(() => {
-    // Skontrolujte, či je reCAPTCHA API načítané
-    if (typeof grecaptcha === 'undefined' || !grecaptcha.render) {
-      console.warn("reCAPTCHA API nie je načítané. Čakám na načítanie.");
-      return;
+  // Funkcia na získanie reCAPTCHA v3 tokenu
+  const getRecaptchaToken = async (action) => {
+    // Skontrolujte, či je reCAPTCHA API načítané a pripravené
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
+      setError("reCAPTCHA API nie je načítané alebo pripravené.");
+      return null;
     }
-
-    const container = document.getElementById('recaptcha-container');
-
-    // Ak sme vo formulári pre prihlásenie/registráciu a reCAPTCHA ešte nebol renderovaný
-    if ((view === 'login' || view === 'register') && container && recaptchaId === null) {
-      console.log("Renderujem reCAPTCHA widget...");
-      const widgetId = grecaptcha.render('recaptcha-container', {
-        'sitekey': RECAPTCHA_SITE_KEY,
-        'callback': (token) => {
-          console.log('reCAPTCHA token:', token);
-        },
-        'expired-callback': () => {
-          console.log('reCAPTCHA vypršala');
-          setError('reCAPTCHA vypršala. Prosím, skúste to znova.');
-          if (recaptchaId) grecaptcha.reset(recaptchaId);
-        }
-      });
-      setRecaptchaId(widgetId); // Uložte ID renderovaného widgetu do stavu
+    try {
+      // reCAPTCHA v3 token sa získava asynchrónne
+      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
+      return token;
+    } catch (e) {
+      console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
+      setError(`Chyba reCAPTCHA: ${e.message}`);
+      return null;
     }
-    // Ak sme vo formulári pre prihlásenie/registráciu a reCAPTCHA už bol renderovaný, stačí ho resetovať
-    else if ((view === 'login' || view === 'register') && recaptchaId !== null) {
-      console.log("Resetujem existujúci reCAPTCHA widget pre zmenu pohľadu.");
-      grecaptcha.reset(recaptchaId);
-    }
-    // Ak prejdeme na pohľad profilu (alebo iný, kde reCAPTCHA nie je potrebná)
-    else if (view === 'profile' && recaptchaId !== null) {
-      console.log("Resetujem a čistím reCAPTCHA widget, pretože pohľad sa zmenil na profil.");
-      grecaptcha.reset(recaptchaId);
-      setRecaptchaId(null); // Vyčistite ID widgetu zo stavu
-    }
-
-    // Cleanup funkcia: Spustí sa, keď sa komponent odpojí alebo pred opätovným spustením efektu
-    return () => {
-      // Ak je sledované ID widgetu a grecaptcha je k dispozícii, resetujte ho.
-      // Toto zabraňuje chybám "reCAPTCHA has already been rendered".
-      if (recaptchaId !== null && typeof grecaptcha !== 'undefined' && grecaptcha.reset) {
-        console.log("Cleanup: Resetujem reCAPTCHA widget s ID:", recaptchaId);
-        grecaptcha.reset(recaptchaId);
-        // Dôležité: NEnastavujte recaptchaId na null tu, ak sa efekt iba opätovne spúšťa
-        // kvôli zmene závislostí. Nastavenie na null je riadené explicitne pri zmene na 'profile' view.
-      }
-    };
-  }, [view, isAuthReady, RECAPTCHA_SITE_KEY]); // Závislosti pre efekt
+  };
 
   const clearMessages = () => {
     setTimeout(() => {
@@ -239,17 +206,16 @@ function App() {
       return;
     }
 
-    // reCAPTCHA overenie
-    if (typeof grecaptcha === 'undefined' || !recaptchaId || !grecaptcha.getResponse(recaptchaId)) {
-      setError("Prosím, potvrďte, že nie ste robot (reCAPTCHA).");
+    // reCAPTCHA v3 overenie
+    const recaptchaToken = await getRecaptchaToken('register');
+    if (!recaptchaToken) {
+      setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
       return;
     }
-    const recaptchaToken = grecaptcha.getResponse(recaptchaId);
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
     // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
     // Ak overenie na serveri zlyhá, nemali by ste povoliť registráciu.
-    // Príklad (pseudo-kód pre serverové overenie):
     /*
     const serverResponse = await fetch('/verify-recaptcha', {
       method: 'POST',
@@ -259,7 +225,6 @@ function App() {
     const data = await serverResponse.json();
     if (!data.success) {
       setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
-      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po neúspešnom overení
       return;
     }
     */
@@ -278,7 +243,6 @@ function App() {
       setConfirmPassword('');
       // Presmerovanie na prihlasovaciu stránku po úspešnej registrácii
       window.location.href = 'login.html';
-      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po úspešnej registrácii
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -288,7 +252,6 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
-      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA aj pri chybe
     } finally {
       setLoading(false);
       clearMessages();
@@ -311,12 +274,12 @@ function App() {
       return;
     }
 
-    // reCAPTCHA overenie
-    if (typeof grecaptcha === 'undefined' || !recaptchaId || !grecaptcha.getResponse(recaptchaId)) {
-      setError("Prosím, potvrďte, že nie ste robot (reCAPTCHA).");
+    // reCAPTCHA v3 overenie
+    const recaptchaToken = await getRecaptchaToken('login');
+    if (!recaptchaToken) {
+      setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
       return;
     }
-    const recaptchaToken = grecaptcha.getResponse(recaptchaId);
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
 
     // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
@@ -330,7 +293,6 @@ function App() {
     const data = await serverResponse.json();
     if (!data.success) {
       setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
-      grecaptcha.reset(recaptchaId);
       return;
     }
     */
@@ -347,7 +309,6 @@ function App() {
       setPassword('');
       // Presmerovanie na logged-in.html po úspešnom prihlásení
       window.location.href = 'logged-in.html';
-      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po úspešnom prihlásení
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       // Upravená chybová správa pre neplatné prihlasovacie údaje
@@ -356,7 +317,6 @@ function App() {
       } else {
         setError(`Chyba pri prihlasovaní: ${e.message}`);
       }
-      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA aj pri chybe
     } finally {
       setLoading(false);
       clearMessages();
@@ -577,8 +537,8 @@ function App() {
                   showPassword ? EyeOffIcon : EyeIcon
                 )
               ),
-              // reCAPTCHA widget pre prihlásenie
-              React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }),
+              {/* reCAPTCHA v3 nemá viditeľný widget, takže tento div nie je potrebný */}
+              {/* React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }), */}
               React.createElement("button", {
                 type: "submit",
                 className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
@@ -649,8 +609,8 @@ function App() {
                   showConfirmPassword ? EyeOffIcon : EyeIcon
                 )
               ),
-              // reCAPTCHA widget pre registráciu
-              React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }),
+              {/* reCAPTCHA v3 nemá viditeľný widget, takže tento div nie je potrebný */}
+              {/* React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }), */}
               React.createElement("button", {
                 type: "submit",
                 className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
