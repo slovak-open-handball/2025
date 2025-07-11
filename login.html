@@ -12,7 +12,8 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
+            /* Pridajte odsadenie zhora pre pevnú hlavičku */
+            padding-top: 64px; /* Približne výška hlavičky */
         }
     </style>
 
@@ -24,37 +25,60 @@
     <!-- React a ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel Standalone pre preklad JSX v prehliadači (už nie je potrebné, ale ponechávam pre kompatibilitu) -->
+    <!-- Babel Standalone pre preklad JSX v prehliadači -->
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- reCAPTCHA v2 script - ODSTRÁNENÉ -->
 </head>
 <body class="bg-gray-100">
+    <!-- Placeholder pre hlavičku, ktorá sa načíta pomocou JavaScriptu -->
+    <div id="header-placeholder"></div>
+
     <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
-    <div id="root"></div>
+    <div id="root" class="flex flex-col items-center p-4 font-inter overflow-y-auto pb-10">
+        <!-- Obsah React aplikácie bude vložený sem -->
+    </div>
 
     <!-- Váš React kód (App.js) -->
-    <!-- Dôležité: App.js už nebude používať import/export a bude používať React.createElement -->
-    <script src="App.js"></script>
+    <script type="text/babel" src="App.js"></script>
 
     <script type="text/javascript">
-        // Tento skript sa spustí po načítaní App.js
-        // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-        window.onload = function() {
-            // Kontrola, či sú React, ReactDOM a App komponent dostupné
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
+        // Funkcia na načítanie a vloženie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html'); // Načítať obsah header.html
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba! Status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml; // Vložiť do placeholderu
+            } catch (error) {
+                console.error('Chyba pri načítaní hlavičky:', error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
-            if (typeof App === 'undefined') {
-                console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
+        }
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
+        // Tento skript sa spustí po načítaní App.js a hlavičky
+        window.onload = function() {
+            // Načítať hlavičku ako prvú
+            loadHeader().then(() => {
+                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof App === 'undefined') {
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            }).catch(error => {
+                console.error("Chyba pri inicializácii stránky:", error);
+            });
         };
     </script>
 </body>
