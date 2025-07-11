@@ -31,7 +31,7 @@ function App() {
   const [currentPassword, setCurrentPassword] = React.useState('');
 
   const [profileView, setProfileView] = React.useState('my-data');
-  const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre simuláciu administrátorských oprávnení
+  const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre administrátorské oprávnenia
   const [allUsersData, setAllUsersData] = React.useState([]); // Stav pre zoznam všetkých používateľov
 
   const [showPassword, setShowPassword] = React.useState(false);
@@ -83,16 +83,25 @@ function App() {
         }
       };
 
-      const unsubscribe = authInstance.onAuthStateChanged((currentUser) => {
+      const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
         if (loading) setLoading(false);
 
-        // Simulácia administrátorských oprávnení na klientskej strane
-        // V REÁLNEJ APLIKÁCII BY SA TOTO ROBILO NA SERVERI POMOCOU FIREBASE ADMIN SDK
-        // A CUSTOM CLAIMS (napr. currentUser.getIdTokenResult(true).then(idTokenResult => setIsAdmin(!!idTokenResult.claims.admin)));
-        if (currentUser && currentUser.email === 'admin@example.com') { // Nahraďte 'admin@example.com' skutočným admin e-mailom
-          setIsAdmin(true);
+        // Načítanie administrátorských oprávnení z Firestore
+        if (currentUser && db) {
+          try {
+            const userDocRef = db.collection('users').doc(currentUser.uid);
+            const userDoc = await userDocRef.get();
+            if (userDoc.exists) {
+              setIsAdmin(userDoc.data().role === 'admin');
+            } else {
+              setIsAdmin(false);
+            }
+          } catch (e) {
+            console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
+            setIsAdmin(false); // Predpokladáme, že nie je admin v prípade chyby
+          }
         } else {
           setIsAdmin(false);
         }
@@ -177,8 +186,8 @@ function App() {
 
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
-    if (!auth) {
-      setError("Firebase Auth nie je inicializovaný.");
+    if (!auth || !db) {
+      setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
     if (!email || !password || !confirmPassword) {
@@ -211,6 +220,18 @@ function App() {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: email }); // Nastavíme display name na email
 
+      // Uloženie údajov používateľa do Firestore
+      // Rola používateľa sa určuje na základe toho, či ide o registráciu administrátora
+      const userRole = isAdminRegistration ? 'admin' : 'user'; 
+      await db.collection('users').doc(userCredential.user.uid).set({
+        uid: userCredential.user.uid,
+        email: email,
+        displayName: email, // Alebo iné zobrazované meno
+        role: userRole,
+        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log(`Používateľ ${email} s rolou '${userRole}' bol uložený do Firestore.`);
+
       // --- ODOSLANIE E-MAILU CEZ GOOGLE APPS SCRIPT ---
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -232,19 +253,7 @@ function App() {
       }
       // --- KONIEC ODOSIELANIA E-MAILU ---
 
-      // --- LOGIKA PRE PRIDELENIE ADMIN ROLY (VYŽADUJE SERVER-SIDE) ---
-      if (isAdminRegistration) {
-        console.log(`Používateľ ${email} registrovaný ako administrátor. Teraz je potrebné priradiť rolu na serveri.`);
-        // V REÁLNEJ APLIKÁCII BY STE TU POSLALI ŽIADOSŤ NA VÁŠ BACKEND (napr. Firebase Cloud Function)
-        // KTORÁ BY POUŽILA FIREBASE ADMIN SDK NA NASTAVENIE CUSTOM CLAIMU:
-        // admin.auth().setCustomUserClaims(userCredential.user.uid, { admin: true });
-        // Alebo by ste aktualizovali dokument vo Firestore:
-        // db.collection('users').doc(userCredential.user.uid).set({ role: 'admin' }, { merge: true });
-        // Táto operácia NESMIE byť vykonaná priamo z klienta!
-        setMessage("Registrácia administrátora úspešná! Rola bude priradená.");
-      } else {
-        setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
-      }
+      setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
       setError('');
       setEmail('');
       setPassword('');
@@ -352,6 +361,8 @@ function App() {
 
       await user.updateEmail(newEmail);
       await user.updateProfile({ displayName: newEmail });
+      // Aktualizácia e-mailu aj vo Firestore
+      await db.collection('users').doc(user.uid).update({ email: newEmail, displayName: newEmail });
       setMessage("E-mailová adresa úspešne zmenená na " + newEmail);
       setError('');
       setNewEmail('');
@@ -423,35 +434,28 @@ function App() {
     }
   };
 
-  // Funkcia na simulované získanie všetkých používateľov (iba pre demo)
+  // Funkcia na získanie všetkých používateľov z Firestore
   const fetchAllUsers = async () => {
     setLoading(true);
     setError('');
     setMessage('');
     try {
-      // V reálnej aplikácii by ste tu volali Firebase Cloud Function, ktorá by použila Firebase Admin SDK
-      // na získanie zoznamu používateľov a vrátila by ho klientovi.
-      // const response = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${await user.getIdToken()}` } });
-      // const data = await response.json();
-      // if (response.ok) {
-      //   setAllUsersData(data.users);
-      //   setMessage("Zoznam používateľov načítaný.");
-      // } else {
-      //   setError(`Chyba pri načítaní používateľov: ${data.error || response.statusText}`);
-      // }
+      if (!db) {
+        setError("Firestore nie je inicializovaný.");
+        return;
+      }
+      // V reálnej aplikácii by ste tu mali overiť, či je používateľ skutočne administrátor
+      // pred získavaním všetkých používateľov.
+      // Toto overenie by malo byť aj na serverovej strane (Firestore Security Rules).
 
-      // Simulované dáta pre demo
-      const dummyUsers = [
-        { uid: 'user123', email: 'user1@example.com', displayName: 'Používateľ Jeden' },
-        { uid: 'user456', email: 'user2@example.com', displayName: 'Používateľ Dva' },
-        { uid: 'admin789', email: 'admin@example.com', displayName: 'Admin Účet' },
-        { uid: 'userabc', email: 'user3@example.com', displayName: 'Používateľ Tri' },
-      ];
-      setAllUsersData(dummyUsers);
-      setMessage("Simulovaný zoznam používateľov načítaný.");
+      const usersCollectionRef = db.collection('users');
+      const snapshot = await usersCollectionRef.get();
+      const usersList = snapshot.docs.map(doc => doc.data());
+      setAllUsersData(usersList);
+      setMessage("Zoznam používateľov načítaný z Firestore.");
 
     } catch (e) {
-      console.error("Chyba pri získavaní používateľov:", e);
+      console.error("Chyba pri získavaní používateľov z Firestore:", e);
       setError(`Chyba pri získavaní používateľov: ${e.message}`);
     } finally {
       setLoading(false);
@@ -905,7 +909,8 @@ function App() {
                       React.createElement("li", { key: u.uid, className: "py-2" },
                         React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
                         React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                        React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`)
+                        React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
+                        React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`) // Zobrazenie roly
                       )
                     )
                   )
