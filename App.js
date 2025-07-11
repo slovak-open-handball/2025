@@ -372,8 +372,14 @@ function App() {
         return;
       }
 
+      // Zmena displayName
       await user.updateProfile({ displayName: newUsername });
-      setMessage("Používateľské meno úspešne zmenené na " + newUsername);
+
+      // Zmena e-mailovej adresy (prihlasovacieho mena)
+      const newEmail = newUsername + DUMMY_DOMAIN;
+      await user.updateEmail(newEmail);
+
+      setMessage("Používateľské meno a prihlasovací e-mail úspešne zmenené na " + newUsername);
       setError('');
       setNewUsername('');
       setCurrentPassword('');
@@ -384,7 +390,12 @@ function App() {
         setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
-      } else {
+      } else if (e.code === 'auth/email-already-in-use') {
+        setError("Nové používateľské meno už existuje. Prosím, zvoľte iné.");
+      } else if (e.code === 'auth/invalid-email') {
+        setError("Nové používateľské meno nie je platné pre e-mailovú adresu.");
+      }
+      else {
         setError(`Chyba pri zmene používateľského mena: ${e.message}`);
       }
     } finally {
