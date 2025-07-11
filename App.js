@@ -373,14 +373,13 @@ function App() {
         return;
       }
 
-      // Zmena displayName
+      // Zmena displayName - toto je to, čo používateľ vidí
       await user.updateProfile({ displayName: newUsername });
 
-      // Zmena e-mailovej adresy (prihlasovacieho mena)
-      const newEmail = newUsername + DUMMY_DOMAIN;
-      await user.updateEmail(newEmail);
+      // NEZMENÍME skutočnú e-mailovú adresu (prihlasovacie meno), pretože doména je fiktívna
+      // a používateľ by ju nemohol overiť. Prihlasovacie meno zostáva pôvodné.
 
-      setMessage("Používateľské meno a prihlasovací e-mail úspešne zmenené na " + newUsername);
+      setMessage("Zobrazované používateľské meno úspešne zmenené na " + newUsername + ". Prihlasovacie meno (e-mail) zostáva pôvodné.");
       setError('');
       setNewUsername('');
       setCurrentPassword('');
@@ -391,12 +390,7 @@ function App() {
         setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
-      } else if (e.code === 'auth/email-already-in-use') {
-        setError("Nové používateľské meno už existuje. Prosím, zvoľte iné.");
-      } else if (e.code === 'auth/invalid-email') {
-        setError("Nové používateľské meno nie je platné pre e-mailovú adresu.");
-      }
-      else {
+      } else {
         setError(`Chyba pri zmene používateľského mena: ${e.message}`);
       }
     } finally {
@@ -640,7 +634,7 @@ function App() {
                     }),
                     React.createElement("button", {
                       type: "button",
-                      onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
+                      onClick: () => setShowConfirmPassword(!showConfirmPassword),
                       className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                     },
                       showConfirmPassword ? EyeOffIcon : EyeIcon
