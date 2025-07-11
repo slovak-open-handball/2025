@@ -427,14 +427,23 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
             React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
             React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-              React.createElement("a", {
-                href: "login.html",
-                className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-              }, "Prihlásenie"),
-              React.createElement("a", {
-                href: "register.html",
-                className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-              }, "Registrácia")
+              user ? ( // Podmienka pre zobrazenie tlačidla "Moja zóna"
+                React.createElement("a", {
+                  href: "logged-in.html", // Odkaz na stránku prihláseného používateľa
+                  className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                }, "Moja zóna")
+              ) : ( // Ak nie je prihlásený, zobrazia sa tlačidlá Prihlásenie a Registrácia
+                React.createElement(React.Fragment, null,
+                  React.createElement("a", {
+                    href: "login.html",
+                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Prihlásenie"),
+                  React.createElement("a", {
+                    href: "register.html",
+                    className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Registrácia")
+                )
+              )
             )
           )
         )
