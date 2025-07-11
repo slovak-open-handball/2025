@@ -17,7 +17,7 @@ const firebaseConfig = {
 const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
 
 // Dummy domain for internal email construction
-const DUMMY_DOMAIN = "@tunraj.slovak.open.handball.sk";
+const DUMMY_DOMAIN = "@slovakhandball.com";
 
 // Definujeme App ako globálnu funkciu, nie ako export
 function App() {
