@@ -6,7 +6,7 @@
 // Pre funkčnosť ich preto definujeme pevne.
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = {
-  apiKey: "AIzaSyB_hlvVpnG-9VAr-VGXiT8J7DuPXx8k-eA",
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // AKTUALIZOVANÝ API KĽÚČ
   authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
   projectId: "prihlasovanie-a3f5f",
   storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
@@ -156,6 +156,11 @@ function App() {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
+    // Overenie medzier v používateľskom mene
+    if (username.includes(' ')) {
+      setError("Používateľské meno nesmie obsahovať medzery.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Heslá sa nezhodujú. Prosím, skontrolujte ich.");
       return;
@@ -201,6 +206,11 @@ function App() {
     }
     if (!username || !password) {
       setError("Prosím, vyplňte používateľské meno a heslo.");
+      return;
+    }
+    // Overenie medzier v používateľskom mene
+    if (username.includes(' ')) {
+      setError("Používateľské meno nesmie obsahovať medzery.");
       return;
     }
 
@@ -252,6 +262,11 @@ function App() {
     }
     if (!newUsername) {
       setError("Prosím, zadajte nové používateľské meno.");
+      return;
+    }
+    // Overenie medzier v novom používateľskom mene
+    if (newUsername.includes(' ')) {
+      setError("Nové používateľské meno nesmie obsahovať medzery.");
       return;
     }
 
@@ -385,7 +400,7 @@ function App() {
                     id: "username",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: username,
-                    onChange: (e) => setUsername(e.target.value),
+                    onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
                     required: true,
                     placeholder: "Zadajte používateľské meno"
                   })
@@ -429,7 +444,7 @@ function App() {
                     id: "reg-username",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: username,
-                    onChange: (e) => setUsername(e.target.value),
+                    onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
                     required: true,
                     placeholder: "Zvoľte používateľské meno"
                   })
@@ -446,7 +461,7 @@ function App() {
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
                     required: true,
-                    placeholder: "Zvoľte heslo (min. 10 znakov)"
+                    placeholder: "Zvoľte heslo (min. 10 znakov)" // Aktualizovaný placeholder
                   }),
                   React.createElement("button", {
                     type: "button",
@@ -509,7 +524,7 @@ function App() {
                   id: "new-username",
                   className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                   value: newUsername,
-                  onChange: (e) => setNewUsername(e.target.value),
+                  onChange: (e) => setNewUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
                   required: true,
                   placeholder: "Zadajte nové používateľské meno"
                 })
@@ -558,7 +573,7 @@ function App() {
                   onPaste: (e) => e.preventDefault(),
                   onCut: (e) => e.preventDefault(),
                   required: true,
-                  placeholder: "Zadajte nové heslo (min. 10 znakov)"
+                  placeholder: "Zadajte nové heslo (min. 10 znakov)" // Aktualizovaný placeholder
                 }),
                 React.createElement("button", {
                   type: "button",
@@ -584,7 +599,7 @@ function App() {
                 }),
                 React.createElement("button", {
                   type: "button",
-                  onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
+                  onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword), // Prepínanie showConfirmPassword
                   className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                 },
                   showConfirmNewPassword ? EyeOffIcon : EyeIcon
