@@ -703,5 +703,3 @@ function App() {
     )
   );
 }
-
-// export default App; // Odstránené export, App je teraz globálna
