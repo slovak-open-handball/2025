@@ -537,8 +537,6 @@ function App() {
                   showPassword ? EyeOffIcon : EyeIcon
                 )
               ),
-              {/* reCAPTCHA v3 nemá viditeľný widget, takže tento div nie je potrebný */}
-              {/* React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }), */}
               React.createElement("button", {
                 type: "submit",
                 className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
@@ -609,8 +607,6 @@ function App() {
                   showConfirmPassword ? EyeOffIcon : EyeIcon
                 )
               ),
-              {/* reCAPTCHA v3 nemá viditeľný widget, takže tento div nie je potrebný */}
-              {/* React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }), */}
               React.createElement("button", {
                 type: "submit",
                 className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
