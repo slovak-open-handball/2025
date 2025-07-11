@@ -1,5 +1,5 @@
-// Odstránené všetky importy, pretože Firebase SDKs, React a ReactDOM sa načítavajú globálne z CDN
-// Všetky funkcie sa teraz pristupujú cez globálny objekt 'firebase'
+// Odstránené všetky importy, pretože Firebase SDKs, React, ReactDOM a React Router DOM sa načítavajú globálne z CDN
+// Všetky funkcie sa teraz pristupujú cez globálny objekt 'firebase' a 'ReactRouterDOM'
 
 // Global variables provided by the Canvas environment (používame ich priamo)
 // Ak toto spúšťate priamo na GitHub Pages, tieto premenné nebudú definované.
@@ -703,3 +703,5 @@ function App() {
     )
   );
 }
+
+// export default App; // Odstránené export, App je teraz globálna
