@@ -69,6 +69,7 @@ function App() {
   // States for modal visibility
   const [showChangeUsernameModal, setShowChangeUsernameModal] = React.useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = React.useState(false);
+  const [showConfirmUsernameChangeModal, setShowConfirmUsernameChangeModal] = React.useState(false); // Nové: Potvrdzujúce modálne okno
 
 
   // SVG ikony pre zobrazenie/skrytie hesla
@@ -313,7 +314,7 @@ function App() {
       setUsername('');
       setPassword('');
       // Presmerovanie na logged-in.html po úspešnom prihlásení
-      window.location.href = 'logged-in.html';
+      window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       // Upravená chybová správa pre neplatné prihlasovacie údaje
@@ -346,50 +347,101 @@ function App() {
     }
   };
 
-  const handleChangeUsername = async (e) => {
+  // Funkcia, ktorá sa zavolá po kliknutí na "Zmeniť používateľské meno"
+  const openChangeUsernameConfirmation = () => {
+    setNewUsername(''); // Vyčistí predchádzajúci vstup
+    setCurrentPassword(''); // Vyčistí predchádzajúci vstup
+    setShowChangeUsernameModal(true); // Otvorí modálne okno pre zadanie údajov
+  };
+
+  // Funkcia, ktorá sa zavolá po odoslaní formulára v prvom modálnom okne (zadanie nového mena a hesla)
+  const handleSubmitChangeUsernameForm = (e) => {
     e.preventDefault();
+    // Validácia vstupu pred zobrazením potvrdenia
+    if (!newUsername || !currentPassword) {
+      setError("Prosím, vyplňte nové používateľské meno a aktuálne heslo.");
+      return;
+    }
+    if (newUsername.includes(' ')) {
+      setError("Nové používateľské meno nesmie obsahovať medzery.");
+      return;
+    }
+    setError(''); // Vyčistí prípadné predchádzajúce chyby
+    setShowChangeUsernameModal(false); // Zavrie vstupné modálne okno
+    setShowConfirmUsernameChangeModal(true); // Otvorí potvrdzujúce modálne okno
+  };
+
+
+  // Hlavná funkcia pre zmenu používateľského mena (vymazanie starého a vytvorenie nového)
+  const handleConfirmUsernameChange = async () => {
+    setShowConfirmUsernameChangeModal(false); // Zavrie potvrdzujúce modálne okno
+
     if (!user) {
       setError("Nie ste prihlásený.");
+      setLoading(false);
+      clearMessages();
       return;
     }
     if (!newUsername) {
       setError("Prosím, zadajte nové používateľské meno.");
+      setLoading(false);
+      clearMessages();
       return;
     }
-    // Overenie medzier v novom používateľskom mene
     if (newUsername.includes(' ')) {
       setError("Nové používateľské meno nesmie obsahovať medzery.");
+      setLoading(false);
+      clearMessages();
       return;
     }
 
     setLoading(true);
     try {
-      if (user.email && currentPassword) {
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-      } else {
+      // 1. Reautentifikácia aktuálneho používateľa
+      // Toto je kľúčové pre získanie aktuálneho hesla a pre bezpečnostné overenie
+      if (!user.email || !currentPassword) {
         setError("Pre zmenu používateľského mena je potrebné zadať aktuálne heslo pre overenie.");
         setLoading(false);
+        clearMessages();
         return;
       }
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
 
-      // Zmena displayName - toto je to, čo používateľ vidí
-      await user.updateProfile({ displayName: newUsername });
+      // Heslo aktuálneho používateľa je overené a je uložené v 'currentPassword'
+      const oldUserPassword = currentPassword;
 
-      // NEZMENÍME skutočnú e-mailovú adresu (prihlasovacie meno), pretože doména je fiktívna
-      // a používateľ by ju nemohol overiť. Prihlasovacie meno zostáva pôvodné.
+      // 2. Vymazanie aktuálneho používateľského účtu
+      await user.delete();
+      setMessage("Starý účet bol úspešne vymazaný.");
 
-      setMessage("Zobrazované používateľské meno úspešne zmenené na " + newUsername + ". Prihlasovacie meno (e-mail) zostáva pôvodné.");
+      // 3. Vytvorenie nového používateľa s novým používateľským menom a pôvodným heslom
+      const newEmailForNewUser = newUsername + DUMMY_DOMAIN;
+      const newUserCredential = await firebase.auth().createUserWithEmailAndPassword(newEmailForNewUser, oldUserPassword);
+      await newUserCredential.user.updateProfile({ displayName: newUsername });
+      setMessage("Nový účet bol úspešne vytvorený s používateľským menom: " + newUsername);
+
+      // 4. Prihlásenie novo vytvoreného používateľa
+      // Firebase zvyčajne prihlási používateľa automaticky po vytvorení, ale explicitné je bezpečnejšie.
+      await firebase.auth().signInWithEmailAndPassword(newEmailForNewUser, oldUserPassword);
+
+      setMessage("Používateľské meno a prihlasovacie meno úspešne zmenené na " + newUsername + ". Prihláste sa prosím s novým menom.");
       setError('');
       setNewUsername('');
       setCurrentPassword('');
-      setShowChangeUsernameModal(false); // Close modal on success
+      // Presmerovanie na prihlasovaciu stránku, aby sa používateľ prihlásil s novým menom
+      window.location.href = 'login.html';
+
     } catch (e) {
-      console.error("Chyba pri zmene používateľského mena:", e);
+      console.error("Chyba pri zmene používateľského mena (vymazanie/vytvorenie):", e);
       if (e.code === 'auth/requires-recent-login') {
         setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
+      } else if (e.code === 'auth/email-already-in-use') {
+        setError("Nové používateľské meno už existuje. Prosím, zvoľte iné.");
+      } else if (e.code === 'auth/invalid-email') {
+        setError("Nové používateľské meno nie je platné pre e-mailovú adresu.");
       } else {
         setError(`Chyba pri zmene používateľského mena: ${e.message}`);
       }
@@ -634,7 +686,7 @@ function App() {
                     }),
                     React.createElement("button", {
                       type: "button",
-                      onClick: () => setShowConfirmPassword(!showConfirmPassword),
+                      onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
                       className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                     },
                       showConfirmPassword ? EyeOffIcon : EyeIcon
@@ -665,7 +717,7 @@ function App() {
               React.createElement("div", { className: "flex flex-col space-y-4 border-t pt-4 mt-4" },
                 React.createElement("button", {
                   type: "button",
-                  onClick: () => { setShowChangeUsernameModal(true); setCurrentPassword(''); }, // Clear current password on modal open
+                  onClick: openChangeUsernameConfirmation, // Volá novú funkciu pre otvorenie modálneho okna
                   className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
                 }, "Zmeniť používateľské meno"),
                 React.createElement("button", {
@@ -688,13 +740,13 @@ function App() {
         )
       ),
 
-      // Modálne okno pre zmenu používateľského mena
+      // Modálne okno pre zadanie nového používateľského mena a aktuálneho hesla
       showChangeUsernameModal && (
         React.createElement("div", { className: "modal", onClick: (e) => { if (e.target.classList.contains('modal')) setShowChangeUsernameModal(false); } },
           React.createElement("div", { className: "modal-content" },
             React.createElement("span", { className: "close-button", onClick: () => setShowChangeUsernameModal(false) }, "\u00d7"),
             React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zmeniť používateľské meno"),
-            React.createElement("form", { onSubmit: handleChangeUsername, className: "space-y-4" },
+            React.createElement("form", { onSubmit: handleSubmitChangeUsernameForm, className: "space-y-4" }, // onSubmit volá novú funkciu
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-new-username" }, "Nové používateľské meno"),
                 React.createElement("input", {
@@ -735,7 +787,40 @@ function App() {
                 type: "submit",
                 className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
                 disabled: loading
-              }, loading ? 'Ukladám...' : 'Zmeniť používateľské meno')
+              }, loading ? 'Kontrolujem...' : 'Pokračovať')
+            )
+          )
+        )
+      ),
+
+      // Nové potvrdzujúce modálne okno pre zmenu používateľského mena
+      showConfirmUsernameChangeModal && (
+        React.createElement("div", { className: "modal", onClick: (e) => { if (e.target.classList.contains('modal')) setShowConfirmUsernameChangeModal(false); } },
+          React.createElement("div", { className: "modal-content" },
+            React.createElement("span", { className: "close-button", onClick: () => setShowConfirmUsernameChangeModal(false) }, "\u00d7"),
+            React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Potvrdiť zmenu používateľského mena"),
+            React.createElement("p", { className: "text-gray-700 mb-4" },
+              "Naozaj chcete zmeniť svoje prihlasovacie meno z ",
+              React.createElement("span", { className: "font-bold" }, user.displayName || 'aktuálneho mena'),
+              " na ",
+              React.createElement("span", { className: "font-bold" }, newUsername),
+              "?"
+            ),
+            React.createElement("p", { className: "text-red-600 font-semibold mb-4" },
+              "Táto operácia vymaže váš pôvodný účet a vytvorí nový. Uistite sa, že si pamätáte svoje heslo, pretože ho budete potrebovať pre nový účet."
+            ),
+            React.createElement("div", { className: "flex justify-end space-x-4" },
+              React.createElement("button", {
+                type: "button",
+                onClick: () => setShowConfirmUsernameChangeModal(false),
+                className: "bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+              }, "Zrušiť"),
+              React.createElement("button", {
+                type: "button",
+                onClick: handleConfirmUsernameChange, // Volá hlavnú funkciu zmeny
+                className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200",
+                disabled: loading
+              }, loading ? 'Vykonávam...' : 'Áno, zmeniť')
             )
           )
         )
