@@ -7,17 +7,20 @@
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = {
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // AKTUALIZOVANÝ API KĽÚČ
-  authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
-  projectId: "prihlasovanie-a3f5f",
-  storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
-  messagingSenderId: "181851240506",
-  appId: "1:181851240506:web:768e27fb15b805ee7b9d03",
-  measurementId: "G-C3XPTT7F4D"
+  authDomain: "prihlasovanie-4f3f3.firebaseapp.com", // AKTUALIZOVANÁ DOMÉNA
+  projectId: "prihlasovanie-4f3f3", // AKTUALIZOVANÝ PROJECT ID
+  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+  messagingSenderId: "26454452024",
+  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd",
+  // measurementId: "G-C3XPTT7F4D" // Odstránené, ak nie je potrebné
 };
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Dummy domain for internal email construction
 const DUMMY_DOMAIN = "@slovakhandball.com"; // You can change this to your actual domain if you own one
+
+// reCAPTCHA Site Key - NAHRADENE S VASIM SKUTOCNYM SITE KEYOM!
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Váš skutočný SITE KEY
 
 function App() {
   // Používame React.useState a React.useEffect namiesto importovaných
@@ -29,6 +32,7 @@ function App() {
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
+  const [recaptchaId, setRecaptchaId] = React.useState(null); // ID pre reCAPTCHA widget
 
   // Form states
   const [username, setUsername] = React.useState('');
@@ -111,6 +115,40 @@ function App() {
     }
   }, []);
 
+  // Effect pre renderovanie reCAPTCHA widgetu
+  React.useEffect(() => {
+    if ((view === 'login' || view === 'register') && typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+      // Uistite sa, že kontajner existuje, než sa pokúsite renderovať
+      const container = document.getElementById('recaptcha-container');
+      if (container && !recaptchaId) { // Renderovať iba raz
+        const widgetId = grecaptcha.render('recaptcha-container', {
+          'sitekey': RECAPTCHA_SITE_KEY,
+          'callback': (token) => {
+            console.log('reCAPTCHA token:', token);
+            // Tu by ste mohli uložiť token do stavu, ak by ste ho potrebovali inde
+            // Napr. setRecaptchaToken(token);
+          },
+          'expired-callback': () => {
+            console.log('reCAPTCHA vypršala');
+            setError('reCAPTCHA vypršala. Prosím, skúste to znova.');
+            // Voliteľné: Resetovať reCAPTCHA, ak vypršala
+            grecaptcha.reset(recaptchaId);
+          }
+        });
+        setRecaptchaId(widgetId);
+      } else if (container && recaptchaId) {
+        // Ak sa zmení pohľad a widget už existuje, resetujte ho
+        grecaptcha.reset(recaptchaId);
+      }
+    } else if (recaptchaId && view === 'profile') {
+      // Ak prejdeme na profil, odstránime widget, ak existuje
+      if (typeof grecaptcha !== 'undefined' && grecaptcha.reset) {
+        grecaptcha.reset(recaptchaId);
+      }
+      setRecaptchaId(null);
+    }
+  }, [view, isAuthReady, recaptchaId]); // Závislosti pre efekt
+
   const clearMessages = () => {
     setTimeout(() => {
       setMessage('');
@@ -172,6 +210,33 @@ function App() {
       return;
     }
 
+    // reCAPTCHA overenie
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.getResponse(recaptchaId)) {
+      setError("Prosím, potvrďte, že nie ste robot (reCAPTCHA).");
+      return;
+    }
+    const recaptchaToken = grecaptcha.getResponse(recaptchaId);
+    console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
+
+    // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
+    // Ak overenie na serveri zlyhá, nemali by ste povoliť registráciu.
+    // Príklad (pseudo-kód pre serverové overenie):
+    /*
+    const serverResponse = await fetch('/verify-recaptcha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: recaptchaToken })
+    });
+    const data = await serverResponse.json();
+    if (!data.success) {
+      setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
+      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po neúspešnom overení
+      return;
+    }
+    */
+    setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
+
+
     setLoading(true);
     try {
       const email = username + DUMMY_DOMAIN;
@@ -183,6 +248,7 @@ function App() {
       setPassword('');
       setConfirmPassword('');
       setView('profile');
+      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po úspešnej registrácii
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -192,6 +258,7 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
+      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA aj pri chybe
     } finally {
       setLoading(false);
       clearMessages();
@@ -214,6 +281,32 @@ function App() {
       return;
     }
 
+    // reCAPTCHA overenie
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.getResponse(recaptchaId)) {
+      setError("Prosím, potvrďte, že nie ste robot (reCAPTCHA).");
+      return;
+    }
+    const recaptchaToken = grecaptcha.getResponse(recaptchaId);
+    console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
+
+    // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
+    // Ak overenie na serveri zlyhá, nemali by ste povoliť prihlásenie.
+    /*
+    const serverResponse = await fetch('/verify-recaptcha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: recaptchaToken })
+    });
+    const data = await serverResponse.json();
+    if (!data.success) {
+      setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
+      grecaptcha.reset(recaptchaId);
+      return;
+    }
+    */
+    setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
+
+
     setLoading(true);
     try {
       const email = username + DUMMY_DOMAIN;
@@ -223,6 +316,7 @@ function App() {
       setUsername('');
       setPassword('');
       setView('profile');
+      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA po úspešnom prihlásení
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       // Upravená chybová správa pre neplatné prihlasovacie údaje
@@ -231,6 +325,7 @@ function App() {
       } else {
         setError(`Chyba pri prihlasovaní: ${e.message}`);
       }
+      grecaptcha.reset(recaptchaId); // Resetovať reCAPTCHA aj pri chybe
     } finally {
       setLoading(false);
       clearMessages();
@@ -357,147 +452,186 @@ function App() {
   }
 
   return (
-    React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-inter" },
-      React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md" },
-        React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
-          user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : (view === 'login' ? 'Prihlásenie' : 'Registrácia')
+    // HLAVNÝ KONTANIER: Upravené triedy pre lepšie zobrazenie
+    React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" }, // Odstránené p-4 a pb-10
+      // Hlavička stránky s menu
+      React.createElement("header", { className: "w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center" },
+        React.createElement("div", { className: "flex items-center space-x-6" },
+          // Odkaz na Domov
+          React.createElement("a", {
+            href: "index.html", // Odkaz na index.html
+            className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
+          }, "Domov")
+          // Tu môžete pridať ďalšie odkazy do hlavného menu, napr.:
+          // React.createElement("a", { href: "#", onClick: (e) => { e.preventDefault(); setView('about'); }, className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200" }, "O nás"),
+          // React.createElement("a", { href: "#", onClick: (e) => { e.preventDefault(); setView('contact'); }, className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200" }, "Kontakt")
         ),
-
-        message && (
-          React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
-            message
+        // Odkaz na Prihlásenie / Odhlásenie / Profil v pravom hornom rohu
+        React.createElement("div", { className: "flex items-center" },
+          user ? (
+            // Ak je používateľ prihlásený, zobrazí "Odhlásenie"
+            React.createElement("a", {
+              href: "#",
+              onClick: (e) => { e.preventDefault(); handleLogout(); }, // Volá handleLogout
+              className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
+            }, "Odhlásenie")
+          ) : (
+            // Ak používateľ nie je prihlásený, zobrazí "Prihlásenie"
+            React.createElement("a", {
+              href: "login.html", // Odkaz na login.html
+              className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
+            }, "Prihlásenie")
           )
-        ),
-        error && (
-          React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
-            error
-          )
-        ),
+        )
+      ),
 
-        !user ? (
-          React.createElement(React.Fragment, null,
-            React.createElement("div", { className: "flex justify-center mb-6" },
-              React.createElement("button", {
-                onClick: () => setView('login'),
-                className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 ${
-                  view === 'login' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`
-              }, "Prihlásenie"),
-              React.createElement("button", {
-                onClick: () => setView('register'),
-                className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 ${
-                  view === 'register' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`
-              }, "Registrácia")
-            ),
+      // Hlavný obsah stránky - pridané odsadenie zhora pre hlavičku
+      React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" }, // Pridané mt-20 pre odsadenie od hlavičky, mb-10 pre spodné odsadenie, p-4 pre vnútorné odsadenie celej sekcie
+        React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" }, // Odstránené my-8, pretože mt-20 a mb-10 sú na rodičovi
+          React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
+            user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : (view === 'login' ? 'Prihlásenie' : 'Registrácia')
+          ),
 
-            view === 'login' && (
-              React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "username" }, "Používateľské meno"),
-                  React.createElement("input", {
-                    type: "text",
-                    id: "username",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: username,
-                    onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
-                    required: true,
-                    placeholder: "Zadajte používateľské meno"
-                  })
-                ),
-                React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "password" }, "Heslo"),
-                  React.createElement("input", {
-                    type: showPassword ? "text" : "password",
-                    id: "password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10 pre ikonu
-                    value: password,
-                    onChange: (e) => setPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte heslo"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowPassword(!showPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
+          message && (
+            React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
+              message
+            )
+          ),
+          error && (
+            React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
+              error
+            )
+          ),
+
+          !user ? (
+            React.createElement(React.Fragment, null,
+              React.createElement("div", { className: "flex justify-center mb-6" },
                 React.createElement("button", {
-                  type: "submit",
-                  className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                  disabled: loading
-                }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
-              )
-            ),
-
-            view === 'register' && (
-              React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-username" }, "Používateľské meno"),
-                  React.createElement("input", {
-                    type: "text",
-                    id: "reg-username",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: username,
-                    onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
-                    required: true,
-                    placeholder: "Zvoľte používateľské meno"
-                  })
-                ),
-                React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-password" }, "Heslo"),
-                  React.createElement("input", {
-                    type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword pre prvé heslo v registrácii
-                    id: "reg-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10
-                    value: password,
-                    onChange: (e) => setPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zvoľte heslo (min. 10 znakov)" // Aktualizovaný placeholder
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showConfirmPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-confirm-password" }, "Potvrďte heslo"),
-                  React.createElement("input", {
-                    type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword aj tu
-                    id: "reg-confirm-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10
-                    value: confirmPassword,
-                    onChange: (e) => setConfirmPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Potvrďte heslo"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showConfirmPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
+                  onClick: () => setView('login'),
+                  className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 ${
+                    view === 'login' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`
+                }, "Prihlásenie"),
                 React.createElement("button", {
-                  type: "submit",
-                  className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                  disabled: loading
-                }, loading ? 'Registrujem...' : 'Registrovať sa')
+                  onClick: () => setView('register'),
+                  className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 ${
+                    view === 'register' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`
+                }, "Registrácia")
+              ),
+
+              view === 'login' && (
+                React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
+                  React.createElement("div", null,
+                    React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "username" }, "Používateľské meno"),
+                    React.createElement("input", {
+                      type: "text",
+                      id: "username",
+                      className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                      value: username,
+                      onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
+                      required: true,
+                      placeholder: "Zadajte používateľské meno"
+                    })
+                  ),
+                  React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
+                    React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "password" }, "Heslo"),
+                    React.createElement("input", {
+                      type: showPassword ? "text" : "password",
+                      id: "password",
+                      className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10 pre ikonu
+                      value: password,
+                      onChange: (e) => setPassword(e.target.value),
+                      onCopy: (e) => e.preventDefault(),
+                      onPaste: (e) => e.preventDefault(),
+                      onCut: (e) => e.preventDefault(),
+                      required: true,
+                      placeholder: "Zadajte heslo"
+                    }),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => setShowPassword(!showPassword),
+                      className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                    },
+                      showPassword ? EyeOffIcon : EyeIcon
+                    )
+                  ),
+                  // reCAPTCHA widget pre prihlásenie
+                  React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }),
+                  React.createElement("button", {
+                    type: "submit",
+                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                    disabled: loading
+                  }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
+                )
+              ),
+
+              view === 'register' && (
+                React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
+                  React.createElement("div", null,
+                    React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-username" }, "Používateľské meno"),
+                    React.createElement("input", {
+                      type: "text",
+                      id: "reg-username",
+                      className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                      value: username,
+                      onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
+                      required: true,
+                      placeholder: "Zvoľte používateľské meno"
+                    })
+                  ),
+                  React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
+                    React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-password" }, "Heslo"),
+                    React.createElement("input", {
+                      type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword pre prvé heslo v registrácii
+                      id: "reg-password",
+                      className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10
+                      value: password,
+                      onChange: (e) => setPassword(e.target.value),
+                      onCopy: (e) => e.preventDefault(),
+                      onPaste: (e) => e.preventDefault(),
+                      onCut: (e) => e.preventDefault(),
+                      required: true,
+                      placeholder: "Zvoľte heslo (min. 10 znakov)" // Aktualizovaný placeholder
+                    }),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
+                      className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                    },
+                      showConfirmPassword ? EyeOffIcon : EyeIcon
+                    )
+                  ),
+                  React.createElement("div", { className: "relative" }, // Wrapper pre ikonu oka
+                    React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-confirm-password" }, "Potvrďte heslo"),
+                    React.createElement("input", {
+                      type: showConfirmPassword ? "text" : "password", // Používame showConfirmPassword aj tu
+                      id: "reg-confirm-password",
+                      className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10", // Pridaný pr-10
+                      value: confirmPassword,
+                      onChange: (e) => setConfirmPassword(e.target.value),
+                      onCopy: (e) => e.preventDefault(),
+                      onPaste: (e) => e.preventDefault(),
+                      onCut: (e) => e.preventDefault(),
+                      required: true,
+                      placeholder: "Potvrďte heslo"
+                    }),
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => setShowConfirmPassword(!showConfirmPassword), // Prepínanie showConfirmPassword
+                      className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                    },
+                      showConfirmPassword ? EyeOffIcon : EyeIcon
+                    )
+                  ),
+                  // reCAPTCHA widget pre registráciu
+                  React.createElement("div", { id: "recaptcha-container", className: "g-recaptcha", "data-sitekey": RECAPTCHA_SITE_KEY }),
+                  React.createElement("button", {
+                    type: "submit",
+                    className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+                    disabled: loading
+                  }, loading ? 'Registrujem...' : 'Registrovať sa')
+                )
               )
             )
           )
