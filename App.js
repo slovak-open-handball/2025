@@ -44,21 +44,6 @@ function App() {
   const [confirmNewPassword, setConfirmNewPassword] = React.useState(''); // Nové pre zmenu hesla
   const [currentPassword, setCurrentPassword] = React.useState(''); // For reauthentication
 
-  // State to manage which view is active, determined by URL pathname
-  const getInitialView = () => {
-    const path = window.location.pathname;
-    if (path.includes('logged-in.html')) {
-      return 'profile';
-    }
-    if (path.includes('register-tournament.html')) {
-      return 'register';
-    }
-    // Default to login if not explicitly profile or register page
-    return 'login';
-  };
-
-  const [view, setView] = React.useState(getInitialView());
-
   // States for password visibility
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -67,8 +52,10 @@ function App() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
 
   // States for modal visibility
-  // Odstránené showChangeUsernameModal a showConfirmUsernameChangeModal
   const [showChangePasswordModal, setShowChangePasswordModal] = React.useState(false);
+
+  // React Router navigate hook
+  const navigate = ReactRouterDOM.useNavigate();
 
 
   // SVG ikony pre zobrazenie/skrytie hesla
@@ -247,7 +234,7 @@ function App() {
       setPassword('');
       setConfirmPassword('');
       // Presmerovanie na prihlasovaciu stránku po úspešnej registrácii
-      window.location.href = 'login.html';
+      navigate('/login'); // Používame navigate
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -312,8 +299,7 @@ function App() {
       setError('');
       setUsername('');
       setPassword('');
-      // Presmerovanie na logged-in.html po úspešnom prihlásení
-      window.location.href = 'login.html';
+      navigate('/logged-in'); // Používame navigate
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       // Upravená chybová správa pre neplatné prihlasovacie údaje
@@ -335,8 +321,7 @@ function App() {
       await auth.signOut();
       setMessage("Úspešne odhlásené.");
       setError('');
-      // Presmerovanie na login.html po odhlásení
-      window.location.href = 'login.html';
+      navigate('/login'); // Používame navigate
     } catch (e) {
       console.error("Chyba pri odhlasovaní:", e);
       setError(`Chyba pri odhlasovaní: ${e.message}`);
@@ -414,35 +399,34 @@ function App() {
       React.createElement("header", { className: "w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center" },
         React.createElement("div", { className: "flex items-center space-x-6" },
           // Odkaz na Domov
-          React.createElement("a", {
-            href: "index.html", // Odkaz na index.html (hlavná stránka)
+          React.createElement(ReactRouterDOM.Link, { // Používame ReactRouterDOM.Link
+            to: "/",
             className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
           }, "Domov"),
           // Nový odkaz na Registráciu na turnaj (teraz podmienený)
-          !user && React.createElement("a", { // <<< ZMENA TU: podmienka !user
-            href: "register-tournament.html", // Odkaz na novú stránku pre registráciu
+          !user && React.createElement(ReactRouterDOM.Link, { // <<< ZMENA TU: podmienka !user a ReactRouterDOM.Link
+            to: "/register", // Odkaz na registračnú stránku
             className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
           }, "Registrácia na turnaj")
         ),
         // Odkaz na Prihlásenie / Odhlásenie / Profil v pravom hornom rohu
         React.createElement("div", { className: "flex items-center space-x-6" },
           user && ( // Podmienené zobrazenie odkazu "Moja zóna"
-            React.createElement("a", {
-              href: "logged-in.html",
+            React.createElement(ReactRouterDOM.Link, { // Používame ReactRouterDOM.Link
+              to: "/logged-in", // Odkaz na profilovú stránku
               className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
             }, "Moja zóna")
           ),
           user ? (
             // Ak je používateľ prihlásený, zobrazí "Odhlásenie"
-            React.createElement("a", {
-              href: "#",
-              onClick: (e) => { e.preventDefault(); handleLogout(); }, // Volá handleLogout
+            React.createElement("button", { // Používame button, nie Link, pre odhlásenie
+              onClick: handleLogout, // Volá handleLogout
               className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
             }, "Odhlásenie")
           ) : (
             // Ak používateľ nie je prihlásený, zobrazí "Prihlásenie"
-            React.createElement("a", {
-              href: "login.html", // Odkaz na login.html
+            React.createElement(ReactRouterDOM.Link, { // Používame ReactRouterDOM.Link
+              to: "/login", // Odkaz na login.html
               className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
             }, "Prihlásenie")
           )
@@ -452,10 +436,6 @@ function App() {
       // Hlavný obsah stránky - pridané odsadenie zhora pre hlavičku
       React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" }, // Pridané mt-20 pre odsadenie od hlavičky, mb-10 pre spodné odsadenie, p-4 pre vnútorné odsadenie celej sekcie
         React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" }, // Odstránené my-8, pretože mt-20 a mb-10 sú na rodičovi
-          React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
-            user ? `Vitajte, ${user.displayName || 'Používateľ'}!` : (view === 'login' ? 'Prihlásenie' : 'Registrácia na turnaj') // Dynamický nadpis
-          ),
-
           message && (
             React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
               message
@@ -467,25 +447,29 @@ function App() {
             )
           ),
 
-          // Podmienené renderovanie formulárov a profilu
-          !user ? ( // Zmena tu: Ternárny operátor obklopuje celý blok pre neprihláseného používateľa
-            React.createElement(React.Fragment, null, // Použitie React.Fragment na zabalenie viacerých podmienených elementov
-              React.createElement("div", { className: "flex justify-center mb-6" },
-                React.createElement("button", {
-                  onClick: () => setView('login'),
-                  className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 ${
-                    view === 'login' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`
-                }, "Prihlásenie"),
-                React.createElement("button", {
-                  onClick: () => setView('register'),
-                  className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 ${
-                    view === 'register' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`
-                }, "Registrácia")
-              ),
+          // Používame ReactRouterDOM.Routes na definovanie ciest
+          React.createElement(ReactRouterDOM.Routes, null,
+            // Domovská stránka
+            React.createElement(ReactRouterDOM.Route, {
+              path: "/",
+              element: React.createElement("div", { className: "text-3xl font-bold text-gray-800 text-center" }, "Vitajte na stránke")
+            }),
 
-              view === 'login' && (
+            // Prihlasovacia stránka
+            React.createElement(ReactRouterDOM.Route, {
+              path: "/login",
+              element: React.createElement(React.Fragment, null,
+                React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Prihlásenie"),
+                React.createElement("div", { className: "flex justify-center mb-6" },
+                  React.createElement("button", {
+                    onClick: () => navigate('/login'), // Používame navigate
+                    className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 bg-blue-600 text-white shadow-md`
+                  }, "Prihlásenie"),
+                  React.createElement("button", {
+                    onClick: () => navigate('/register'), // Používame navigate
+                    className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300`
+                  }, "Registrácia")
+                ),
                 React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
                   React.createElement("div", null,
                     React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "username" }, "Používateľské meno"),
@@ -529,9 +513,24 @@ function App() {
                     disabled: loading
                   }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
                 )
-              ),
+              )
+            }),
 
-              view === 'register' && (
+            // Registračná stránka
+            React.createElement(ReactRouterDOM.Route, {
+              path: "/register",
+              element: React.createElement(React.Fragment, null,
+                React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Registrácia na turnaj"),
+                React.createElement("div", { className: "flex justify-center mb-6" },
+                  React.createElement("button", {
+                    onClick: () => navigate('/login'), // Používame navigate
+                    className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300`
+                  }, "Prihlásenie"),
+                  React.createElement("button", {
+                    onClick: () => navigate('/register'), // Používame navigate
+                    className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 bg-blue-600 text-white shadow-md`
+                  }, "Registrácia")
+                ),
                 React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
                   React.createElement("div", null,
                     React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-username" }, "Používateľské meno"),
@@ -599,53 +598,40 @@ function App() {
                   }, loading ? 'Registrujem...' : 'Registrovať sa')
                 )
               )
-            )
-          ) : (
-            // User is logged in - Profile View
-            React.createElement("div", { className: "space-y-6" },
-              React.createElement("div", { className: "text-center" },
-                React.createElement("p", { className: "text-lg text-gray-700" },
-                  "Prihlásený ako: ",
-                  React.createElement("span", { className: "font-semibold" }, user.displayName || 'Neznámy používateľ')
-                ),
-                React.createElement("p", { className: "text-sm text-gray-500" },
-                  "(ID: ", user.uid, ")"
+            }),
+
+            // Profilová stránka (len pre prihlásených používateľov)
+            React.createElement(ReactRouterDOM.Route, {
+              path: "/logged-in",
+              element: user ? (
+                React.createElement("div", { className: "space-y-6" },
+                  React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
+                  React.createElement("div", { className: "text-center" },
+                    React.createElement("p", { className: "text-lg text-gray-700" },
+                      "Prihlásený ako: ",
+                      React.createElement("span", { className: "font-semibold" }, user.displayName || 'Neznámy používateľ')
+                    ),
+                    React.createElement("p", { className: "text-sm text-gray-500" },
+                      "(ID: ", user.uid, ")"
+                    )
+                  ),
+
+                  // Buttons to open modals
+                  React.createElement("div", { className: "flex flex-col space-y-4 border-t pt-4 mt-4" },
+                    React.createElement("button", {
+                      type: "button",
+                      onClick: () => { setShowChangePasswordModal(true); setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }, // Clear passwords on modal open
+                      className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                    }, "Zmeniť heslo")
+                  )
                 )
-              ),
-
-              // Buttons to open modals
-              React.createElement("div", { className: "flex flex-col space-y-4 border-t pt-4 mt-4" },
-                // Tlačidlo pre zmenu používateľského mena je odstránené
-                // React.createElement("button", {
-                //   type: "button",
-                //   onClick: openChangeUsernameConfirmation,
-                //   className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                // }, "Zmeniť používateľské meno"),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => { setShowChangePasswordModal(true); setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }, // Clear passwords on modal open
-                  className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                }, "Zmeniť heslo")
+              ) : (
+                React.createElement("div", { className: "text-red-500 text-center" }, "Pre prístup k tejto stránke sa musíte prihlásiť.")
               )
-
-              // Logout Button (bol tu, ale bol odstránený podľa požiadavky)
-              // React.createElement("div", { className: "border-t pt-4 mt-4" },
-              //   React.createElement("button", {
-              //     onClick: handleLogout,
-              //     className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-              //     disabled: loading
-              //   }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
-              // )
-            )
+            })
           )
         )
       ),
-
-      // Modálne okno pre zadanie nového používateľského mena a aktuálneho hesla je odstránené
-      // showChangeUsernameModal && ( ... )
-
-      // Nové potvrdzujúce modálne okno pre zmenu používateľského mena je odstránené
-      // showConfirmUsernameChangeModal && ( ... )
 
       // Modálne okno pre zmenu hesla
       showChangePasswordModal && (
