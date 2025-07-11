@@ -1,10 +1,4 @@
-// Odstránené všetky importy, pretože Firebase SDKs, React, ReactDOM a React Router DOM sa načítavajú globálne z CDN
-// Všetky funkcie sa teraz pristupujú cez globálny objekt 'firebase' a 'ReactRouterDOM'
-
-// Global variables provided by the Canvas environment (používame ich priamo)
-// Ak toto spúšťate priamo na GitHub Pages, tieto premenné nebudú definované.
-// Pre funkčnosť ich preto definujeme pevne.
-const appId = 'default-app-id'; // Toto je len zástupná hodnota, pre Canvas by sa použila __app_id
+const appId = 'default-app-id'; 
 const firebaseConfig = {
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
   authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
@@ -13,18 +7,13 @@ const firebaseConfig = {
   messagingSenderId: "26454452024",
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
-const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
+const initialAuthToken = null;
 
-// Dummy domain for internal email construction
 const DUMMY_DOMAIN = "@slovakhandball.com";
 
-// Definujeme App ako globálnu funkciu, nie ako export
 function App() {
-  // reCAPTCHA Site Key - NAHRADENE S VASIM SKUTOCNYM SITE KEYOM!
-  // Presunuté sem, aby bolo definované v rozsahu funkcie App
-  const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Váš skutočný SITE KEY
+  const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 
-  // Používame React.useState a React.useEffect namiesto importovaných
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
@@ -34,18 +23,15 @@ function App() {
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
 
-  // Form states
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState(''); // Nové pre registráciu
+  const [confirmPassword, setConfirmPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = React.useState(''); // Nové pre zmenu hesla
-  const [currentPassword, setCurrentPassword] = React.useState(''); // For reauthentication
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
+  const [currentPassword, setCurrentPassword] = React.useState('');
 
-  // State to manage which view is active for logged-in users
-  const [profileView, setProfileView] = React.useState('my-data'); // 'my-data' or 'change-password'
+  const [profileView, setProfileView] = React.useState('my-data');
 
-  // States for password visibility
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
@@ -53,7 +39,6 @@ function App() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
 
 
-  // SVG ikony pre zobrazenie/skrytie hesla
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }),
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" })
@@ -66,7 +51,6 @@ function App() {
 
   React.useEffect(() => {
     try {
-      // Uistite sa, že 'firebase' je definované globálne z CDN skriptov
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
         setLoading(false);
@@ -78,17 +62,13 @@ function App() {
 
       const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      setDb(firebase.firestore(firebaseApp)); // Ak by ste chceli používať Firestore
+      setDb(firebase.firestore(firebaseApp));
 
       const signIn = async () => {
         try {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            // Ak nechcete automatické prihlásenie anonymného používateľa,
-            // odstráňte tento riadok. Používateľ bude musieť explicitne
-            // prihlásiť sa alebo zaregistrovať.
-            // await authInstance.signInAnonymously();
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -103,7 +83,6 @@ function App() {
         setIsAuthReady(true);
         if (loading) setLoading(false);
 
-        // Update header links based on auth state
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
         const logoutButton = document.getElementById('logout-button');
@@ -114,12 +93,12 @@ function App() {
             authLink.classList.add('hidden');
             profileLink && profileLink.classList.remove('hidden');
             logoutButton && logoutButton.classList.remove('hidden');
-            registerLink && registerLink.classList.add('hidden'); // Hide register link if logged in
+            registerLink && registerLink.classList.add('hidden');
           } else {
             authLink.classList.remove('hidden');
             profileLink && profileLink.classList.add('hidden');
             logoutButton && logoutButton.classList.add('hidden');
-            registerLink && registerLink.classList.remove('hidden'); // Show register link if not logged in
+            registerLink && registerLink.classList.remove('hidden');
           }
         }
       });
@@ -134,15 +113,12 @@ function App() {
     }
   }, []);
 
-  // Funkcia na získanie reCAPTCHA v3 tokenu
   const getRecaptchaToken = async (action) => {
-    // Skontrolujte, či je reCAPTCHA API načítané a pripravené
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
       setError("reCAPTCHA API nie je načítané alebo pripravené.");
       return null;
     }
     try {
-      // reCAPTCHA v3 token sa získava asynchrónne
       const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
@@ -159,7 +135,6 @@ function App() {
     }, 5000);
   };
 
-  // Funkcia na validáciu hesla podľa požiadaviek
   const validatePassword = (pwd) => {
     const errors = [];
 
@@ -180,9 +155,8 @@ function App() {
     }
 
     if (errors.length === 0) {
-      return null; // Heslo je platné
+      return null;
     } else {
-      // Upravená formátovanie pre zobrazenie všetkých požiadaviek
       return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
   };
@@ -197,7 +171,6 @@ function App() {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
-    // Overenie medzier v používateľskom mene
     if (username.includes(' ')) {
       setError("Používateľské meno nesmie obsahovať medzery.");
       return;
@@ -213,7 +186,6 @@ function App() {
       return;
     }
 
-    // reCAPTCHA v3 overenie
     const recaptchaToken = await getRecaptchaToken('register');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
@@ -221,20 +193,6 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
-    // Ak overenie na serveri zlyhá, nemali by ste povoliť registráciu.
-    /*
-    const serverResponse = await fetch('/verify-recaptcha', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: recaptchaToken })
-    });
-    const data = await serverResponse.json();
-    if (!data.success) {
-      setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
-      return;
-    }
-    */
     setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
 
 
@@ -248,13 +206,13 @@ function App() {
       setUsername('');
       setPassword('');
       setConfirmPassword('');
-      window.location.href = 'login.html'; // Presmerovanie na prihlasovaciu stránku
+      window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
         setError("Používateľské meno už existuje. Prosím, zvoľte iné.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. " + validatePassword(password)); // Použijeme detailnejšiu správu
+        setError("Heslo je príliš slabé. " + validatePassword(password));
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
@@ -274,13 +232,11 @@ function App() {
       setError("Prosím, vyplňte používateľské meno a heslo.");
       return;
     }
-    // Overenie medzier v používateľskom mene
     if (username.includes(' ')) {
       setError("Používateľské meno nesmie obsahovať medzery.");
       return;
     }
 
-    // reCAPTCHA v3 overenie
     const recaptchaToken = await getRecaptchaToken('login');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
@@ -288,20 +244,6 @@ function App() {
     }
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
 
-    // DÔLEŽITÉ: Tu by ste mali poslať 'recaptchaToken' na váš server na overenie.
-    // Ak overenie na serveri zlyhá, nemali by ste povoliť prihlásenie.
-    /*
-    const serverResponse = await fetch('/verify-recaptcha', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: recaptchaToken })
-    });
-    const data = await serverResponse.json();
-    if (!data.success) {
-      setError("reCAPTCHA overenie zlyhalo. Prosím, skúste to znova.");
-      return;
-    }
-    */
     setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
 
 
@@ -313,10 +255,9 @@ function App() {
       setError('');
       setUsername('');
       setPassword('');
-      window.location.href = 'logged-in.html'; // Presmerovanie na profilovú stránku
+      window.location.href = 'logged-in.html';
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
-      // Upravená chybová správa pre neplatné prihlasovacie údaje
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Zadané prihlasovacie údaje sú neplatné. Skontrolujte používateľské meno a heslo a skúste to prosím znova.");
       } else {
@@ -335,7 +276,7 @@ function App() {
       await auth.signOut();
       setMessage("Úspešne odhlásené.");
       setError('');
-      window.location.href = 'login.html'; // Presmerovanie na prihlasovaciu stránku
+      window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri odhlasovaní:", e);
       setError(`Chyba pri odhlasovaní: ${e.message}`);
@@ -368,7 +309,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Dôležité: Používame firebase.auth.EmailAuthProvider.credential
       const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
       await user.reauthenticateWithCredential(credential);
 
@@ -393,7 +333,6 @@ function App() {
     }
   };
 
-  // Efekt pre pridanie event listeneru na tlačidlo odhlásenia v hlavičke
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
@@ -415,10 +354,8 @@ function App() {
     );
   }
 
-  // Podmienené renderovanie obsahu na základe aktuálnej URL a stavu prihlásenia
   const currentPath = window.location.pathname.split('/').pop();
 
-  // Renderovanie pre index.html (uvítacia stránka)
   if (currentPath === '' || currentPath === 'index.html') {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
@@ -427,12 +364,12 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
             React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
             React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-              user ? ( // Podmienka pre zobrazenie tlačidla "Moja zóna"
+              user ? (
                 React.createElement("a", {
-                  href: "logged-in.html", // Odkaz na stránku prihláseného používateľa
+                  href: "logged-in.html",
                   className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
                 }, "Moja zóna")
-              ) : ( // Ak nie je prihlásený, zobrazia sa tlačidlá Prihlásenie a Registrácia
+              ) : (
                 React.createElement(React.Fragment, null,
                   React.createElement("a", {
                     href: "login.html",
@@ -451,7 +388,6 @@ function App() {
     );
   }
 
-  // Renderovanie pre register.html
   if (currentPath === 'register.html') {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
@@ -540,7 +476,6 @@ function App() {
     );
   }
 
-  // Renderovanie pre login.html
   if (currentPath === 'login.html') {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
@@ -566,7 +501,7 @@ function App() {
                   id: "username",
                   className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                   value: username,
-                  onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')), // Odstránenie medzier
+                  onChange: (e) => setUsername(e.target.value.replace(/\s/g, '')),
                   required: true,
                   placeholder: "Zadajte používateľské meno",
                   autoComplete: "username"
@@ -607,7 +542,6 @@ function App() {
     );
   }
 
-  // Renderovanie pre logged-in.html
   if (currentPath === 'logged-in.html') {
     if (!user) {
       return React.createElement("div", { className: "min-h-screen bg-gray-100 flex items-center justify-center font-inter" },
@@ -623,8 +557,7 @@ function App() {
 
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" }, /* Zväčšený max-w a pridaný flex */
-          /* Ľavé menu */
+        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" },
           React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4" },
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
@@ -649,7 +582,6 @@ function App() {
             )
           ),
 
-          /* Pravý obsah */
           React.createElement("div", { className: "w-3/4 bg-white p-8 rounded-lg shadow-xl" },
             message && (
               React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
@@ -670,8 +602,7 @@ function App() {
               )
             ),
 
-            {/* Podmienené zobrazenie obsahu podľa výberu v menu */}
-            {profileView === 'my-data' && (
+            profileView === 'my-data' && (
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
                 React.createElement("p", { className: "text-gray-700" },
@@ -680,11 +611,10 @@ function App() {
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Email: "), user.email || 'N/A'
                 )
-                // Tu môžete pridať ďalšie údaje zadané pri registrácii, ak ich ukladáte vo Firebase (napr. do Firestore)
               )
-            )}
+            ),
 
-            {profileView === 'change-password' && (
+            profileView === 'change-password' && (
               React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
                 React.createElement("div", { className: "relative" },
@@ -753,7 +683,7 @@ function App() {
                     onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
                     className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                   },
-                    showConfirmPassword ? EyeOffIcon : EyeIcon
+                    showConfirmNewPassword ? EyeOffIcon : EyeIcon
                   )
                 ),
                 React.createElement("button", {
@@ -764,7 +694,6 @@ function App() {
               </form>
             )}
 
-            {/* Logout Button */}
             <div className="border-t pt-4 mt-4">
               <button
                 onClick={handleLogout}
@@ -780,7 +709,5 @@ function App() {
     );
   }
 
-  return null; // Ak nie je zhoda s cestou, nič sa nezobrazí
+  return null;
 }
-
-// export default App; // Odstránené export, App je teraz globálna
