@@ -689,17 +689,7 @@ function App() {
                   disabled: loading
                 }, loading ? 'Ukladám...' : 'Zmeniť heslo')
               )
-            ),
-
-            <div className="border-t pt-4 mt-4">
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Odhlasujem...' : 'Odhlásiť sa'}
-              </button>
-            </div>
+            )
           )
         )
       )
