@@ -623,8 +623,8 @@ function App() {
 
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" }, {/* Zväčšený max-w a pridaný flex */}
-          {/* Ľavé menu */}
+        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" }, /* Zväčšený max-w a pridaný flex */
+          /* Ľavé menu */
           React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4" },
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
@@ -649,7 +649,7 @@ function App() {
             )
           ),
 
-          {/* Pravý obsah */}
+          /* Pravý obsah */
           React.createElement("div", { className: "w-3/4 bg-white p-8 rounded-lg shadow-xl" },
             message && (
               React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
@@ -753,7 +753,7 @@ function App() {
                     onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
                     className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                   },
-                    showConfirmNewPassword ? EyeOffIcon : EyeIcon
+                    showConfirmPassword ? EyeOffIcon : EyeIcon
                   )
                 ),
                 React.createElement("button", {
