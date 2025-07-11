@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH - Prihlásenie</title>
+    <title>Prihlasovanie - Slovak Open Handball</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -28,7 +28,9 @@
     <!-- Babel Standalone pre preklad JSX v prehliadači -->
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- reCAPTCHA v2 script - ODSTRÁNENÉ -->
+    <!-- Google reCAPTCHA v2 API script -->
+    <!-- Nahraďte 'YOUR_RECAPTCHA_SITE_KEY' vaším skutočným Site Key z Google reCAPTCHA konzoly -->
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
 </head>
 <body class="bg-gray-100">
     <!-- Placeholder pre hlavičku, ktorá sa načíta pomocou JavaScriptu -->
@@ -57,6 +59,13 @@
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
+
+        // Globálna funkcia, ktorú zavolá reCAPTCHA po načítaní
+        // Táto funkcia bude volaná z App.js na renderovanie reCAPTCHA
+        window.onloadCallback = function() {
+            console.log("reCAPTCHA API načítané.");
+            // App.js bude zodpovedný za renderovanie reCAPTCHA widgetu
+        };
 
         // Tento skript sa spustí po načítaní App.js a hlavičky
         window.onload = function() {
