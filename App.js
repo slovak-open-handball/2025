@@ -41,6 +41,13 @@ function App() {
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
 
+  // Nové stavy pre modálne okná
+  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
+  const [userToDelete, setUserToDelete] = React.useState(null);
+  const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
+  const [userToEditRole, setUserToEditRole] = React.useState(null);
+  const [newRole, setNewRole] = React.useState('');
+
 
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }),
@@ -474,6 +481,87 @@ function App() {
       clearMessages();
     }
   };
+
+  // Funkcie pre modálne okná
+  const openDeleteConfirmationModal = (user) => {
+    setUserToDelete(user);
+    setShowDeleteConfirmationModal(true);
+  };
+
+  const closeDeleteConfirmationModal = () => {
+    setUserToDelete(null);
+    setShowDeleteConfirmationModal(false);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !db || !auth) {
+      setError("Používateľ na odstránenie nie je definovaný alebo Firebase nie je inicializovaný.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      // Odstránenie dokumentu používateľa z Firestore
+      await db.collection('users').doc(userToDelete.uid).delete();
+      console.log(`Používateľ ${userToDelete.email} (Firestore) bol odstránený.`);
+
+      // POZNÁMKA: Odstránenie používateľa z Firebase Authentication (auth.deleteUser)
+      // NIE JE MOŽNÉ PRIAMO Z KLIENTA kvôli bezpečnostným pravidlám.
+      // Muselo by sa vykonať na serveri (napr. Firebase Cloud Function)
+      // s použitím Firebase Admin SDK.
+      // Pre účely tejto demo aplikácie len odstránime záznam z Firestore.
+      setMessage(`Používateľ ${userToDelete.email} bol odstránený z databázy.`);
+      
+      // Obnovenie zoznamu používateľov po odstránení
+      fetchAllUsers();
+      closeDeleteConfirmationModal();
+    } catch (e) {
+      console.error("Chyba pri odstraňovaní používateľa:", e);
+      setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
+  const openRoleEditModal = (user) => {
+    setUserToEditRole(user);
+    setNewRole(user.role || 'user'); // Predvyplniť aktuálnou rolou
+    setShowRoleEditModal(true);
+  };
+
+  const closeRoleEditModal = () => {
+    setUserToEditRole(null);
+    setNewRole('');
+    setShowRoleEditModal(false);
+  };
+
+  const handleUpdateUserRole = async () => {
+    if (!userToEditRole || !db || !newRole) {
+      setError("Používateľ alebo nová rola nie sú definované.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      await db.collection('users').doc(userToEditRole.uid).update({ role: newRole });
+      setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
+      // Obnovenie zoznamu používateľov po zmene roly
+      fetchAllUsers();
+      closeRoleEditModal();
+    } catch (e) {
+      console.error("Chyba pri aktualizácii roly používateľa:", e);
+      setError(`Chyba pri aktualizácii roly: ${e.message}`);
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
 
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
@@ -918,17 +1006,85 @@ function App() {
                 allUsersData.length > 0 ? (
                   React.createElement("ul", { className: "divide-y divide-gray-200" },
                     allUsersData.map((u) =>
-                      React.createElement("li", { key: u.uid, className: "py-2" },
-                        React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
-                        React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                        React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
-                        React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`) // Zobrazenie roly
+                      React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
+                        React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
+                          React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
+                          React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`) // Zobrazenie roly
+                        ),
+                        // Tlačidlá pre správu používateľov
+                        user && user.uid !== u.uid && ( // Zobrazí tlačidlá len ak je admin a nie je to jeho vlastný účet
+                          React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
+                            React.createElement("button", {
+                              onClick: () => openRoleEditModal(u),
+                              className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                            }, "Upraviť rolu"),
+                            React.createElement("button", {
+                              onClick: () => openDeleteConfirmationModal(u),
+                              className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                            }, "Odstrániť používateľa")
+                          )
+                        )
                       )
                     )
                   )
                 ) : (
                   React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
+              )
+            )
+          )
+        ),
+
+        // Modálne okno pre potvrdenie odstránenia
+        showDeleteConfirmationModal && (
+          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
+            React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
+              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť odstránenie"),
+              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete odstrániť používateľa ${userToDelete?.email}? Táto akcia je nevratná.`),
+              React.createElement("div", { className: "flex justify-end space-x-4" },
+                React.createElement("button", {
+                  onClick: closeDeleteConfirmationModal,
+                  className: "px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                }, "Zrušiť"),
+                React.createElement("button", {
+                  onClick: handleDeleteUser,
+                  className: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200",
+                  disabled: loading
+                }, loading ? 'Odstraňujem...' : 'Odstrániť')
+              )
+            )
+          )
+        ),
+
+        // Modálne okno pre úpravu roly
+        showRoleEditModal && (
+          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
+            React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
+              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, `Upraviť rolu pre ${userToEditRole?.email}`),
+              React.createElement("div", { className: "mb-4" },
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-user-role" }, "Nová rola"),
+                React.createElement("select", {
+                  id: "new-user-role",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: newRole,
+                  onChange: (e) => setNewRole(e.target.value)
+                },
+                  React.createElement("option", { value: "user" }, "Používateľ"),
+                  React.createElement("option", { value: "admin" }, "Administrátor")
+                )
+              ),
+              React.createElement("div", { className: "flex justify-end space-x-4" },
+                React.createElement("button", {
+                  onClick: closeRoleEditModal,
+                  className: "px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                }, "Zrušiť"),
+                React.createElement("button", {
+                  onClick: handleUpdateUserRole,
+                  className: "px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200",
+                  disabled: loading
+                }, loading ? 'Ukladám...' : 'Uložiť')
               )
             )
           )
