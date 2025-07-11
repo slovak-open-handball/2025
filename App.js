@@ -204,6 +204,29 @@ function App() {
       setEmail(''); // Vyčistíme pole emailu
       setPassword('');
       setConfirmPassword('');
+
+      // --- TU BY STE ODOSTALI E-MAIL S ÚDAJMI POMOCOU BACKENDU ---
+      // Príklad (pseudo-kód pre Cloud Function alebo iný backend):
+      // const response = await fetch('/sendRegistrationEmail', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     recipientEmail: email,
+      //     // Sem by ste pridali ďalšie údaje z formulára, ak by existovali, napr. meno, priezvisko atď.
+      //     // Pre jednoduchosť, ak je email jediná "identita", môžete poslať len ten.
+      //     // Ak by ste mali v registračnom formulári napríklad polia pre meno a priezvisko,
+      //     // museli by ste ich pridať do stavu Reactu a potom ich zahrnúť sem.
+      //     // Napríklad: firstName: firstName, lastName: lastName
+      //   })
+      // });
+      // const data = await response.json();
+      // if (data.success) {
+      //   console.log("E-mail úspešne odoslaný.");
+      // } else {
+      //   console.error("Chyba pri odosielaní e-mailu:", data.error);
+      // }
+      // --- KONIEC BACKEND ČASTI ---
+
       window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
