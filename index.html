@@ -12,18 +12,33 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            /* Pridajte odsadenie zhora pre pevnú hlavičku */
+            padding-top: 64px; /* Približne výška hlavičky (p-4 = 16px padding + výška textu, takže 64px by malo stačiť) */
             background-color: #f3f4f6; /* bg-gray-100 */
         }
     </style>
 </head>
 <body>
-    <div class="text-3xl font-bold text-gray-800">
-        Vitajte na stránke
+    <!-- Hlavička stránky s menu -->
+    <header class="w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center">
+        <div class="flex items-center space-x-6">
+            <!-- Odkaz na Domov (index.html) -->
+            <a href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
+            <!-- Tu môžete pridať ďalšie odkazy do hlavného menu, napr.: -->
+            <!-- <a href="#" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">O nás</a> -->
+            <!-- <a href="#" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Kontakt</a> -->
+        </div>
+        <!-- Odkaz na Prihlásenie v pravom hornom rohu -->
+        <div class="flex items-center">
+            <a href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Prihlásenie</a>
+        </div>
+    </header>
+
+    <!-- Hlavný obsah stránky -->
+    <div class="flex items-center justify-center h-[calc(100vh-64px)]"> <!-- Upravená výška pre zohľadnenie hlavičky -->
+        <div class="text-3xl font-bold text-gray-800">
+            Vitajte na stránke
+        </div>
     </div>
 </body>
 </html>
