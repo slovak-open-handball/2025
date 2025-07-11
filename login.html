@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prihlasovanie - Slovak Open Handball</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+
+    <!-- Firebase SDKs - Načítané z CDN (používame compat verzie) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- React a ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone pre preklad JSX v prehliadači (už nie je potrebné, ale ponechávam pre kompatibilitu) -->
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- reCAPTCHA v2 script - ODSTRÁNENÉ -->
+</head>
+<body class="bg-gray-100">
+    <!-- Toto je koreňový element, kde sa bude renderovať vaša React aplikácia -->
+    <div id="root"></div>
+
+    <!-- Váš React kód (App.js) -->
+    <!-- Dôležité: App.js už nebude používať import/export a bude používať React.createElement -->
+    <script src="App.js"></script>
+
+    <script type="text/javascript">
+        // Tento skript sa spustí po načítaní App.js
+        // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+        window.onload = function() {
+            // Kontrola, či sú React, ReactDOM a App komponent dostupné
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof App === 'undefined') {
+                console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App, null));
+        };
+    </script>
+</body>
+</html>
