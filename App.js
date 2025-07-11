@@ -11,7 +11,7 @@ const initialAuthToken = null;
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z-21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -33,6 +33,7 @@ function App() {
   const [profileView, setProfileView] = React.useState('my-data');
   const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre administrátorské oprávnenia
   const [allUsersData, setAllUsersData] = React.useState([]); // Stav pre zoznam všetkých používateľov
+  const [isRoleLoaded, setIsRoleLoaded] = React.useState(false); // Nový stav pre indikáciu načítania roly
 
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -86,7 +87,7 @@ function App() {
       const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        if (loading) setLoading(false);
+        setIsRoleLoaded(false); // Resetovať stav načítania roly pri zmene používateľa
 
         // Načítanie administrátorských oprávnení z Firestore
         if (currentUser && db) {
@@ -101,9 +102,12 @@ function App() {
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
             setIsAdmin(false); // Predpokladáme, že nie je admin v prípade chyby
+          } finally {
+            setIsRoleLoaded(true); // Rola bola načítaná (alebo sa zistilo, že dokument neexistuje)
           }
         } else {
           setIsAdmin(false);
+          setIsRoleLoaded(true); // Ak nie je používateľ alebo db, rola je "načítaná" ako nie-admin
         }
 
         const authLink = document.getElementById('auth-link');
@@ -476,7 +480,7 @@ function App() {
   }, [handleLogout]);
 
 
-  if (loading || !isAuthReady) {
+  if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded)) {
     return (
       React.createElement("div", { className: "flex items-center justify-center min-h-screen bg-gray-100" },
         React.createElement("div", { className: "text-xl font-semibold text-gray-700" }, "Načítava sa...")
