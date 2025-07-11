@@ -460,16 +460,7 @@ function App() {
               path: "/login",
               element: React.createElement(React.Fragment, null,
                 React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Prihlásenie"),
-                React.createElement("div", { className: "flex justify-center mb-6" },
-                  React.createElement("button", {
-                    onClick: () => navigate('/login'), // Používame navigate
-                    className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 bg-blue-600 text-white shadow-md`
-                  }, "Prihlásenie"),
-                  React.createElement("button", {
-                    onClick: () => navigate('/register'), // Používame navigate
-                    className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300`
-                  }, "Registrácia")
-                ),
+                // ODSTRÁNENÉ TLAČIDLÁ "Prihlásenie" a "Registrácia"
                 React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
                   React.createElement("div", null,
                     React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "username" }, "Používateľské meno"),
@@ -521,16 +512,7 @@ function App() {
               path: "/register",
               element: React.createElement(React.Fragment, null,
                 React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Registrácia na turnaj"),
-                React.createElement("div", { className: "flex justify-center mb-6" },
-                  React.createElement("button", {
-                    onClick: () => navigate('/login'), // Používame navigate
-                    className: `px-6 py-2 rounded-l-lg font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300`
-                  }, "Prihlásenie"),
-                  React.createElement("button", {
-                    onClick: () => navigate('/register'), // Používame navigate
-                    className: `px-6 py-2 rounded-r-lg font-semibold transition-colors duration-200 bg-blue-600 text-white shadow-md`
-                  }, "Registrácia")
-                ),
+                // ODSTRÁNENÉ TLAČIDLÁ "Prihlásenie" a "Registrácia"
                 React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
                   React.createElement("div", null,
                     React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-username" }, "Používateľské meno"),
