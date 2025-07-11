@@ -91,12 +91,17 @@ function App() {
 
         // Načítanie administrátorských oprávnení z Firestore
         if (currentUser && db) {
+          console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu z Firestore...");
           try {
             const userDocRef = db.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get();
             if (userDoc.exists) {
-              setIsAdmin(userDoc.data().role === 'admin');
+              const userData = userDoc.data();
+              console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
+              setIsAdmin(userData.role === 'admin');
+              console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
             } else {
+              console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
             }
           } catch (e) {
@@ -104,8 +109,10 @@ function App() {
             setIsAdmin(false); // Predpokladáme, že nie je admin v prípade chyby
           } finally {
             setIsRoleLoaded(true); // Rola bola načítaná (alebo sa zistilo, že dokument neexistuje)
+            console.log("onAuthStateChanged: isRoleLoaded nastavené na true.");
           }
         } else {
+          console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
           setIsRoleLoaded(true); // Ak nie je používateľ alebo db, rola je "načítaná" ako nie-admin
         }
