@@ -17,7 +17,7 @@ const firebaseConfig = {
 const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
 
 // Dummy domain for internal email construction
-const DUMMY_DOMAIN = "@slovakhandball.com";
+const DUMMY_DOMAIN = "@tunraj.slovak.open.handball.sk";
 
 // Definujeme App ako globálnu funkciu, nie ako export
 function App() {
@@ -418,8 +418,8 @@ function App() {
             href: "index.html", // Odkaz na index.html (hlavná stránka)
             className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
           }, "Domov"),
-          // Nový odkaz na Registráciu na turnaj
-          React.createElement("a", {
+          // Nový odkaz na Registráciu na turnaj (teraz podmienený)
+          !user && React.createElement("a", { // <<< ZMENA TU: podmienka !user
             href: "register-tournament.html", // Odkaz na novú stránku pre registráciu
             className: "text-lg font-semibold hover:text-blue-200 transition-colors duration-200"
           }, "Registrácia na turnaj")
