@@ -6,12 +6,13 @@
 // Pre funkčnosť ich preto definujeme pevne.
 const appId = 'default-app-id'; // Toto je len zástupná hodnota, pre Canvas by sa použila __app_id
 const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // AKTUALIZOVANÝ API KĽÚČ
+  authDomain: "prihlasovanie-a3f5f.firebaseapp.com",
+  projectId: "prihlasovanie-a3f5f",
+  storageBucket: "prihlasovanie-a3f5f.firebasestorage.app",
+  messagingSenderId: "181851240506",
+  appId: "1:181851240506:web:768e27fb15b8055ee7b9d03",
+  measurementId: "G-C3XPTT7F4D"
 };
 const initialAuthToken = null; // Toto je len zástupná hodnota, pre Canvas by sa použila __initial_auth_token
 
@@ -678,16 +679,16 @@ function App() {
                   onClick: () => { setShowChangePasswordModal(true); setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword(''); }, // Clear passwords on modal open
                   className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
                 }, "Zmeniť heslo")
-              ),
-
-              // Logout Button (remains here as requested)
-              React.createElement("div", { className: "border-t pt-4 mt-4" },
-                React.createElement("button", {
-                  onClick: handleLogout,
-                  className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                  disabled: loading
-                }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
               )
+
+              // Logout Button (bol tu, ale bol odstránený podľa požiadavky)
+              // React.createElement("div", { className: "border-t pt-4 mt-4" },
+              //   React.createElement("button", {
+              //     onClick: handleLogout,
+              //     className: "bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
+              //     disabled: loading
+              //   }, loading ? 'Odhlasujem...' : 'Odhlásiť sa')
+              // )
             )
           )
         )
