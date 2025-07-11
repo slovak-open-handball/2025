@@ -13,6 +13,8 @@ const initialAuthToken = null;
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+  // !!! NAHRADTE TENTO URL VASIM DEPLOYED GOOGLE APPS SCRIPT WEB APP URL !!!
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/VASE_DEPLOYED_SCRIPT_ID/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -195,38 +197,37 @@ function App() {
 
     setLoading(true);
     try {
-      // Používame email priamo
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      // Voliteľne nastavíme display name na email, alebo ponecháme tak ako je
-      await userCredential.user.updateProfile({ displayName: email });
+      await userCredential.user.updateProfile({ displayName: email }); // Nastavíme display name na email
+
+      // --- ODOSLANIE E-MAILU CEZ GOOGLE APPS SCRIPT ---
+      try {
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', // Dôležité pre Google Apps Script ako Web App
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'sendRegistrationEmail',
+            email: email,
+            password: password // UPOZORNENIE: Posielanie hesla e-mailom nie je bezpečné!
+          })
+        });
+        // Keďže používame 'no-cors', nemôžeme čítať odpoveď.
+        // Ak by ste chceli spracovať odpoveď, museli by ste nastaviť CORS na Apps Script.
+        console.log("Žiadosť na odoslanie e-mailu odoslaná.");
+      } catch (emailError) {
+        console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
+        // Nezastavujeme registráciu kvôli chybe e-mailu, ale zaznamenáme ju.
+      }
+      // --- KONIEC ODOSIELANIA E-MAILU ---
+
       setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
       setError('');
-      setEmail(''); // Vyčistíme pole emailu
+      setEmail('');
       setPassword('');
       setConfirmPassword('');
-
-      // --- TU BY STE ODOSTALI E-MAIL S ÚDAJMI POMOCOU BACKENDU ---
-      // Príklad (pseudo-kód pre Cloud Function alebo iný backend):
-      // const response = await fetch('/sendRegistrationEmail', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     recipientEmail: email,
-      //     // Sem by ste pridali ďalšie údaje z formulára, ak by existovali, napr. meno, priezvisko atď.
-      //     // Pre jednoduchosť, ak je email jediná "identita", môžete poslať len ten.
-      //     // Ak by ste mali v registračnom formulári napríklad polia pre meno a priezvisko,
-      //     // museli by ste ich pridať do stavu Reactu a potom ich zahrnúť sem.
-      //     // Napríklad: firstName: firstName, lastName: lastName
-      //   })
-      // });
-      // const data = await response.json();
-      // if (data.success) {
-      //   console.log("E-mail úspešne odoslaný.");
-      // } else {
-      //   console.error("Chyba pri odosielaní e-mailu:", data.error);
-      // }
-      // --- KONIEC BACKEND ČASTI ---
-
       window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -268,11 +269,10 @@ function App() {
 
     setLoading(true);
     try {
-      // Používame email priamo
       await auth.signInWithEmailAndPassword(email, password);
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
-      setEmail(''); // Vyčistíme pole emailu
+      setEmail('');
       setPassword('');
       window.location.href = 'logged-in.html';
     } catch (e) {
@@ -307,7 +307,7 @@ function App() {
     }
   };
 
-  const handleChangeEmail = async (e) => { // Premenované z handleChangeUsername
+  const handleChangeEmail = async (e) => {
     e.preventDefault();
     if (!user) {
       setError("Nie ste prihlásený.");
@@ -329,8 +329,7 @@ function App() {
         return;
       }
 
-      await user.updateEmail(newEmail); // Používame updateEmail
-      // Voliteľne aktualizujeme display name na nový email, alebo ponecháme tak ako je
+      await user.updateEmail(newEmail);
       await user.updateProfile({ displayName: newEmail });
       setMessage("E-mailová adresa úspešne zmenená na " + newEmail);
       setError('');
@@ -646,7 +645,7 @@ function App() {
                 ),
                 React.createElement("li", null,
                   React.createElement("button", {
-                    onClick: () => setProfileView('change-email'), // Nový stav pre zmenu emailu
+                    onClick: () => setProfileView('change-email'),
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 ${
                       profileView === 'change-email' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
@@ -696,7 +695,7 @@ function App() {
               )
             ),
 
-            profileView === 'change-email' && ( // Nová sekcia pre zmenu emailu
+            profileView === 'change-email' && (
               React.createElement("form", { onSubmit: handleChangeEmail, className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť e-mailovú adresu"),
                 React.createElement("div", null,
