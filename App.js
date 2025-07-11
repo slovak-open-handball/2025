@@ -607,9 +607,6 @@ function App() {
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Používateľské meno: "), user.displayName || 'N/A'
-                ),
-                React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Email: "), user.email || 'N/A'
                 )
               )
             ),
