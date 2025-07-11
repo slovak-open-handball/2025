@@ -11,7 +11,6 @@ const initialAuthToken = null;
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  // !!! NAHRADTE TENTO URL VASIM DEPLOYED GOOGLE APPS SCRIPT WEB APP URL !!!
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
@@ -32,6 +31,8 @@ function App() {
   const [currentPassword, setCurrentPassword] = React.useState('');
 
   const [profileView, setProfileView] = React.useState('my-data');
+  const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre simuláciu administrátorských oprávnení
+  const [allUsersData, setAllUsersData] = React.useState([]); // Stav pre zoznam všetkých používateľov
 
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -70,6 +71,9 @@ function App() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
+            // Ak nechcete automatické prihlásenie anonymného používateľa,
+            // odstráňte tento riadok. Používateľ bude musieť explicitne
+            // prihlásiť sa alebo zaregistrovať.
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -83,6 +87,15 @@ function App() {
         setUser(currentUser);
         setIsAuthReady(true);
         if (loading) setLoading(false);
+
+        // Simulácia administrátorských oprávnení na klientskej strane
+        // V REÁLNEJ APLIKÁCII BY SA TOTO ROBILO NA SERVERI POMOCOU FIREBASE ADMIN SDK
+        // A CUSTOM CLAIMS (napr. currentUser.getIdTokenResult(true).then(idTokenResult => setIsAdmin(!!idTokenResult.claims.admin)));
+        if (currentUser && currentUser.email === 'admin@example.com') { // Nahraďte 'admin@example.com' skutočným admin e-mailom
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
 
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
@@ -213,20 +226,17 @@ function App() {
             isAdmin: isAdminRegistration // Indikátor, či ide o registráciu administrátora
           })
         });
-        // Keďže používame 'no-cors', nemôžeme čítať odpoveď.
-        // Ak by ste chceli spracovať odpoveď, museli by ste nastaviť CORS na Apps Script.
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
       } catch (emailError) {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
-        // Nezastavujeme registráciu kvôli chybe e-mailu, ale zaznamenáme ju.
       }
       // --- KONIEC ODOSIELANIA E-MAILU ---
 
       // --- LOGIKA PRE PRIDELENIE ADMIN ROLY (VYŽADUJE SERVER-SIDE) ---
       if (isAdminRegistration) {
         console.log(`Používateľ ${email} registrovaný ako administrátor. Teraz je potrebné priradiť rolu na serveri.`);
-        // Tu by ste poslali žiadosť na váš backend (napr. Firebase Cloud Function)
-        // ktorá by použila Firebase Admin SDK na nastavenie custom claimu:
+        // V REÁLNEJ APLIKÁCII BY STE TU POSLALI ŽIADOSŤ NA VÁŠ BACKEND (napr. Firebase Cloud Function)
+        // KTORÁ BY POUŽILA FIREBASE ADMIN SDK NA NASTAVENIE CUSTOM CLAIMU:
         // admin.auth().setCustomUserClaims(userCredential.user.uid, { admin: true });
         // Alebo by ste aktualizovali dokument vo Firestore:
         // db.collection('users').doc(userCredential.user.uid).set({ role: 'admin' }, { merge: true });
@@ -407,6 +417,42 @@ function App() {
       } else {
         setError(`Chyba pri zmene hesla: ${e.message}`);
       }
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
+  // Funkcia na simulované získanie všetkých používateľov (iba pre demo)
+  const fetchAllUsers = async () => {
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      // V reálnej aplikácii by ste tu volali Firebase Cloud Function, ktorá by použila Firebase Admin SDK
+      // na získanie zoznamu používateľov a vrátila by ho klientovi.
+      // const response = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${await user.getIdToken()}` } });
+      // const data = await response.json();
+      // if (response.ok) {
+      //   setAllUsersData(data.users);
+      //   setMessage("Zoznam používateľov načítaný.");
+      // } else {
+      //   setError(`Chyba pri načítaní používateľov: ${data.error || response.statusText}`);
+      // }
+
+      // Simulované dáta pre demo
+      const dummyUsers = [
+        { uid: 'user123', email: 'user1@example.com', displayName: 'Používateľ Jeden' },
+        { uid: 'user456', email: 'user2@example.com', displayName: 'Používateľ Dva' },
+        { uid: 'admin789', email: 'admin@example.com', displayName: 'Admin Účet' },
+        { uid: 'userabc', email: 'user3@example.com', displayName: 'Používateľ Tri' },
+      ];
+      setAllUsersData(dummyUsers);
+      setMessage("Simulovaný zoznam používateľov načítaný.");
+
+    } catch (e) {
+      console.error("Chyba pri získavaní používateľov:", e);
+      setError(`Chyba pri získavaní používateľov: ${e.message}`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -672,6 +718,20 @@ function App() {
                       profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť heslo")
+                ),
+                // Nová položka menu "Používatelia" - viditeľná len pre administrátorov
+                isAdmin && (
+                  React.createElement("li", null,
+                    React.createElement("button", {
+                      onClick: () => {
+                        setProfileView('users');
+                        fetchAllUsers(); // Načítať používateľov pri kliknutí
+                      },
+                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 ${
+                        profileView === 'users' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`
+                    }, "Používatelia")
+                  )
                 )
               )
             )
@@ -833,6 +893,25 @@ function App() {
                   className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
                   disabled: loading
                 }, loading ? 'Ukladám...' : 'Zmeniť heslo')
+              )
+            ),
+
+            profileView === 'users' && (
+              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov"),
+                allUsersData.length > 0 ? (
+                  React.createElement("ul", { className: "divide-y divide-gray-200" },
+                    allUsersData.map((u) =>
+                      React.createElement("li", { key: u.uid, className: "py-2" },
+                        React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
+                        React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
+                        React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`)
+                      )
+                    )
+                  )
+                ) : (
+                  React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
+                )
               )
             )
           )
