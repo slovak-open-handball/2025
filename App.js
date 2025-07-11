@@ -9,8 +9,6 @@ const firebaseConfig = {
 };
 const initialAuthToken = null;
 
-// DUMMY_DOMAIN je odstránený, pretože sa už nepoužíva
-
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   // !!! NAHRADTE TENTO URL VASIM DEPLOYED GOOGLE APPS SCRIPT WEB APP URL !!!
@@ -25,10 +23,10 @@ function App() {
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
 
-  const [email, setEmail] = React.useState(''); // Premenované z 'username' na 'email'
+  const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [newEmail, setNewEmail] = React.useState(''); // Premenované z 'newUsername' na 'newEmail'
+  const [newEmail, setNewEmail] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -164,7 +162,7 @@ function App() {
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
     if (!auth) {
       setError("Firebase Auth nie je inicializovaný.");
@@ -211,7 +209,8 @@ function App() {
           body: JSON.stringify({
             action: 'sendRegistrationEmail',
             email: email,
-            password: password // UPOZORNENIE: Posielanie hesla e-mailom nie je bezpečné!
+            password: password, // UPOZORNENIE: Posielanie hesla e-mailom nie je bezpečné!
+            isAdmin: isAdminRegistration // Indikátor, či ide o registráciu administrátora
           })
         });
         // Keďže používame 'no-cors', nemôžeme čítať odpoveď.
@@ -223,12 +222,24 @@ function App() {
       }
       // --- KONIEC ODOSIELANIA E-MAILU ---
 
-      setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
+      // --- LOGIKA PRE PRIDELENIE ADMIN ROLY (VYŽADUJE SERVER-SIDE) ---
+      if (isAdminRegistration) {
+        console.log(`Používateľ ${email} registrovaný ako administrátor. Teraz je potrebné priradiť rolu na serveri.`);
+        // Tu by ste poslali žiadosť na váš backend (napr. Firebase Cloud Function)
+        // ktorá by použila Firebase Admin SDK na nastavenie custom claimu:
+        // admin.auth().setCustomUserClaims(userCredential.user.uid, { admin: true });
+        // Alebo by ste aktualizovali dokument vo Firestore:
+        // db.collection('users').doc(userCredential.user.uid).set({ role: 'admin' }, { merge: true });
+        // Táto operácia NESMIE byť vykonaná priamo z klienta!
+        setMessage("Registrácia administrátora úspešná! Rola bude priradená.");
+      } else {
+        setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
+      }
       setError('');
       setEmail('');
       setPassword('');
       setConfirmPassword('');
-      window.location.href = 'login.html';
+      window.location.href = 'login.html'; // Presmerovanie po registrácii
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -461,7 +472,8 @@ function App() {
     );
   }
 
-  if (currentPath === 'register.html') {
+  if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
+    const is_admin_register_page = currentPath === 'admin-register.html';
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
@@ -476,8 +488,10 @@ function App() {
                 error
               )
             ),
-            React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Registrácia na turnaj"),
-            React.createElement("form", { onSubmit: handleRegister, className: "space-y-4" },
+            React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
+              is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
+            ),
+            React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
                 React.createElement("input", {
