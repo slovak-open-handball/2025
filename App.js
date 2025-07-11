@@ -65,7 +65,8 @@ function App() {
 
       const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      setDb(firebase.firestore(firebaseApp));
+      const firestoreInstance = firebase.firestore(firebaseApp);
+      setDb(firestoreInstance);
 
       const signIn = async () => {
         try {
@@ -90,10 +91,10 @@ function App() {
         setIsRoleLoaded(false); // Resetovať stav načítania roly pri zmene používateľa
 
         // Načítanie administrátorských oprávnení z Firestore
-        if (currentUser && db) {
+        if (currentUser && firestoreInstance) { // Používame firestoreInstance priamo
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu z Firestore...");
           try {
-            const userDocRef = db.collection('users').doc(currentUser.uid);
+            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get();
             if (userDoc.exists) {
               const userData = userDoc.data();
@@ -145,7 +146,7 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, []);
+  }, []); // Závislosti: Prázdne pole, aby sa useEffect spustil len raz
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
