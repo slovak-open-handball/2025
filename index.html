@@ -19,20 +19,8 @@
     </style>
 </head>
 <body>
-    <!-- Hlavička stránky s menu -->
-    <header class="w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center">
-        <div class="flex items-center space-x-6">
-            <!-- Odkaz na Domov (index.html) -->
-            <a href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
-            <!-- Tu môžete pridať ďalšie odkazy do hlavného menu, napr.: -->
-            <!-- <a href="#" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">O nás</a> -->
-            <!-- <a href="#" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Kontakt</a> -->
-        </div>
-        <!-- Odkaz na Prihlásenie v pravom hornom rohu -->
-        <div class="flex items-center">
-            <a href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Prihlásenie</a>
-        </div>
-    </header>
+    <!-- Placeholder pre hlavičku, ktorá sa načíta pomocou JavaScriptu -->
+    <div id="header-placeholder"></div>
 
     <!-- Hlavný obsah stránky -->
     <div class="flex items-center justify-center h-[calc(100vh-64px)]"> <!-- Upravená výška pre zohľadnenie hlavičky -->
@@ -40,5 +28,26 @@
             Vitajte na stránke
         </div>
     </div>
+
+    <script>
+        // Funkcia na načítanie a vloženie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html'); // Načítať obsah header.html
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba! Status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml; // Vložiť do placeholderu
+            } catch (error) {
+                console.error('Chyba pri načítaní hlavičky:', error);
+                // Voliteľné: Zobraziť chybu používateľovi
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+            }
+        }
+
+        // Načítať hlavičku po načítaní DOM
+        document.addEventListener('DOMContentLoaded', loadHeader);
+    </script>
 </body>
 </html>
