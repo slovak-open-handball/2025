@@ -596,7 +596,14 @@ function App() {
       setError('');
       setEmail('');
       setPassword('');
-      window.location.href = 'logged-in.html';
+      
+      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
+
+      // Presmerovanie po 15 sekundách
+      setTimeout(() => {
+        window.location.href = 'logged-in.html';
+      }, 15000); // 15 sekúnd
+
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
@@ -606,10 +613,9 @@ function App() {
       } else {
         setError(`Chyba pri prihlasovaní: ${e.message}`);
       }
-    } finally {
       setLoading(false);
       clearMessages();
-    }
+    } 
   };
 
   const handleLogout = async () => {
@@ -1180,7 +1186,7 @@ function App() {
                   <span style={{ whiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
                   </span>{" "}
-                  <span style={{ whiteSpace: 'nowrap' }}>
+                  <span style={{ whiteSpace: 'nowowrap' }}>
                     {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
                   </span>
                 </p>
