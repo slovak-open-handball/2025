@@ -130,17 +130,18 @@ function App() {
         const logoutButton = document.getElementById('logout-button');
         const registerLink = document.getElementById('register-link');
 
+        // Aktualizácia viditeľnosti navigačných prvkov
         if (authLink) {
           if (currentUser) {
-            authLink.classList.add('hidden');
-            profileLink && profileLink.classList.remove('hidden');
-            logoutButton && logoutButton.classList.remove('hidden');
-            registerLink && registerLink.classList.add('hidden');
+            authLink.classList.add('hidden'); // Skryť "Prihlásenie"
+            profileLink && profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
+            logoutButton && logoutButton.classList.remove('hidden'); // Zobraziť "Odhlásenie"
+            registerLink && registerLink.classList.add('hidden'); // Skryť "Registrácia"
           } else {
-            authLink.classList.remove('hidden');
-            profileLink && profileLink.classList.add('hidden');
-            logoutButton && logoutButton.classList.add('hidden');
-            registerLink && registerLink.classList.remove('hidden');
+            authLink.classList.remove('hidden'); // Zobraziť "Prihlásenie"
+            profileLink && profileLink.classList.add('hidden'); // Skryť "Moja zóna"
+            logoutButton && logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
+            registerLink && registerLink.classList.remove('hidden'); // Zobraziť "Registrácia"
           }
         }
       });
@@ -274,6 +275,9 @@ function App() {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
       // --- KONIEC ODOSIELANIA E-MAILU ---
+
+      // DÔLEŽITÉ: Odhlásiť používateľa ihneď po registrácii
+      await auth.signOut();
 
       setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
       setError('');
@@ -676,7 +680,7 @@ function App() {
                   React.createElement("a", {
                     href: "register.html",
                     className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  }, "Registrácia")
+                  }, "Registrácia na turnaj") // Zmena textu
                 )
               )
             )
