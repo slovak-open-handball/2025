@@ -28,7 +28,7 @@ function App() {
   // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby
+  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
   const [newEmail, setNewEmail] = React.useState('');
@@ -38,6 +38,9 @@ function App() {
   // Nové stavy pre zmenu mena a priezviska
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
+  // NOVÉ: Stav pre nové telefónne číslo (pre zmenu)
+  const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
+
 
   // Inicializácia profileView na základe URL hash alebo defaultne na 'my-data'
   const getInitialProfileView = () => {
@@ -112,9 +115,9 @@ function App() {
         setIsAuthReady(true);
         setIsRoleLoaded(false); // Resetovať stav načítania roly pri zmene používateľa
 
-        // Načítanie administrátorských oprávnení z Firestore
+        // Načítanie administrátorských oprávnení a ďalších údajov z Firestore
         if (currentUser && firestoreInstance) { // Používame firestoreInstance priamo
-          console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu z Firestore...");
+          console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
           try {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get();
@@ -123,12 +126,15 @@ function App() {
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
               setIsAdmin(userData.role === 'admin');
               console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
-              // Nastavíme display name na kombináciu mena a priezviska z Firestore
-              if (userData.firstName && userData.lastName) {
-                await currentUser.updateProfile({ displayName: `${userData.firstName} ${userData.lastName}` });
-              } else if (userData.email) {
-                await currentUser.updateProfile({ displayName: userData.email });
-              }
+              
+              // Aktualizovať objekt používateľa o dáta z Firestore
+              // Vytvoríme nový objekt, aby sme nespôsobili priamu mutáciu
+              setUser(prevUser => ({
+                ...prevUser,
+                ...userData, // Pridá všetky polia z Firestore dokumentu (vrátane firstName, lastName, contactPhoneNumber, role, approved)
+                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email // Aktualizuje displayName
+              }));
+
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
@@ -259,7 +265,7 @@ function App() {
       return;
     }
     // NOVÉ: Pridané overenie contactPhoneNumber
-    if (!email || !password || !confirmPassword || !firstName || !lastName || !contactPhoneNumber) {
+    if (!email || !password || !confirmPassword || !firstName || !lastName || (!isAdminRegistration && !contactPhoneNumber)) {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
@@ -274,11 +280,13 @@ function App() {
       return;
     }
 
-    // NOVÉ: Validácia telefónneho čísla - prvý znak "+" a zvyšné iba čísla
-    const phoneRegex = /^\+\d+$/; // Regex pre '+' nasledovaný jednou alebo viacerými číslicami
-    if (!phoneRegex.test(contactPhoneNumber)) {
-        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-        return;
+    // NOVÉ: Validácia telefónneho čísla - prvý znak "+" a zvyšné iba čísla (len pre bežnú registráciu)
+    if (!isAdminRegistration) {
+      const phoneRegex = /^\+\d+$/; // Regex pre '+' nasledovaný jednou alebo viacerými číslicami
+      if (!phoneRegex.test(contactPhoneNumber)) {
+          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+          return;
+      }
     }
 
     const recaptchaToken = await getRecaptchaToken('register');
@@ -302,7 +310,7 @@ function App() {
         email: email,
         firstName: firstName, // Uloženie mena
         lastName: lastName,   // Uloženie priezvisko
-        contactPhoneNumber: contactPhoneNumber, // NOVÉ: Uloženie telefónneho čísla
+        contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber, // NOVÉ: Uloženie telefónneho čísla (prázdne pre admina)
         displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
         role: userRole,
         approved: isApproved, 
@@ -325,7 +333,7 @@ function App() {
             isAdmin: isAdminRegistration,
             firstName: firstName, // Pridané pre e-mail
             lastName: lastName,   // Pridané pre e-mail
-            contactPhoneNumber: contactPhoneNumber // NOVÉ: Pridané pre e-mail
+            contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber // NOVÉ: Pridané pre e-mail
           })
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
@@ -407,12 +415,12 @@ function App() {
         return;
       }
 
-      // Aktualizujeme displayName používateľa po prihlásení, ak máme meno a priezvisko
-      if (userData.firstName && userData.lastName) {
-        await currentUser.updateProfile({ displayName: `${userData.firstName} ${userData.lastName}` });
-      } else if (userData.email) {
-        await currentUser.updateProfile({ displayName: userData.email });
-      }
+      // Aktualizujeme objekt používateľa o dáta z Firestore
+      setUser(prevUser => ({
+        ...prevUser,
+        ...userData,
+        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
+      }));
 
 
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
@@ -622,6 +630,61 @@ function App() {
     }
   };
 
+  // NOVÁ FUNKCIA: Zmena telefónneho čísla
+  const handleChangeContactPhoneNumber = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      setError("Nie ste prihlásený.");
+      return;
+    }
+    if (!newContactPhoneNumber) {
+      setError("Prosím, zadajte nové telefónne číslo.");
+      return;
+    }
+
+    // Validácia telefónneho čísla
+    const phoneRegex = /^\+\d+$/;
+    if (!phoneRegex.test(newContactPhoneNumber)) {
+        setError("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+        return;
+    }
+
+    setLoading(true);
+    try {
+      if (user.email && currentPassword) {
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        await user.reauthenticateWithCredential(credential);
+      } else {
+        setError("Pre zmenu telefónneho čísla je potrebné zadať aktuálne heslo pre overenie.");
+        setLoading(false);
+        return;
+      }
+
+      // Aktualizácia telefónneho čísla vo Firestore
+      await db.collection('users').doc(user.uid).update({ 
+        contactPhoneNumber: newContactPhoneNumber
+      });
+      setMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber);
+      setError('');
+      setNewContactPhoneNumber('');
+      setCurrentPassword('');
+      // Aktualizovať lokálny stav používateľa po úspešnej zmene
+      setUser(prevUser => ({ ...prevUser, contactPhoneNumber: newContactPhoneNumber }));
+    } catch (e) {
+      console.error("Chyba pri zmene telefónneho čísla:", e);
+      if (e.code === 'auth/requires-recent-login') {
+        setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
+      } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
+        setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
+      } else {
+        setError(`Chyba pri zmene telefónneho čísla: ${e.message}`);
+      }
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
 
   // Funkcie pre modálne okná
   const openDeleteConfirmationModal = (user) => {
@@ -758,6 +821,17 @@ function App() {
     if (view === 'users' && isAdmin) {
       fetchAllUsers();
     }
+    // Predvyplníme polia pre zmenu telefónneho čísla
+    if (view === 'change-phone-number' && user && user.contactPhoneNumber) {
+        setNewContactPhoneNumber(user.contactPhoneNumber);
+    } else {
+        setNewContactPhoneNumber(''); // Vyčistiť pole, ak sa prepína na inú záložku
+    }
+    // Vyčistíme polia pre zmenu mena/priezviska, aby sa nepredvyplňovali
+    if (view === 'change-name') {
+        setNewFirstName('');
+        setNewLastName('');
+    }
   };
 
 
@@ -858,7 +932,7 @@ function App() {
                   autoComplete: "family-name"
                 })
               ),
-              // NOVÉ: Pole pre telefónne číslo kontaktnej osoby
+              // NOVÉ: Pole pre telefónne číslo kontaktnej osoby (len pre bežnú registráciu)
               !is_admin_register_page && (
                 React.createElement("div", null,
                   React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-phone-number" }, "Telefónne číslo kontaktnej osoby"),
@@ -882,7 +956,9 @@ function App() {
                 )
               ),
               React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa kontaktnej osoby"), // Zmena textu
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, 
+                  is_admin_register_page ? "E-mailová adresa" : "E-mailová adresa kontaktnej osoby" // Podmienený nadpis pre e-mail
+                ),
                 React.createElement("input", {
                   type: "email",
                   id: "reg-email",
@@ -1067,14 +1143,23 @@ function App() {
                   React.createElement("button", {
                     onClick: () => {
                       changeProfileView('change-name');
-                      // Predvyplníme polia aktuálnymi hodnotami
-                      setNewFirstName(user.displayName ? user.displayName.split(' ')[0] : '');
-                      setNewLastName(user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '');
+                      // Predvyplnenie polí bolo odstránené, aby zostali prázdne
+                      // setNewFirstName(user.firstName || '');
+                      // setNewLastName(user.lastName || '');
                     },
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť meno/priezvisko")
+                ),
+                // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla
+                React.createElement("li", null,
+                  React.createElement("button", {
+                    onClick: () => changeProfileView('change-phone-number'),
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      profileView === 'change-phone-number' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`
+                  }, "Zmeniť telefónne číslo")
                 ),
                 // Nová položka menu "Používatelia" - viditeľná len pre administrátorov
                 isAdmin && (
@@ -1122,6 +1207,10 @@ function App() {
                 ),
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Zobrazované meno: "), user.displayName || 'N/A'
+                ),
+                // NOVÉ: Zobrazenie telefónneho čísla
+                React.createElement("p", { className: "text-gray-700" },
+                  React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || 'N/A'
                 )
               )
             ),
@@ -1310,6 +1399,55 @@ function App() {
                   className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
                   disabled: loading
                 }, loading ? 'Ukladám...' : 'Zmeniť meno a priezvisko')
+              )
+            ),
+
+            // NOVÁ SEKCIA: Zmena telefónneho čísla
+            profileView === 'change-phone-number' && (
+              React.createElement("form", { onSubmit: handleChangeContactPhoneNumber, className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť telefónne číslo"),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-contact-phone-number" }, "Nové telefónne číslo"),
+                  React.createElement("input", {
+                    type: "tel",
+                    id: "new-contact-phone-number",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: newContactPhoneNumber,
+                    onChange: (e) => setNewContactPhoneNumber(e.target.value),
+                    required: true,
+                    placeholder: "+421901234567",
+                    pattern: "^\\+\\d+$",
+                    title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                  })
+                ),
+                React.createElement("div", { className: "relative" },
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-phone-change" }, "Aktuálne heslo (pre overenie)"),
+                  React.createElement("input", {
+                    type: showCurrentPassword ? "text" : "password",
+                    id: "current-password-phone-change",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
+                    value: currentPassword,
+                    onChange: (e) => setCurrentPassword(e.target.value),
+                    onCopy: (e) => e.preventDefault(),
+                    onPaste: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    required: true,
+                    placeholder: "Zadajte svoje aktuálne heslo",
+                    autoComplete: "current-password"
+                  }),
+                  React.createElement("button", {
+                    type: "button",
+                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
+                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  },
+                    showCurrentPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
+                React.createElement("button", {
+                  type: "submit",
+                  className: "bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
+                  disabled: loading
+                }, loading ? 'Ukladám...' : 'Zmeniť telefónne číslo')
               )
             ),
 
