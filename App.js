@@ -13,7 +13,7 @@ function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z-21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
-const [app, setApp] = React.useState(null);
+  const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
@@ -814,7 +814,9 @@ const [app, setApp] = React.useState(null);
             ),
             React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
               React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" }, "Meno"), // Nové pole Meno
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" },
+                  is_admin_register_page ? "Meno" : "Meno kontaktnej osoby" // Podmienený nadpis
+                ),
                 React.createElement("input", {
                   type: "text",
                   id: "reg-first-name",
@@ -827,7 +829,9 @@ const [app, setApp] = React.useState(null);
                 })
               ),
               React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-last-name" }, "Priezvisko"), // Nové pole Priezvisko
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-last-name" },
+                  is_admin_register_page ? "Priezvisko" : "Priezvisko kontaktnej osoby" // Podmienený nadpis
+                ),
                 React.createElement("input", {
                   type: "text",
                   id: "reg-last-name",
