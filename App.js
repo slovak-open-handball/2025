@@ -26,20 +26,26 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
+  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
+  // Odstránené newEmail
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
+  // Nové stavy pre zmenu mena a priezviska
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
+  // NOVÉ: Stav pre nové telefónne číslo (pre zmenu)
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
 
 
+  // Inicializácia profileView na základe URL hash alebo defaultne na 'my-data'
   const getInitialProfileView = () => {
-    const hash = window.location.hash.substring(1);
+    const hash = window.location.hash.substring(1); // Odstráni '#'
     return hash || 'my-data';
   };
   const [profileView, setProfileView] = React.useState(getInitialProfileView);
@@ -908,8 +914,14 @@ function App() {
                 )
               ),
               // Text "E-mailová adresa bude slúžiť..." presunutý sem a upravený
-              React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď. Po odoslaní tohto formulára ju NIE JE možné zmeniť."
+              is_admin_register_page ? ( // Podmienené zobrazenie pre admin registráciu
+                React.createElement("p", { className: "text-gray-600 text-sm mt-4" },
+                  "Po odoslaní tohto formulára NIE JE možné zmeniť e-mailovú adresu."
+                )
+              ) : ( // Pôvodný text pre bežnú registráciu
+                React.createElement("p", { className: "text-gray-600 text-sm mt-4" },
+                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď. Po odoslaní tohto formulára ju NIE JE možné zmeniť."
+                )
               ),
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, 
