@@ -795,40 +795,39 @@ function App() {
   }
 
   if (currentPath === '' || currentPath === 'index.html') {
+    let contentForIndexPage;
+    if (user) {
+      contentForIndexPage = React.createElement("div", { key: "logged-in-content" },
+        React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
+        React.createElement("div", { className: "mt-6 flex justify-center" },
+          React.createElement("a", {
+            href: "logged-in.html",
+            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Moja zóna")
+        )
+      );
+    } else {
+      contentForIndexPage = React.createElement("div", { key: "logged-out-content" },
+        React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
+        React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
+          React.createElement("a", {
+            href: "login.html",
+            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Prihlásenie"),
+          React.createElement("a", {
+            href: "register.html",
+            className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Registrácia na turnaj")
+        )
+      );
+    }
+
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-            // Wrap all children of this React.createElement in an array.
-            // This ensures a single argument is passed as children, which can help with parsing.
-            [
-              React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
-              user ? ( // Ak je používateľ prihlásený
-                React.createElement("div", { key: "logged-in-content" }, // Pridaný key pre React zoznamy
-                  React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
-                  React.createElement("div", { className: "mt-6 flex justify-center" },
-                    React.createElement("a", {
-                      href: "logged-in.html",
-                      className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    }, "Moja zóna")
-                  )
-                )
-              ) : ( // Inak (používateľ nie je prihlásený)
-                React.createElement("div", { key: "logged-out-content" }, // Pridaný key pre React zoznamy
-                  React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
-                  React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-                    React.createElement("a", {
-                      href: "login.html",
-                      className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    }, "Prihlásenie"),
-                    React.createElement("a", {
-                      href: "register.html",
-                      className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    }, "Registrácia na turnaj")
-                  )
-                )
-              )
-            ]
+            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
+            contentForIndexPage // Toto je teraz jediný dynamický potomok
           )
         )
       )
