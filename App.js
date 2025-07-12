@@ -1455,19 +1455,19 @@ function App() {
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Moje údaje</h2>
                 <p className="text-gray-700">
-                  <span className="font-semibold">E-mailová adresa: </span>{user.email || 'N/A'}
+                  <span className="font-semibold">E-mailová adresa: </span>{user.email || '-'}
                 </p>
                 <p className="text-gray-700">
-                  <span className="font-semibold">Meno a priezvisko: </span>{user.displayName || 'N/A'}
+                  <span className="font-semibold">Meno a priezvisko: </span>{user.displayName || '-'}
                 </p>
                 {!isAdmin && ( 
                   <p className="text-gray-700">
-                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || 'N/A'}
+                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
                   </p>
                 )}
                 {!isEditAllowed && (
                     <p className="text-red-500 text-sm mt-2">
-                        Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : 'N/A'}
+                        Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : '-'}
                     </p>
                 )}
               </div>
@@ -1701,9 +1701,9 @@ function App() {
                         {allUsersData.map((u) => (
                           <tr key={u.uid} className="hover:bg-gray-50">
                             <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.email}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || 'N/A'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || 'N/A'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || 'N/A'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || '-'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || '-'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || '-'}</td>
                             <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
                             <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
                           </tr>
