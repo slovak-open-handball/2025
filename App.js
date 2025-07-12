@@ -157,6 +157,7 @@ function App() {
   }, [registrationStartDate]);
 
 
+  // Efekt pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
   React.useEffect(() => {
     try {
       if (typeof firebase === 'undefined') {
@@ -185,34 +186,10 @@ function App() {
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
           setError(`Chyba pri prihlasovaní: ${e.message}`);
-        } finally {
-          // Nastavenie loading na false sa presunie až po načítaní nastavení
-          // setSettingsLoaded bude riadiť celkové načítanie
         }
       };
 
-      const fetchSettings = async (firestore) => {
-        try {
-            const settingsDocRef = firestore.collection('settings').doc('registration');
-            const settingsDoc = await settingsDocRef.get();
-            if (settingsDoc.exists) {
-                const data = settingsDoc.data();
-                // Používame formatToDatetimeLocal pre zobrazenie v lokálnom čase
-                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-                setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
-            } else {
-                console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
-            }
-        } catch (e) {
-            console.error("Chyba pri načítaní nastavení registrácie:", e);
-            setError(`Chyba pri načítaní nastavení: ${e.message}`);
-        } finally {
-            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
-            setLoading(false); // Celkové načítanie je hotové
-        }
-      };
-
+      // Listener pre zmeny stavu autentifikácie
       const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
@@ -251,11 +228,13 @@ function App() {
           setIsRoleLoaded(true);
         }
 
+        // Aktualizácia viditeľnosti odkazov v hlavičke
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
         const logoutButton = document.getElementById('logout-button');
         const registerLink = document.getElementById('register-link');
 
+        // Táto časť sa spustí vždy pri zmene auth stavu a bude reagovať na aktuálny isRegistrationOpen
         if (authLink) {
           if (currentUser) {
             authLink.classList.add('hidden');
@@ -276,18 +255,47 @@ function App() {
         }
       });
 
-      signIn();
-      fetchSettings(firestoreInstance); // Načítať nastavenia po inicializácii Firestore
+      signIn(); // Spustí počiatočné prihlásenie
 
-      return () => unsubscribe();
+      return () => unsubscribe(); // Vyčistenie listenera
     } catch (e) {
       console.error("Failed to initialize Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, [isRegistrationOpen]); // Pridajte isRegistrationOpen do dependency array
+  }, []); // Prázdne pole závislostí - spustí sa len raz pri mountovaní komponentu
 
-  // Efekt pre odpočítavanie času
+  // Efekt pre načítanie nastavení (spustí sa po inicializácii DB a Auth)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        return; // Čakáme na inicializáciu DB a Auth
+      }
+      try {
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const settingsDoc = await settingsDocRef.get();
+          if (settingsDoc.exists) {
+              const data = settingsDoc.data();
+              setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+              setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+              setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
+          } else {
+              console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
+          }
+      } catch (e) {
+          console.error("Chyba pri načítaní nastavení registrácie:", e);
+          setError(`Chyba pri načítaní nastavení: ${e.message}`);
+      } finally {
+          setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
+          setLoading(false); // Celkové načítanie je hotové
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]); // Načíta nastavenia, keď je DB a Auth pripravené
+
+
+  // Efekt pre odpočítavanie času (spustí sa pri zmene registrationStartDate)
   React.useEffect(() => {
     let timer;
     const updateCountdown = () => {
