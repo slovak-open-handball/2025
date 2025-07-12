@@ -1058,7 +1058,7 @@ function App() {
           React.createElement("a", {
             href: "logged-in.html",
             className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Moja zón")
+          }, "Moja zóna")
         )
       );
     } else {
