@@ -821,12 +821,9 @@ function App() {
     if (view === 'users' && isAdmin) {
       fetchAllUsers();
     }
-    // Predvyplníme polia pre zmenu telefónneho čísla
-    if (view === 'change-phone-number' && user && user.contactPhoneNumber) {
-        setNewContactPhoneNumber(user.contactPhoneNumber);
-    } else {
-        setNewContactPhoneNumber(''); // Vyčistiť pole, ak sa prepína na inú záložku
-    }
+    // NOVÁ ZMENA: Vyčistiť pole pre telefónne číslo, aby sa nepredvyplňovalo
+    setNewContactPhoneNumber(''); // Vyčistiť pole pri každej zmene zobrazenia
+    
     // Vyčistíme polia pre zmenu mena/priezviska, aby sa nepredvyplňovali
     if (view === 'change-name') {
         setNewFirstName('');
@@ -1151,14 +1148,11 @@ function App() {
                   React.createElement("button", {
                     onClick: () => {
                       changeProfileView('change-name');
-                      // Predvyplnenie polí bolo odstránené, aby zostali prázdne
-                      // setNewFirstName(user.firstName || '');
-                      // setNewLastName(user.lastName || '');
                     },
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
-                  }, "Zmeniť meno/priezvisko")
+                  }, "Zmeniť meno a priezvisko") {/* ZMENA: Text zmenený z "Zmeniť meno/priezvisko" na "Zmeniť meno a priezvisko" */}
                 ),
                 // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla
                 React.createElement("li", null,
