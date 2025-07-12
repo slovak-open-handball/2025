@@ -356,7 +356,7 @@ function App() {
       setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
       return;
     }
-    console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
+    console.log("reCAPTcha Token pre prihlásenie:", recaptchaToken);
 
     setLoading(true);
     try {
@@ -767,7 +767,7 @@ function App() {
               )
             ) : (
               React.createElement(React.Fragment, null,
-                React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
+                React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
                 React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
                   React.createElement("a", {
                     href: "login.html",
@@ -832,17 +832,6 @@ function App() {
                   autoComplete: "family-name"
                 })
               ),
-              // Podmienené zobrazenie textu len pre register.html
-              !is_admin_register_page && (
-                React.createElement(React.Fragment, null,
-                  React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                    "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
-                  ),
-                  React.createElement("p", { className: "text-gray-600 text-sm mb-6" }, // Pridaný mb-6 pre medzeru
-                    "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
-                  )
-                )
-              ),
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
                 React.createElement("input", {
@@ -855,6 +844,20 @@ function App() {
                   placeholder: "Zadajte svoju e-mailovú adresu",
                   autoComplete: "email"
                 })
+              ),
+              // Podmienené zobrazenie textu len pre register.html
+              !is_admin_register_page && (
+                React.createElement(React.Fragment, null,
+                  React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
+                    "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
+                  )
+                )
+              ),
+              // Druhá veta zostáva na pôvodnom mieste (teraz za prvou presunutou vetou)
+              !is_admin_register_page && (
+                React.createElement("p", { className: "text-gray-600 text-sm mb-6" }, // Pridaný mb-6 pre medzeru
+                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
+                )
               ),
               React.createElement("div", { className: "relative" },
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-password" }, "Heslo"),
