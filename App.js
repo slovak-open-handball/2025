@@ -9,6 +9,49 @@ const firebaseConfig = {
 };
 const initialAuthToken = null;
 
+// Komponenta pre vstup hesla s prepínaním viditeľnosti
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut }) {
+  const EyeIcon = (
+    <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+
+  const EyeOffIcon = (
+    <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25" />
+    </svg>
+  );
+
+  return (
+    <div className="relative">
+      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor={id}>{label}</label>
+      <input
+        type={showPassword ? "text" : "password"}
+        id={id}
+        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10"
+        value={value}
+        onChange={onChange}
+        onCopy={onCopy}
+        onPaste={onPaste}
+        onCut={onCut}
+        required
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+      />
+      <button
+        type="button"
+        onClick={toggleShowPassword}
+        className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+      >
+        {showPassword ? EyeOffIcon : EyeIcon}
+      </button>
+    </div>
+  );
+}
+
+
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
@@ -25,56 +68,40 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
-  // Odstránené: newEmail
   const [newPassword, setNewPassword] = React.useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
+  const [confirmNewPassword, setNewConfirmPassword] = React.useState(''); // Zmenené meno pre konzistenciu
   const [currentPassword, setCurrentPassword] = React.useState('');
-  // Nové stavy pre zmenu mena a priezviska
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
-  // NOVÉ: Stav pre nové telefónne číslo (pre zmenu)
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
 
 
-  // Inicializácia profileView na základe URL hash alebo defaultne na 'my-data'
   const getInitialProfileView = () => {
-    const hash = window.location.hash.substring(1); // Odstráni '#'
+    const hash = window.location.hash.substring(1);
     return hash || 'my-data';
   };
   const [profileView, setProfileView] = React.useState(getInitialProfileView);
 
-  const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre administrátorské oprávnenia
-  const [allUsersData, setAllUsersData] = React.useState([]); // Stav pre zoznam všetkých používateľov
-  const [isRoleLoaded, setIsRoleLoaded] = React.useState(false); // Nový stav pre indikáciu načítania roly
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [allUsersData, setAllUsersData] = React.useState([]);
+  const [isRoleLoaded, setIsRoleLoaded] = React.useState(false);
 
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
-  const [showNewPassword, setShowNewPassword] = React.useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
+  const [showPasswordReg, setShowPasswordReg] = React.useState(false); // Pre registráciu
+  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false); // Pre registráciu
+  const [showPasswordLogin, setShowPasswordLogin] = React.useState(false); // Pre prihlásenie
+  const [showCurrentPasswordChange, setShowCurrentPasswordChange] = React.useState(false); // Pre zmenu hesla/mena/tel.čísla
+  const [showNewPasswordChange, setShowNewPasswordChange] = React.useState(false); // Pre zmenu hesla
+  const [showConfirmNewPasswordChange, setShowConfirmNewPasswordChange] = React.useState(false); // Pre zmenu hesla
 
-  // NOVÉ: Stavové premenné pre modálne okná
   const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null);
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
-
-
-  const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
-    React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }),
-    React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" })
-  );
-
-  const EyeOffIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
-    React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25" })
-  );
 
 
   React.useEffect(() => {
@@ -115,8 +142,7 @@ function App() {
         setIsAuthReady(true);
         setIsRoleLoaded(false); // Resetovať stav načítania roly pri zmene používateľa
 
-        // Načítanie administrátorských oprávnení a ďalších údajov z Firestore
-        if (currentUser && firestoreInstance) { // Používame firestoreInstance priamo
+        if (currentUser && firestoreInstance) {
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
           try {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
@@ -127,12 +153,10 @@ function App() {
               setIsAdmin(userData.role === 'admin');
               console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
               
-              // Aktualizovať objekt používateľa o dáta z Firestore
-              // Vytvoríme nový objekt, aby sme nespôsobili priamu mutáciu
               setUser(prevUser => ({
                 ...prevUser,
-                ...userData, // Pridá všetky polia z Firestore dokumentu (vrátane firstName, lastName, contactPhoneNumber, role, approved)
-                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email // Aktualizuje displayName
+                ...userData,
+                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
               }));
 
             } else {
@@ -141,15 +165,15 @@ function App() {
             }
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
-            setIsAdmin(false); // Predpokladáme, že nie je admin v prípade chyby
+            setIsAdmin(false);
           } finally {
-            setIsRoleLoaded(true); // Rola bola načítaná (alebo sa zistilo, že dokument neexistuje)
+            setIsRoleLoaded(true);
             console.log("onAuthStateChanged: isRoleLoaded nastavené na true.");
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
-          setIsRoleLoaded(true); // Ak nie je používateľ alebo db, rola je "načítaná" ako nie-admin
+          setIsRoleLoaded(true);
         }
 
         const authLink = document.getElementById('auth-link');
@@ -157,18 +181,17 @@ function App() {
         const logoutButton = document.getElementById('logout-button');
         const registerLink = document.getElementById('register-link');
 
-        // Aktualizácia viditeľnosti navigačných prvkov
         if (authLink) {
           if (currentUser) {
-            authLink.classList.add('hidden'); // Skryť "Prihlásenie"
-            profileLink && profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
-            logoutButton && logoutButton.classList.remove('hidden'); // Zobraziť "Odhlásenie"
-            registerLink && registerLink.classList.add('hidden'); // Skryť "Registrácia"
+            authLink.classList.add('hidden');
+            profileLink && profileLink.classList.remove('hidden');
+            logoutButton && logoutButton.classList.remove('hidden');
+            registerLink && registerLink.classList.add('hidden');
           } else {
-            authLink.classList.remove('hidden'); // Zobraziť "Prihlásenie"
-            profileLink && profileLink.classList.add('hidden'); // Skryť "Moja zóna"
-            logoutButton && logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
-            registerLink && registerLink.classList.remove('hidden'); // Zobraziť "Registrácia"
+            authLink.classList.remove('hidden');
+            profileLink && profileLink.classList.add('hidden');
+            logoutButton && logoutButton.classList.add('hidden');
+            registerLink && registerLink.classList.remove('hidden');
           }
         }
       });
@@ -181,15 +204,13 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, []); // Závislosti: Prázdne pole, aby sa useEffect spustil len raz
+  }, []);
 
-  // Effect pre načítanie profileView z URL hash pri načítaní stránky
   React.useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.substring(1);
       if (hash) {
         setProfileView(hash);
-        // Ak je hash 'users' alebo 'all-teams' a používateľ je admin, načítaj používateľov
         if ((hash === 'users' || hash === 'all-teams') && isAdmin) {
           fetchAllUsers();
         }
@@ -198,17 +219,14 @@ function App() {
       }
     };
 
-    // Nastavte počiatočný stav na základe aktuálneho hashu
     handleHashChange();
 
-    // Pridajte poslucháča pre zmeny hashu
     window.addEventListener('hashchange', handleHashChange);
 
-    // Vyčistenie poslucháča pri odpojení komponentu
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [isAdmin]); // Závisí od isAdmin, aby sa fetchAllUsers zavolalo správne
+  }, [isAdmin]);
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -264,7 +282,6 @@ function App() {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    // NOVÉ: Pridané overenie contactPhoneNumber
     if (!email || !password || !confirmPassword || !firstName || !lastName || (!isAdminRegistration && !contactPhoneNumber)) {
       setError("Prosím, vyplňte všetky polia.");
       return;
@@ -280,9 +297,8 @@ function App() {
       return;
     }
 
-    // NOVÉ: Validácia telefónneho čísla - prvý znak "+" a zvyšné iba čísla (len pre bežnú registráciu)
     if (!isAdminRegistration) {
-      const phoneRegex = /^\+\d+$/; // Regex pre '+' nasledovaný jednou alebo viacerými číslicami
+      const phoneRegex = /^\+\d+$/;
       if (!phoneRegex.test(contactPhoneNumber)) {
           setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
           return;
@@ -299,26 +315,23 @@ function App() {
     setLoading(true);
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      // Nastavíme display name na kombináciu mena a priezviska
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
-      // Uloženie údajov používateľa do Firestore
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
       const isApproved = !isAdminRegistration; 
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
-        firstName: firstName, // Uloženie mena
-        lastName: lastName,   // Uloženie priezvisko
-        contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber, // NOVÉ: Uloženie telefónneho čísla (prázdne pre admina)
-        displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
+        firstName: firstName,
+        lastName: lastName,
+        contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber,
+        displayName: `${firstName} ${lastName}`,
         role: userRole,
         approved: isApproved, 
         registeredAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
-      // --- ODOSLANIE E-MAILU CEZ GOOGLE APPS SCRIPT ---
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
@@ -331,16 +344,15 @@ function App() {
             email: email,
             password: password, 
             isAdmin: isAdminRegistration,
-            firstName: firstName, // Pridané pre e-mail
-            lastName: lastName,   // Pridané pre e-mail
-            contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber // NOVÉ: Pridané pre e-mail
+            firstName: firstName,
+            lastName: lastName,
+            contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber
           })
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
       } catch (emailError) {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
-      // --- KONIEC ODOSIELANIA E-MAILU ---
 
       await auth.signOut();
 
@@ -349,9 +361,9 @@ function App() {
       setEmail('');
       setPassword('');
       setConfirmPassword('');
-      setFirstName(''); // Vyčistenie polí
-      setLastName('');  // Vyčistenie polí
-      setContactPhoneNumber(''); // NOVÉ: Vyčistenie poľa
+      setFirstName('');
+      setLastName('');
+      setContactPhoneNumber('');
       window.location.href = 'login.html'; 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -415,7 +427,6 @@ function App() {
         return;
       }
 
-      // Aktualizujeme objekt používateľa o dáta z Firestore
       setUser(prevUser => ({
         ...prevUser,
         ...userData,
@@ -460,8 +471,6 @@ function App() {
     }
   };
 
-  // Odstránená funkcia handleChangeEmail
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -492,7 +501,7 @@ function App() {
       setMessage("Heslo úspešne zmenené!");
       setError('');
       setNewPassword('');
-      setConfirmNewPassword('');
+      setNewConfirmPassword('');
       setCurrentPassword('');
     } catch (e) {
       console.error("Chyba pri zmene hesla:", e);
@@ -509,7 +518,6 @@ function App() {
     }
   };
 
-  // Funkcia na získanie všetkých používateľov z Firestore
   const fetchAllUsers = async () => {
     setLoading(true);
     setError('');
@@ -532,7 +540,6 @@ function App() {
     }
   };
 
-  // Funkcia na zmenu mena a priezviska
   const handleChangeName = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -557,7 +564,6 @@ function App() {
 
       const newDisplayName = `${newFirstName} ${newLastName}`;
       await user.updateProfile({ displayName: newDisplayName });
-      // Aktualizácia mena a priezviska aj vo Firestore
       await db.collection('users').doc(user.uid).update({ 
         firstName: newFirstName,
         lastName: newLastName,
@@ -583,7 +589,6 @@ function App() {
     }
   };
 
-  // NOVÁ FUNKCIA: Zmena telefónneho čísla
   const handleChangeContactPhoneNumber = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -595,7 +600,6 @@ function App() {
       return;
     }
 
-    // Validácia telefónneho čísla
     const phoneRegex = /^\+\d+$/;
     if (!phoneRegex.test(newContactPhoneNumber)) {
         setError("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
@@ -613,7 +617,6 @@ function App() {
         return;
       }
 
-      // Aktualizácia telefónneho čísla vo Firestore
       await db.collection('users').doc(user.uid).update({ 
         contactPhoneNumber: newContactPhoneNumber
       });
@@ -621,7 +624,6 @@ function App() {
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
-      // Aktualizovať lokálny stav používateľa po úspešnej zmene
       setUser(prevUser => ({ ...prevUser, contactPhoneNumber: newContactPhoneNumber }));
     } catch (e) {
       console.error("Chyba pri zmene telefónneho čísla:", e);
@@ -639,7 +641,6 @@ function App() {
   };
 
 
-  // Funkcie pre modálne okná
   const openDeleteConfirmationModal = (user) => {
     setUserToDelete(user);
     setShowDeleteConfirmationModal(true);
@@ -650,7 +651,6 @@ function App() {
     setShowDeleteConfirmationModal(false);
   };
 
-  // Upravená funkcia handleDeleteUser pre úplné odstránenie
   const handleDeleteUser = async () => {
     if (!userToDelete || !db) { 
       setError("Používateľ na odstránenie nie je definovaný alebo Firebase nie je inicializovaný.");
@@ -661,29 +661,26 @@ function App() {
     setError('');
     setMessage('');
     try {
-      // Úplné odstránenie dokumentu používateľa z Firestore
       await db.collection('users').doc(userToDelete.uid).delete();
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
-      closeDeleteConfirmationModal(); // Zavrie modálne okno PRED otvorením novej karty
-      fetchAllUsers(); // Obnovenie zoznamu používateľov po odstránení
+      closeDeleteConfirmationModal();
+      fetchAllUsers();
 
-      // Otvorenie Firebase Console v novej karte po úspešnom odstránení
-      // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
       window.open(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users?t=${new Date().getTime()}`, '_blank');
 
     } catch (e) {
       console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
     } finally {
-      setLoading(false); // Nastavíme loading na false aj v prípade chyby, aby sa UI neodblokovalo
+      setLoading(false);
       clearMessages();
     }
   };
 
   const openRoleEditModal = (user) => {
     setUserToEditRole(user);
-    setNewRole(user.role || 'user'); // Predvyplniť aktuálnou rolou
+    setNewRole(user.role || 'user');
     setShowRoleEditModal(true);
   };
 
@@ -705,21 +702,15 @@ function App() {
     try {
       let updateData = { role: newRole };
 
-      // Ak sa nová rola nastavuje na 'user', automaticky schváliť
       if (newRole === 'user') {
         updateData.approved = true;
       }
-      // Ak sa rola nastavuje na 'admin', zachovať existujúci stav schválenia používateľa.
-      // Toto zahŕňa prípady, keď bol používateľ neschválený admin (zostane neschválený)
-      // alebo schválený používateľ/admin (zostane schválený).
       else if (newRole === 'admin') {
-          updateData.approved = userToEditRole.approved; // Zachovať existujúci stav schválenia
+          updateData.approved = userToEditRole.approved;
       }
-
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      // Obnovenie zoznamu používateľov po zmene roly
       fetchAllUsers();
       closeRoleEditModal();
     } catch (e) {
@@ -731,7 +722,6 @@ function App() {
     }
   };
 
-  // Funkcia na schválenie používateľa (nastaví approved na true)
   const handleApproveUser = async (userToApprove) => {
     if (!userToApprove || !db) {
       setError("Používateľ na schválenie nie je definovaný.");
@@ -744,7 +734,7 @@ function App() {
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      fetchAllUsers(); // Obnovenie zoznamu používateľov
+      fetchAllUsers();
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
@@ -767,758 +757,691 @@ function App() {
     };
   }, [handleLogout]);
 
-  // Funkcia pre zmenu zobrazenia profilu a aktualizáciu URL hash
   const changeProfileView = (view) => {
     setProfileView(view);
-    window.location.hash = view; // Aktualizácia URL hash
-    if ((view === 'users' || view === 'all-teams') && isAdmin) { // Zmena: Volanie fetchAllUsers aj pre 'all-teams'
+    window.location.hash = view;
+    if ((view === 'users' || view === 'all-teams') && isAdmin) {
       fetchAllUsers();
     }
-    // NOVÁ ZMENA: Vyčistiť pole pre telefónne číslo, aby sa nepredvyplňovalo
-    setNewContactPhoneNumber(''); // Vyčistiť pole pri každej zmene zobrazenia
+    setNewContactPhoneNumber('');
     
-    // Vyčistíme polia pre zmenu mena/priezviska, aby sa nepredvyplňovali
     if (view === 'change-name') {
         setNewFirstName('');
         setNewLastName('');
     }
-    // Odstránené: Vyčistenie poľa pre zmenu e-mailu
     setCurrentPassword('');
     setNewPassword('');
-    setConfirmNewPassword('');
+    setNewConfirmPassword('');
   };
 
 
   if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded)) {
     return (
-      React.createElement("div", { className: "flex items-center justify-center min-h-screen bg-gray-100" },
-        React.createElement("div", { className: "text-xl font-semibold text-gray-700" }, "Načítava sa...")
-      )
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-xl font-semibold text-gray-700">Načítava sa...</div>
+      </div>
     );
   }
 
   const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
-    const h1Element = React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball");
-
-    let conditionalContent;
-    if (user) {
-      conditionalContent = React.createElement(React.Fragment, null,
-        React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
-        React.createElement("div", { className: "mt-6 flex justify-center" },
-          React.createElement("a", {
-            href: "logged-in.html",
-            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Moja zóna")
-        )
-      );
-    } else {
-      conditionalContent = React.createElement(React.Fragment, null,
-        React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
-        React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-          React.createElement("a", {
-            href: "login.html",
-            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Prihlásenie"),
-          React.createElement("a", {
-            href: "register.html",
-            className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Registrácia na turnaj")
-        )
-      );
-    }
-
     return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
-          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-            h1Element,
-            conditionalContent
-          )
-        )
-      )
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+        <div className="w-full max-w-md mt-20 mb-10 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">Vitajte na stránke Slovak Open Handball</h1>
+            {user ? (
+              <>
+                <p className="text-lg text-gray-600">Ste prihlásený. Prejdite do svojej zóny pre viac možností.</p>
+                <div className="mt-6 flex justify-center">
+                  <a
+                    href="logged-in.html"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  >
+                    Moja zóna
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali.</p>
+                <div className="mt-6 flex justify-center space-x-4">
+                  <a
+                    href="login.html"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  >
+                    Prihlásenie
+                  </a>
+                  <a
+                    href="register.html"
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  >
+                    Registrácia na turnaj
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
-    // Ak je používateľ prihlásený, presmerovať na logged-in.html
     if (user) {
       window.location.href = 'logged-in.html';
-      return null; // Návrat null, aby sa nič nezobrazilo pred presmerovaním
+      return null;
     }
 
     const is_admin_register_page = currentPath === 'admin-register.html';
     return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
-          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" },
-            message && (
-              React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
-                message
-              )
-            ),
-            error && (
-              React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
-                error
-              )
-            ),
-            React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
-              is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
-            ),
-            React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
-              React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" },
-                  is_admin_register_page ? "Meno" : "Meno kontaktnej osoby" // Podmienený nadpis
-                ),
-                React.createElement("input", {
-                  type: "text",
-                  id: "reg-first-name",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: firstName,
-                  onChange: (e) => setFirstName(e.target.value),
-                  required: true,
-                  placeholder: "Zadajte svoje meno",
-                  autoComplete: "given-name"
-                })
-              ),
-              React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-last-name" },
-                  is_admin_register_page ? "Priezvisko" : "Priezvisko kontaktnej osoby" // Podmienený nadpis
-                ),
-                React.createElement("input", {
-                  type: "text",
-                  id: "reg-last-name",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: lastName,
-                  onChange: (e) => setLastName(e.target.value),
-                  required: true,
-                  placeholder: "Zadajte svoje priezvisko",
-                  autoComplete: "family-name"
-                })
-              ),
-              // NOVÉ: Pole pre telefónne číslo kontaktnej osoby (len pre bežnú registráciu)
-              !is_admin_register_page && (
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-phone-number" }, "Telefónne číslo kontaktnej osoby"),
-                  React.createElement("input", {
-                    type: "tel", // Používame type="tel" pre mobilné zariadenia
-                    id: "reg-phone-number",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: contactPhoneNumber,
-                    // ZMENA: Upravený onChange handler pre striktné overenie vstupu
-                    onChange: (e) => {
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
+        <div className="w-full max-w-md mt-20 mb-10 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full">
+            {message && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
+                {error}
+              </div>
+            )}
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
+              {is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"}
+            </h1>
+            <form onSubmit={(e) => handleRegister(e, is_admin_register_page)} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
+                  {is_admin_register_page ? "Meno" : "Meno kontaktnej osoby"}
+                </label>
+                <input
+                  type="text"
+                  id="reg-first-name"
+                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  placeholder="Zadajte svoje meno"
+                  autoComplete="given-name"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
+                  {is_admin_register_page ? "Priezvisko" : "Priezvisko kontaktnej osoby"}
+                </label>
+                <input
+                  type="text"
+                  id="reg-last-name"
+                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  placeholder="Zadajte svoje priezvisko"
+                  autoComplete="family-name"
+                />
+              </div>
+              {!is_admin_register_page && (
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                  <input
+                    type="tel"
+                    id="reg-phone-number"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={contactPhoneNumber}
+                    onChange={(e) => {
                       const value = e.target.value;
-                      // Regex pre povolenie prázdneho reťazca, alebo reťazca začínajúceho na '+' nasledovaného nulou alebo viacerými číslicami
                       const strictPhoneRegex = /^\+\d*$/;
                       if (value === '' || strictPhoneRegex.test(value)) {
                         setContactPhoneNumber(value);
                       }
-                    },
-                    required: true,
-                    placeholder: "+421901234567", // Aktualizovaný placeholder
-                    pattern: "^\\+\\d+$", // Aktualizovaný regex pre '+' a iba číslice
-                    title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)" // Aktualizovaný title
-                  })
-                )
-              ),
-              // Text "E-mailová adresa bude slúžiť..." presunutý sem
-              !is_admin_register_page && (
-                React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
-                )
-              ),
-              React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, 
-                  is_admin_register_page ? "E-mailová adresa" : "E-mailová adresa kontaktnej osoby" // Podmienený nadpis pre e-mail
-                ),
-                React.createElement("input", {
-                  type: "email",
-                  id: "reg-email",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: email,
-                  onChange: (e) => setEmail(e.target.value),
-                  required: true,
-                  placeholder: "Zadajte svoju e-mailovú adresu",
-                  autoComplete: "email"
-                })
-              ),
-              // Text "E-mailová adresa a heslo sú potrebné..." presunutý sem
-              !is_admin_register_page && (
-                React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                  "E-mailová adresa a heslo sú potrebné na editáciu údajov poskytnutých v tomto registračnom formulári a na správu turnajového účtu."
-                )
-              ),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-password" }, "Heslo"),
-                React.createElement("input", {
-                  type: showConfirmPassword ? "text" : "password",
-                  id: "reg-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: password,
-                  onChange: (e) => setPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Zvoľte heslo (min. 10 znakov)",
-                  autoComplete: "new-password"
-                }),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowConfirmPassword(!showConfirmPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showConfirmPassword ? EyeOffIcon : EyeIcon
-                )
-              ),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-confirm-password" }, "Potvrďte heslo"),
-                React.createElement("input", {
-                  type: showConfirmPassword ? "text" : "password",
-                  id: "reg-confirm-password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: confirmPassword,
-                  onChange: (e) => setConfirmPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Potvrďte heslo",
-                  autoComplete: "new-password"
-                }),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowConfirmPassword(!showConfirmPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showConfirmPassword ? EyeOffIcon : EyeIcon
-                )
-              ),
-              React.createElement("button", {
-                type: "submit",
-                className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                disabled: loading
-              }, loading ? 'Registrujem...' : 'Registrovať sa')
-            )
-          )
-        )
-      )
+                    }}
+                    required
+                    placeholder="+421901234567"
+                    pattern="^\+\d+$"
+                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                  />
+                </div>
+              )}
+              {!is_admin_register_page && (
+                <p className="text-gray-600 text-sm mt-4">
+                  E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                </p>
+              )}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
+                  {is_admin_register_page ? "E-mailová adresa" : "E-mailová adresa kontaktnej osoby"}
+                </label>
+                <input
+                  type="email"
+                  id="reg-email"
+                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Zadajte svoju e-mailovú adresu"
+                  autoComplete="email"
+                />
+              </div>
+              {!is_admin_register_page && (
+                <p className="text-gray-600 text-sm mt-4">
+                  E-mailová adresa a heslo sú potrebné na editáciu údajov poskytnutých v tomto registračnom formulári a na správu turnajového účtu.
+                </p>
+              )}
+              <PasswordInput
+                id="reg-password"
+                label="Heslo"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                placeholder="Zvoľte heslo (min. 10 znakov)"
+                autoComplete="new-password"
+                showPassword={showPasswordReg}
+                toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+              />
+              <PasswordInput
+                id="reg-confirm-password"
+                label="Potvrďte heslo"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                placeholder="Potvrďte heslo"
+                autoComplete="new-password"
+                showPassword={showConfirmPasswordReg}
+                toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+              />
+              <button
+                type="submit"
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                disabled={loading}
+              >
+                {loading ? 'Registrujem...' : 'Registrovať sa'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (currentPath === 'login.html') {
     return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
-          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" },
-            message && (
-              React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
-                message
-              )
-            ),
-            error && (
-              React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
-                error
-              )
-            ),
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
+        <div className="w-full max-w-md mt-20 mb-10 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full">
+            {message && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
+                {error}
+              </div>
+            )}
 
-            React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, "Prihlásenie"),
-            React.createElement("form", { onSubmit: handleLogin, className: "space-y-4" },
-              React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "email" }, "E-mailová adresa"),
-                React.createElement("input", {
-                  type: "email",
-                  id: "email",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: email,
-                  onChange: (e) => setEmail(e.target.value),
-                  required: true,
-                  placeholder: "Zadajte svoju e-mailovú adresu",
-                  autoComplete: "email"
-                })
-              ),
-              React.createElement("div", { className: "relative" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "password" }, "Heslo"),
-                React.createElement("input", {
-                  type: showPassword ? "text" : "password",
-                  id: "password",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                  value: password,
-                  onChange: (e) => setPassword(e.target.value),
-                  onCopy: (e) => e.preventDefault(),
-                  onPaste: (e) => e.preventDefault(),
-                  onCut: (e) => e.preventDefault(),
-                  required: true,
-                  placeholder: "Zadajte heslo",
-                  autoComplete: "current-password"
-                }),
-                React.createElement("button", {
-                  type: "button",
-                  onClick: () => setShowPassword(!showPassword),
-                  className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                },
-                  showPassword ? EyeOffIcon : EyeIcon
-                )
-              ),
-              React.createElement("button", {
-                type: "submit",
-                className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200",
-                disabled: loading
-              }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
-            )
-          )
-        )
-      )
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Prihlásenie</h1>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">E-mailová adresa</label>
+                <input
+                  type="email"
+                  id="email"
+                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Zadajte svoju e-mailovú adresu"
+                  autoComplete="email"
+                />
+              </div>
+              <PasswordInput
+                id="password"
+                label="Heslo"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onPaste={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
+                placeholder="Zadajte heslo"
+                autoComplete="current-password"
+                showPassword={showPasswordLogin}
+                toggleShowPassword={() => setShowPasswordLogin(!showPasswordLogin)}
+              />
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                disabled={loading}
+              >
+                {loading ? 'Prihlasujem...' : 'Prihlásiť sa'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (currentPath === 'logged-in.html') {
     if (!user) {
-      // Automatické presmerovanie na login.html, ak používateľ nie je prihlásený
       window.location.href = 'login.html';
-      return null; // Návrat null, aby sa nič nezobrazilo pred presmerovaním
+      return null;
     }
 
     return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto" },
-        // Horný priestor, ak je potrebný pre hlavičku alebo vizuálne odsadenie
-        React.createElement("div", { className: "h-20" }), 
+      <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
+        <div className="h-20"></div> 
 
-        // Hlavná oblasť obsahu: flex kontajner pre menu a pravý panel
-        React.createElement("div", { className: "flex flex-grow w-full pb-10" }, // Pridaný pb-10 pre spodnú medzeru
-          // Ľavé menu (fixné)
-          React.createElement("div", { className: "fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-[271px] bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4" }, // ZMENA: w-[271px]
-            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
-            React.createElement("nav", null,
-              React.createElement("ul", { className: "space-y-2" },
-                React.createElement("li", null,
-                  React.createElement("button", {
-                    onClick: () => changeProfileView('my-data'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+        <div className="flex flex-grow w-full pb-10">
+          <div className="fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-[271px] bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Menu</h2>
+            <nav>
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    onClick={() => changeProfileView('my-data')}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'my-data' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`
-                  }, "Moje údaje")
-                ),
-                // Odstránené: Zmeniť e-mail
-                React.createElement("li", null,
-                  React.createElement("button", {
-                    onClick: () => changeProfileView('change-password'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                    }`}
+                  >
+                    Moje údaje
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => changeProfileView('change-password')}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`
-                  }, "Zmeniť heslo")
-                ),
-                React.createElement("li", null,
-                  React.createElement("button", {
-                    onClick: () => {
+                    }`}
+                  >
+                    Zmeniť heslo
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
                       changeProfileView('change-name');
-                    },
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                    }}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`
-                  }, "Zmeniť meno a priezvisko") 
-                ),
-                !isAdmin && (
-                  React.createElement("li", null,
-                    React.createElement("button", {
-                      onClick: () => changeProfileView('change-phone-number'),
-                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                    }`}
+                  >
+                    Zmeniť meno a priezvisko
+                  </button> 
+                </li>
+                {!isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => changeProfileView('change-phone-number')}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'change-phone-number' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`
-                    }, "Zmeniť telefónne číslo")
-                  )
-                ),
-                isAdmin && (
-                  React.createElement("li", null,
-                    React.createElement("button", {
-                      onClick: () => {
+                      }`}
+                    >
+                      Zmeniť telefónne číslo
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
                         changeProfileView('users');
-                      },
-                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'users' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`
-                    }, "Používatelia")
-                  )
-                ),
-                isAdmin && (
-                  React.createElement("li", null,
-                    React.createElement("button", {
-                      onClick: () => {
+                      }`}
+                    >
+                      Používatelia
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
                         changeProfileView('all-teams');
-                      },
-                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'all-teams' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`
-                    }, "Všetky tímy (registrácie)")
-                  )
-                )
-              )
-            )
-          ),
+                      }`}
+                    >
+                      Všetky tímy (registrácie)
+                    </button>
+                  </li>
+                )}
+              </ul>
+            </nav>
+          </div>
 
-          // Pravý obsah (posuvný)
-          React.createElement("div", { className: "flex-grow ml-[287px] p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4" }, // ZMENA: ml-[287px]
-            message && (
-              React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
-                message
-              )
-            ),
-            error && (
-              React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
-                error
-              )
-            ),
+          <div className="flex-grow ml-[287px] p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4">
+            {message && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
+                {error}
+              </div>
+            )}
 
-            React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Vitajte, {user.displayName || 'Používateľ'}!</h1>
             
-            profileView === 'my-data' && (
-              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
-                React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
-                ),
-                React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
-                ),
-                !isAdmin && ( 
-                  React.createElement("p", { className: "text-gray-700" },
-                    React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || 'N/A'
-                  )
-                )
-              )
-            ),
+            {profileView === 'my-data' && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Moje údaje</h2>
+                <p className="text-gray-700">
+                  <span className="font-semibold">E-mailová adresa: </span>{user.email || 'N/A'}
+                </p>
+                <p className="text-gray-700">
+                  <span className="font-semibold">Meno a priezvisko: </span>{user.displayName || 'N/A'}
+                </p>
+                {!isAdmin && ( 
+                  <p className="text-gray-700">
+                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || 'N/A'}
+                  </p>
+                )}
+              </div>
+            )}
 
-            // Odstránené: profileView === 'change-email' sekcia
+            {profileView === 'change-password' && (
+              <form onSubmit={handleChangePassword} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Zmeniť heslo</h2>
+                <PasswordInput
+                  id="modal-current-password-password-change"
+                  label="Aktuálne heslo (pre overenie)"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Zadajte svoje aktuálne heslo"
+                  autoComplete="current-password"
+                  showPassword={showCurrentPasswordChange}
+                  toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                />
+                <PasswordInput
+                  id="modal-new-password"
+                  label="Nové heslo"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Zadajte nové heslo (min. 10 znakov)"
+                  autoComplete="new-password"
+                  showPassword={showNewPasswordChange}
+                  toggleShowPassword={() => setShowNewPasswordChange(!showNewPasswordChange)}
+                />
+                <PasswordInput
+                  id="modal-confirm-new-password"
+                  label="Potvrďte nové heslo"
+                  value={confirmNewPassword}
+                  onChange={(e) => setNewConfirmPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Potvrďte heslo"
+                  autoComplete="new-password"
+                  showPassword={showConfirmNewPasswordChange}
+                  toggleShowPassword={() => setShowConfirmNewPasswordChange(!showConfirmNewPasswordChange)}
+                />
+                <button
+                  type="submit"
+                  className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Ukladám...' : 'Zmeniť heslo'}
+                </button>
+              </form>
+            )}
 
-            profileView === 'change-password' && (
-              React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť heslo"),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-current-password-password-change" }, "Aktuálne heslo (pre overenie)"),
-                  React.createElement("input", {
-                    type: showCurrentPassword ? "text" : "password",
-                    id: "modal-current-password-password-change",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: currentPassword,
-                    onChange: (e) => setCurrentPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte svoje aktuálne heslo",
-                    autoComplete: "current-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showCurrentPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-new-password" }, "Nové heslo"),
-                  React.createElement("input", {
-                    type: showNewPassword ? "text" : "password",
-                    id: "modal-new-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: newPassword,
-                    onChange: (e) => setNewPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte nové heslo (min. 10 znakov)",
-                    autoComplete: "new-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowNewPassword(!showNewPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showNewPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "modal-confirm-new-password" }, "Potvrďte nové heslo"),
-                  React.createElement("input", {
-                    type: showConfirmNewPassword ? "text" : "password",
-                    id: "modal-confirm-new-password",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: confirmNewPassword,
-                    onChange: (e) => setConfirmNewPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Potvrďte heslo",
-                    autoComplete: "new-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowConfirmNewPassword(!showConfirmNewPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showConfirmNewPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("button", {
-                  type: "submit",
-                  className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
-                  disabled: loading
-                }, loading ? 'Ukladám...' : 'Zmeniť heslo')
-              )
-            ),
+            {profileView === 'change-name' && (
+              <form onSubmit={handleChangeName} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Zmeniť meno a priezvisko</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-first-name">Nové meno</label>
+                  <input
+                    type="text"
+                    id="new-first-name"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={newFirstName}
+                    onChange={(e) => setNewFirstName(e.target.value)}
+                    required
+                    placeholder="Zadajte nové meno"
+                    autoComplete="given-name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-last-name">Nové priezvisko</label>
+                  <input
+                    type="text"
+                    id="new-last-name"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={newLastName}
+                    onChange={(e) => setNewLastName(e.target.value)}
+                    required
+                    placeholder="Zadajte nové priezvisko"
+                    autoComplete="family-name"
+                  />
+                </div>
+                <PasswordInput
+                  id="current-password-name-change"
+                  label="Aktuálne heslo (pre overenie)"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Zadajte svoje aktuálne heslo"
+                  autoComplete="current-password"
+                  showPassword={showCurrentPasswordChange}
+                  toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                />
+                <button
+                  type="submit"
+                  className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Ukladám...' : 'Zmeniť meno a priezvisko'}
+                </button>
+              </form>
+            )}
 
-            profileView === 'change-name' && (
-              React.createElement("form", { onSubmit: handleChangeName, className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť meno a priezvisko"),
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-first-name" }, "Nové meno"),
-                  React.createElement("input", {
-                    type: "text",
-                    id: "new-first-name",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: newFirstName,
-                    onChange: (e) => setNewFirstName(e.target.value),
-                    required: true,
-                    placeholder: "Zadajte nové meno",
-                    autoComplete: "given-name"
-                  })
-                ),
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-last-name" }, "Nové priezvisko"),
-                  React.createElement("input", {
-                    type: "text",
-                    id: "new-last-name",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: newLastName,
-                    onChange: (e) => setNewLastName(e.target.value),
-                    required: true,
-                    placeholder: "Zadajte nové priezvisko",
-                    autoComplete: "family-name"
-                  })
-                ),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-name-change" }, "Aktuálne heslo (pre overenie)"),
-                  React.createElement("input", {
-                    type: showCurrentPassword ? "text" : "password",
-                    id: "current-password-name-change",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: currentPassword,
-                    onChange: (e) => setCurrentPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte svoje aktuálne heslo",
-                    autoComplete: "current-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showCurrentPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("button", {
-                  type: "submit",
-                  className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
-                  disabled: loading
-                }, loading ? 'Ukladám...' : 'Zmeniť meno a priezvisko')
-              )
-            ),
-
-            // NOVÁ SEKCIA: Zmena telefónneho čísla
-            profileView === 'change-phone-number' && (
-              React.createElement("form", { onSubmit: handleChangeContactPhoneNumber, className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť telefónne číslo"),
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-contact-phone-number" }, "Nové telefónne číslo"),
-                  React.createElement("input", {
-                    type: "tel",
-                    id: "new-contact-phone-number",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: newContactPhoneNumber,
-                    // ZMENA: Upravený onChange handler pre striktné overenie vstupu
-                    onChange: (e) => {
+            {profileView === 'change-phone-number' && (
+              <form onSubmit={handleChangeContactPhoneNumber} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Zmeniť telefónne číslo</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-contact-phone-number">Nové telefónne číslo</label>
+                  <input
+                    type="tel"
+                    id="new-contact-phone-number"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={newContactPhoneNumber}
+                    onChange={(e) => {
                       const value = e.target.value;
-                      // Regex pre povolenie prázdneho reťazca, alebo reťazca začínajúceho na '+' nasledovaného nulou alebo viacerými číslicami
                       const strictPhoneRegex = /^\+\d*$/;
                       if (value === '' || strictPhoneRegex.test(value)) {
                         setNewContactPhoneNumber(value);
                       }
-                    },
-                    required: true,
-                    placeholder: "+421901234567",
-                    pattern: "^\\+\\d+$",
-                    title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                  })
-                ),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-phone-change" }, "Aktuálne heslo (pre overenie)"),
-                  React.createElement("input", {
-                    type: showCurrentPassword ? "text" : "password",
-                    id: "current-password-phone-change",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: currentPassword,
-                    onChange: (e) => setCurrentPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte svoje aktuálne heslo",
-                    autoComplete: "current-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showCurrentPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("button", {
-                  type: "submit",
-                  className: "bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
-                  disabled: loading
-                }, loading ? 'Ukladám...' : 'Zmeniť telefónne číslo')
-              )
-            ),
+                    }}
+                    required
+                    placeholder="+421901234567"
+                    pattern="^\+\d+$"
+                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                  />
+                </div>
+                <PasswordInput
+                  id="current-password-phone-change"
+                  label="Aktuálne heslo (pre overenie)"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Zadajte svoje aktuálne heslo"
+                  autoComplete="current-password"
+                  showPassword={showCurrentPasswordChange}
+                  toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                />
+                <button
+                  type="submit"
+                  className="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Ukladám...' : 'Zmeniť telefónne číslo'}
+                </button>
+              </form>
+            )}
 
-            profileView === 'users' && (
-              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
-                allUsersData.length > 0 ? (
-                  React.createElement("ul", { className: "divide-y divide-gray-200" },
-                    allUsersData.map((u) =>
-                      React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
-                        React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
-                          React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), 
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) 
-                        ),
-                        user && user.uid !== u.uid && ( 
-                          React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
-                            u.role === 'admin' && u.approved === false && (
-                              React.createElement("button", {
-                                onClick: () => handleApproveUser(u),
-                                className: "bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                              }, "Povoliť používateľa")
-                            ),
-                            React.createElement("button", {
-                              onClick: () => openRoleEditModal(u),
-                              className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Upraviť rolu"),
-                            React.createElement("button", { // Zmenené späť na button
-                              onClick: () => openDeleteConfirmationModal(u), // Volá modálne okno
-                              className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Odstrániť používateľa") 
-                          )
-                        )
-                      )
-                    )
-                  )
+            {profileView === 'users' && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Zoznam používateľov (Administrácia)</h2>
+                {allUsersData.length > 0 ? (
+                  <ul className="divide-y divide-gray-200">
+                    {allUsersData.map((u) => (
+                      <li key={u.uid} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex-grow mb-2 sm:mb-0">
+                          <p className="text-gray-600 text-sm">{u.email}</p>
+                          <p className="text-gray-500 text-xs">Rola: {u.role || 'user'}</p> 
+                          <p className="text-gray-500 text-xs">Schválený: {u.approved ? 'Áno' : 'Nie'}</p> 
+                        </div>
+                        {user && user.uid !== u.uid && ( 
+                          <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                            {u.role === 'admin' && u.approved === false && (
+                              <button
+                                onClick={() => handleApproveUser(u)}
+                                className="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                              >
+                                Povoliť používateľa
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openRoleEditModal(u)}
+                              className="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                            >
+                              Upraviť rolu
+                            </button>
+                            <button
+                              onClick={() => openDeleteConfirmationModal(u)}
+                              className="bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                            >
+                              Odstrániť používateľa
+                            </button> 
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
-                  React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
-                )
-              )
-            ),
+                  <p className="text-gray-600">Žiadni používatelia na zobrazenie alebo načítavanie...</p>
+                )}
+              </div>
+            )}
 
-            // NOVÁ SEKCIA: Všetky tímy (registrácie)
-            profileView === 'all-teams' && (
-              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Všetky tímy (údaje z registračného formulára)"),
-                allUsersData.length > 0 ? (
-                  React.createElement("div", { className: "overflow-x-auto" },
-                    React.createElement("table", { className: "min-w-full bg-white border border-gray-200 rounded-lg shadow-sm" },
-                      React.createElement("thead", null,
-                        React.createElement("tr", { className: "bg-gray-100 border-b border-gray-200" },
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "E-mail"),
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Meno kontaktnej osoby"),
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Priezvisko kontaktnej osoby"),
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Telefónne číslo"),
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Rola"),
-                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Schválený")
-                        )
-                      ),
-                      React.createElement("tbody", { className: "divide-y divide-gray-200" },
-                        allUsersData.map((u) => (
-                          React.createElement("tr", { key: u.uid, className: "hover:bg-gray-50" },
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.email),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.firstName || 'N/A'),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.lastName || 'N/A'),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.contactPhoneNumber || 'N/A'),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.role || 'user'),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.approved ? 'Áno' : 'Nie')
-                          )
-                        ))
-                      )
-                    )
-                  )
+            {profileView === 'all-teams' && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Všetky tímy (údaje z registračného formulára)</h2>
+                {allUsersData.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+                      <thead>
+                        <tr className="bg-gray-100 border-b border-gray-200">
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">E-mail</th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Meno kontaktnej osoby</th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Priezvisko kontaktnej osoby</th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Telefónne číslo</th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Rola</th>
+                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Schválený</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allUsersData.map((u) => (
+                          <tr key={u.uid} className="hover:bg-gray-50">
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.email}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || 'N/A'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || 'N/A'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || 'N/A'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
+                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  React.createElement("p", { className: "text-gray-600" }, "Žiadne registračné údaje na zobrazenie alebo načítavanie...")
-                )
-              )
-            )
-          )
-        ),
+                  <p className="text-gray-600">Žiadne registračné údaje na zobrazenie alebo načítavanie...</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
-        // Modálne okno pre potvrdenie odstránenia
-        showDeleteConfirmationModal && (
-          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
-            React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
-              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť odstránenie"), 
-              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete natrvalo odstrániť používateľa ${userToDelete?.email} z databázy? Táto akcia je nezvratná.`), 
-              React.createElement("div", { className: "flex justify-end space-x-4" },
-                React.createElement("button", {
-                  onClick: closeDeleteConfirmationModal,
-                  className: "px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
-                }, "Zrušiť"),
-                React.createElement("button", {
-                  onClick: handleDeleteUser,
-                  className: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200",
-                  disabled: loading
-                }, loading ? 'Odstraňujem...' : 'Odstrániť') 
-              )
-            )
-          )
-        ),
+        {showDeleteConfirmationModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+            <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Potvrdiť odstránenie</h3> 
+              <p className="text-gray-700 mb-6">Naozaj chcete natrvalo odstrániť používateľa {userToDelete?.email} z databázy? Táto akcia je nezvratná.</p> 
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={closeDeleteConfirmationModal}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                >
+                  Zrušiť
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                  disabled={loading}
+                >
+                  {loading ? 'Odstraňujem...' : 'Odstrániť'}
+                </button> 
+              </div>
+            </div>
+          </div>
+        )}
 
-        // Modálne okno pre úpravu roly
-        showRoleEditModal && (
-          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
-            React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
-              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, `Upraviť rolu pre ${userToEditRole?.email}`),
-              React.createElement("div", { className: "mb-4" },
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-user-role" }, "Nová rola"),
-                React.createElement("select", {
-                  id: "new-user-role",
-                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                  value: newRole,
-                  onChange: (e) => setNewRole(e.target.value)
-                },
-                  React.createElement("option", { value: "user" }, "Používateľ"),
-                  React.createElement("option", { value: "admin" }, "Administrátor")
-                )
-              ),
-              React.createElement("div", { className: "flex justify-end space-x-4" },
-                React.createElement("button", {
-                  onClick: closeRoleEditModal,
-                  className: "px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
-                }, "Zrušiť"),
-                React.createElement("button", {
-                  onClick: handleUpdateUserRole,
-                  className: "px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200",
-                  disabled: loading
-                }, loading ? 'Ukladám...' : 'Uložiť')
-              )
-            )
-          )
-        )
-      )
+        {showRoleEditModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+            <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Upraviť rolu pre {userToEditRole?.email}</h3>
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-user-role">Nová rola</label>
+                <select
+                  id="new-user-role"
+                  className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                >
+                  <option value="user">Používateľ</option>
+                  <option value="admin">Administrátor</option>
+                </select>
+              </div>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={closeRoleEditModal}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                >
+                  Zrušiť
+                </button>
+                <button
+                  onClick={handleUpdateUserRole}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                  disabled={loading}
+                >
+                  {loading ? 'Ukladám...' : 'Uložiť'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 
