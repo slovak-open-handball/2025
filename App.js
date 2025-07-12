@@ -66,8 +66,8 @@ function App() {
   const [newRole, setNewRole] = React.useState('');
 
   // NOVÉ: Stavy pre nastavenia dátumov (globálne, pre logiku registrácie)
-  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [editEndDate, setEditEndDate] = React.useState('');
+  const [registrationEndDate, setRegistrationEndDate] = React.useState(null); // Zmena: null namiesto ''
+  const [editEndDate, setEditEndDate] = React.useState(null); // Zmena: null namiesto ''
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
   // NOVÉ: Lokálne stavy pre input polia v sekcii nastavení
@@ -178,8 +178,8 @@ function App() {
             logoutButton && logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
             // Zmena: Skryť/zobraziť odkaz "Registrácia na turnaj" na základe stavu registrácie
             const now = new Date();
-            const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-            const isRegistrationOpen = regEnd && now <= regEnd;
+            // ZMENA: Používame priamo registrationEndDate (ktorý je už Date objekt alebo null)
+            const isRegistrationOpen = registrationEndDate && now <= registrationEndDate;
 
             if (registerLink) {
                 if (isRegistrationOpen) {
@@ -239,18 +239,22 @@ function App() {
         if (doc.exists) {
           const data = doc.data();
           // Konvertovať Firestore Timestamp na ISO string pre input type="datetime-local"
-          const regDate = data.registrationEndDate ? new Date(data.registrationEndDate.toDate()).toISOString().slice(0, 16) : '';
-          const edDate = data.editEndDate ? new Date(data.editEndDate.toDate()).toISOString().slice(0, 16) : '';
+          // ZMENA: Ukladáme Date objekty priamo do stavov registrationEndDate a editEndDate
+          const regDateObj = data.registrationEndDate ? data.registrationEndDate.toDate() : null;
+          const edDateObj = data.editEndDate ? data.editEndDate.toDate() : null;
           
-          setRegistrationEndDate(regDate);
-          setEditEndDate(edDate);
-          // Inicializovať lokálne stavy s načítanými hodnotami
-          setTempRegistrationEndDate(regDate);
-          setTempEditEndDate(edDate);
+          setRegistrationEndDate(regDateObj); // Uložiť ako Date objekt alebo null
+          setEditEndDate(edDateObj); // Uložiť ako Date objekt alebo null
+
+          // Pre lokálne stavy inputov konvertujeme Date objekt na ISO string
+          setTempRegistrationEndDate(regDateObj ? regDateObj.toISOString().slice(0, 16) : '');
+          setTempEditEndDate(edDateObj ? edDateObj.toISOString().slice(0, 16) : '');
 
         } else {
           console.log("Nastavenia turnaja neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
           // Ak dokument neexistuje, inicializovať lokálne stavy na prázdne
+          setRegistrationEndDate(null);
+          setEditEndDate(null);
           setTempRegistrationEndDate('');
           setTempEditEndDate('');
         }
@@ -323,10 +327,9 @@ function App() {
     }
 
     // NOVÁ KONTROLA: Registrácia povolená do
-    if (!isAdminRegistration && settingsLoaded && registrationEndDate) {
+    if (!isAdminRegistration && settingsLoaded && registrationEndDate) { // ZMENA: registrationEndDate je už Date objekt
       const now = new Date();
-      const regEnd = new Date(registrationEndDate);
-      if (now > regEnd) {
+      if (now > registrationEndDate) { // Priame porovnanie Date objektov
         setError("Registrácia je už uzavretá.");
         return;
       }
@@ -536,10 +539,9 @@ function App() {
     }
 
     // NOVÁ KONTROLA: Editácia údajov povolená do (len pre bežných používateľov)
-    if (!isAdmin && settingsLoaded && editEndDate) {
+    if (!isAdmin && settingsLoaded && editEndDate) { // ZMENA: editEndDate je už Date objekt
       const now = new Date();
-      const editEnd = new Date(editEndDate);
-      if (now > editEnd) {
+      if (now > editEndDate) { // Priame porovnanie Date objektov
         setError("Editácia údajov je už uzavretá.");
         return;
       }
@@ -618,10 +620,9 @@ function App() {
     }
 
     // NOVÁ KONTROLA: Editácia údajov povolená do (len pre bežných používateľov)
-    if (!isAdmin && settingsLoaded && editEndDate) {
+    if (!isAdmin && settingsLoaded && editEndDate) { // ZMENA: editEndDate je už Date objekt
       const now = new Date();
-      const editEnd = new Date(editEndDate);
-      if (now > editEnd) {
+      if (now > editEndDate) { // Priame porovnanie Date objektov
         setError("Editácia údajov je už uzavretá.");
         return;
       }
@@ -680,10 +681,9 @@ function App() {
     }
 
     // NOVÁ KONTROLA: Editácia údajov povolená do (len pre bežných používateľov)
-    if (!isAdmin && settingsLoaded && editEndDate) {
+    if (!isAdmin && settingsLoaded && editEndDate) { // ZMENA: editEndDate je už Date objekt
       const now = new Date();
-      const editEnd = new Date(editEndDate);
-      if (now > editEnd) {
+      if (now > editEndDate) { // Priame porovnanie Date objektov
         setError("Editácia údajov je už uzavretá.");
         return;
       }
@@ -866,16 +866,21 @@ function App() {
     setMessage('');
     try {
       const settingsDocRef = db.collection('appSettings').doc('tournamentSettings');
+      
+      // ZMENA: Konvertujeme tempRegistrationEndDate a tempEditEndDate na Date objekty
+      // a tie potom na Firestore Timestamp
+      const regDateToSave = tempRegistrationEndDate ? new Date(tempRegistrationEndDate) : null;
+      const edDateToSave = tempEditEndDate ? new Date(tempEditEndDate) : null;
+
       await settingsDocRef.set({
-        // Používame hodnoty z lokálnych stavov pre uloženie
-        registrationEndDate: tempRegistrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(tempRegistrationEndDate)) : null,
-        editEndDate: tempEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(tempEditEndDate)) : null,
+        registrationEndDate: regDateToSave ? firebase.firestore.Timestamp.fromDate(regDateToSave) : null,
+        editEndDate: edDateToSave ? firebase.firestore.Timestamp.fromDate(edDateToSave) : null,
         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }); // Použiť merge, aby sa prepísali len zadané polia
 
-      // Po úspešnom uložení aktualizujeme globálne stavy
-      setRegistrationEndDate(tempRegistrationEndDate);
-      setEditEndDate(tempEditEndDate);
+      // Po úspešnom uložení aktualizujeme globálne stavy s Date objektmi
+      setRegistrationEndDate(regDateToSave);
+      setEditEndDate(edDateToSave);
 
       setMessage("Nastavenia turnaja úspešne uložené!");
     } catch (e) {
@@ -934,8 +939,8 @@ function App() {
 
   // Získame stav, či je registrácia otvorená
   const now = new Date();
-  const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-  const isRegistrationOpen = regEnd && now <= regEnd;
+  // ZMENA: Používame priamo registrationEndDate (ktorý je už Date objekt alebo null)
+  const isRegistrationOpen = registrationEndDate && now <= registrationEndDate;
 
   if (currentPath === '' || currentPath === 'index.html') {
     const h1Element = React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball");
@@ -990,6 +995,7 @@ function App() {
     }
 
     const is_admin_register_page = currentPath === 'admin-register.html';
+    // ZMENA: Používame priamo isRegistrationOpen, ktorá je už vypočítaná
     // const now = new Date(); // Už definované globálne
     // const regEnd = registrationEndDate ? new Date(registrationEndDate) : null; // Už definované globálne
     // const isRegistrationOpen = is_admin_register_page || (regEnd && now <= regEnd); // Už definované globálne
@@ -1011,7 +1017,7 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
               is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
             ),
-            isRegistrationOpen ? (
+            isRegistrationOpen || is_admin_register_page ? ( // ZMENA: Pridaná podmienka pre admin registráciu
               React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
                 React.createElement("div", null,
                   React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" },
@@ -1150,7 +1156,8 @@ function App() {
             ) : (
               React.createElement("div", { className: "text-center text-gray-700 text-lg" },
                 React.createElement("p", null, "Registrácia na turnaj je momentálne uzavretá."),
-                regEnd && React.createElement("p", null, `Registrácia bola povolená do: ${new Date(registrationEndDate).toLocaleString('sk-SK')}`)
+                // ZMENA: registrationEndDate je už Date objekt
+                registrationEndDate && React.createElement("p", null, `Registrácia bola povolená do: ${registrationEndDate.toLocaleString('sk-SK')}`)
               )
             )
           )
@@ -1233,8 +1240,8 @@ function App() {
     }
 
     const now = new Date();
-    const editEnd = editEndDate ? new Date(editEndDate) : null;
-    const isEditingOpen = isAdmin || (editEnd && now <= editEnd);
+    // ZMENA: Používame priamo editEndDate (ktorý je už Date objekt alebo null)
+    const isEditingOpen = isAdmin || (editEndDate && now <= editEndDate);
 
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto" },
@@ -1438,7 +1445,8 @@ function App() {
               ) : (
                 React.createElement("div", { className: "text-center text-gray-700 text-lg" },
                   React.createElement("p", null, "Editácia údajov je momentálne uzavretá."),
-                  editEnd && React.createElement("p", null, `Editácia bola povolená do: ${new Date(editEndDate).toLocaleString('sk-SK')}`)
+                  // ZMENA: editEndDate je už Date objekt
+                  editEndDate && React.createElement("p", null, `Editácia bola povolená do: ${editEndDate.toLocaleString('sk-SK')}`)
                 )
               )
             ),
@@ -1505,7 +1513,8 @@ function App() {
               ) : (
                 React.createElement("div", { className: "text-center text-gray-700 text-lg" },
                   React.createElement("p", null, "Editácia údajov je momentálne uzavretá."),
-                  editEnd && React.createElement("p", null, `Editácia bola povolená do: ${new Date(editEndDate).toLocaleString('sk-SK')}`)
+                  // ZMENA: editEndDate je už Date objekt
+                  editEndDate && React.createElement("p", null, `Editácia bola povolená do: ${editEndDate.toLocaleString('sk-SK')}`)
                 )
               )
             ),
@@ -1569,7 +1578,8 @@ function App() {
               ) : (
                 React.createElement("div", { className: "text-center text-gray-700 text-lg" },
                   React.createElement("p", null, "Editácia údajov je momentálne uzavretá."),
-                  editEnd && React.createElement("p", null, `Editácia bola povolená do: ${new Date(editEndDate).toLocaleString('sk-SK')}`)
+                  // ZMENA: editEndDate je už Date objekt
+                  editEndDate && React.createElement("p", null, `Editácia bola povolená do: ${editEndDate.toLocaleString('sk-SK')}`)
                 )
               )
             ),
