@@ -227,32 +227,6 @@ function App() {
           setIsAdmin(false);
           setIsRoleLoaded(true);
         }
-
-        // Aktualizácia viditeľnosti odkazov v hlavičke
-        const authLink = document.getElementById('auth-link');
-        const profileLink = document.getElementById('profile-link');
-        const logoutButton = document.getElementById('logout-button');
-        const registerLink = document.getElementById('register-link');
-
-        // Táto časť sa spustí vždy pri zmene auth stavu a bude reagovať na aktuálny isRegistrationOpen
-        if (authLink) {
-          if (currentUser) {
-            authLink.classList.add('hidden');
-            profileLink && profileLink.classList.remove('hidden');
-            logoutButton && logoutButton.classList.remove('hidden');
-            registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
-          } else {
-            authLink.classList.remove('hidden');
-            profileLink && profileLink.classList.add('hidden');
-            logoutButton && logoutButton.classList.add('hidden');
-            // Podmienene zobraziť/skryť odkaz registrácie v hlavičke na základe stavu registrácie
-            if (isRegistrationOpen) {
-              registerLink && registerLink.classList.remove('hidden');
-            } else {
-              registerLink && registerLink.classList.add('hidden');
-            }
-          }
-        }
       });
 
       signIn(); // Spustí počiatočné prihlásenie
@@ -316,6 +290,33 @@ function App() {
 
     return () => clearInterval(timer); // Vyčistenie intervalu pri unmount alebo zmene registrationStartDate
   }, [registrationStartDate, calculateTimeLeft]); // Závisí od registrationStartDate a calculateTimeLeft
+
+  // NOVÝ useEffect pre aktualizáciu viditeľnosti odkazov v hlavičke
+  React.useEffect(() => {
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+
+    if (authLink) {
+      if (user) { // Ak je používateľ prihlásený
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
+      } else { // Ak používateľ nie je prihlásený
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        // Podmienene zobraziť/skryť odkaz registrácie v hlavičke na základe stavu registrácie
+        if (isRegistrationOpen) {
+          registerLink && registerLink.classList.remove('hidden');
+        } else {
+          registerLink && registerLink.classList.add('hidden');
+        }
+      }
+    }
+  }, [user, isRegistrationOpen]); // Spustí sa pri zmene user alebo isRegistrationOpen
 
 
   React.useEffect(() => {
@@ -658,8 +659,9 @@ function App() {
       setError("Nie ste prihlásený.");
       return;
     }
-    if (!newFirstName || !newLastName) {
-      setError("Prosím, zadajte meno aj priezvisko.");
+    // Zmenená validácia: vyžaduje aspoň jedno z mien A aktuálne heslo
+    if ((!newFirstName && !newLastName) || !currentPassword) {
+      setError("Prosím, zadajte aspoň nové meno alebo priezvisko a aktuálne heslo pre overenie.");
       return;
     }
 
@@ -673,27 +675,28 @@ function App() {
 
     setLoading(true);
     try {
-      if (user.email && currentPassword) {
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-      } else {
-        setError("Pre zmenu mena a priezviska je potrebné zadať aktuálne heslo pre overenie.");
-        setLoading(false);
-        return;
-      }
+      // Reautentifikácia je potrebná vždy, keďže sa menia citlivé údaje
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
 
-      const newDisplayName = `${newFirstName} ${newLastName}`;
-      await user.updateProfile({ displayName: newDisplayName });
+      const updatedDisplayName = `${newFirstName || user.firstName} ${newLastName || user.lastName}`;
+      await user.updateProfile({ displayName: updatedDisplayName });
       await db.collection('users').doc(user.uid).update({ 
-        firstName: newFirstName,
-        lastName: newLastName,
-        displayName: newDisplayName
+        firstName: newFirstName || user.firstName, // Ak je prázdne, ponechá starú hodnotu
+        lastName: newLastName || user.lastName,   // Ak je prázdne, ponechá starú hodnotu
+        displayName: updatedDisplayName
       });
-      setMessage("Meno a priezvisko úspešne zmenené na " + newDisplayName);
+      setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
       setError('');
       setNewFirstName('');
       setNewLastName('');
       setCurrentPassword('');
+      setUser(prevUser => ({
+        ...prevUser,
+        firstName: newFirstName || prevUser.firstName,
+        lastName: newLastName || prevUser.lastName,
+        displayName: updatedDisplayName
+      }));
     } catch (e) {
       console.error("Chyba pri zmene mena a priezviska:", e);
       if (e.code === 'auth/requires-recent-login') {
@@ -1473,7 +1476,6 @@ function App() {
                     className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                     value={newFirstName}
                     onChange={(e) => setNewFirstName(e.target.value)}
-                    required
                     placeholder="Zadajte nové meno"
                     autoComplete="given-name"
                     disabled={!isEditAllowed}
@@ -1487,7 +1489,6 @@ function App() {
                     className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
-                    required
                     placeholder="Zadajte nové priezvisko"
                     autoComplete="family-name"
                     disabled={!isEditAllowed}
