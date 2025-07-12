@@ -1052,7 +1052,7 @@ function App() {
                     href="logged-in.html"
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
                   >
-                    Klub
+                    Moja zóna
                   </a>
                 </div>
               </>
@@ -1060,7 +1060,7 @@ function App() {
               <>
                 {isRegistrationOpen ? (
                   <>
-                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa&nbsp;zaregistrujte.</p>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať.</p>
                     <div className="mt-6 flex justify-center space-x-4">
                       <a
                         href="login.html"
@@ -1083,14 +1083,30 @@ function App() {
                     </p>
                     {regStart && !isNaN(regStart) && now < regStart && (
                       <>
-                        <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                        <p className="text-md text-gray-500 mt-2">
+                          Registrácia bude možná od:{" "}
+                          <span style={{ whiteSpace: 'nowrap' }}>
+                            {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
+                          </span>{" "}
+                          <span style={{ whiteSpace: 'nowrap' }}>
+                            {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
+                          </span>
+                        </p>
                         {countdown && (
                             <p className="text-md text-gray-500 mt-2">Registrácia bude spustená o: {countdown}</p>
                         )}
                       </>
                     )}
                     {regEnd && !isNaN(regEnd) && now > regEnd && (
-                      <p className="text-md text-gray-500 mt-2">Registrácia bola ukončená: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+                      <p className="text-md text-gray-500 mt-2">
+                        Registrácia bola ukončená:{" "}
+                        <span style={{ whiteSpace: 'nowrap' }}>
+                          {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
+                        </span>{" "}
+                        <span style={{ whiteSpace: 'nowrap' }}>
+                          {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
+                        </span>
+                      </p>
                     )}
                     <div className="mt-6 flex justify-center">
                       <a
@@ -1137,14 +1153,30 @@ function App() {
               </p>
               {regStart && !isNaN(regStart) && now < regStart && (
                 <>
-                  <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                  <p className="text-md text-gray-500 mt-2">
+                    Registrácia bude možná od:{" "}
+                    <span style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
+                    </span>{" "}
+                    <span style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
+                    </span>
+                  </p>
                   {countdown && (
                       <p className="text-md text-gray-500 mt-2">Registrácia bude spustená o: {countdown}</p>
                   )}
                 </>
               )}
               {regEnd && !isNaN(regEnd) && now > regEnd && (
-                <p className="text-md text-gray-500 mt-2">Registrácia bola ukončená: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+                <p className="text-md text-gray-500 mt-2">
+                  Registrácia bola ukončená:{" "}
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
+                  </span>{" "}
+                  <span style={{ whiteSpace: 'nowrap' }}>
+                    {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
+                  </span>
+                </p>
               )}
               <div className="mt-6 flex justify-center">
                 <a
