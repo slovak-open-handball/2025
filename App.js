@@ -1073,7 +1073,7 @@ function App() {
                             React.createElement("button", {
                               onClick: () => openDeleteConfirmationModal(u),
                               className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Deaktivovať používateľa") {/* Zmenený text tlačidla */}
+                            }, "Deaktivovať používateľa")
                           )
                         )
                       )
@@ -1091,8 +1091,8 @@ function App() {
         showDeleteConfirmationModal && (
           React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
             React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
-              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť deaktiváciu"), {/* Zmenený nadpis modálu */}
-              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete deaktivovať používateľa ${userToDelete?.email}? Tento používateľ sa už nebude môcť prihlásiť.`), {/* Zmenená správa */}
+              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť deaktiváciu"),
+              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete deaktivovať používateľa ${userToDelete?.email}? Tento používateľ sa už nebude môcť prihlásiť.`),
               React.createElement("div", { className: "flex justify-end space-x-4" },
                 React.createElement("button", {
                   onClick: closeDeleteConfirmationModal,
@@ -1102,7 +1102,7 @@ function App() {
                   onClick: handleDeleteUser,
                   className: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200",
                   disabled: loading
-                }, loading ? 'Deaktivujem...' : 'Deaktivovať') {/* Zmenený text tlačidla */}
+                }, loading ? 'Deaktivujem...' : 'Deaktivovať')
               )
             )
           )
