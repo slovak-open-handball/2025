@@ -1254,7 +1254,7 @@ const ChangePhoneNumber = () => {
                 setError("Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
                 setNewContactPhoneNumber(value);
               } else {
-                setNewContactPhoneNumber(value);
+                setContactPhoneNumber(value);
                 setError('');
               }
             },
@@ -1742,7 +1742,8 @@ const LoggedInPage = () => {
 };
 
 // --- Hlavný komponent aplikácie ---
-function AppContent() {
+// Odstránený `export default`
+function App() {
   // Získanie globálneho stavu a funkcií z AuthContextu
   const { loading, isAuthReady, user, error, message } = useAuth();
 
@@ -1804,11 +1805,12 @@ function AppContent() {
   );
 }
 
-// Hlavný export komponentu App, ktorý obalí AppContent do AuthProvider
-export default function App() {
-  return (
-    React.createElement(AuthProvider, null,
-      React.createElement(AppContent, null)
-    )
-  );
-}
+// Vykreslenie hlavného komponentu React do DOM
+// Uistite sa, že v index.html máte <div id="root"></div>
+// a že react.production.min.js, react-dom.production.min.js a babel.min.js sú načítané PRED týmto skriptom.
+ReactDOM.render(
+  React.createElement(AuthProvider, null,
+    React.createElement(App, null)
+  ),
+  document.getElementById('root')
+);
