@@ -820,6 +820,28 @@ function App() {
     setLoading(true);
     setError('');
     setMessage('');
+
+    // Konvertovať dátumy na Date objekty pre validáciu
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+    const userEditEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+
+    // Validácia 1: Koniec registrácie musí byť po začiatku registrácie
+    if (regStart && regEnd && regEnd <= regStart) {
+        setError("Dátum 'Koniec registrácie' musí byť neskôr ako 'Začiatok registrácie'.");
+        setLoading(false);
+        clearMessages();
+        return;
+    }
+
+    // Validácia 2: Koniec úprav používateľských dát musí byť po konci registrácie
+    if (regEnd && userEditEnd && userEditEnd <= regEnd) {
+        setError("Dátum 'Koniec úprav používateľských dát' musí byť neskôr ako 'Koniec registrácie'.");
+        setLoading(false);
+        clearMessages();
+        return;
+    }
+
     try {
         const settingsDocRef = db.collection('settings').doc('registration');
         await settingsDocRef.set({
@@ -997,7 +1019,7 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-800 mb-4">Vitajte na stránke Slovak Open Handball</h1>
             {user ? (
               <>
-                <p className="text-lg text-gray-600">Ste prihlásený. Prejdite do svojej zóny pre viac možností.</p>
+                <p className="text-lg text-gray-600">Ste prihlásený. Voľbou ""Moja zóna"" otvoríte ďalšie možnosti.</p>
                 <div className="mt-6 flex justify-center">
                   <a
                     href="logged-in.html"
@@ -1011,7 +1033,7 @@ function App() {
               <>
                 {isRegistrationOpen ? (
                   <>
-                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa&nbsp;zaregistrujte, aby ste mohli pokračovať.</p>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať.</p>
                     <div className="mt-6 flex justify-center space-x-4">
                       <a
                         href="login.html"
@@ -1462,7 +1484,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -1540,7 +1562,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -1593,7 +1615,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
