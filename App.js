@@ -13,7 +13,7 @@ function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z-21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
-  const [app, setApp] = React.useState(null);
+    const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
@@ -945,7 +945,7 @@ function App() {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" },
-          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4" },
+          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[200px]" }, // Zmenená šírka ľavého menu
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
               React.createElement("ul", { className: "space-y-2" },
