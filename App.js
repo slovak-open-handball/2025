@@ -913,11 +913,9 @@ function App() {
                   })
                 )
               ),
-              // Text "E-mailová adresa bude slúžiť..." presunutý sem
-              !is_admin_register_page && (
-                React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
-                )
+              // Text "E-mailová adresa bude slúžiť..." presunutý sem a upravený
+              React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
+                "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď. Po odoslaní tohto formulára ju NIE JE možné zmeniť."
               ),
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, 
