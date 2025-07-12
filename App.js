@@ -342,7 +342,6 @@ function App() {
         displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
         role: userRole,
         approved: isApproved, 
-        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
