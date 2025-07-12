@@ -1,48 +1,71 @@
+<!-- admin-register.html -->
 <!DOCTYPE html>
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrácia administrátora - Slovak Open Handball</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Registrácia administrátora - Slovak Open Handball 2025</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React, ReactDOM a Babel CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.0/babel.min.js"></script>
+    <!-- Firebase SDKs CDN (verzia 8.10.0, aby bola kompatibilná s existujúcim kódom) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- reCAPTCHA v3 API -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
+    
     <style>
+        /* Základné štýly pre telo a font */
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            overflow-x: hidden; /* Zabraňuje horizontálnemu posúvaniu */
+        }
+        /* Štýly pre modálne okno */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            width: 90%;
+            max-width: 500px;
+        }
+        .close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
         }
     </style>
-
-    <!-- Firebase SDKs - Načítané z CDN (používame compat verzie) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-    <!-- React a ReactDOM CDN -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel Standalone pre preklad JSX v prehliadači -->
-    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- reCAPTCHA v3 script - DÔLEŽITÉ: Použite váš skutočný SITE KEY v parametri render! -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa" async defer></script>
 </head>
 <body class="bg-gray-100">
+    <!-- Element, do ktorého sa bude vykresľovať React aplikácia -->
     <div id="root"></div>
+
+    <!-- Váš hlavný React kód s Babel transformáciou -->
+    <!-- Dôležité: Tento skript musí byť načítaný PO React, ReactDOM a Babel CDN -->
     <script type="text/babel" src="App.js"></script>
-    <script type="text/babel">
-        window.onload = function() {
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof App === 'undefined') {
-                console.error("Chyba: React, ReactDOM alebo App komponent nie sú načítané.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
-        };
-    </script>
 </body>
 </html>
