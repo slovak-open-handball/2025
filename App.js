@@ -1033,7 +1033,7 @@ function App() {
               <>
                 {isRegistrationOpen ? (
                   <>
-                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať.</p>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa&nbsp;zaregistrujte, aby ste mohli pokračovať.</p>
                     <div className="mt-6 flex justify-center space-x-4">
                       <a
                         href="login.html"
