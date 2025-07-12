@@ -26,10 +26,8 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
   // Odstránené newEmail
