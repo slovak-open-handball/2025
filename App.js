@@ -540,7 +540,7 @@ function App() {
     }
     // ZMENA: Meno alebo priezvisko je povinné, nie oboje
     if (!newFirstName && !newLastName) {
-      setError("Prosím, zadajte aspoň jedno z polí: Nové meno alebo Nové priezvisko.");
+      setError("Prosím, vyplňte aspoň jedno z polí: Nové meno alebo Nové priezvisko."); // ZMENENÁ VETA
       return;
     }
     // ZMENA: Aktuálne heslo je vždy povinné
@@ -1175,10 +1175,8 @@ function App() {
                   React.createElement("p", { className: "text-gray-700" },
                     React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), userFirestoreProfile?.contactPhoneNumber || 'N/A'
                   )
-                ),
-                React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Rola: "), userFirestoreProfile?.role || 'N/A'
                 )
+                // Odstránený riadok s rolou
               )
             ),
 
