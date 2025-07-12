@@ -537,6 +537,7 @@ function App() {
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
       closeDeleteConfirmationModal(); // Zavrie modálne okno PRED otvorením novej karty
+      fetchAllUsers(); // Obnovenie zoznamu používateľov po odstránení
 
       // Otvorenie Firebase Console v novej karte po úspešnom odstránení
       // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
