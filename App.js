@@ -189,8 +189,8 @@ function App() {
       const hash = window.location.hash.substring(1);
       if (hash) {
         setProfileView(hash);
-        // Ak je hash 'users' a používateľ je admin, načítaj používateľov
-        if (hash === 'users' && isAdmin) {
+        // Ak je hash 'users' alebo 'all-teams' a používateľ je admin, načítaj používateľov
+        if ((hash === 'users' || hash === 'all-teams') && isAdmin) {
           fetchAllUsers();
         }
       } else {
@@ -818,7 +818,7 @@ function App() {
   const changeProfileView = (view) => {
     setProfileView(view);
     window.location.hash = view; // Aktualizácia URL hash
-    if (view === 'users' && isAdmin) {
+    if ((view === 'users' || view === 'all-teams') && isAdmin) { // Zmena: Volanie fetchAllUsers aj pre 'all-teams'
       fetchAllUsers();
     }
     // NOVÁ ZMENA: Vyčistiť pole pre telefónne číslo, aby sa nepredvyplňovalo
@@ -1115,7 +1115,7 @@ function App() {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" },
-          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[300px]" },
+          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[300px]" }, // ZMENA: Zvýšená minimálna šírka
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
               React.createElement("ul", { className: "space-y-2" },
@@ -1152,16 +1152,18 @@ function App() {
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
-                  }, "Zmeniť meno a priezvisko")
+                  }, "Zmeniť meno a priezvisko") 
                 ),
-                // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla
-                React.createElement("li", null,
-                  React.createElement("button", {
-                    onClick: () => changeProfileView('change-phone-number'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-phone-number' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`
-                  }, "Zmeniť telefónne číslo")
+                // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla - Zobraziť len pre bežných používateľov
+                !isAdmin && ( // ZMENA: Podmienené zobrazenie
+                  React.createElement("li", null,
+                    React.createElement("button", {
+                      onClick: () => changeProfileView('change-phone-number'),
+                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'change-phone-number' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`
+                    }, "Zmeniť telefónne číslo")
+                  )
                 ),
                 // Nová položka menu "Používatelia" - viditeľná len pre administrátorov
                 isAdmin && (
@@ -1175,6 +1177,19 @@ function App() {
                         profileView === 'users' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`
                     }, "Používatelia")
+                  )
+                ),
+                // NOVÁ POLOŽKA MENU: Všetky tímy - viditeľná len pre administrátorov
+                isAdmin && (
+                  React.createElement("li", null,
+                    React.createElement("button", {
+                      onClick: () => {
+                        changeProfileView('all-teams');
+                      },
+                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'all-teams' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`
+                    }, "Všetky tímy (registrácie)") // ZMENA: Text pre novú záložku
                   )
                 )
               )
@@ -1214,9 +1229,11 @@ function App() {
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
                 ),
-                // NOVÉ: Zobrazenie telefónneho čísla
-                React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || 'N/A'
+                // NOVÉ: Zobrazenie telefónneho čísla - Skryť pre administrátorov
+                !isAdmin && ( // ZMENA: Podmienené zobrazenie
+                  React.createElement("p", { className: "text-gray-700" },
+                    React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || 'N/A'
+                  )
                 )
               )
             ),
@@ -1467,7 +1484,7 @@ function App() {
 
             profileView === 'users' && (
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov"),
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
                 allUsersData.length > 0 ? (
                   React.createElement("ul", { className: "divide-y divide-gray-200" },
                     allUsersData.map((u) =>
@@ -1500,6 +1517,43 @@ function App() {
                   )
                 ) : (
                   React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
+                )
+              )
+            ),
+
+            // NOVÁ SEKCIA: Všetky tímy (registrácie)
+            profileView === 'all-teams' && (
+              React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Všetky tímy (údaje z registračného formulára)"),
+                allUsersData.length > 0 ? (
+                  React.createElement("div", { className: "overflow-x-auto" },
+                    React.createElement("table", { className: "min-w-full bg-white border border-gray-200 rounded-lg shadow-sm" },
+                      React.createElement("thead", null,
+                        React.createElement("tr", { className: "bg-gray-100 border-b border-gray-200" },
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "E-mail"),
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Meno kontaktnej osoby"),
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Priezvisko kontaktnej osoby"),
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Telefónne číslo"),
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Rola"),
+                          React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Schválený")
+                        )
+                      ),
+                      React.createElement("tbody", { className: "divide-y divide-gray-200" },
+                        allUsersData.map((u) => (
+                          React.createElement("tr", { key: u.uid, className: "hover:bg-gray-50" },
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.email),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.firstName || 'N/A'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.lastName || 'N/A'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.contactPhoneNumber || 'N/A'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.role || 'user'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.approved ? 'Áno' : 'Nie')
+                          )
+                        ))
+                      )
+                    )
+                  )
+                ) : (
+                  React.createElement("p", { className: "text-gray-600" }, "Žiadne registračné údaje na zobrazenie alebo načítavanie...")
                 )
               )
             )
