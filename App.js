@@ -519,10 +519,10 @@ function App() {
       
       setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
 
-      // Presmerovanie po 15 sekundách
+      // Presmerovanie po 10 sekundách
       setTimeout(() => {
         window.location.href = 'login.html'; 
-      }, 15000); // 15 sekúnd
+      }, 10000); // 10 sekúnd
 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -599,10 +599,10 @@ function App() {
       
       setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
 
-      // Presmerovanie po 15 sekundách
+      // Presmerovanie po 5 sekundách
       setTimeout(() => {
         window.location.href = 'logged-in.html';
-      }, 15000); // 15 sekúnd
+      }, 5000); // 5 sekúnd
 
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
