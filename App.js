@@ -822,7 +822,7 @@ function App() {
                   React.createElement("a", {
                     href: "register.html",
                     className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  }, "Registrácia na turnaj") // Zmena textu
+                  }, "Registrácia na turnaj")
                 )
               )
             )
@@ -998,8 +998,8 @@ function App() {
             )
           )
         )
-      ),
-  };
+      );
+  }
 
   if (currentPath === 'login.html') {
     return (
