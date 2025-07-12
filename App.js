@@ -1113,16 +1113,21 @@ function App() {
     }
 
     return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
-        React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" },
-          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[300px]" }, // ZMENA: Zvýšená minimálna šírka
+      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto" },
+        // Horný priestor, ak je potrebný pre hlavičku alebo vizuálne odsadenie
+        React.createElement("div", { className: "h-20" }), 
+
+        // Hlavná oblasť obsahu: flex kontajner pre menu a pravý panel
+        React.createElement("div", { className: "flex flex-grow w-full pb-10" }, // Pridaný pb-10 pre spodnú medzeru
+          // Ľavé menu (fixné)
+          React.createElement("div", { className: "fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-64 bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4" }, // Pridaný ml-4 pre medzeru od ľavého okraja
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
               React.createElement("ul", { className: "space-y-2" },
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => changeProfileView('my-data'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'my-data' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Moje údaje")
@@ -1130,7 +1135,7 @@ function App() {
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => changeProfileView('change-email'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'change-email' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť e-mail")
@@ -1138,24 +1143,22 @@ function App() {
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => changeProfileView('change-password'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť heslo")
                 ),
-                // Nová položka menu pre zmenu mena a priezviska
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => {
                       changeProfileView('change-name');
                     },
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť meno a priezvisko") 
                 ),
-                // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla - Zobraziť len pre bežných používateľov
-                !isAdmin && ( // ZMENA: Podmienené zobrazenie
+                !isAdmin && (
                   React.createElement("li", null,
                     React.createElement("button", {
                       onClick: () => changeProfileView('change-phone-number'),
@@ -1165,21 +1168,18 @@ function App() {
                     }, "Zmeniť telefónne číslo")
                   )
                 ),
-                // Nová položka menu "Používatelia" - viditeľná len pre administrátorov
                 isAdmin && (
                   React.createElement("li", null,
                     React.createElement("button", {
                       onClick: () => {
                         changeProfileView('users');
-                        // fetchAllUsers() sa už volá v changeProfileView, ak je isAdmin true
                       },
-                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
+                      className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'users' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`
                     }, "Používatelia")
                   )
                 ),
-                // NOVÁ POLOŽKA MENU: Všetky tímy - viditeľná len pre administrátorov
                 isAdmin && (
                   React.createElement("li", null,
                     React.createElement("button", {
@@ -1189,14 +1189,15 @@ function App() {
                       className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'all-teams' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`
-                    }, "Všetky tímy (registrácie)") // ZMENA: Text pre novú záložku
+                    }, "Všetky tímy (registrácie)")
                   )
                 )
               )
             )
           ),
 
-          React.createElement("div", { className: "w-3/4 bg-white p-8 rounded-lg shadow-xl" },
+          // Pravý obsah (posuvný)
+          React.createElement("div", { className: "flex-grow ml-72 p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4" }, // Zmenený ml na ml-72 (64px menu + 8px medzera) a pridaný mr-4
             message && (
               React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
                 message
@@ -1209,28 +1210,17 @@ function App() {
             ),
 
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
-            // ODSTRÁNENÉ: Pôvodné riadky s e-mailom a menom pod hlavičkou
-            // React.createElement("div", { className: "text-center mb-6" },
-            //   React.createElement("p", { className: "text-lg text-gray-700" },
-            //     React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
-            //   ),
-            //   React.createElement("p", { className: "text-lg text-gray-700" },
-            //     React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
-            //   )
-            // ),
-
+            
             profileView === 'my-data' && (
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
                 ),
-                // ZMENA: "Zobrazované meno" na "Meno a priezvisko"
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
                 ),
-                // NOVÉ: Zobrazenie telefónneho čísla - Skryť pre administrátorov
-                !isAdmin && ( // ZMENA: Podmienené zobrazenie
+                !isAdmin && ( 
                   React.createElement("p", { className: "text-gray-700" },
                     React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || 'N/A'
                   )
