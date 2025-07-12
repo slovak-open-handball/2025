@@ -13,7 +13,7 @@ function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z-21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
-    const [app, setApp] = React.useState(null);
+const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
@@ -53,6 +53,13 @@ function App() {
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
+
+  // NOVÉ: Stavové premenné pre modálne okná
+  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
+  const [userToDelete, setUserToDelete] = React.useState(null);
+  const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
+  const [userToEditRole, setUserToEditRole] = React.useState(null);
+  const [newRole, setNewRole] = React.useState('');
 
 
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
@@ -1334,7 +1341,7 @@ function App() {
 
         // Modálne okno pre úpravu roly
         showRoleEditModal && (
-          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
+          React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
             React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
               React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, `Upraviť rolu pre ${userToEditRole?.email}`),
               React.createElement("div", { className: "mb-4" },
