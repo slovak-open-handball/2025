@@ -801,6 +801,8 @@ function App() {
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
             React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
             // PRIDANÁ ČIARKA TU!
+            // Bola tu chýbajúca čiarka, ktorá spôsobovala SyntaxError.
+            // React.createElement očakáva čiarku medzi viacerými deťmi.
             user ? (
               React.createElement(React.Fragment, null,
                 React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
