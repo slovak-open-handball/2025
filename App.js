@@ -635,10 +635,30 @@ function App() {
   const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
-    return (
-      React.createElement("div", { className: "min-h-screen bg-gray-100 flex items-center justify-center font-inter" },
-        React.createElement("div", { className: "text-xl font-semibold text-gray-700" }, "Vitajte na úvodnej stránke!")
-      )
+    return React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
+      [ // Explicitne zabalíme hlavný obsah do poľa pre React.createElement
+        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
+          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
+            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
+            user ? (
+              React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností.")
+            ) : (
+              React.createElement(React.Fragment, null,
+                React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
+                  React.createElement("a", {
+                    href: "login.html",
+                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Prihlásenie"),
+                  React.createElement("a", {
+                    href: "register.html",
+                    className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Registrácia")
+                )
+              )
+            )
+          )
+        )
+      ]
     );
   }
 
