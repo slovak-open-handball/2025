@@ -1654,10 +1654,9 @@ function App() {
                       )
                     )
                   )
-                ): (
-                  React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
-              )
+               : React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
+            )
           ),
 
           profileView === 'all-teams' && (
@@ -1689,10 +1688,7 @@ function App() {
                       ))
                     )
                   )
-                ) : (
-                  React.createElement("p", { className: "text-gray-600" }, "Žiadne registračné údaje na zobrazenie alebo načítavanie...")
-                )
-              )
+                ) : React.createElement("p", { className: "text-gray-600" }, "Žiadne registračné údaje na zobrazenie alebo načítavanie...")
             )
           ),
 
