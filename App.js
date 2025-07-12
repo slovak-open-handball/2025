@@ -655,7 +655,7 @@ function App() {
       React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
         React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
           React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
-          user ? loggedInContent : loggedOutContent // Priame odovzdanie detí
+          React.createElement(React.Fragment, null, user ? loggedInContent : loggedOutContent) // Explicitne zabalené vo fragmente
         )
       )
     );
@@ -748,7 +748,7 @@ function App() {
             )
           )
         )
-      ),
+      );
   }
 
   if (currentPath === 'login.html') {
