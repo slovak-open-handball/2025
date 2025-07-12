@@ -991,7 +991,6 @@ function App() {
         registrationStartDate: regStartDateToSave ? firebase.firestore.Timestamp.fromDate(regStartDateToSave) : null, // NOVÉ
         registrationEndDate: regEndDateToSave ? firebase.firestore.Timestamp.fromDate(regEndDateToSave) : null,
         editEndDate: edDateToSave ? firebase.firestore.Timestamp.fromDate(edDateToSave) : null,
-        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }); // Použiť merge, aby sa prepísali len zadané polia
 
       // Po úspešnom uložení aktualizujeme globálne stavy s Date objektmi
