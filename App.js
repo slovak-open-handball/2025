@@ -812,6 +812,13 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
               is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
             ),
+            // Nové vety pridané sem
+            React.createElement("p", { className: "text-gray-600 text-sm mb-4" },
+              "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
+            ),
+            React.createElement("p", { className: "text-gray-600 text-sm mb-6" },
+              "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
+            ),
             React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" }, "Meno"), // Nové pole Meno
