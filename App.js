@@ -999,7 +999,7 @@ function App() {
           )
         )
       ),
-  }
+  };
 
   if (currentPath === 'login.html') {
     return (
