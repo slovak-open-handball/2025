@@ -1205,6 +1205,23 @@ function App() {
       );
     }
 
+    // Podmienka pre zobrazenie správy po registrácii
+    if (message && currentPath === 'register.html') {
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+          <div className="w-full max-w-md mt-20 mb-10 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
         <div className="w-full max-w-md mt-20 mb-10 p-4">
@@ -1341,6 +1358,23 @@ function App() {
   }
 
   if (currentPath === 'login.html') {
+    // Podmienka pre zobrazenie správy po prihlásení
+    if (message && currentPath === 'login.html') {
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+          <div className="w-full max-w-md mt-20 mb-10 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Prihlásenie úspešné!</h1>
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+              <p className="text-lg text-gray-600">Presmerovanie na profilovú stránku...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
         <div className="w-full max-w-md mt-20 mb-10 p-4">
