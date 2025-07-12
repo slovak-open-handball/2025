@@ -91,7 +91,7 @@ function App() {
   const [newLastName, setNewLastName] = React.useState('');
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
 
-  // NOVÉ: Stavy pre nastavenia dátumov a časov
+  // Stavy pre nastavenia dátumov a časov
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [userDataEditEndDate, setUserDataEditEndDate] = React.useState('');
@@ -120,6 +120,15 @@ function App() {
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
+
+  // Vypočítajte stav registrácie ako memoizovanú hodnotu
+  const isRegistrationOpen = React.useMemo(() => {
+    if (!settingsLoaded) return false; // Počkajte, kým sa načítajú nastavenia
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+    return (!regStart || now >= regStart) && (!regEnd || now <= regEnd);
+  }, [settingsLoaded, registrationStartDate, registrationEndDate]);
 
 
   React.useEffect(() => {
@@ -226,12 +235,17 @@ function App() {
             authLink.classList.add('hidden');
             profileLink && profileLink.classList.remove('hidden');
             logoutButton && logoutButton.classList.remove('hidden');
-            registerLink && registerLink.classList.add('hidden');
+            registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
           } else {
             authLink.classList.remove('hidden');
             profileLink && profileLink.classList.add('hidden');
             logoutButton && logoutButton.classList.add('hidden');
-            registerLink && registerLink.classList.remove('hidden');
+            // Podmienene zobraziť/skryť odkaz registrácie v hlavičke na základe stavu registrácie
+            if (isRegistrationOpen) {
+              registerLink && registerLink.classList.remove('hidden');
+            } else {
+              registerLink && registerLink.classList.add('hidden');
+            }
           }
         }
       });
@@ -245,7 +259,7 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, []);
+  }, [isRegistrationOpen]); // Pridajte isRegistrationOpen do dependency array
 
   React.useEffect(() => {
     const handleHashChange = () => {
@@ -592,7 +606,7 @@ function App() {
       return;
     }
 
-    // NOVÉ: Kontrola, či je povolená úprava dát
+    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -655,7 +669,7 @@ function App() {
         return;
     }
 
-    // NOVÉ: Kontrola, či je povolená úprava dát
+    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -697,7 +711,7 @@ function App() {
     }
   };
 
-  // NOVÉ: Funkcia na ukladanie nastavení pre administrátora
+  // Funkcia na ukladanie nastavení pre administrátora
   const handleSaveSettings = async (e) => {
     e.preventDefault();
     if (!db || !isAdmin) {
@@ -716,7 +730,7 @@ function App() {
             // Timestamp.fromDate() potom tento lokálny čas správne prekonvertuje na UTC pre uloženie.
             registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
-            userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null,
+            userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
         setMessage("Nastavenia úspešne uložené!");
     } catch (e) {
@@ -874,6 +888,10 @@ function App() {
   const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
         <div className="w-full max-w-md mt-20 mb-10 p-4">
@@ -893,21 +911,45 @@ function App() {
               </>
             ) : (
               <>
-                <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali.</p>
-                <div className="mt-6 flex justify-center space-x-4">
-                  <a
-                    href="login.html"
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  >
-                    Prihlásenie
-                  </a>
-                  <a
-                    href="register.html"
-                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  >
-                    Registrácia na turnaj
-                  </a>
-                </div>
+                {isRegistrationOpen ? (
+                  <>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali.</p>
+                    <div className="mt-6 flex justify-center space-x-4">
+                      <a
+                        href="login.html"
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                      >
+                        Prihlásenie
+                      </a>
+                      <a
+                        href="register.html"
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                      >
+                        Registrácia na turnaj
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-lg text-gray-600">
+                      Registračný formulár je momentálne {regStart && now < regStart ? 'ešte neotvorený' : 'už uzavretý'}.
+                    </p>
+                    {regStart && now < regStart && (
+                      <p className="text-md text-gray-500 mt-2">Registrácia bude otvorená od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                    )}
+                    {regEnd && now > regEnd && (
+                      <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+                    )}
+                    <div className="mt-6 flex justify-center">
+                      <a
+                        href="login.html"
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                      >
+                        Prihlásenie
+                      </a>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -929,7 +971,8 @@ function App() {
 
     // Registrácia je otvorená, ak nie je nastavený začiatok, alebo je už po začiatku
     // A zároveň nie je nastavený koniec, alebo je ešte pred koncom
-    const isRegistrationOpen = (!regStart || now >= regStart) && (!regEnd || now <= regEnd);
+    // isRegistrationOpen je už definované vyššie pomocou useMemo
+    // const isRegistrationOpen = (!regStart || now >= regStart) && (!regEnd || now <= regEnd); // Už definované
 
     // Ak nie je admin registrácia a registrácia nie je otvorená, zobrazte správu
     if (!is_admin_register_page && !isRegistrationOpen) {
@@ -1160,7 +1203,7 @@ function App() {
       return null;
     }
 
-    // NOVÉ: Kontrola pre povolenie úprav používateľských dát
+    // Kontrola pre povolenie úprav používateľských dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     const isEditAllowed = !editEnd || now <= editEnd;
@@ -1546,7 +1589,7 @@ function App() {
               </div>
             )}
 
-            {/* NOVÉ: Sekcia nastavení pre administrátora */}
+            {/* Sekcia nastavení pre administrátora */}
             {profileView === 'settings' && isAdmin && (
               <form onSubmit={handleSaveSettings} className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Nastavenia systému</h2>
