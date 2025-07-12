@@ -303,19 +303,19 @@ function App() {
       errors.push("maximálne 4096 znakov");
     }
     if (!/[A-Z]/.test(pwd)) {
-      errors.push("aspoň jedno veľké písmeno");
+      errors.push("jedno veľké písmeno");
     }
     if (!/[a-z]/.test(pwd)) {
-      errors.push("aspoň jedno malé písmeno");
+      errors.push("jedno malé písmeno");
     }
     if (!/[0-9]/.test(pwd)) {
-      errors.push("aspoň jednu číslicu");
+      errors.push("jednu číslicu");
     }
 
     if (errors.length === 0) {
       return null;
     } else {
-      return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
+      return "Heslo musí obsahovať aspoň:\n• " + errors.join("\n• ") + ".";
     }
   };
 
@@ -1004,16 +1004,6 @@ function App() {
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full" },
-            message && (
-              React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
-                message
-              )
-            ),
-            error && (
-              React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
-                error
-              )
-            ),
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
               is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
             ),
@@ -1145,6 +1135,17 @@ function App() {
                     className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
                   },
                     showConfirmPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
+                {/* Správy o úspechu a chybe presunuté sem */}
+                message && (
+                  React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
+                    message
+                  )
+                ),
+                error && (
+                  React.createElement("div", { className: "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap", role: "alert" },
+                    error
                   )
                 ),
                 React.createElement("button", {
