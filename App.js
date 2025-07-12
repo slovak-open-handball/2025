@@ -343,7 +343,7 @@ function App() {
 
       // Krok 2: Skontrolujte stav schválenia pre admin účty
       if (userData.role === 'admin' && userData.approved === false) { 
-        setError("Váš administrátorský účet čaká na schválenie iným administrátorom.");
+        setError("Váš administrátorský účet je neaktívny alebo čaká na schválenie iným administrátorom.");
         await auth.signOut(); // Odhlásiť neschváleného administrátora
         setLoading(false);
         clearMessages();
