@@ -1041,7 +1041,7 @@ function App() {
                       </>
                     )}
                     {regEnd && !isNaN(regEnd) && now > regEnd && (
-                      <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+                      <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
                     )}
                     <div className="mt-6 flex justify-center">
                       <a
@@ -1204,7 +1204,7 @@ function App() {
               </div>
               {!is_admin_register_page && (
                 <p className="text-gray-600 text-sm mt-4">
-                  E-mailová adresa a heslo sú potrebné na editáciu údajov poskytnutých v tomto registračnom formulári a na správu turnajového účtu.
+                  E-mailová adresa a heslo budú potrebné na editáciu údajov poskytnutých v tomto registračnom formulári a na správu turnajového účtu.
                 </p>
               )}
               <PasswordInput
