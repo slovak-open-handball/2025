@@ -573,8 +573,6 @@ function App() {
       console.error("Chyba pri prihlasovaní:", e);
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Zadané prihlasovacie údaje sú neplatné. Skontrolujte e-mailovú adresu a heslo a skúste to prosím znova.");
-      } else if (e.code === 'auth/invalid-email') {
-        setError("Neplatný formát e-mailovej adresy.");
       } else {
         setError(`Chyba pri prihlasovaní: ${e.message}`);
       }
