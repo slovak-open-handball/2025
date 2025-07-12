@@ -660,7 +660,7 @@ function App() {
     return React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
       React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
         React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-          mainCardContent // Odovzdáme pripravené pole elementov
+          ...mainCardContent // Rozbalíme pole elementov
         )
       )
     );
