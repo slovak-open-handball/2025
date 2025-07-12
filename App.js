@@ -31,7 +31,7 @@ function App() {
   // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
-  const [newEmail, setNewEmail] = React.useState(''); // Obnovený stav pre zmenu e-mailu
+  // Odstránené: newEmail
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -292,7 +292,7 @@ function App() {
     const recaptchaToken = await getRecaptchaToken('register');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
-      return;
+      return null;
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
@@ -384,7 +384,7 @@ function App() {
     const recaptchaToken = await getRecaptchaToken('login');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
-      return;
+      return null;
     }
     console.log("reCAPTcha Token pre prihlásenie:", recaptchaToken);
 
@@ -460,55 +460,7 @@ function App() {
     }
   };
 
-  // Obnovená funkcia handleChangeEmail
-  const handleChangeEmail = async (e) => {
-    e.preventDefault();
-    if (!user) {
-      setError("Nie ste prihlásený.");
-      return;
-    }
-    if (!newEmail) {
-      setError("Prosím, zadajte novú e-mailovú adresu.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (user.email && currentPassword) {
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-      } else {
-        setError("Pre zmenu e-mailovej adresy je potrebné zadať aktuálne heslo pre overenie.");
-        setLoading(false);
-        return;
-      }
-
-      await user.updateEmail(newEmail);
-      // Aktualizácia e-mailu aj vo Firestore
-      await db.collection('users').doc(user.uid).update({ email: newEmail });
-      setMessage("E-mailová adresa úspešne zmenená na " + newEmail);
-      setError('');
-      setNewEmail('');
-      setCurrentPassword('');
-    } catch (e) {
-      console.error("Chyba pri zmene e-mailovej adresy:", e);
-      if (e.code === 'auth/requires-recent-login') {
-        setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
-      } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
-        setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
-      } else if (e.code === 'auth/invalid-email') {
-        setError("Neplatný formát novej e-mailovej adresy.");
-      } else if (e.code === 'auth/email-already-in-use') {
-        setError("Nová e-mailová adresa už je používaná iným účtom.");
-      }
-      else {
-        setError(`Chyba pri zmene e-mailovej adresy: ${e.message}`);
-      }
-    } finally {
-      setLoading(false);
-      clearMessages();
-    }
-  };
+  // Odstránená funkcia handleChangeEmail
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -830,11 +782,7 @@ function App() {
         setNewFirstName('');
         setNewLastName('');
     }
-    // Vyčistíme pole pre zmenu e-mailu, aby sa nepredvyplňovalo
-    if (view === 'change-email') {
-        setNewEmail('');
-    }
-    // Vyčistíme pole pre aktuálne heslo pri zmene záložky
+    // Odstránené: Vyčistenie poľa pre zmenu e-mailu
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
@@ -1152,14 +1100,7 @@ function App() {
                     }`
                   }, "Moje údaje")
                 ),
-                React.createElement("li", null,
-                  React.createElement("button", {
-                    onClick: () => changeProfileView('change-email'),
-                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-email' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`
-                  }, "Zmeniť e-mail")
-                ),
+                // Odstránené: Zmeniť e-mail
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => changeProfileView('change-password'),
@@ -1248,52 +1189,7 @@ function App() {
               )
             ),
 
-            profileView === 'change-email' && (
-              React.createElement("form", { onSubmit: handleChangeEmail, className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť e-mailovú adresu"),
-                React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-email" }, "Nová e-mailová adresa"),
-                  React.createElement("input", {
-                    type: "email",
-                    id: "new-email",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                    value: newEmail,
-                    onChange: (e) => setNewEmail(e.target.value),
-                    required: true,
-                    placeholder: "Zadajte novú e-mailovú adresu",
-                    autoComplete: "email"
-                  })
-                ),
-                React.createElement("div", { className: "relative" },
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-email-change" }, "Aktuálne heslo (pre overenie)"),
-                  React.createElement("input", {
-                    type: showCurrentPassword ? "text" : "password",
-                    id: "current-password-email-change",
-                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
-                    value: currentPassword,
-                    onChange: (e) => setCurrentPassword(e.target.value),
-                    onCopy: (e) => e.preventDefault(),
-                    onPaste: (e) => e.preventDefault(),
-                    onCut: (e) => e.preventDefault(),
-                    required: true,
-                    placeholder: "Zadajte svoje aktuálne heslo",
-                    autoComplete: "current-password"
-                  }),
-                  React.createElement("button", {
-                    type: "button",
-                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
-                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-                  },
-                    showCurrentPassword ? EyeOffIcon : EyeIcon
-                  )
-                ),
-                React.createElement("button", {
-                  type: "submit",
-                  className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
-                  disabled: loading
-                }, loading ? 'Ukladám...' : 'Zmeniť e-mail')
-              )
-            ),
+            // Odstránené: profileView === 'change-email' sekcia
 
             profileView === 'change-password' && (
               React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
