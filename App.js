@@ -13,7 +13,7 @@ function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z-21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
-  const [app, setApp] = React.useState(null);
+    const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
@@ -832,6 +832,12 @@ function App() {
                   autoComplete: "family-name"
                 })
               ),
+              // Text "E-mailová adresa bude slúžiť..." presunutý sem
+              !is_admin_register_page && (
+                React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
+                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
+                )
+              ),
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
                 React.createElement("input", {
@@ -845,18 +851,10 @@ function App() {
                   autoComplete: "email"
                 })
               ),
-              // Podmienené zobrazenie textu len pre register.html
+              // Text "E-mailová adresa a heslo sú potrebné..." presunutý sem
               !is_admin_register_page && (
-                React.createElement(React.Fragment, null,
-                  React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                    "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
-                  )
-                )
-              ),
-              // Druhá veta zostáva na pôvodnom mieste (teraz za prvou presunutou vetou)
-              !is_admin_register_page && (
-                React.createElement("p", { className: "text-gray-600 text-sm mb-6" }, // Pridaný mb-6 pre medzeru
-                  "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
+                React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
+                  "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
                 )
               ),
               React.createElement("div", { className: "relative" },
