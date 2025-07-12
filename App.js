@@ -494,7 +494,7 @@ function App() {
             action: 'sendRegistrationEmail',
             email: email,
             password: password, 
-            isAdmin: isAdminRegistration,
+            isAdmin: isAdminRegistration, // Toto je teraz dôležité pre rozlíšenie v Apps Script
             firstName: firstName,
             lastName: lastName,
             contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber
@@ -507,7 +507,8 @@ function App() {
 
       await auth.signOut();
 
-      setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
+      // Zmena správy a odloženie presmerovania
+      setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       setError('');
       setEmail('');
       setPassword('');
@@ -515,7 +516,12 @@ function App() {
       setFirstName('');
       setLastName('');
       setContactPhoneNumber('');
-      window.location.href = 'login.html'; 
+
+      // Presmerovanie po 15 sekundách
+      setTimeout(() => {
+        window.location.href = 'login.html'; 
+      }, 15000); // 15 sekúnd
+
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -527,9 +533,12 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
+      setLoading(false); // V prípade chyby sa loading vypne okamžite
+      clearMessages(); // A správy sa tiež vyčistia po 5 sekundách
     } finally {
-      setLoading(false);
-      clearMessages();
+      // Loading sa vypne až po presmerovaní, alebo hneď v prípade chyby.
+      // Ak je úspešná registrácia, loading zostane true počas 15 sekúnd.
+      // Ak je chyba, loading sa vypne v bloku catch.
     }
   };
 
@@ -1725,6 +1734,7 @@ function App() {
                             <button
                               onClick={() => openDeleteConfirmationModal(u)}
                               className="bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                              disabled={u.role === 'admin' && user.uid === u.uid} // Zakázať odstránenie vlastného admin účtu
                             >
                               Odstrániť používateľa
                             </button> 
