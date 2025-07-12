@@ -139,8 +139,9 @@ function App() {
             if (userDoc.exists) {
               const userData = userDoc.data();
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
-              setIsAdmin(userData.role === 'admin');
-              console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
+              const userIsAdmin = userData.role === 'admin';
+              setIsAdmin(userIsAdmin);
+              console.log("onAuthStateChanged: isAdmin nastavené na:", userIsAdmin);
               
               // Aktualizovať objekt používateľa o dáta z Firestore
               // Vytvoríme nový objekt, aby sme nespôsobili priamu mutáciu
@@ -150,42 +151,46 @@ function App() {
                 displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email // Aktualizuje displayName
               }));
 
+              // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+              window.currentUserData = {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : currentUser.email,
+                role: userData.role,
+                approved: userData.approved
+              };
+              window.isAdminGlobal = userIsAdmin;
+
+
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
+              // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+              window.currentUserData = null;
+              window.isAdminGlobal = false;
             }
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
             setIsAdmin(false); // Predpokladáme, že nie je admin v prípade chyby
+            // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+            window.currentUserData = null;
+            window.isAdminGlobal = false;
           } finally {
             setIsRoleLoaded(true); // Rola bola načítaná (alebo sa zistilo, že dokument neexistuje)
             console.log("onAuthStateChanged: isRoleLoaded nastavené na true.");
+            // Spustiť udalosť po načítaní všetkých dát pre hlavičku
+            window.dispatchEvent(new Event('authStatusChanged'));
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
           setIsRoleLoaded(true); // Ak nie je používateľ alebo db, rola je "načítaná" ako nie-admin
+          // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+          window.currentUserData = null;
+          window.isAdminGlobal = false;
+          // Spustiť udalosť po načítaní všetkých dát pre hlavičku
+          window.dispatchEvent(new Event('authStatusChanged'));
         }
-
-        // Tieto aktualizácie viditeľnosti sú teraz riadené Reactom v render funkcii
-        // a cez `registrationStatusChanged` stav, takže ich tu nepotrebujeme manuálne meniť.
-        // const authLink = document.getElementById('auth-link');
-        // const profileLink = document.getElementById('profile-link');
-        // const logoutButton = document.getElementById('logout-button');
-        // const registerLink = document.getElementById('register-link'); 
-
-        // if (authLink) {
-        //   if (currentUser) {
-        //     authLink.classList.add('hidden'); 
-        //     profileLink && profileLink.classList.remove('hidden'); 
-        //     logoutButton && logoutButton.classList.remove('hidden'); 
-        //     registerLink && registerLink.classList.add('hidden'); 
-        //   } else {
-        //     authLink.classList.remove('hidden'); 
-        //     profileLink && profileLink.classList.add('hidden'); 
-        //     logoutButton && logoutButton.classList.add('hidden'); 
-        //   }
-        // }
       });
 
       signIn();
@@ -279,16 +284,21 @@ function App() {
     const updateCountdown = () => {
       if (!settingsLoaded || (!registrationStartDate && !registrationEndDate)) {
         setCountdownMessage("Načítavam nastavenia registrácie...");
+        window.isRegistrationOpenGlobal = false; // Nastavíme na false, kým sa nenačítajú
         return;
       }
 
       const now = new Date();
       
       // Registrácia je otvorená, ak je 'teraz' medzi začiatkom a koncom
-      const isRegistrationOpen = registrationStartDate && registrationEndDate && now >= registrationStartDate && now <= registrationEndDate;
+      const isRegistrationCurrentlyOpen = registrationStartDate && registrationEndDate && now >= registrationStartDate && now <= registrationEndDate;
+      window.isRegistrationOpenGlobal = isRegistrationCurrentlyOpen; // Aktualizácia globálnej premennej
+
+      // Spustiť udalosť, aby hlavička reagovala na zmenu stavu registrácie
+      window.dispatchEvent(new Event('authStatusChanged'));
 
       // Ak je registrácia otvorená
-      if (isRegistrationOpen) {
+      if (isRegistrationCurrentlyOpen) {
         const timeLeft = registrationEndDate.getTime() - now.getTime();
         if (timeLeft <= 0) {
           setCountdownMessage("Registrácia je ukončená.");
@@ -425,7 +435,7 @@ function App() {
     if (!isAdminRegistration) {
       const phoneRegex = /^\+\d+$/; // Regex pre '+' nasledovaný jednou alebo viacerými číslicami
       if (!phoneRegex.test(contactPhoneNumber)) {
-          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+          setError("Telefónne číslo kontaktnej osoby musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
           return;
       }
     }
@@ -563,6 +573,17 @@ function App() {
         displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
       }));
 
+      // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+      window.currentUserData = {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : currentUser.email,
+        role: userData.role,
+        approved: userData.approved
+      };
+      window.isAdminGlobal = userData.role === 'admin';
+      window.dispatchEvent(new Event('authStatusChanged'));
+
 
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
@@ -589,6 +610,11 @@ function App() {
       await auth.signOut();
       setMessage("Úspešne odhlásené.");
       setError('');
+      // GLOBÁLNA PREMENNÁ PRE HLAVIČKU
+      window.currentUserData = null;
+      window.isAdminGlobal = false;
+      window.dispatchEvent(new Event('authStatusChanged'));
+
       window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri odhlasovaní:", e);
@@ -725,6 +751,14 @@ function App() {
       setNewFirstName('');
       setNewLastName('');
       setCurrentPassword('');
+      // Aktualizujeme aj lokálny stav `user` v Reactu
+      setUser(prevUser => ({ ...prevUser, displayName: newDisplayName, firstName: newFirstName, lastName: newLastName }));
+      // Aktualizujeme aj globálnu premennú pre hlavičku
+      if (window.currentUserData) {
+        window.currentUserData.displayName = newDisplayName;
+        window.dispatchEvent(new Event('authStatusChanged'));
+      }
+
     } catch (e) {
       console.error("Chyba pri zmene mena a priezviska:", e);
       if (e.code === 'auth/requires-recent-login') {
@@ -1024,7 +1058,7 @@ function App() {
           React.createElement("a", {
             href: "logged-in.html",
             className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Moja zóna")
+          }, "Moja zón")
         )
       );
     } else {
@@ -1422,14 +1456,14 @@ function App() {
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Moje údaje"),
                 React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || ''
+                  React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || '-'
                 ),
                 React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || ''
+                  React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || '-'
                 ),
                 !isAdmin && ( 
                   React.createElement("p", { className: "text-gray-700" },
-                    React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || ''
+                    React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), user.contactPhoneNumber || '-'
                   )
                 )
               )
@@ -1711,9 +1745,9 @@ function App() {
                         allUsersData.map((u) => (
                           React.createElement("tr", { key: u.uid, className: "hover:bg-gray-50" },
                             React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.email),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.firstName || ''),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.lastName || ''),
-                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.contactPhoneNumber || ''),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.firstName || '-'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.lastName || '-'),
+                            React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.contactPhoneNumber || '-'),
                             React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.role || 'user'),
                             React.createElement("td", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, u.approved ? 'Áno' : 'Nie')
                           )
