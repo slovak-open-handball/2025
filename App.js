@@ -483,8 +483,6 @@ function App() {
     }
   };
 
-  // Funkcia handleChangeEmail bola odstránená
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -540,29 +538,32 @@ function App() {
       setError("Nie ste prihlásený.");
       return;
     }
-    if (!newFirstName || !newLastName) {
-      setError("Prosím, zadajte meno aj priezvisko.");
+    // ZMENA: Meno alebo priezvisko je povinné, nie oboje
+    if (!newFirstName && !newLastName) {
+      setError("Prosím, zadajte aspoň jedno z polí: Nové meno alebo Nové priezvisko.");
+      return;
+    }
+    // ZMENA: Aktuálne heslo je vždy povinné
+    if (!currentPassword) {
+      setError("Prosím, zadajte svoje aktuálne heslo pre overenie.");
       return;
     }
 
     setLoading(true);
     try {
       // Reautentifikácia používateľa pred zmenou mena/priezviska
-      if (user.email && currentPassword) {
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-      } else {
-        setError("Pre zmenu mena a priezviska je potrebné zadať aktuálne heslo pre overenie.");
-        setLoading(false);
-        return;
-      }
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
 
-      const newDisplayName = `${newFirstName} ${newLastName}`;
+      const updatedFirstName = newFirstName || userFirestoreProfile?.firstName || '';
+      const updatedLastName = newLastName || userFirestoreProfile?.lastName || '';
+      const newDisplayName = `${updatedFirstName} ${updatedLastName}`.trim();
+
       await user.updateProfile({ displayName: newDisplayName });
       // Aktualizácia mena a priezviska aj vo Firestore
       await db.collection('users').doc(user.uid).update({ 
-        firstName: newFirstName,
-        lastName: newLastName,
+        firstName: updatedFirstName,
+        lastName: updatedLastName,
         displayName: newDisplayName
       });
       setMessage("Meno a priezvisko úspešne zmenené na " + newDisplayName);
@@ -571,7 +572,7 @@ function App() {
       setNewLastName('');
       setCurrentPassword('');
       // Aktualizovať userFirestoreProfile po úspešnej zmene
-      setUserFirestoreProfile(prevProfile => ({ ...prevProfile, firstName: newFirstName, lastName: newLastName, displayName: newDisplayName }));
+      setUserFirestoreProfile(prevProfile => ({ ...prevProfile, firstName: updatedFirstName, lastName: updatedLastName, displayName: newDisplayName }));
     } catch (e) {
       console.error("Chyba pri zmene mena a priezviska:", e);
       if (e.code === 'auth/requires-recent-login') {
@@ -784,6 +785,8 @@ function App() {
   };
 
 
+  const currentPath = window.location.pathname.split('/').pop();
+
   if (loading || !isAuthReady || (currentPath === 'logged-in.html' && !isRoleLoaded)) {
     return (
       React.createElement("div", { className: "flex items-center justify-center min-h-screen bg-gray-100" },
@@ -791,8 +794,6 @@ function App() {
       )
     );
   }
-
-  const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
     return (
@@ -1108,7 +1109,6 @@ function App() {
                     }`
                   }, "Zmeniť meno a priezvisko") 
                 ),
-                // Zmena: Používame userFirestoreProfile?.role namiesto isAdmin pre podmienku
                 userFirestoreProfile?.role !== 'admin' && (
                   React.createElement("li", null,
                     React.createElement("button", {
@@ -1171,7 +1171,6 @@ function App() {
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), userFirestoreProfile?.firstName && userFirestoreProfile?.lastName ? `${userFirestoreProfile.firstName} ${userFirestoreProfile.lastName}` : 'N/A'
                 ),
-                // Zmena: Používame userFirestoreProfile?.role namiesto isAdmin pre podmienku
                 userFirestoreProfile?.role !== 'admin' && ( 
                   React.createElement("p", { className: "text-gray-700" },
                     React.createElement("span", { className: "font-semibold" }, "Telefónne číslo: "), userFirestoreProfile?.contactPhoneNumber || 'N/A'
@@ -1267,27 +1266,25 @@ function App() {
               React.createElement("form", { onSubmit: handleChangeName, className: "space-y-4 border-t pt-4 mt-4" },
                 React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť meno a priezvisko"),
                 React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-first-name" }, "Nové meno"),
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-first-name" }, "Nové meno (voliteľné)"),
                   React.createElement("input", {
                     type: "text",
                     id: "new-first-name",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: newFirstName,
                     onChange: (e) => setNewFirstName(e.target.value),
-                    required: true,
                     placeholder: "Zadajte nové meno",
                     autoComplete: "given-name"
                   })
                 ),
                 React.createElement("div", null,
-                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-last-name" }, "Nové priezvisko"),
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-last-name" }, "Nové priezvisko (voliteľné)"),
                   React.createElement("input", {
                     type: "text",
                     id: "new-last-name",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: newLastName,
                     onChange: (e) => setNewLastName(e.target.value),
-                    required: true,
                     placeholder: "Zadajte nové priezvisko",
                     autoComplete: "family-name"
                   })
@@ -1303,7 +1300,7 @@ function App() {
                     onCopy: (e) => e.preventDefault(),
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
-                    required: true,
+                    required: true, // ZMENA: Toto pole je teraz povinné
                     placeholder: "Zadajte svoje aktuálne heslo",
                     autoComplete: "current-password"
                   }),
