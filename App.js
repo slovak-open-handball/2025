@@ -651,16 +651,11 @@ function App() {
       )
     );
 
-    // Vytvoríme obsah pre hlavnú kartu ako pole elementov
-    const mainCardContent = [
-      React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
-      user ? loggedInContent : loggedOutContent
-    ];
-
     return React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
       React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
         React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-          ...mainCardContent // Rozbalíme pole elementov
+          React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
+          user ? loggedInContent : loggedOutContent // Priame odovzdanie detí
         )
       )
     );
@@ -753,7 +748,7 @@ function App() {
             )
           )
         )
-      ),
+      );
   }
 
   if (currentPath === 'login.html') {
