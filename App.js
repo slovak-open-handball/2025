@@ -1209,15 +1209,15 @@ function App() {
             ),
 
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
-            React.createElement("div", { className: "text-center mb-6" },
-              React.createElement("p", { className: "text-lg text-gray-700" },
-                React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
-              ),
-              // ZMENA: "Zobrazované meno" na "Meno a priezvisko"
-              React.createElement("p", { className: "text-lg text-gray-700" },
-                React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
-              )
-            ),
+            // ODSTRÁNENÉ: Pôvodné riadky s e-mailom a menom pod hlavičkou
+            // React.createElement("div", { className: "text-center mb-6" },
+            //   React.createElement("p", { className: "text-lg text-gray-700" },
+            //     React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
+            //   ),
+            //   React.createElement("p", { className: "text-lg text-gray-700" },
+            //     React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
+            //   )
+            // ),
 
             profileView === 'my-data' && (
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
