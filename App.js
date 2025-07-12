@@ -28,6 +28,8 @@ function App() {
   // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
+  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby
+  const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
   const [newEmail, setNewEmail] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
@@ -256,7 +258,8 @@ function App() {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    if (!email || !password || !confirmPassword || !firstName || !lastName) { // Pridané overenie mena a priezviska
+    // NOVÉ: Pridané overenie contactPhoneNumber
+    if (!email || !password || !confirmPassword || !firstName || !lastName || !contactPhoneNumber) {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
@@ -269,6 +272,13 @@ function App() {
     if (passwordError) {
       setError(passwordError);
       return;
+    }
+
+    // NOVÉ: Validácia telefónneho čísla
+    const phoneRegex = /^\+421 \d{3} \d{3} \d{3}$/;
+    if (!phoneRegex.test(contactPhoneNumber)) {
+        setError("Telefónne číslo kontaktnej osoby musí byť vo formáte +421 xxx xxx xxx.");
+        return;
     }
 
     const recaptchaToken = await getRecaptchaToken('register');
@@ -292,6 +302,7 @@ function App() {
         email: email,
         firstName: firstName, // Uloženie mena
         lastName: lastName,   // Uloženie priezvisko
+        contactPhoneNumber: contactPhoneNumber, // NOVÉ: Uloženie telefónneho čísla
         displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
         role: userRole,
         approved: isApproved, 
@@ -311,7 +322,10 @@ function App() {
             action: 'sendRegistrationEmail',
             email: email,
             password: password, 
-            isAdmin: isAdminRegistration
+            isAdmin: isAdminRegistration,
+            firstName: firstName, // Pridané pre e-mail
+            lastName: lastName,   // Pridané pre e-mail
+            contactPhoneNumber: contactPhoneNumber // NOVÉ: Pridané pre e-mail
           })
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
@@ -329,6 +343,7 @@ function App() {
       setConfirmPassword('');
       setFirstName(''); // Vyčistenie polí
       setLastName('');  // Vyčistenie polí
+      setContactPhoneNumber(''); // NOVÉ: Vyčistenie poľa
       window.location.href = 'login.html'; 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -843,6 +858,23 @@ function App() {
                   autoComplete: "family-name"
                 })
               ),
+              // NOVÉ: Pole pre telefónne číslo kontaktnej osoby
+              !is_admin_register_page && (
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-phone-number" }, "Telefónne číslo kontaktnej osoby"),
+                  React.createElement("input", {
+                    type: "tel", // Používame type="tel" pre mobilné zariadenia
+                    id: "reg-phone-number",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: contactPhoneNumber,
+                    onChange: (e) => setContactPhoneNumber(e.target.value),
+                    required: true,
+                    placeholder: "+421 xxx xxx xxx",
+                    pattern: "\\+421 \\d{3} \\d{3} \\d{3}", // Regex pre formát
+                    title: "Formát: +421 xxx xxx xxx"
+                  })
+                )
+              ),
               // Text "E-mailová adresa bude slúžiť..." presunutý sem
               !is_admin_register_page && (
                 React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
@@ -850,7 +882,7 @@ function App() {
                 )
               ),
               React.createElement("div", null,
-                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa kontaktnej osoby"), // Zmena textu
                 React.createElement("input", {
                   type: "email",
                   id: "reg-email",
