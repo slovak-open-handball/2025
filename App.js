@@ -91,6 +91,17 @@ function App() {
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25" })
   );
 
+  // NOVÁ POMOCNÁ FUNKCIA: Formátuje Date objekt na reťazec pre datetime-local input
+  // Zabezpečuje, že sa zobrazí čas v lokálnom časovom pásme prehliadača (ktorý by mal byť UTC+2)
+  const formatToDateTimeLocal = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   React.useEffect(() => {
     try {
@@ -250,9 +261,10 @@ function App() {
           setEditEndDate(edDateObj);
 
           // Pre lokálne stavy inputov konvertujeme Date objekt na ISO string
-          setTempRegistrationStartDate(regStartDateObj ? regStartDateObj.toISOString().slice(0, 16) : ''); // NOVÉ
-          setTempRegistrationEndDate(regEndDateObj ? regEndDateObj.toISOString().slice(0, 16) : '');
-          setTempEditEndDate(edDateObj ? edDateObj.toISOString().slice(0, 16) : '');
+          // POUŽÍVAME NOVÚ FUNKCIU formatToDateTimeLocal
+          setTempRegistrationStartDate(formatToDateTimeLocal(regStartDateObj)); // NOVÉ
+          setTempRegistrationEndDate(formatToDateTimeLocal(regEndDateObj));
+          setTempEditEndDate(formatToDateTimeLocal(edDateObj));
 
         } else {
           console.log("Nastavenia turnaja neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
@@ -799,7 +811,7 @@ function App() {
     // Validácia telefónneho čísla
     const phoneRegex = /^\+\d+$/;
     if (!phoneRegex.test(newContactPhoneNumber)) {
-        setError("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+        setError("Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
         return;
     }
 
@@ -1058,7 +1070,7 @@ function App() {
           React.createElement("a", {
             href: "logged-in.html",
             className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Moja zóna")
+          }, "Moja zón")
         )
       );
     } else {
@@ -1166,7 +1178,7 @@ function App() {
                       required: true,
                       placeholder: "+421901234567", 
                       pattern: "^\\+\\d+$", 
-                      title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)" 
+                      title: "Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567)" 
                     })
                   )
                 ),
@@ -1383,7 +1395,7 @@ function App() {
                       changeProfileView('change-name');
                     },
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                        profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť meno a priezvisko") 
                 ),
@@ -1645,7 +1657,7 @@ function App() {
                       required: true,
                       placeholder: "+421901234567",
                       pattern: "^\\+\\d+$",
-                      title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                      title: "Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
                     })
                   ),
                   React.createElement("div", { className: "relative" },
