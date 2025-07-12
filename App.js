@@ -1654,12 +1654,10 @@ function App() {
                       )
                     )
                   )
-                )
-               : (
+                ): (
                   React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
               )
-            )
           ),
 
           profileView === 'all-teams' && (
