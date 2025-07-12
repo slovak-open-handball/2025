@@ -1204,7 +1204,7 @@ function App() {
               </div>
               {!is_admin_register_page && (
                 <p className="text-gray-600 text-sm mt-4">
-                  E-mailová adresa a heslo budú potrebné na správu turnajového účtu na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
+                  E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
                 </p>
               )}
               <PasswordInput
