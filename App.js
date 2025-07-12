@@ -1120,7 +1120,7 @@ function App() {
         // Hlavná oblasť obsahu: flex kontajner pre menu a pravý panel
         React.createElement("div", { className: "flex flex-grow w-full pb-10" }, // Pridaný pb-10 pre spodnú medzeru
           // Ľavé menu (fixné)
-          React.createElement("div", { className: "fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-64 bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4" }, // Pridaný ml-4 pre medzeru od ľavého okraja
+          React.createElement("div", { className: "fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-[271px] bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4" }, // ZMENA: w-[271px]
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
               React.createElement("ul", { className: "space-y-2" },
@@ -1197,7 +1197,7 @@ function App() {
           ),
 
           // Pravý obsah (posuvný)
-          React.createElement("div", { className: "flex-grow ml-72 p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4" }, // Zmenený ml na ml-72 (64px menu + 8px medzera) a pridaný mr-4
+          React.createElement("div", { className: "flex-grow ml-[287px] p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4" }, // ZMENA: ml-[287px]
             message && (
               React.createElement("div", { className: "bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4", role: "alert" },
                 message
