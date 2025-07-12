@@ -1637,11 +1637,12 @@ function App() {
                     )
                   )
                 ) : (
-                  React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie..."),
+                  React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
               )
             )
-          ),
+          )
+        ),
 
           profileView === 'all-teams' && (
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
