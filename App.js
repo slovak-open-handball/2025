@@ -536,16 +536,16 @@ function App() {
       await db.collection('users').doc(userToDelete.uid).delete();
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
+      closeDeleteConfirmationModal(); // Zavrie modálne okno PRED otvorením novej karty
+
       // Otvorenie Firebase Console v novej karte po úspešnom odstránení
       // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
       window.open(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users?t=${new Date().getTime()}`, '_blank');
 
-      // Obnovenie zoznamu používateľov po odstránení (už sa nespustí, ak dôjde k presmerovaniu)
-      // fetchAllUsers(); 
-      closeDeleteConfirmationModal(); // Zavrie modálne okno, ak sa presmeruje na novú kartu
     } catch (e) {
       console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
+    } finally {
       setLoading(false); // Nastavíme loading na false aj v prípade chyby, aby sa UI neodblokovalo
       clearMessages();
     }
