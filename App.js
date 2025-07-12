@@ -17,9 +17,6 @@ const firebaseConfig = {
 };
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Dummy domain for internal email construction
-const DUMMY_DOMAIN = "";
-
 // reCAPTCHA Site Key - NAHRADENE S VASIM SKUTOCNYM SITE KEYOM!
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Váš skutočný SITE KEY
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec";
@@ -38,7 +35,7 @@ const EyeOffIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-50
 const formatToDateTimeLocal = (date) => {
   if (!date) return '';
   const d = new Date(date);
-  const year = d.getFullYear();
+  const year = String(d.getFullYear());
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   const hours = String(d.getHours()).padStart(2, '0');
@@ -1375,7 +1372,7 @@ const RoleEditModal = ({ show, userToEditRole, newRole, setNewRole, onClose, onC
 
 // components/admin/UserList.js
 const UserList = () => {
-  const { user, loading, fetchAllUsers, handleDeleteUser, handleUpdateUserRole, handleApproveUser, allUsersData } = useAuth();
+  const { user, loading, handleDeleteUser, handleUpdateUserRole, handleApproveUser, allUsersData } = useAuth(); // Removed fetchAllUsers from destructuring
 
   const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null);
@@ -1383,9 +1380,8 @@ const UserList = () => {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
 
-  React.useEffect(() => {
-    fetchAllUsers();
-  }, [fetchAllUsers]);
+  // REMOVED: React.useEffect(() => { fetchAllUsers(); }, [fetchAllUsers]);
+  // Data is now fetched and updated by the onSnapshot listener in AuthContext.
 
   const openDeleteConfirmationModal = (u) => {
     setUserToDelete(u);
@@ -1479,11 +1475,10 @@ const UserList = () => {
 
 // components/admin/TeamList.js
 const TeamList = () => {
-  const { allUsersData, fetchAllUsers } = useAuth();
+  const { allUsersData } = useAuth(); // Removed fetchAllUsers from destructuring
 
-  React.useEffect(() => {
-    fetchAllUsers();
-  }, [fetchAllUsers]);
+  // REMOVED: React.useEffect(() => { fetchAllUsers(); }, [fetchAllUsers]);
+  // Data is now fetched and updated by the onSnapshot listener in AuthContext.
 
   return (
     React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
