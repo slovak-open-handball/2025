@@ -25,10 +25,18 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  // Nové stavy pre meno a priezvisko
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+
   const [newEmail, setNewEmail] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
+  // Nové stavy pre zmenu mena a priezviska
+  const [newFirstName, setNewFirstName] = React.useState('');
+  const [newLastName, setNewLastName] = React.useState('');
+
 
   const [profileView, setProfileView] = React.useState('my-data');
   const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre administrátorské oprávnenia
@@ -108,6 +116,12 @@ function App() {
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
               setIsAdmin(userData.role === 'admin');
               console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
+              // Nastavíme display name na kombináciu mena a priezviska z Firestore
+              if (userData.firstName && userData.lastName) {
+                await currentUser.updateProfile({ displayName: `${userData.firstName} ${userData.lastName}` });
+              } else if (userData.email) {
+                await currentUser.updateProfile({ displayName: userData.email });
+              }
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
@@ -210,7 +224,7 @@ function App() {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    if (!email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword || !firstName || !lastName) { // Pridané overenie mena a priezviska
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
@@ -235,19 +249,20 @@ function App() {
     setLoading(true);
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      await userCredential.user.updateProfile({ displayName: email }); // Nastavíme display name na email
+      // Nastavíme display name na kombináciu mena a priezviska
+      await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       // Uloženie údajov používateľa do Firestore
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
-      // Nové: Pridanie poľa 'approved'
-      // Admini potrebujú schválenie (approved: false), bežní používatelia sú schválení hneď (approved: true)
       const isApproved = !isAdminRegistration; 
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
-        displayName: email, // Alebo iné zobrazované meno
+        firstName: firstName, // Uloženie mena
+        lastName: lastName,   // Uloženie priezviska
+        displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
         role: userRole,
-        approved: isApproved, // Nastavenie schválenia
+        approved: isApproved, 
         registeredAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
@@ -256,15 +271,15 @@ function App() {
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // Dôležité pre Google Apps Script ako Web App
+          mode: 'no-cors', 
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             action: 'sendRegistrationEmail',
             email: email,
-            password: password, // UPOZORNENIE: Posielanie hesla e-mailom nie je bezpečné!
-            isAdmin: isAdminRegistration // Indikátor, či ide o registráciu administrátora
+            password: password, 
+            isAdmin: isAdminRegistration
           })
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
@@ -273,7 +288,6 @@ function App() {
       }
       // --- KONIEC ODOSIELANIA E-MAILU ---
 
-      // DÔLEŽITÉ: Odhlásiť používateľa ihneď po registrácii
       await auth.signOut();
 
       setMessage("Registrácia úspešná! Presmerovanie na prihlasovaciu stránku...");
@@ -281,7 +295,9 @@ function App() {
       setEmail('');
       setPassword('');
       setConfirmPassword('');
-      window.location.href = 'login.html'; // Presmerovanie po registrácii
+      setFirstName(''); // Vyčistenie polí
+      setLastName('');  // Vyčistenie polí
+      window.location.href = 'login.html'; 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
       if (e.code === 'auth/email-already-in-use') {
@@ -301,7 +317,7 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!auth || !db) { // Pridaná kontrola db
+    if (!auth || !db) { 
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
@@ -322,15 +338,12 @@ function App() {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
 
-      // Krok 1: Načítajte rolu a stav schválenia z Firestore
       const userDocRef = db.collection('users').doc(currentUser.uid);
       const userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
-        // Ak dokument používateľa neexistuje vo Firestore, môže to byť problém
-        // Alebo používateľ ešte nebol plne zaregistrovaný (napr. chyba pri registrácii)
         setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
-        await auth.signOut(); // Odhlásiť používateľa
+        await auth.signOut(); 
         setLoading(false);
         clearMessages();
         return;
@@ -339,16 +352,22 @@ function App() {
       const userData = userDoc.data();
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
-      // Krok 2: Skontrolujte stav schválenia pre admin účty
       if (userData.role === 'admin' && userData.approved === false) { 
         setError("Váš administrátorský účet je neaktívny alebo čaká na schválenie iným administrátorom.");
-        await auth.signOut(); // Odhlásiť neschváleného administrátora
+        await auth.signOut(); 
         setLoading(false);
         clearMessages();
         return;
       }
 
-      // Krok 3: Ak je používateľ schválený (alebo nie je admin), pokračujte v prihlásení
+      // Aktualizujeme displayName používateľa po prihlásení, ak máme meno a priezvisko
+      if (userData.firstName && userData.lastName) {
+        await currentUser.updateProfile({ displayName: `${userData.firstName} ${userData.lastName}` });
+      } else if (userData.email) {
+        await currentUser.updateProfile({ displayName: userData.email });
+      }
+
+
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
       setEmail('');
@@ -409,9 +428,8 @@ function App() {
       }
 
       await user.updateEmail(newEmail);
-      await user.updateProfile({ displayName: newEmail });
       // Aktualizácia e-mailu aj vo Firestore
-      await db.collection('users').doc(user.uid).update({ email: newEmail, displayName: newEmail });
+      await db.collection('users').doc(user.uid).update({ email: newEmail });
       setMessage("E-mailová adresa úspešne zmenená na " + newEmail);
       setError('');
       setNewEmail('');
@@ -492,10 +510,6 @@ function App() {
         setError("Firestore nie je inicializovaný.");
         return;
       }
-      // V reálnej aplikácii by ste tu mali overiť, či je používateľ skutočne administrátor
-      // pred získavaním všetkých používateľov.
-      // Toto overenie by malo byť aj na serverovej strane (Firestore Security Rules).
-
       const usersCollectionRef = db.collection('users');
       const snapshot = await usersCollectionRef.get();
       const usersList = snapshot.docs.map(doc => doc.data());
@@ -509,6 +523,58 @@ function App() {
       clearMessages();
     }
   };
+
+  // Funkcia na zmenu mena a priezviska
+  const handleChangeName = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      setError("Nie ste prihlásený.");
+      return;
+    }
+    if (!newFirstName || !newLastName) {
+      setError("Prosím, zadajte meno aj priezvisko.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (user.email && currentPassword) {
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        await user.reauthenticateWithCredential(credential);
+      } else {
+        setError("Pre zmenu mena a priezviska je potrebné zadať aktuálne heslo pre overenie.");
+        setLoading(false);
+        return;
+      }
+
+      const newDisplayName = `${newFirstName} ${newLastName}`;
+      await user.updateProfile({ displayName: newDisplayName });
+      // Aktualizácia mena a priezviska aj vo Firestore
+      await db.collection('users').doc(user.uid).update({ 
+        firstName: newFirstName,
+        lastName: newLastName,
+        displayName: newDisplayName
+      });
+      setMessage("Meno a priezvisko úspešne zmenené na " + newDisplayName);
+      setError('');
+      setNewFirstName('');
+      setNewLastName('');
+      setCurrentPassword('');
+    } catch (e) {
+      console.error("Chyba pri zmene mena a priezviska:", e);
+      if (e.code === 'auth/requires-recent-login') {
+        setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
+      } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
+        setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
+      } else {
+        setError(`Chyba pri zmene mena a priezviska: ${e.message}`);
+      }
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
 
   // Funkcie pre modálne okná
   const openDeleteConfirmationModal = (user) => {
@@ -707,6 +773,32 @@ function App() {
             ),
             React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
               React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" }, "Meno"), // Nové pole Meno
+                React.createElement("input", {
+                  type: "text",
+                  id: "reg-first-name",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: firstName,
+                  onChange: (e) => setFirstName(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte svoje meno",
+                  autoComplete: "given-name"
+                })
+              ),
+              React.createElement("div", null,
+                React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-last-name" }, "Priezvisko"), // Nové pole Priezvisko
+                React.createElement("input", {
+                  type: "text",
+                  id: "reg-last-name",
+                  className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                  value: lastName,
+                  onChange: (e) => setLastName(e.target.value),
+                  required: true,
+                  placeholder: "Zadajte svoje priezvisko",
+                  autoComplete: "family-name"
+                })
+              ),
+              React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
                 React.createElement("input", {
                   type: "email",
@@ -880,6 +972,20 @@ function App() {
                       profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť heslo")
+                ),
+                // Nová položka menu pre zmenu mena a priezviska
+                React.createElement("li", null,
+                  React.createElement("button", {
+                    onClick: () => {
+                      setProfileView('change-name');
+                      // Predvyplníme polia aktuálnymi hodnotami
+                      setNewFirstName(user.displayName ? user.displayName.split(' ')[0] : '');
+                      setNewLastName(user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '');
+                    },
+                    className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 ${
+                      profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`
+                  }, "Zmeniť meno/priezvisko")
                 ),
                 // Nová položka menu "Používatelia" - viditeľná len pre administrátorov
                 isAdmin && (
@@ -1055,6 +1161,66 @@ function App() {
                   className: "bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
                   disabled: loading
                 }, loading ? 'Ukladám...' : 'Zmeniť heslo')
+              )
+            ),
+
+            profileView === 'change-name' && (
+              React.createElement("form", { onSubmit: handleChangeName, className: "space-y-4 border-t pt-4 mt-4" },
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800" }, "Zmeniť meno a priezvisko"),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-first-name" }, "Nové meno"),
+                  React.createElement("input", {
+                    type: "text",
+                    id: "new-first-name",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: newFirstName,
+                    onChange: (e) => setNewFirstName(e.target.value),
+                    required: true,
+                    placeholder: "Zadajte nové meno",
+                    autoComplete: "given-name"
+                  })
+                ),
+                React.createElement("div", null,
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "new-last-name" }, "Nové priezvisko"),
+                  React.createElement("input", {
+                    type: "text",
+                    id: "new-last-name",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
+                    value: newLastName,
+                    onChange: (e) => setNewLastName(e.target.value),
+                    required: true,
+                    placeholder: "Zadajte nové priezvisko",
+                    autoComplete: "family-name"
+                  })
+                ),
+                React.createElement("div", { className: "relative" },
+                  React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "current-password-name-change" }, "Aktuálne heslo (pre overenie)"),
+                  React.createElement("input", {
+                    type: showCurrentPassword ? "text" : "password",
+                    id: "current-password-name-change",
+                    className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10",
+                    value: currentPassword,
+                    onChange: (e) => setCurrentPassword(e.target.value),
+                    onCopy: (e) => e.preventDefault(),
+                    onPaste: (e) => e.preventDefault(),
+                    onCut: (e) => e.preventDefault(),
+                    required: true,
+                    placeholder: "Zadajte svoje aktuálne heslo",
+                    autoComplete: "current-password"
+                  }),
+                  React.createElement("button", {
+                    type: "button",
+                    onClick: () => setShowCurrentPassword(!showCurrentPassword),
+                    className: "absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+                  },
+                    showCurrentPassword ? EyeOffIcon : EyeIcon
+                  )
+                ),
+                React.createElement("button", {
+                  type: "submit",
+                  className: "bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4",
+                  disabled: loading
+                }, loading ? 'Ukladám...' : 'Zmeniť meno a priezvisko')
               )
             ),
 
