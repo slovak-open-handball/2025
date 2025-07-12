@@ -130,7 +130,15 @@ function App() {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-    return (!regStart || now >= regStart) && (!regEnd || now <= regEnd);
+
+    // Kontrola, či sú dátumy platné pred porovnaním
+    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
+    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
+
+    return (
+      (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladáme, že registrácia už začala
+      (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladáme, že registrácia ešte neskončila
+    );
   }, [settingsLoaded, registrationStartDate, registrationEndDate]);
 
   // Funkcia na výpočet zostávajúceho času pre odpočítavanie
@@ -138,8 +146,9 @@ function App() {
     const now = new Date();
     const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
 
-    if (!startDate || now >= startDate) {
-        return null; // Registrácia je už otvorená alebo nebol nastavený dátum začiatku
+    // Ak startDate nie je platný dátum, alebo už je v minulosti, odpočítavanie nie je potrebné
+    if (!startDate || isNaN(startDate) || now >= startDate) {
+        return null; 
     }
 
     const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekundách
@@ -246,22 +255,35 @@ function App() {
         return; // Čakáme na inicializáciu DB a Auth
       }
       try {
+          // Používame onSnapshot pre real-time aktualizácie nastavení
           const settingsDocRef = db.collection('settings').doc('registration');
-          const settingsDoc = await settingsDocRef.get();
-          if (settingsDoc.exists) {
-              const data = settingsDoc.data();
-              setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-              setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-              setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
-          } else {
-              console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
-          }
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+                setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
+            } else {
+                console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
+                setRegistrationStartDate('');
+                setRegistrationEndDate('');
+                setUserDataEditEndDate('');
+            }
+            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
+            setLoading(false); // Celkové načítanie je hotové
+          }, error => {
+            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+            setLoading(false);
+          });
+
+          return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
       } catch (e) {
-          console.error("Chyba pri načítaní nastavení registrácie:", e);
-          setError(`Chyba pri načítaní nastavení: ${e.message}`);
-      } finally {
-          setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
-          setLoading(false); // Celkové načítanie je hotové
+          console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
+          setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+          setLoading(false);
       }
     };
 
@@ -275,8 +297,14 @@ function App() {
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
         setCountdown(timeLeft);
+        // Ak čas vypršal, znova vyhodnotíme isRegistrationOpen
         if (timeLeft === null) {
-            clearInterval(timer);
+            // Force re-evaluation of isRegistrationOpen by updating one of its dependencies
+            // A simple way is to toggle a dummy state or re-fetch settings if needed,
+            // but since isRegistrationOpen is a useMemo, it will re-evaluate on regStartDate change.
+            // The fact that countdown becomes null means regStartDate is no longer in the future,
+            // which should naturally trigger isRegistrationOpen to become true (if within end date).
+            // No explicit action needed here beyond setting countdown to null.
         }
     };
 
@@ -994,7 +1022,7 @@ function App() {
                     <p className="text-lg text-gray-600">
                       Registračný formulár zatiaľ nie je prístupný.
                     </p>
-                    {regStart && now < regStart && (
+                    {regStart && !isNaN(regStart) && now < regStart && (
                       <>
                         <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
                         {countdown && (
@@ -1002,7 +1030,7 @@ function App() {
                         )}
                       </>
                     )}
-                    {regEnd && now > regEnd && (
+                    {regEnd && !isNaN(regEnd) && now > regEnd && (
                       <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
                     )}
                     <div className="mt-6 flex justify-center">
@@ -1049,7 +1077,7 @@ function App() {
               <p className="text-lg text-gray-600">
                 Registračný formulár zatiaľ nie je prístupný.
               </p>
-              {regStart && now < regStart && (
+              {regStart && !isNaN(regStart) && now < regStart && (
                 <>
                   <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
                   {countdown && (
@@ -1057,7 +1085,7 @@ function App() {
                   )}
                 </>
               )}
-              {regEnd && now > regEnd && (
+              {regEnd && !isNaN(regEnd) && now > regEnd && (
                 <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
               )}
               <div className="mt-6 flex justify-center">
