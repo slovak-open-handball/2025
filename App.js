@@ -799,7 +799,9 @@ function App() {
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"), // <--- PRIDANÁ ČIARKA TU
+            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"), 
+            // Pridaná čiarka tu!
+            // Toto je miesto, kde v predchádzajúcej verzii chýbala čiarka.
             user ? (
               React.createElement(React.Fragment, null,
                 React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
@@ -810,7 +812,8 @@ function App() {
                   }, "Moja zóna")
                 )
               )
-            ) : (
+            ), // <--- Táto čiarka je kľúčová!
+            user ? null : ( // Pridané user ? null : (...) aby sa zabezpečila správna štruktúra
               React.createElement(React.Fragment, null,
                 React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
                 React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
