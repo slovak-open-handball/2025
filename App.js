@@ -941,7 +941,15 @@ function App() {
                     id: "reg-phone-number",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: contactPhoneNumber,
-                    onChange: (e) => setContactPhoneNumber(e.target.value),
+                    // ZMENA: Upravený onChange handler pre striktné overenie vstupu
+                    onChange: (e) => {
+                      const value = e.target.value;
+                      // Regex pre povolenie prázdneho reťazca, alebo reťazca začínajúceho na '+' nasledovaného nulou alebo viacerými číslicami
+                      const strictPhoneRegex = /^\+\d*$/;
+                      if (value === '' || strictPhoneRegex.test(value)) {
+                        setContactPhoneNumber(value);
+                      }
+                    },
                     required: true,
                     placeholder: "+421901234567", // Aktualizovaný placeholder
                     pattern: "^\\+\\d+$", // Aktualizovaný regex pre '+' a iba číslice
@@ -1194,8 +1202,11 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" }, `Vitajte, ${user.displayName || 'Používateľ'}!`),
             React.createElement("div", { className: "text-center mb-6" },
               React.createElement("p", { className: "text-lg text-gray-700" },
-                "Prihlásený ako: ",
-                React.createElement("span", { className: "font-semibold" }, user.email || 'Neznámy používateľ')
+                React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
+              ),
+              // ZMENA: "Zobrazované meno" na "Meno a priezvisko"
+              React.createElement("p", { className: "text-lg text-gray-700" },
+                React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
               )
             ),
 
@@ -1205,8 +1216,9 @@ function App() {
                 React.createElement("p", { className: "text-gray-700" },
                   React.createElement("span", { className: "font-semibold" }, "E-mailová adresa: "), user.email || 'N/A'
                 ),
+                // ZMENA: "Zobrazované meno" na "Meno a priezvisko"
                 React.createElement("p", { className: "text-gray-700" },
-                  React.createElement("span", { className: "font-semibold" }, "Zobrazované meno: "), user.displayName || 'N/A'
+                  React.createElement("span", { className: "font-semibold" }, "Meno a priezvisko: "), user.displayName || 'N/A'
                 ),
                 // NOVÉ: Zobrazenie telefónneho čísla
                 React.createElement("p", { className: "text-gray-700" },
@@ -1413,7 +1425,15 @@ function App() {
                     id: "new-contact-phone-number",
                     className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
                     value: newContactPhoneNumber,
-                    onChange: (e) => setNewContactPhoneNumber(e.target.value),
+                    // ZMENA: Upravený onChange handler pre striktné overenie vstupu
+                    onChange: (e) => {
+                      const value = e.target.value;
+                      // Regex pre povolenie prázdneho reťazca, alebo reťazca začínajúceho na '+' nasledovaného nulou alebo viacerými číslicami
+                      const strictPhoneRegex = /^\+\d*$/;
+                      if (value === '' || strictPhoneRegex.test(value)) {
+                        setNewContactPhoneNumber(value);
+                      }
+                    },
                     required: true,
                     placeholder: "+421901234567",
                     pattern: "^\\+\\d+$",
