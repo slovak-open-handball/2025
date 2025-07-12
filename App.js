@@ -51,6 +51,18 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   );
 }
 
+// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
+// This ensures the datetime-local input displays the time in the user's local timezone.
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -150,9 +162,10 @@ function App() {
             const settingsDoc = await settingsDocRef.get();
             if (settingsDoc.exists) {
                 const data = settingsDoc.data();
-                setRegistrationStartDate(data.registrationStartDate ? new Date(data.registrationStartDate.toDate()).toISOString().slice(0, 16) : '');
-                setRegistrationEndDate(data.registrationEndDate ? new Date(data.registrationEndDate.toDate()).toISOString().slice(0, 16) : '');
-                setUserDataEditEndDate(data.userDataEditEndDate ? new Date(data.userDataEditEndDate.toDate()).toISOString().slice(0, 16) : '');
+                // Používame formatToDatetimeLocal pre zobrazenie v lokálnom čase
+                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+                setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
             } else {
                 console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
             }
@@ -698,6 +711,9 @@ function App() {
     try {
         const settingsDocRef = db.collection('settings').doc('registration');
         await settingsDocRef.set({
+            // Pri ukladaní vytvárame Timestamp z Date objektu, ktorý je vytvorený z datetime-local stringu.
+            // new Date() s datetime-local stringom sa interpretuje ako lokálny čas.
+            // Timestamp.fromDate() potom tento lokálny čas správne prekonvertuje na UTC pre uloženie.
             registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null,
@@ -1279,7 +1295,7 @@ function App() {
                 )}
                 {!isEditAllowed && (
                     <p className="text-red-500 text-sm mt-2">
-                        Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {new Date(userDataEditEndDate).toLocaleString('sk-SK')}
+                        Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : 'N/A'}
                     </p>
                 )}
               </div>
@@ -1351,7 +1367,7 @@ function App() {
                     required
                     placeholder="Zadajte nové meno"
                     autoComplete="given-name"
-                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
+                    disabled={!isEditAllowed}
                   />
                 </div>
                 <div>
@@ -1365,7 +1381,7 @@ function App() {
                     required
                     placeholder="Zadajte nové priezvisko"
                     autoComplete="family-name"
-                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
+                    disabled={!isEditAllowed}
                   />
                 </div>
                 <PasswordInput
@@ -1380,7 +1396,7 @@ function App() {
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
-                  disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
+                  disabled={!isEditAllowed}
                 />
                 <button
                   type="submit"
@@ -1418,7 +1434,7 @@ function App() {
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
                     title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
+                    disabled={!isEditAllowed}
                   />
                 </div>
                 <PasswordInput
@@ -1433,7 +1449,7 @@ function App() {
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
-                  disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
+                  disabled={!isEditAllowed}
                 />
                 <button
                   type="submit"
