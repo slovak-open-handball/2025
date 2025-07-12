@@ -54,13 +54,6 @@ function App() {
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
 
-  // Nové stavy pre modálne okná
-  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
-  const [userToDelete, setUserToDelete] = React.useState(null);
-  const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
-  const [userToEditRole, setUserToEditRole] = React.useState(null);
-  const [newRole, setNewRole] = React.useState('');
-
 
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }),
@@ -291,7 +284,7 @@ function App() {
         uid: userCredential.user.uid,
         email: email,
         firstName: firstName, // Uloženie mena
-        lastName: lastName,   // Uloženie priezviska
+        lastName: lastName,   // Uloženie priezvisko
         displayName: `${firstName} ${lastName}`, // Uloženie kombinovaného mena
         role: userRole,
         approved: isApproved, 
@@ -812,13 +805,6 @@ function App() {
             React.createElement("h1", { className: "text-3xl font-bold text-center text-gray-800 mb-6" },
               is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"
             ),
-            // Nové vety pridané sem
-            React.createElement("p", { className: "text-gray-600 text-sm mb-4" },
-              "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
-            ),
-            React.createElement("p", { className: "text-gray-600 text-sm mb-6" },
-              "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
-            ),
             React.createElement("form", { onSubmit: (e) => handleRegister(e, is_admin_register_page), className: "space-y-4" },
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-first-name" }, "Meno"), // Nové pole Meno
@@ -845,6 +831,17 @@ function App() {
                   placeholder: "Zadajte svoje priezvisko",
                   autoComplete: "family-name"
                 })
+              ),
+              // Podmienené zobrazenie textu len pre register.html
+              !is_admin_register_page && (
+                React.createElement(React.Fragment, null,
+                  React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
+                    "E-mailová adresa a heslo sú potrebné na editáciu poskytnutých údajov z prihlasovacieho formuláru/na správu svojho turnajového účtu."
+                  ),
+                  React.createElement("p", { className: "text-gray-600 text-sm mb-6" }, // Pridaný mb-6 pre medzeru
+                    "E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď."
+                  )
+                )
               ),
               React.createElement("div", null,
                 React.createElement("label", { className: "block text-gray-700 text-sm font-bold mb-2", htmlFor: "reg-email" }, "E-mailová adresa"),
