@@ -1090,7 +1090,6 @@ function App() {
                     }`
                   }, "Moje údaje")
                 ),
-                {/* Odstránené: Zmeniť e-mail */}
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => changeProfileView('change-password'),
@@ -1183,8 +1182,6 @@ function App() {
                 )
               )
             ),
-
-            {/* Odstránený blok pre zmenu e-mailu */}
 
             profileView === 'change-password' && (
               React.createElement("form", { onSubmit: handleChangePassword, className: "space-y-4 border-t pt-4 mt-4" },
