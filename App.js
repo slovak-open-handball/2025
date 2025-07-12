@@ -799,7 +799,8 @@ function App() {
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-            // Vytvorenie poľa potomkov pre React.createElement
+            // Wrap all children of this React.createElement in an array.
+            // This ensures a single argument is passed as children, which can help with parsing.
             [
               React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
               user ? ( // Ak je používateľ prihlásený
