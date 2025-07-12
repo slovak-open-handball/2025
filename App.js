@@ -717,7 +717,6 @@ function App() {
             registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
         setMessage("Nastavenia úspešne uložené!");
     } catch (e) {
