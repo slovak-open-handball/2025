@@ -1625,7 +1625,7 @@ function App() {
           profileView === 'users' && (
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
-              allUsersData.length > 0 ? ( // Removed outer parentheses
+              allUsersData.length > 0 ? (
                 React.createElement(React.Fragment, null,
                   React.createElement("ul", { className: "divide-y divide-gray-200" },
                     allUsersData.map((u) =>
@@ -1656,8 +1656,7 @@ function App() {
                       )
                     )
                   )
-                )
-               : React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...") // No outer parentheses here
+                ) : React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
             )
           ),
 
