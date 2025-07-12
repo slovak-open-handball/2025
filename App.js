@@ -18,7 +18,7 @@ const firebaseConfig = {
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Dummy domain for internal email construction
-const DUMMY_DOMAIN = "@slovakhandball.com";
+const DUMMY_DOMAIN = "";
 
 // reCAPTCHA Site Key - NAHRADENE S VASIM SKUTOCNYM SITE KEYOM!
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Váš skutočný SITE KEY
