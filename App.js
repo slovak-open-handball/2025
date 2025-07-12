@@ -737,8 +737,8 @@ function App() {
         console.error("Chyba pri ukladaní nastavení:", e);
         setError(`Chyba pri ukladaní nastavení: ${e.message}`);
     } finally {
-        setLoading(false);
-        clearMessages();
+      setLoading(false);
+      clearMessages();
     }
   };
 
@@ -932,10 +932,10 @@ function App() {
                 ) : (
                   <>
                     <p className="text-lg text-gray-600">
-                      Registračný formulár je momentálne {regStart && now < regStart ? 'ešte neotvorený' : 'už uzavretý'}.
+                      Registračný formulár zatiaľ nie je prístupný.
                     </p>
                     {regStart && now < regStart && (
-                      <p className="text-md text-gray-500 mt-2">Registrácia bude otvorená od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                      <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
                     )}
                     {regEnd && now > regEnd && (
                       <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
@@ -982,10 +982,10 @@ function App() {
             <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
               <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia na turnaj</h1>
               <p className="text-lg text-gray-600">
-                Registračný formulár je momentálne {regStart && now < regStart ? 'ešte neotvorený' : 'už uzavretý'}.
+                Registračný formulár zatiaľ nie je prístupný.
               </p>
               {regStart && now < regStart && (
-                <p className="text-md text-gray-500 mt-2">Registrácia bude otvorená od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
               )}
               {regEnd && now > regEnd && (
                 <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
