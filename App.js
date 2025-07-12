@@ -909,7 +909,7 @@ function App() {
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
       closeDeleteConfirmationModal(); // Zavrie modálne okno PRED otvorením novej karty
-      fetchAllUsers(); // Obnovenie zoznamu používateľov po odstránení
+      fetchAllUsers(); // Obnovenie zoznamu používateľov po odstranení
 
       // Otvorenie Firebase Console v novej karte po úspešnom odstránení
       // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
@@ -1731,7 +1731,8 @@ function App() {
                       )
                     )
                   )
-                ) : (
+                ) // Removed the extra closing parenthesis here
+               : (
                   React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
               )
