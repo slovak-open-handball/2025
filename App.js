@@ -97,6 +97,9 @@ function App() {
   const [userDataEditEndDate, setUserDataEditEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false); // Indikátor načítania nastavení
 
+  // Nový stav pre odpočítavanie
+  const [countdown, setCountdown] = React.useState(null);
+
 
   const getInitialProfileView = () => {
     const hash = window.location.hash.substring(1);
@@ -129,6 +132,29 @@ function App() {
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
     return (!regStart || now >= regStart) && (!regEnd || now <= regEnd);
   }, [settingsLoaded, registrationStartDate, registrationEndDate]);
+
+  // Funkcia na výpočet zostávajúceho času pre odpočítavanie
+  const calculateTimeLeft = React.useCallback(() => {
+    const now = new Date();
+    const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
+
+    if (!startDate || now >= startDate) {
+        return null; // Registrácia je už otvorená alebo nebol nastavený dátum začiatku
+    }
+
+    const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekundách
+
+    if (difference <= 0) {
+        return null; // Čas už uplynul
+    }
+
+    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }, [registrationStartDate]);
 
 
   React.useEffect(() => {
@@ -260,6 +286,29 @@ function App() {
       setLoading(false);
     }
   }, [isRegistrationOpen]); // Pridajte isRegistrationOpen do dependency array
+
+  // Efekt pre odpočítavanie času
+  React.useEffect(() => {
+    let timer;
+    const updateCountdown = () => {
+        const timeLeft = calculateTimeLeft();
+        setCountdown(timeLeft);
+        if (timeLeft === null) {
+            clearInterval(timer);
+        }
+    };
+
+    // Spustite odpočítavanie len ak je nastavený dátum začiatku a je v budúcnosti
+    if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
+        updateCountdown(); // Počiatočné volanie pre okamžité zobrazenie
+        timer = setInterval(updateCountdown, 1000);
+    } else {
+        setCountdown(null); // Vymažte odpočítavanie, ak nie je relevantné
+    }
+
+    return () => clearInterval(timer); // Vyčistenie intervalu pri unmount alebo zmene registrationStartDate
+  }, [registrationStartDate, calculateTimeLeft]); // Závisí od registrationStartDate a calculateTimeLeft
+
 
   React.useEffect(() => {
     const handleHashChange = () => {
@@ -935,7 +984,12 @@ function App() {
                       Registračný formulár zatiaľ nie je prístupný.
                     </p>
                     {regStart && now < regStart && (
-                      <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                      <>
+                        <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                        {countdown && (
+                            <p className="text-md text-gray-500 mt-2">Registrácia bude spustená o: {countdown}</p>
+                        )}
+                      </>
                     )}
                     {regEnd && now > regEnd && (
                       <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
@@ -985,7 +1039,12 @@ function App() {
                 Registračný formulár zatiaľ nie je prístupný.
               </p>
               {regStart && now < regStart && (
-                <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                <>
+                  <p className="text-md text-gray-500 mt-2">Registrácia bude možná od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+                  {countdown && (
+                      <p className="text-md text-gray-500 mt-2">Registrácia bude spustená o: {countdown}</p>
+                  )}
+                </>
               )}
               {regEnd && now > regEnd && (
                 <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
