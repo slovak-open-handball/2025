@@ -463,7 +463,7 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    setLoading(true);
+    setLoading(true); // Zobraziť loading indikátor
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
@@ -494,7 +494,7 @@ function App() {
             action: 'sendRegistrationEmail',
             email: email,
             password: password, 
-            isAdmin: isAdminRegistration, // Toto je teraz dôležité pre rozlíšenie v Apps Script
+            isAdmin: isAdminRegistration, 
             firstName: firstName,
             lastName: lastName,
             contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber
@@ -516,6 +516,8 @@ function App() {
       setFirstName('');
       setLastName('');
       setContactPhoneNumber('');
+      
+      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
 
       // Presmerovanie po 15 sekundách
       setTimeout(() => {
@@ -535,11 +537,7 @@ function App() {
       }
       setLoading(false); // V prípade chyby sa loading vypne okamžite
       clearMessages(); // A správy sa tiež vyčistia po 5 sekundách
-    } finally {
-      // Loading sa vypne až po presmerovaní, alebo hneď v prípade chyby.
-      // Ak je úspešná registrácia, loading zostane true počas 15 sekúnd.
-      // Ak je chyba, loading sa vypne v bloku catch.
-    }
+    } 
   };
 
   const handleLogin = async (e) => {
