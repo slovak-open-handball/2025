@@ -76,6 +76,11 @@ function App() {
   const [tempRegistrationEndDate, setTempRegistrationEndDate] = React.useState('');
   const [tempEditEndDate, setTempEditEndDate] = React.useState('');
 
+  // NOVÉ: Stav pre text odpočítavania
+  const [countdownMessage, setCountdownMessage] = React.useState('');
+  // NOVÉ: Stav pre vynútenie re-renderu na základe zmeny stavu registrácie
+  const [registrationStatusChanged, setRegistrationStatusChanged] = React.useState(false);
+
 
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
     React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }),
@@ -162,36 +167,25 @@ function App() {
           setIsRoleLoaded(true); // Ak nie je používateľ alebo db, rola je "načítaná" ako nie-admin
         }
 
-        const authLink = document.getElementById('auth-link');
-        const profileLink = document.getElementById('profile-link');
-        const logoutButton = document.getElementById('logout-button');
-        const registerLink = document.getElementById('register-link'); // Získame odkaz na registráciu
+        // Tieto aktualizácie viditeľnosti sú teraz riadené Reactom v render funkcii
+        // a cez `registrationStatusChanged` stav, takže ich tu nepotrebujeme manuálne meniť.
+        // const authLink = document.getElementById('auth-link');
+        // const profileLink = document.getElementById('profile-link');
+        // const logoutButton = document.getElementById('logout-button');
+        // const registerLink = document.getElementById('register-link'); 
 
-        // Aktualizácia viditeľnosti navigačných prvkov
-        if (authLink) {
-          if (currentUser) {
-            authLink.classList.add('hidden'); // Skryť "Prihlásenie"
-            profileLink && profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
-            logoutButton && logoutButton.classList.remove('hidden'); // Zobraziť "Odhlásenie"
-            registerLink && registerLink.classList.add('hidden'); // Skryť "Registrácia"
-          } else {
-            authLink.classList.remove('hidden'); // Zobraziť "Prihlásenie"
-            profileLink && profileLink.classList.add('hidden'); // Skryť "Moja zóna"
-            logoutButton && logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
-            // Zmena: Skryť/zobraziť odkaz "Registrácia na turnaj" na základe stavu registrácie
-            const now = new Date();
-            // NOVÁ LOGIKA: Registrácia je otvorená, ak je 'teraz' medzi začiatkom a koncom
-            const isRegistrationOpen = registrationStartDate && registrationEndDate && now >= registrationStartDate && now <= registrationEndDate;
-
-            if (registerLink) {
-                if (isRegistrationOpen) {
-                    registerLink.classList.remove('hidden'); // Zobraziť odkaz
-                } else {
-                    registerLink.classList.add('hidden'); // Skryť odkaz
-                }
-            }
-          }
-        }
+        // if (authLink) {
+        //   if (currentUser) {
+        //     authLink.classList.add('hidden'); 
+        //     profileLink && profileLink.classList.remove('hidden'); 
+        //     logoutButton && logoutButton.classList.remove('hidden'); 
+        //     registerLink && registerLink.classList.add('hidden'); 
+        //   } else {
+        //     authLink.classList.remove('hidden'); 
+        //     profileLink && profileLink.classList.add('hidden'); 
+        //     logoutButton && logoutButton.classList.add('hidden'); 
+        //   }
+        // }
       });
 
       signIn();
@@ -202,7 +196,7 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, [registrationEndDate, registrationStartDate]); // Závislosti: Pridané registrationStartDate a registrationEndDate
+  }, []); // Závislosti: Pridané registrationStartDate a registrationEndDate
 
   // Effect pre načítanie profileView z URL hash pri načítaní stránky
   React.useEffect(() => {
@@ -277,6 +271,72 @@ function App() {
       fetchSettings();
     }
   }, [db]); // Spustí sa, keď je dostupná inštancia Firestore
+
+  // NOVÝ useEffect pre odpočítavanie
+  React.useEffect(() => {
+    let intervalId;
+
+    const updateCountdown = () => {
+      if (!settingsLoaded || (!registrationStartDate && !registrationEndDate)) {
+        setCountdownMessage("Načítavam nastavenia registrácie...");
+        return;
+      }
+
+      const now = new Date();
+      
+      // Registrácia je otvorená, ak je 'teraz' medzi začiatkom a koncom
+      const isRegistrationOpen = registrationStartDate && registrationEndDate && now >= registrationStartDate && now <= registrationEndDate;
+
+      // Ak je registrácia otvorená
+      if (isRegistrationOpen) {
+        const timeLeft = registrationEndDate.getTime() - now.getTime();
+        if (timeLeft <= 0) {
+          setCountdownMessage("Registrácia je ukončená.");
+          setRegistrationStatusChanged(prev => !prev); // Prepne stav pre vynútenie re-renderu
+          clearInterval(intervalId);
+          return;
+        }
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        setCountdownMessage(`Registrácia sa končí za: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+      } 
+      // Ak registrácia ešte nezačala
+      else if (registrationStartDate && now < registrationStartDate) {
+        const timeLeft = registrationStartDate.getTime() - now.getTime();
+        if (timeLeft <= 0) {
+          setCountdownMessage("Registrácia je otvorená!");
+          setRegistrationStatusChanged(prev => !prev); // Prepne stav pre vynútenie re-renderu
+          clearInterval(intervalId);
+          return;
+        }
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        setCountdownMessage(`Registrácia začína za: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+      }
+      // Ak registrácia už skončila
+      else {
+        setCountdownMessage("Registrácia je uzavretá.");
+        setRegistrationStatusChanged(prev => !prev); // Prepne stav pre vynútenie re-renderu
+        clearInterval(intervalId);
+      }
+    };
+
+    if (settingsLoaded) {
+      updateCountdown(); // Okamžitá aktualizácia pri načítaní nastavení
+      intervalId = setInterval(updateCountdown, 1000); // Aktualizácia každú sekundu
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId); // Vyčistenie intervalu pri odpojení komponentu
+      }
+    };
+  }, [settingsLoaded, registrationStartDate, registrationEndDate]); // Závisí od načítania nastavení a dátumov
+
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -966,7 +1026,7 @@ function App() {
           React.createElement("a", {
             href: "logged-in.html",
             className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Moja zóna")
+          }, "Moja zón")
         )
       );
     } else {
@@ -984,6 +1044,10 @@ function App() {
               className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
             }, "Registrácia na turnaj")
           )
+        ),
+        // NOVÉ: Zobrazenie odpočítavania
+        React.createElement("div", { className: "mt-6 text-center text-gray-700 font-semibold" },
+          countdownMessage
         )
       );
     }
