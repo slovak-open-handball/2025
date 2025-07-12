@@ -1011,7 +1011,7 @@ function App() {
               <>
                 {isRegistrationOpen ? (
                   <>
-                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali.</p>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať.</p>
                     <div className="mt-6 flex justify-center space-x-4">
                       <a
                         href="login.html"
@@ -1030,7 +1030,7 @@ function App() {
                 ) : (
                   <>
                     <p className="text-lg text-gray-600">
-                      Registračný formulár zatiaľ nie je prístupný.
+                      Registračný formulár nie je prístupný.
                     </p>
                     {regStart && !isNaN(regStart) && now < regStart && (
                       <>
@@ -1085,7 +1085,7 @@ function App() {
             <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
               <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia na turnaj</h1>
               <p className="text-lg text-gray-600">
-                Registračný formulár zatiaľ nie je prístupný.
+                Registračný formulár nie je prístupný.
               </p>
               {regStart && !isNaN(regStart) && now < regStart && (
                 <>
