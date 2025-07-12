@@ -232,7 +232,8 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
+    // Odstránená pozitívna správa o reCAPTCHA overení
+    // setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
 
 
     setLoading(true);
@@ -320,7 +321,8 @@ function App() {
     }
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
 
-    setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
+    // Odstránená pozitívna správa o reCAPTCHA overení
+    // setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
 
 
     setLoading(true);
@@ -543,7 +545,8 @@ function App() {
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
       // Otvorenie Firebase Console v novej karte po úspešnom odstránení
-      window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
+      // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
+      window.open(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users?t=${new Date().getTime()}`, '_blank');
 
       // Obnovenie zoznamu používateľov po odstránení (už sa nespustí, ak dôjde k presmerovaniu)
       // fetchAllUsers(); 
@@ -843,8 +846,7 @@ function App() {
             )
           )
         )
-      )
-    );
+      );
   }
 
   if (currentPath === 'logged-in.html') {
