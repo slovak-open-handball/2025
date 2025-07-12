@@ -99,6 +99,8 @@ function App() {
 
   // Nový stav pre odpočítavanie
   const [countdown, setCountdown] = React.useState(null);
+  // Nová stavová premenná na vynútenie prepočítania isRegistrationOpen
+  const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
 
 
   const getInitialProfileView = () => {
@@ -139,7 +141,7 @@ function App() {
       (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladáme, že registrácia už začala
       (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladáme, že registrácia ešte neskončila
     );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate]);
+  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck]); // Pridaná závislosť forceRegistrationCheck
 
   // Funkcia na výpočet zostávajúceho času pre odpočítavanie
   const calculateTimeLeft = React.useCallback(() => {
@@ -297,14 +299,10 @@ function App() {
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
         setCountdown(timeLeft);
-        // Ak čas vypršal, znova vyhodnotíme isRegistrationOpen
+        // Ak čas vypršal, vynútime prepočítanie isRegistrationOpen
         if (timeLeft === null) {
-            // Force re-evaluation of isRegistrationOpen by updating one of its dependencies
-            // A simple way is to toggle a dummy state or re-fetch settings if needed,
-            // but since isRegistrationOpen is a useMemo, it will re-evaluate on regStartDate change.
-            // The fact that countdown becomes null means regStartDate is no longer in the future,
-            // which should naturally trigger isRegistrationOpen to become true (if within end date).
-            // No explicit action needed here beyond setting countdown to null.
+            clearInterval(timer);
+            setForceRegistrationCheck(prev => prev + 1); // Zmeníme stav, aby sa isRegistrationOpen prepočítalo
         }
     };
 
