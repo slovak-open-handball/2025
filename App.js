@@ -101,6 +101,8 @@ function App() {
   const [countdown, setCountdown] = React.useState(null);
   // Nová stavová premenná na vynútenie prepočítania isRegistrationOpen
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
+  // Nová stavová premenná pre periodickú aktualizáciu isRegistrationOpen
+  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
 
   const getInitialProfileView = () => {
@@ -141,7 +143,7 @@ function App() {
       (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladáme, že registrácia už začala
       (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladáme, že registrácia ešte neskončila
     );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck]); // Pridaná závislosť forceRegistrationCheck
+  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]); // Pridaná závislosť periodicRefreshKey
 
   // Funkcia na výpočet zostávajúceho času pre odpočítavanie
   const calculateTimeLeft = React.useCallback(() => {
@@ -317,7 +319,17 @@ function App() {
     return () => clearInterval(timer); // Vyčistenie intervalu pri unmount alebo zmene registrationStartDate
   }, [registrationStartDate, calculateTimeLeft]); // Závisí od registrationStartDate a calculateTimeLeft
 
-  // NOVÝ useEffect pre aktualizáciu viditeľnosti odkazov v hlavičke
+  // NOVÝ useEffect pre periodickú aktualizáciu isRegistrationOpen
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setPeriodicRefreshKey(prev => prev + 1);
+    }, 60 * 1000); // Aktualizovať každú minútu
+
+    return () => clearInterval(interval);
+  }, []); // Spustí sa len raz pri mountovaní komponentu
+
+
+  // useEffect pre aktualizáciu viditeľnosti odkazov v hlavičke
   React.useEffect(() => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
