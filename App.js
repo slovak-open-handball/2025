@@ -865,7 +865,7 @@ function App() {
               // Text "E-mailová adresa a heslo sú potrebné..." presunutý sem
               !is_admin_register_page && (
                 React.createElement("p", { className: "text-gray-600 text-sm mt-4" }, // Pridaný mt-4 pre medzeru
-                  "E-mailová adresa a heslo sú potrebné na editáciu údajov poskytnutých v registračnom formulári a na správu turnajového účtu."
+                  "E-mailová adresa a heslo sú potrebné na editáciu údajov poskytnutých v tomto registračnom formulári a na správu turnajového účtu."
                 )
               ),
               React.createElement("div", { className: "relative" },
