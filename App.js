@@ -493,7 +493,6 @@ function App() {
   const fetchAllUsers = async () => {
     setLoading(true);
     setError('');
-    // setMessage(''); // Odstránená správa o načítaní používateľov
     try {
       if (!db) {
         setError("Firestore nie je inicializovaný.");
@@ -507,7 +506,6 @@ function App() {
       const snapshot = await usersCollectionRef.get();
       const usersList = snapshot.docs.map(doc => doc.data());
       setAllUsersData(usersList);
-      // setMessage("Zoznam používateľov načítaný z Firestore."); // Odstránená správa o načítaní používateľov
 
     } catch (e) {
       console.error("Chyba pri získavaní používateľov z Firestore:", e);
@@ -529,7 +527,7 @@ function App() {
     setShowDeleteConfirmationModal(false);
   };
 
-  // Upravená funkcia handleDeleteUser pre "mäkké odstránenie"
+  // Upravená funkcia handleDeleteUser pre úplné odstránenie
   const handleDeleteUser = async () => {
     if (!userToDelete || !db) { 
       setError("Používateľ na odstránenie nie je definovaný alebo Firebase nie je inicializovaný.");
@@ -540,18 +538,20 @@ function App() {
     setError('');
     setMessage('');
     try {
-      // Označenie používateľa ako neaktívneho vo Firestore
-      await db.collection('users').doc(userToDelete.uid).update({ approved: false });
-      setMessage(`Používateľ ${userToDelete.email} bol označený ako neaktívny.`);
+      // Úplné odstránenie dokumentu používateľa z Firestore
+      await db.collection('users').doc(userToDelete.uid).delete();
+      setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
-      // Obnovenie zoznamu používateľov po odstránení
-      fetchAllUsers();
-      closeDeleteConfirmationModal();
+      // Presmerovanie na Firebase Console po úspešnom odstránení
+      window.location.href = 'https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users';
+
+      // Obnovenie zoznamu používateľov po odstránení (už sa nespustí, ak dôjde k presmerovaniu)
+      // fetchAllUsers(); 
+      // closeDeleteConfirmationModal(); 
     } catch (e) {
-      console.error("Chyba pri mäkkom odstraňovaní používateľa:", e);
+      console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
-    } finally {
-      setLoading(false);
+      setLoading(false); // Nastavíme loading na false aj v prípade chyby, aby sa UI neodblokovalo
       clearMessages();
     }
   };
@@ -1094,10 +1094,8 @@ function App() {
                               onClick: () => openRoleEditModal(u),
                               className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
                             }, "Upraviť rolu"),
-                            React.createElement("a", { // Zmenené na <a> tag pre presmerovanie
-                              href: "https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users",
-                              target: "_blank", // Otvorí v novom tabe
-                              rel: "noopener noreferrer", // Bezpečnostné odporúčanie pre target="_blank"
+                            React.createElement("button", { // Zmenené späť na button
+                              onClick: () => openDeleteConfirmationModal(u), // Volá modálne okno
                               className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
                             }, "Odstrániť používateľa") 
                           )
@@ -1113,12 +1111,12 @@ function App() {
           )
         ),
 
-        // Modálne okno pre potvrdenie odstránenia (ponechané, ak by bolo potrebné pre iné akcie)
+        // Modálne okno pre potvrdenie odstránenia
         showDeleteConfirmationModal && (
           React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
             React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
-              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť deaktiváciu"), 
-              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete deaktivovať používateľa ${userToDelete?.email}? Tento používateľ sa už nebude môcť prihlásiť.`), 
+              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť odstránenie"), 
+              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete natrvalo odstrániť používateľa ${userToDelete?.email} z databázy? Táto akcia je nezvratná.`), 
               React.createElement("div", { className: "flex justify-end space-x-4" },
                 React.createElement("button", {
                   onClick: closeDeleteConfirmationModal,
@@ -1128,7 +1126,7 @@ function App() {
                   onClick: handleDeleteUser,
                   className: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200",
                   disabled: loading
-                }, loading ? 'Deaktivujem...' : 'Deaktivovať') 
+                }, loading ? 'Odstraňujem...' : 'Odstrániť') 
               )
             )
           )
