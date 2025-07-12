@@ -1096,7 +1096,7 @@ function App() {
                 </>
               )}
               {regEnd && !isNaN(regEnd) && now > regEnd && (
-                <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+                <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
               )}
               <div className="mt-6 flex justify-center">
                 <a
