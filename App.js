@@ -1738,7 +1738,7 @@ function App() {
             // NOVÁ SEKCIA: Všetky tímy (registrácie)
             profileView === 'all-teams' && (
               React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
-                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Všetky údaje z formulára)"),
+                React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Všetky údaje z formulára"),
                 allUsersData.length > 0 ? (
                   React.createElement("div", { className: "overflow-x-auto" },
                     React.createElement("table", { className: "min-w-full bg-white border border-gray-200 rounded-lg shadow-sm" },
