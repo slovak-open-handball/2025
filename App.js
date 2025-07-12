@@ -73,11 +73,17 @@ function App() {
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
   const [newPassword, setNewPassword] = React.useState('');
-  const [confirmNewPassword, setNewConfirmPassword] = React.useState(''); // Zmenené meno pre konzistenciu
+  const [confirmNewPassword, setNewConfirmPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
+
+  // NOVÉ: Stavy pre nastavenia dátumov a časov
+  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
+  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
+  const [userDataEditEndDate, setUserDataEditEndDate] = React.useState('');
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false); // Indikátor načítania nastavení
 
 
   const getInitialProfileView = () => {
@@ -90,12 +96,12 @@ function App() {
   const [allUsersData, setAllUsersData] = React.useState([]);
   const [isRoleLoaded, setIsRoleLoaded] = React.useState(false);
 
-  const [showPasswordReg, setShowPasswordReg] = React.useState(false); // Pre registráciu
-  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false); // Pre registráciu
-  const [showPasswordLogin, setShowPasswordLogin] = React.useState(false); // Pre prihlásenie
-  const [showCurrentPasswordChange, setShowCurrentPasswordChange] = React.useState(false); // Pre zmenu hesla/mena/tel.čísla
-  const [showNewPasswordChange, setShowNewPasswordChange] = React.useState(false); // Pre zmenu hesla
-  const [showConfirmNewPasswordChange, setShowConfirmNewPasswordChange] = React.useState(false); // Pre zmenu hesla
+  const [showPasswordReg, setShowPasswordReg] = React.useState(false);
+  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
+  const [showPasswordLogin, setShowPasswordLogin] = React.useState(false);
+  const [showCurrentPasswordChange, setShowCurrentPasswordChange] = React.useState(false);
+  const [showNewPasswordChange, setShowNewPasswordChange] = React.useState(false);
+  const [showConfirmNewPasswordChange, setShowConfirmNewPasswordChange] = React.useState(false);
 
   const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null);
@@ -133,14 +139,36 @@ function App() {
           console.error("Firebase initial sign-in failed:", e);
           setError(`Chyba pri prihlasovaní: ${e.message}`);
         } finally {
-          setLoading(false);
+          // Nastavenie loading na false sa presunie až po načítaní nastavení
+          // setSettingsLoaded bude riadiť celkové načítanie
+        }
+      };
+
+      const fetchSettings = async (firestore) => {
+        try {
+            const settingsDocRef = firestore.collection('settings').doc('registration');
+            const settingsDoc = await settingsDocRef.get();
+            if (settingsDoc.exists) {
+                const data = settingsDoc.data();
+                setRegistrationStartDate(data.registrationStartDate ? new Date(data.registrationStartDate.toDate()).toISOString().slice(0, 16) : '');
+                setRegistrationEndDate(data.registrationEndDate ? new Date(data.registrationEndDate.toDate()).toISOString().slice(0, 16) : '');
+                setUserDataEditEndDate(data.userDataEditEndDate ? new Date(data.userDataEditEndDate.toDate()).toISOString().slice(0, 16) : '');
+            } else {
+                console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
+            }
+        } catch (e) {
+            console.error("Chyba pri načítaní nastavení registrácie:", e);
+            setError(`Chyba pri načítaní nastavení: ${e.message}`);
+        } finally {
+            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
+            setLoading(false); // Celkové načítanie je hotové
         }
       };
 
       const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        setIsRoleLoaded(false); // Resetovať stav načítania roly pri zmene používateľa
+        setIsRoleLoaded(false);
 
         if (currentUser && firestoreInstance) {
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
@@ -168,7 +196,6 @@ function App() {
             setIsAdmin(false);
           } finally {
             setIsRoleLoaded(true);
-            console.log("onAuthStateChanged: isRoleLoaded nastavené na true.");
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
@@ -197,6 +224,7 @@ function App() {
       });
 
       signIn();
+      fetchSettings(firestoreInstance); // Načítať nastavenia po inicializácii Firestore
 
       return () => unsubscribe();
     } catch (e) {
@@ -551,6 +579,14 @@ function App() {
       return;
     }
 
+    // NOVÉ: Kontrola, či je povolená úprava dát
+    const now = new Date();
+    const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+    if (editEnd && now > editEnd) {
+        setError("Úpravy vašich údajov sú už uzavreté.");
+        return;
+    }
+
     setLoading(true);
     try {
       if (user.email && currentPassword) {
@@ -606,6 +642,14 @@ function App() {
         return;
     }
 
+    // NOVÉ: Kontrola, či je povolená úprava dát
+    const now = new Date();
+    const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+    if (editEnd && now > editEnd) {
+        setError("Úpravy vašich údajov sú už uzavreté.");
+        return;
+    }
+
     setLoading(true);
     try {
       if (user.email && currentPassword) {
@@ -637,6 +681,35 @@ function App() {
     } finally {
       setLoading(false);
       clearMessages();
+    }
+  };
+
+  // NOVÉ: Funkcia na ukladanie nastavení pre administrátora
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    if (!db || !isAdmin) {
+        setError("Nemáte oprávnenie na ukladanie nastavení.");
+        return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+        const settingsDocRef = db.collection('settings').doc('registration');
+        await settingsDocRef.set({
+            registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
+            registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
+            userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        setMessage("Nastavenia úspešne uložené!");
+    } catch (e) {
+        console.error("Chyba pri ukladaní nastavení:", e);
+        setError(`Chyba pri ukladaní nastavení: ${e.message}`);
+    } finally {
+        setLoading(false);
+        clearMessages();
     }
   };
 
@@ -775,7 +848,7 @@ function App() {
   };
 
 
-  if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded)) {
+  if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded) || !settingsLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-xl font-semibold text-gray-700">Načítava sa...</div>
@@ -835,6 +908,44 @@ function App() {
     }
 
     const is_admin_register_page = currentPath === 'admin-register.html';
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
+    // Registrácia je otvorená, ak nie je nastavený začiatok, alebo je už po začiatku
+    // A zároveň nie je nastavený koniec, alebo je ešte pred koncom
+    const isRegistrationOpen = (!regStart || now >= regStart) && (!regEnd || now <= regEnd);
+
+    // Ak nie je admin registrácia a registrácia nie je otvorená, zobrazte správu
+    if (!is_admin_register_page && !isRegistrationOpen) {
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+          <div className="w-full max-w-md mt-20 mb-10 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia na turnaj</h1>
+              <p className="text-lg text-gray-600">
+                Registračný formulár je momentálne {regStart && now < regStart ? 'ešte neotvorený' : 'už uzavretý'}.
+              </p>
+              {regStart && now < regStart && (
+                <p className="text-md text-gray-500 mt-2">Registrácia bude otvorená od: {new Date(registrationStartDate).toLocaleString('sk-SK')}</p>
+              )}
+              {regEnd && now > regEnd && (
+                <p className="text-md text-gray-500 mt-2">Registrácia bola uzavretá dňa: {new Date(registrationEndDate).toLocaleString('sk-SK')}</p>
+              )}
+              <div className="mt-6 flex justify-center">
+                <a
+                  href="index.html"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                >
+                  Späť na úvod
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
         <div className="w-full max-w-md mt-20 mb-10 p-4">
@@ -1034,6 +1145,11 @@ function App() {
       return null;
     }
 
+    // NOVÉ: Kontrola pre povolenie úprav používateľských dát
+    const now = new Date();
+    const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+    const isEditAllowed = !editEnd || now <= editEnd;
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
@@ -1115,6 +1231,20 @@ function App() {
                     </button>
                   </li>
                 )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('settings');
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Nastavenia
+                    </button>
+                  </li>
+                )}
               </ul>
             </nav>
           </div>
@@ -1146,6 +1276,11 @@ function App() {
                   <p className="text-gray-700">
                     <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || 'N/A'}
                   </p>
+                )}
+                {!isEditAllowed && (
+                    <p className="text-red-500 text-sm mt-2">
+                        Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {new Date(userDataEditEndDate).toLocaleString('sk-SK')}
+                    </p>
                 )}
               </div>
             )}
@@ -1216,6 +1351,7 @@ function App() {
                     required
                     placeholder="Zadajte nové meno"
                     autoComplete="given-name"
+                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
                   />
                 </div>
                 <div>
@@ -1229,6 +1365,7 @@ function App() {
                     required
                     placeholder="Zadajte nové priezvisko"
                     autoComplete="family-name"
+                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
                   />
                 </div>
                 <PasswordInput
@@ -1243,14 +1380,20 @@ function App() {
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                  disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
                 />
                 <button
                   type="submit"
-                  className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
-                  disabled={loading}
+                  className={`font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4 ${
+                    isEditAllowed ? 'bg-purple-500 hover:bg-purple-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={loading || !isEditAllowed}
                 >
-                  {loading ? 'Ukladám...' : 'Zmeniť meno a priezvisko'}
+                  {loading ? 'Ukladám...' : (isEditAllowed ? 'Zmeniť meno a priezvisko' : 'Úpravy sú už uzavreté')}
                 </button>
+                { !isEditAllowed && editEnd && (
+                    <p className="text-red-500 text-sm mt-2 text-center">Úpravy boli uzavreté dňa: {editEnd.toLocaleString('sk-SK')}</p>
+                )}
               </form>
             )}
 
@@ -1275,6 +1418,7 @@ function App() {
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
                     title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                    disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
                   />
                 </div>
                 <PasswordInput
@@ -1289,14 +1433,20 @@ function App() {
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                  disabled={!isEditAllowed} // NOVÉ: Zakázanie, ak nie je povolená úprava
                 />
                 <button
                   type="submit"
-                  className="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
-                  disabled={loading}
+                  className={`font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4 ${
+                    isEditAllowed ? 'bg-teal-500 hover:bg-teal-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={loading || !isEditAllowed}
                 >
-                  {loading ? 'Ukladám...' : 'Zmeniť telefónne číslo'}
+                  {loading ? 'Ukladám...' : (isEditAllowed ? 'Zmeniť telefónne číslo' : 'Úpravy sú už uzavreté')}
                 </button>
+                { !isEditAllowed && editEnd && (
+                    <p className="text-red-500 text-sm mt-2 text-center">Úpravy boli uzavreté dňa: {editEnd.toLocaleString('sk-SK')}</p>
+                )}
               </form>
             )}
 
@@ -1380,6 +1530,56 @@ function App() {
                 )}
               </div>
             )}
+
+            {/* NOVÉ: Sekcia nastavení pre administrátora */}
+            {profileView === 'settings' && isAdmin && (
+              <form onSubmit={handleSaveSettings} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Nastavenia systému</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-start-date">
+                    Začiatok registrácie (dátum a čas)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="reg-start-date"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={registrationStartDate}
+                    onChange={(e) => setRegistrationStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-end-date">
+                    Koniec registrácie (dátum a čas)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="reg-end-date"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={registrationEndDate}
+                    onChange={(e) => setRegistrationEndDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="user-edit-end-date">
+                    Koniec úprav používateľských dát (dátum a čas)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="user-edit-end-date"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={userDataEditEndDate}
+                    onChange={(e) => setUserDataEditEndDate(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Ukladám...' : 'Uložiť nastavenia'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
 
@@ -1408,7 +1608,7 @@ function App() {
         )}
 
         {showRoleEditModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50" style={{ backdropFilter: 'blur(5px)' }}>
             <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Upraviť rolu pre {userToEditRole?.email}</h3>
               <div className="mb-4">
