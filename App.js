@@ -240,16 +240,18 @@ function App() {
       await userCredential.user.updateProfile({ displayName: email }); // Nastavíme display name na email
 
       // Uloženie údajov používateľa do Firestore
-      // Rola používateľa sa určuje na základe toho, či ide o registráciu administrátora
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
+      // Nové: Pridanie poľa 'approved'
+      const isApproved = !isAdminRegistration; // Admini potrebujú schválenie, bežní používatelia sú schválení hneď
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
         displayName: email, // Alebo iné zobrazované meno
         role: userRole,
+        approved: isApproved, // Nastavenie schválenia
         registeredAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      console.log(`Používateľ ${email} s rolou '${userRole}' bol uložený do Firestore.`);
+      console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
       // --- ODOSLANIE E-MAILU CEZ GOOGLE APPS SCRIPT ---
       try {
@@ -297,8 +299,8 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!auth) {
-      setError("Firebase Auth nie je inicializovaný.");
+    if (!auth || !db) { // Pridaná kontrola db
+      setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
     if (!email || !password) {
@@ -318,7 +320,35 @@ function App() {
 
     setLoading(true);
     try {
-      await auth.signInWithEmailAndPassword(email, password);
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const currentUser = userCredential.user;
+
+      // Krok 1: Načítajte rolu a stav schválenia z Firestore
+      const userDocRef = db.collection('users').doc(currentUser.uid);
+      const userDoc = await userDocRef.get();
+
+      if (!userDoc.exists) {
+        // Ak dokument používateľa neexistuje vo Firestore, môže to byť problém
+        // Alebo používateľ ešte nebol plne zaregistrovaný (napr. chyba pri registrácii)
+        setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
+        await auth.signOut(); // Odhlásiť používateľa
+        setLoading(false);
+        clearMessages();
+        return;
+      }
+
+      const userData = userDoc.data();
+      console.log("Login: Používateľské dáta z Firestore:", userData);
+
+      // Krok 2: Skontrolujte stav schválenia
+      if (userData.role === 'admin' && userData.approved === false) {
+        setError("Tento účet čaká na schválenie administrátorom.");
+        await auth.signOut(); // Odhlásiť používateľa, ktorý nie je schválený
+        setLoading(false);
+        clearMessages();
+        return;
+      }
+
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
       setEmail('');
@@ -556,6 +586,29 @@ function App() {
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
       setError(`Chyba pri aktualizácii roly: ${e.message}`);
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
+  // Nová funkcia na schválenie používateľa
+  const handleApproveUser = async (userToApprove) => {
+    if (!userToApprove || !db) {
+      setError("Používateľ na schválenie nie je definovaný.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      await db.collection('users').doc(userToApprove.uid).update({ approved: true });
+      setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
+      fetchAllUsers(); // Obnovenie zoznamu používateľov
+    } catch (e) {
+      console.error("Chyba pri schvaľovaní používateľa:", e);
+      setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -1011,11 +1064,19 @@ function App() {
                           React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
                           React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
                           React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`) // Zobrazenie roly
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), // Zobrazenie roly
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) // Zobrazenie stavu schválenia
                         ),
                         // Tlačidlá pre správu používateľov
                         user && user.uid !== u.uid && ( // Zobrazí tlačidlá len ak je admin a nie je to jeho vlastný účet
                           React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
+                            // Tlačidlo "Povoliť používateľa" (zobrazí sa len pre neschválených adminov)
+                            u.role === 'admin' && u.approved === false && (
+                              React.createElement("button", {
+                                onClick: () => handleApproveUser(u),
+                                className: "bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                              }, "Povoliť používateľa")
+                            ),
                             React.createElement("button", {
                               onClick: () => openRoleEditModal(u),
                               className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
