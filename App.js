@@ -1019,7 +1019,7 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-800 mb-4">Vitajte na stránke Slovak Open Handball</h1>
             {user ? (
               <>
-                <p className="text-lg text-gray-600">Ste prihlásený. Voľbou ""Moja zóna"" otvoríte ďalšie možnosti.</p>
+                <p className="text-lg text-gray-600">Ste prihlásený. Voľbou "Moja zóna" otvoríte ďalšie možnosti.</p>
                 <div className="mt-6 flex justify-center">
                   <a
                     href="logged-in.html"
