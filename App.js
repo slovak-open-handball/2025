@@ -341,15 +341,16 @@ function App() {
       const userData = userDoc.data();
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
-      // Krok 2: Skontrolujte stav schválenia
-      if (userData.approved === false) { 
-        setError("Váš účet je neaktívny alebo čaká na schválenie administrátorom.");
-        await auth.signOut(); // Odhlásiť používateľa, ktorý nie je schválený
+      // Krok 2: Skontrolujte stav schválenia pre admin účty
+      if (userData.role === 'admin' && userData.approved === false) { 
+        setError("Váš administrátorský účet je neaktívny alebo čaká na schválenie iným administrátorom.");
+        await auth.signOut(); // Odhlásiť neschváleného administrátora
         setLoading(false);
         clearMessages();
         return;
       }
 
+      // Krok 3: Ak je používateľ schválený (alebo nie je admin), pokračujte v prihlásení
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
       setEmail('');
