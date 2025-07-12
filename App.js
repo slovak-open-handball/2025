@@ -1152,7 +1152,7 @@ function App() {
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
-                  }, "Zmeniť meno a priezvisko") {/* ZMENA: Text zmenený z "Zmeniť meno/priezvisko" na "Zmeniť meno a priezvisko" */}
+                  }, "Zmeniť meno a priezvisko")
                 ),
                 // NOVÁ POLOŽKA MENU: Zmena telefónneho čísla
                 React.createElement("li", null,
