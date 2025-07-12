@@ -1102,9 +1102,18 @@ function App() {
                   value: contactPhoneNumber,
                   onChange: (e) => {
                     const value = e.target.value;
-                    const strictPhoneRegex = /^\+\d*$/;
-                    if (value === '' || strictPhoneRegex.test(value)) {
+                    if (value === '') {
+                      setContactPhoneNumber('');
+                      setError('');
+                    } else if (value[0] !== '+') {
+                      setError("Telefónne číslo musí začínať znakom +.");
+                      setContactPhoneNumber(value); 
+                    } else if (!/^\+\d*$/.test(value)) {
+                      setError("Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                      setContactPhoneNumber(value); 
+                    } else {
                       setContactPhoneNumber(value);
+                      setError('');
                     }
                   },
                   required: true,
@@ -1556,9 +1565,18 @@ function App() {
                     value: newContactPhoneNumber,
                     onChange: (e) => {
                       const value = e.target.value;
-                      const strictPhoneRegex = /^\+\d*$/;
-                      if (value === '' || strictPhoneRegex.test(value)) {
+                      if (value === '') {
+                        setNewContactPhoneNumber('');
+                        setError('');
+                      } else if (value[0] !== '+') {
+                        setError("Telefónne číslo musí začínať znakom +.");
+                        setNewContactPhoneNumber(value); 
+                      } else if (!/^\+\d*$/.test(value)) {
+                        setError("Telefónne číslo musí zaínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                        setNewContactPhoneNumber(value); 
+                      } else {
                         setNewContactPhoneNumber(value);
+                        setError('');
                       }
                     },
                     required: true,
@@ -1636,13 +1654,13 @@ function App() {
                       )
                     )
                   )
-                ) : (
+                )
+               : (
                   React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")
                 )
               )
             )
-          )
-        ),
+          ),
 
           profileView === 'all-teams' && (
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
