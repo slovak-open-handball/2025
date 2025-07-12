@@ -232,10 +232,6 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    // Odstránená pozitívna správa o reCAPTCHA overení
-    // setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
-
-
     setLoading(true);
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
@@ -320,10 +316,6 @@ function App() {
       return;
     }
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
-
-    // Odstránená pozitívna správa o reCAPTCHA overení
-    // setMessage("reCAPTCHA overenie na klientovi úspešné. (Potrebné je aj serverové overenie!)");
-
 
     setLoading(true);
     try {
@@ -846,20 +838,15 @@ function App() {
             )
           )
         )
-      );
+      )
+    );
   }
 
   if (currentPath === 'logged-in.html') {
     if (!user) {
-      return React.createElement("div", { className: "min-h-screen bg-gray-100 flex items-center justify-center font-inter" },
-        React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center" },
-          React.createElement("p", { className: "text-red-500 text-lg" }, "Pre prístup k tejto stránke sa musíte prihlásiť."),
-          React.createElement("button", {
-            onClick: () => window.location.href = 'login.html',
-            className: "mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-          }, "Prejsť na prihlásenie")
-        )
-      );
+      // Automatické presmerovanie na login.html, ak používateľ nie je prihlásený
+      window.location.href = 'login.html';
+      return null; // Návrat null, aby sa nič nezobrazilo pred presmerovaním
     }
 
     return (
