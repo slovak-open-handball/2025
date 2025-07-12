@@ -274,10 +274,10 @@ function App() {
       return;
     }
 
-    // NOVÉ: Validácia telefónneho čísla
-    const phoneRegex = /^\+421 \d{3} \d{3} \d{3}$/;
+    // NOVÉ: Validácia telefónneho čísla - prvý znak "+" a zvyšné iba čísla
+    const phoneRegex = /^\+\d+$/; // Regex pre '+' nasledovaný jednou alebo viacerými číslicami
     if (!phoneRegex.test(contactPhoneNumber)) {
-        setError("Telefónne číslo kontaktnej osoby musí byť vo formáte +421 xxx xxx xxx.");
+        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
         return;
     }
 
@@ -869,9 +869,9 @@ function App() {
                     value: contactPhoneNumber,
                     onChange: (e) => setContactPhoneNumber(e.target.value),
                     required: true,
-                    placeholder: "+421 xxx xxx xxx",
-                    pattern: "\\+421 \\d{3} \\d{3} \\d{3}", // Regex pre formát
-                    title: "Formát: +421 xxx xxx xxx"
+                    placeholder: "+421901234567", // Aktualizovaný placeholder
+                    pattern: "^\\+\\d+$", // Aktualizovaný regex pre '+' a iba číslice
+                    title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)" // Aktualizovaný title
                   })
                 )
               ),
