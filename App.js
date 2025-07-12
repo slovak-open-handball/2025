@@ -810,8 +810,8 @@ function App() {
                   }, "Moja zóna")
                 )
               )
-            ), // <--- Táto čiarka je kľúčová!
-            user ? null : ( // Pridané user ? null : (...) aby sa zabezpečila správna štruktúra
+            ),
+            user ? null : (
               React.createElement(React.Fragment, null,
                 React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
                 React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
