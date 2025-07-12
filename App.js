@@ -1626,32 +1626,30 @@ function App() {
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
               allUsersData.length > 0 ? (
-                React.createElement(React.Fragment, null, // Added React.Fragment here
-                  React.createElement("ul", { className: "divide-y divide-gray-200" },
-                    allUsersData.map((u) =>
-                      React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
-                        React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
-                          React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), 
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) 
-                        ),
-                        user && user.uid !== u.uid && ( 
-                          React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
-                            u.role === 'admin' && u.approved === false && (
-                              React.createElement("button", {
-                                onClick: () => handleApproveUser(u),
-                                className: "bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                              }, "Povoliť používateľa")
-                            ),
+                React.createElement("ul", { className: "divide-y divide-gray-200" }, // Removed React.Fragment here
+                  allUsersData.map((u) =>
+                    React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
+                      React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
+                        React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
+                        React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), 
+                        React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) 
+                      ),
+                      user && user.uid !== u.uid && ( 
+                        React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
+                          u.role === 'admin' && u.approved === false && (
                             React.createElement("button", {
-                              onClick: () => openRoleEditModal(u),
-                              className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Upraviť rolu"),
-                            React.createElement("button", { 
-                              onClick: () => openDeleteConfirmationModal(u), 
-                              className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Odstrániť používateľa") 
-                          )
+                              onClick: () => handleApproveUser(u),
+                              className: "bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                            }, "Povoliť používateľa")
+                          ),
+                          React.createElement("button", {
+                            onClick: () => openRoleEditModal(u),
+                            className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                          }, "Upraviť rolu"),
+                          React.createElement("button", { 
+                            onClick: () => openDeleteConfirmationModal(u), 
+                            className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
+                          }, "Odstrániť používateľa") 
                         )
                       )
                     )
@@ -1674,7 +1672,7 @@ function App() {
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Priezvisko kontaktnej osoby"),
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Telefónne číslo"),
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Rola"),
-                        React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Schválený")
+                        React.createElement("th", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, "Schválený")
                       )
                     ),
                     React.createElement("tbody", { className: "divide-y divide-gray-200" },
