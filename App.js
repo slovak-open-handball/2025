@@ -542,12 +542,12 @@ function App() {
       await db.collection('users').doc(userToDelete.uid).delete();
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
-      // Presmerovanie na Firebase Console po úspešnom odstránení
-      window.location.href = 'https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users';
+      // Otvorenie Firebase Console v novej karte po úspešnom odstránení
+      window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
 
       // Obnovenie zoznamu používateľov po odstránení (už sa nespustí, ak dôjde k presmerovaniu)
       // fetchAllUsers(); 
-      // closeDeleteConfirmationModal(); 
+      closeDeleteConfirmationModal(); // Zavrie modálne okno, ak sa presmeruje na novú kartu
     } catch (e) {
       console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
@@ -1076,7 +1076,7 @@ function App() {
                     allUsersData.map((u) =>
                       React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
                         React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
-                          React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
+                          React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
                           React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), 
                           React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) 
                         ),
