@@ -1625,7 +1625,7 @@ function App() {
           profileView === 'users' && (
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
-              (allUsersData.length > 0 ? ( // Added parentheses around the ternary expression
+              allUsersData.length > 0 ? ( // Removed outer parentheses
                 React.createElement(React.Fragment, null,
                   React.createElement("ul", { className: "divide-y divide-gray-200" },
                     allUsersData.map((u) =>
@@ -1657,7 +1657,7 @@ function App() {
                     )
                   )
                 )
-               : React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...")) // Closing parenthesis for the ternary expression
+               : React.createElement("p", { className: "text-gray-600" }, "Žiadni používatelia na zobrazenie alebo načítavanie...") // No outer parentheses here
             )
           ),
 
@@ -1673,7 +1673,7 @@ function App() {
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Meno kontaktnej osoby"),
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Priezvisko kontaktnej osoby"),
                         React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Telefónne číslo"),
-                        React.createElement("th", { className: "py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider" }, "Rola"),
+                        React.createElement("th", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, "Rola"),
                         React.createElement("th", { className: "py-3 px-4 whitespace-nowrap text-sm text-gray-800" }, "Schválený")
                       )
                     ),
