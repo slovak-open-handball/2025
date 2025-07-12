@@ -65,10 +65,14 @@ function App() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
 
-  // NOVÉ: Stavy pre nastavenia dátumov
+  // NOVÉ: Stavy pre nastavenia dátumov (globálne, pre logiku registrácie)
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [editEndDate, setEditEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // NOVÉ: Lokálne stavy pre input polia v sekcii nastavení
+  const [tempRegistrationEndDate, setTempRegistrationEndDate] = React.useState('');
+  const [tempEditEndDate, setTempEditEndDate] = React.useState('');
 
 
   const EyeIcon = React.createElement("svg", { className: "h-5 w-5 text-gray-500", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" },
@@ -235,10 +239,20 @@ function App() {
         if (doc.exists) {
           const data = doc.data();
           // Konvertovať Firestore Timestamp na ISO string pre input type="datetime-local"
-          setRegistrationEndDate(data.registrationEndDate ? new Date(data.registrationEndDate.toDate()).toISOString().slice(0, 16) : '');
-          setEditEndDate(data.editEndDate ? new Date(data.editEndDate.toDate()).toISOString().slice(0, 16) : '');
+          const regDate = data.registrationEndDate ? new Date(data.registrationEndDate.toDate()).toISOString().slice(0, 16) : '';
+          const edDate = data.editEndDate ? new Date(data.editEndDate.toDate()).toISOString().slice(0, 16) : '';
+          
+          setRegistrationEndDate(regDate);
+          setEditEndDate(edDate);
+          // Inicializovať lokálne stavy s načítanými hodnotami
+          setTempRegistrationEndDate(regDate);
+          setTempEditEndDate(edDate);
+
         } else {
           console.log("Nastavenia turnaja neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
+          // Ak dokument neexistuje, inicializovať lokálne stavy na prázdne
+          setTempRegistrationEndDate('');
+          setTempEditEndDate('');
         }
       } catch (e) {
         console.error("Chyba pri načítaní nastavení turnaja:", e);
@@ -853,10 +867,15 @@ function App() {
     try {
       const settingsDocRef = db.collection('appSettings').doc('tournamentSettings');
       await settingsDocRef.set({
-        registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
-        editEndDate: editEndDate ? firebase.firestore.Timestamp.fromDate(new Date(editEndDate)) : null,
+        // Používame hodnoty z lokálnych stavov pre uloženie
+        registrationEndDate: tempRegistrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(tempRegistrationEndDate)) : null,
+        editEndDate: tempEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(tempEditEndDate)) : null,
         lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }); // Použiť merge, aby sa prepísali len zadané polia
+
+      // Po úspešnom uložení aktualizujeme globálne stavy
+      setRegistrationEndDate(tempRegistrationEndDate);
+      setEditEndDate(tempEditEndDate);
 
       setMessage("Nastavenia turnaja úspešne uložené!");
     } catch (e) {
@@ -1642,8 +1661,8 @@ function App() {
                       type: "datetime-local",
                       id: "registration-end-date",
                       className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                      value: registrationEndDate,
-                      onChange: (e) => setRegistrationEndDate(e.target.value),
+                      value: tempRegistrationEndDate, // Používame lokálny stav
+                      onChange: (e) => setTempRegistrationEndDate(e.target.value), // Aktualizujeme lokálny stav
                       required: true
                     })
                   ),
@@ -1653,8 +1672,8 @@ function App() {
                       type: "datetime-local",
                       id: "edit-end-date",
                       className: "shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500",
-                      value: editEndDate,
-                      onChange: (e) => setEditEndDate(e.target.value),
+                      value: tempEditEndDate, // Používame lokálny stav
+                      onChange: (e) => setTempEditEndDate(e.target.value), // Aktualizujeme lokálny stav
                       required: true
                     })
                   ),
