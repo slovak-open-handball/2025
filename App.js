@@ -968,10 +968,6 @@ const LoginPage = () => {
             disabled: loading
           }, loading ? 'Prihlasujem...' : 'Prihlásiť sa')
         ),
-        React.createElement("p", { className: "mt-4 text-center text-gray-600" },
-          "Nemáte účet? ",
-          React.createElement("a", { href: "register.html", className: "text-blue-500 hover:text-blue-700 font-semibold" }, "Zaregistrujte sa")
-        )
       )
     )
   );
