@@ -191,7 +191,7 @@ function App() {
         setProfileView(hash);
         // Ak je hash 'users' alebo 'all-teams' a používateľ je admin, načítaj používateľov
         if ((hash === 'users' || hash === 'all-teams') && isAdmin) {
-          fetchAllUsers();
+          // fetchAllUsers() sa teraz volá priamo v useEffect pre onSnapshot
         }
       } else {
         setProfileView('my-data');
@@ -209,6 +209,37 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, [isAdmin]); // Závisí od isAdmin, aby sa fetchAllUsers zavolalo správne
+
+
+  // NOVÝ useEffect pre onSnapshot listener na používateľov
+  React.useEffect(() => {
+    let unsubscribeFromUsers = () => {}; // Predvolená no-op funkcia
+
+    if (db && isAdmin && (profileView === 'users' || profileView === 'all-teams')) {
+      console.log("Nastavujem onSnapshot listener pre kolekciu 'users'...");
+      setLoading(true);
+      unsubscribeFromUsers = db.collection('users').onSnapshot(snapshot => {
+        const usersList = snapshot.docs.map(doc => doc.data());
+        setAllUsersData(usersList);
+        setLoading(false);
+        setError(''); // Vyčistiť chybu po úspešnom načítaní
+      }, err => {
+        console.error("Chyba pri načítaní používateľov v reálnom čase:", err);
+        setError(`Chyba pri načítaní používateľov: ${err.message}`);
+        setLoading(false);
+      });
+    } else {
+      // Ak nie je admin alebo nie sme na správnej záložke, vyčistíme dáta a zrušíme odber
+      setAllUsersData([]);
+    }
+
+    // Funkcia na vyčistenie pri odpojení komponentu alebo zmene závislostí
+    return () => {
+      console.log("Ruším onSnapshot listener pre kolekciu 'users'.");
+      unsubscribeFromUsers();
+    };
+  }, [db, isAdmin, profileView]); // Závislosti pre tento useEffect
+
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -556,28 +587,29 @@ function App() {
     }
   };
 
-  // Funkcia na získanie všetkých používateľov z Firestore
-  const fetchAllUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      if (!db) {
-        setError("Firestore nie je inicializovaný.");
-        return;
-      }
-      const usersCollectionRef = db.collection('users');
-      const snapshot = await usersCollectionRef.get();
-      const usersList = snapshot.docs.map(doc => doc.data());
-      setAllUsersData(usersList);
-
-    } catch (e) {
-      console.error("Chyba pri získavaní používateľov z Firestore:", e);
-      setError(`Chyba pri získavaní používateľov: ${e.message}`);
-    } finally {
-      setLoading(false);
-      clearMessages();
-    }
-  };
+  // Pôvodná funkcia fetchAllUsers je teraz nahradená onSnapshot listenerom v React.useEffect
+  // Táto funkcia už nie je potrebná v tejto forme, ale ponechávam ju zakomentovanú pre referenciu
+  // const fetchAllUsers = async () => {
+  //   setLoading(true);
+  //   setError('');
+  //   try {
+  //     if (!db) {
+  //       setError("Firestore nie je inicializovaný.");
+  //       return;
+  //     }
+  //     const usersCollectionRef = db.collection('users');
+  //     const snapshot = await usersCollectionRef.get();
+  //     const usersList = snapshot.docs.map(doc => doc.data());
+  //     setAllUsersData(usersList);
+  //
+  //   } catch (e) {
+  //     console.error("Chyba pri získavaní používateľov z Firestore:", e);
+  //     setError(`Chyba pri získavaní používateľov: ${e.message}`);
+  //   } finally {
+  //     setLoading(false);
+  //     clearMessages();
+  //   }
+  // };
 
   // Funkcia na zmenu mena a priezviska
   const handleChangeName = async (e) => {
@@ -713,7 +745,7 @@ function App() {
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
       
       closeDeleteConfirmationModal(); // Zavrie modálne okno PRED otvorením novej karty
-      fetchAllUsers(); // Obnovenie zoznamu používateľov po odstránení
+      // fetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
 
       // Otvorenie Firebase Console v novej karte po úspešnom odstránení
       // Pridávame parameter 't=' s aktuálnym časom, aby sa vynútilo načítanie stránky
@@ -766,8 +798,7 @@ function App() {
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      // Obnovenie zoznamu používateľov po zmene roly
-      fetchAllUsers();
+      // fetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
@@ -791,7 +822,7 @@ function App() {
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      fetchAllUsers(); // Obnovenie zoznamu používateľov
+      // fetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
@@ -818,9 +849,9 @@ function App() {
   const changeProfileView = (view) => {
     setProfileView(view);
     window.location.hash = view; // Aktualizácia URL hash
-    if ((view === 'users' || view === 'all-teams') && isAdmin) { // Zmena: Volanie fetchAllUsers aj pre 'all-teams'
-      fetchAllUsers();
-    }
+    // fetchAllUsers() sa už nevolá priamo tu, ale je riadené cez useEffect s onSnapshot
+    // na základe profileView a isAdmin
+    
     // NOVÁ ZMENA: Vyčistiť pole pre telefónne číslo, aby sa nepredvyplňovalo
     setNewContactPhoneNumber(''); // Vyčistiť pole pri každej zmene zobrazenia
     
