@@ -37,8 +37,13 @@ function App() {
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
 
+  // Inicializácia profileView na základe URL hash alebo defaultne na 'my-data'
+  const getInitialProfileView = () => {
+    const hash = window.location.hash.substring(1); // Odstráni '#'
+    return hash || 'my-data';
+  };
+  const [profileView, setProfileView] = React.useState(getInitialProfileView);
 
-  const [profileView, setProfileView] = React.useState('my-data');
   const [isAdmin, setIsAdmin] = React.useState(false); // Stav pre administrátorské oprávnenia
   const [allUsersData, setAllUsersData] = React.useState([]); // Stav pre zoznam všetkých používateľov
   const [isRoleLoaded, setIsRoleLoaded] = React.useState(false); // Nový stav pre indikáciu načítania roly
@@ -169,6 +174,33 @@ function App() {
       setLoading(false);
     }
   }, []); // Závislosti: Prázdne pole, aby sa useEffect spustil len raz
+
+  // Effect pre načítanie profileView z URL hash pri načítaní stránky
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash) {
+        setProfileView(hash);
+        // Ak je hash 'users' a používateľ je admin, načítaj používateľov
+        if (hash === 'users' && isAdmin) {
+          fetchAllUsers();
+        }
+      } else {
+        setProfileView('my-data');
+      }
+    };
+
+    // Nastavte počiatočný stav na základe aktuálneho hashu
+    handleHashChange();
+
+    // Pridajte poslucháča pre zmeny hashu
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Vyčistenie poslucháča pri odpojení komponentu
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [isAdmin]); // Závisí od isAdmin, aby sa fetchAllUsers zavolalo správne
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -704,6 +736,15 @@ function App() {
     };
   }, [handleLogout]);
 
+  // Funkcia pre zmenu zobrazenia profilu a aktualizáciu URL hash
+  const changeProfileView = (view) => {
+    setProfileView(view);
+    window.location.hash = view; // Aktualizácia URL hash
+    if (view === 'users' && isAdmin) {
+      fetchAllUsers();
+    }
+  };
+
 
   if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded)) {
     return (
@@ -951,7 +992,7 @@ function App() {
               React.createElement("ul", { className: "space-y-2" },
                 React.createElement("li", null,
                   React.createElement("button", {
-                    onClick: () => setProfileView('my-data'),
+                    onClick: () => changeProfileView('my-data'),
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'my-data' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
@@ -959,7 +1000,7 @@ function App() {
                 ),
                 React.createElement("li", null,
                   React.createElement("button", {
-                    onClick: () => setProfileView('change-email'),
+                    onClick: () => changeProfileView('change-email'),
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-email' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
@@ -967,7 +1008,7 @@ function App() {
                 ),
                 React.createElement("li", null,
                   React.createElement("button", {
-                    onClick: () => setProfileView('change-password'),
+                    onClick: () => changeProfileView('change-password'),
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                       profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
@@ -977,7 +1018,7 @@ function App() {
                 React.createElement("li", null,
                   React.createElement("button", {
                     onClick: () => {
-                      setProfileView('change-name');
+                      changeProfileView('change-name');
                       // Predvyplníme polia aktuálnymi hodnotami
                       setNewFirstName(user.displayName ? user.displayName.split(' ')[0] : '');
                       setNewLastName(user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '');
@@ -992,8 +1033,8 @@ function App() {
                   React.createElement("li", null,
                     React.createElement("button", {
                       onClick: () => {
-                        setProfileView('users');
-                        fetchAllUsers(); // Načítať používateľov pri kliknutí
+                        changeProfileView('users');
+                        // fetchAllUsers() sa už volá v changeProfileView, ak je isAdmin true
                       },
                       className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${ // Pridané whitespace-nowrap
                         profileView === 'users' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
