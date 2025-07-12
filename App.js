@@ -31,7 +31,7 @@ function App() {
   // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
-  const [newEmail, setNewEmail] = React.useState('');
+  const [newEmail, setNewEmail] = React.useState(''); // Obnovený stav pre zmenu e-mailu
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -460,6 +460,7 @@ function App() {
     }
   };
 
+  // Obnovená funkcia handleChangeEmail
   const handleChangeEmail = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -829,6 +830,14 @@ function App() {
         setNewFirstName('');
         setNewLastName('');
     }
+    // Vyčistíme pole pre zmenu e-mailu, aby sa nepredvyplňovalo
+    if (view === 'change-email') {
+        setNewEmail('');
+    }
+    // Vyčistíme pole pre aktuálne heslo pri zmene záložky
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
   };
 
 
@@ -843,36 +852,41 @@ function App() {
   const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
+    const h1Element = React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball");
+
+    let conditionalContent;
+    if (user) {
+      conditionalContent = React.createElement(React.Fragment, null,
+        React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
+        React.createElement("div", { className: "mt-6 flex justify-center" },
+          React.createElement("a", {
+            href: "logged-in.html",
+            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Moja zóna")
+        )
+      );
+    } else {
+      conditionalContent = React.createElement(React.Fragment, null,
+        React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
+        React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
+          React.createElement("a", {
+            href: "login.html",
+            className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Prihlásenie"),
+          React.createElement("a", {
+            href: "register.html",
+            className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+          }, "Registrácia na turnaj")
+        )
+      );
+    }
+
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
           React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
-            user ? (
-              React.createElement(React.Fragment, null,
-                React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
-                React.createElement("div", { className: "mt-6 flex justify-center" },
-                  React.createElement("a", {
-                    href: "logged-in.html",
-                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  }, "Moja zóna")
-                )
-              )
-            ) : (
-              React.createElement(React.Fragment, null,
-                React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovali."),
-                React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-                  React.createElement("a", {
-                    href: "login.html",
-                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  }, "Prihlásenie"),
-                  React.createElement("a", {
-                    href: "register.html",
-                    className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                  }, "Registrácia na turnaj") // Zmena textu
-                )
-              )
-            )
+            h1Element,
+            conditionalContent
           )
         )
       )
@@ -880,6 +894,12 @@ function App() {
   }
 
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
+    // Ak je používateľ prihlásený, presmerovať na logged-in.html
+    if (user) {
+      window.location.href = 'logged-in.html';
+      return null; // Návrat null, aby sa nič nezobrazilo pred presmerovaním
+    }
+
     const is_admin_register_page = currentPath === 'admin-register.html';
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
@@ -1035,7 +1055,8 @@ function App() {
             )
           )
         )
-      );
+      )
+    );
   }
 
   if (currentPath === 'login.html') {
