@@ -1115,7 +1115,7 @@ function App() {
     return (
       React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto" },
         React.createElement("div", { className: "w-full max-w-4xl mt-20 mb-10 p-4 flex" },
-          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[250px]" }, // Zvýšená minimálna šírka
+          React.createElement("div", { className: "w-1/4 bg-white p-6 rounded-lg shadow-xl mr-4 min-w-[300px]" },
             React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Menu"),
             React.createElement("nav", null,
               React.createElement("ul", { className: "space-y-2" },
