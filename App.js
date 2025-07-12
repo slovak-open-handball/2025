@@ -624,8 +624,8 @@ function App() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError("Nie ste prihlásený.");
+    if (!user || !auth) { // Pridaná kontrola pre auth inštanciu
+      setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
     if (!currentPassword || !newPassword || !confirmNewPassword) {
@@ -645,10 +645,21 @@ function App() {
 
     setLoading(true);
     try {
-      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-      await user.reauthenticateWithCredential(credential);
+      // Použitie auth.currentUser pre získanie aktuálneho používateľa
+      const currentUserForReauth = auth.currentUser;
+      if (!currentUserForReauth) {
+        setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
+        setLoading(false);
+        return;
+      }
 
-      await user.updatePassword(newPassword);
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      
+      // Reautentifikácia sa vykonáva na objekte currentUserForReauth
+      await currentUserForReauth.reauthenticateWithCredential(credential);
+
+      // Zmena hesla sa vykonáva na objekte currentUserForReauth
+      await currentUserForReauth.updatePassword(newPassword);
       setMessage("Heslo úspešne zmenené!");
       setError('');
       setNewPassword('');
@@ -693,8 +704,8 @@ function App() {
 
   const handleChangeName = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError("Nie ste prihlásený.");
+    if (!user || !auth) { // Pridaná kontrola pre auth inštanciu
+      setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
     // Zmenená validácia: vyžaduje aspoň jedno z mien A aktuálne heslo
@@ -707,18 +718,29 @@ function App() {
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
-        setError("Úpravy vašich údajov sú už uzavreté.");
+        setError("Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: " + (editEnd ? editEnd.toLocaleString('sk-SK') : '-'));
         return;
     }
 
     setLoading(true);
     try {
+      // Použitie auth.currentUser pre získanie aktuálneho používateľa
+      const currentUserForReauth = auth.currentUser;
+      if (!currentUserForReauth) {
+        setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
+        setLoading(false);
+        return;
+      }
+
       // Reautentifikácia je potrebná vždy, keďže sa menia citlivé údaje
-      const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-      await user.reauthenticateWithCredential(credential);
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      await currentUserForReauth.reauthenticateWithCredential(credential);
 
       const updatedDisplayName = `${newFirstName || user.firstName} ${newLastName || user.lastName}`;
-      await user.updateProfile({ displayName: updatedDisplayName });
+      
+      // Aktualizácia profilu sa vykonáva na objekte currentUserForReauth
+      await currentUserForReauth.updateProfile({ displayName: updatedDisplayName });
+      
       await db.collection('users').doc(user.uid).update({ 
         firstName: newFirstName || user.firstName, // Ak je prázdne, ponechá starú hodnotu
         lastName: newLastName || user.lastName,   // Ak je prázdne, ponechá starú hodnotu
@@ -752,8 +774,8 @@ function App() {
 
   const handleChangeContactPhoneNumber = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError("Nie ste prihlásený.");
+    if (!user || !auth) { // Pridaná kontrola pre auth inštanciu
+      setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
     if (!newContactPhoneNumber) {
@@ -771,20 +793,23 @@ function App() {
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
-        setError("Úpravy vašich údajov sú už uzavreté.");
+        setError("Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: " + (editEnd ? editEnd.toLocaleString('sk-SK') : '-'));
         return;
     }
 
     setLoading(true);
     try {
-      if (user.email && currentPassword) {
-        const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-        await user.reauthenticateWithCredential(credential);
-      } else {
-        setError("Pre zmenu telefónneho čísla je potrebné zadať aktuálne heslo pre overenie.");
+      // Použitie auth.currentUser pre získanie aktuálneho používateľa
+      const currentUserForReauth = auth.currentUser;
+      if (!currentUserForReauth) {
+        setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
         setLoading(false);
         return;
       }
+
+      // Reautentifikácia je potrebná
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      await currentUserForReauth.reauthenticateWithCredential(credential);
 
       await db.collection('users').doc(user.uid).update({ 
         contactPhoneNumber: newContactPhoneNumber
@@ -883,17 +908,19 @@ function App() {
     setError('');
     setMessage('');
     try {
+      // Odstránenie používateľa z Firestore databázy
       await db.collection('users').doc(userToDelete.uid).delete();
-      setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy.`);
+      setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
       
       closeDeleteConfirmationModal();
-      fetchAllUsers();
+      fetchAllUsers(); // Obnoviť zoznam používateľov
 
-      window.open(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users?t=${new Date().getTime()}`, '_blank');
+      // Otvorenie Firebase konzoly v novom okne pre manuálne odstránenie z Authentication
+      window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
 
     } catch (e) {
       console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
-      setError(`Chyba pri odstraňovaní používateľa: ${e.message}`);
+      setError(`Chyba pri odstraňovaní používateľa: ${e.message}. Uistite sa, že máte dostatočné Firebase Security Rules.`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -1019,13 +1046,13 @@ function App() {
             <h1 className="text-3xl font-bold text-gray-800 mb-4">Vitajte na stránke Slovak Open Handball</h1>
             {user ? (
               <>
-                <p className="text-lg text-gray-600">Ste prihlásený. Voľbou "Klub" otvoríte ďalšie možnosti.</p>
+                <p className="text-lg text-gray-600">Ste prihlásený. Prejdite do svojej zóny pre viac možností.</p>
                 <div className="mt-6 flex justify-center">
                   <a
                     href="logged-in.html"
                     className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
                   >
-                    Klub
+                    Moja zóna
                   </a>
                 </div>
               </>
@@ -1033,7 +1060,7 @@ function App() {
               <>
                 {isRegistrationOpen ? (
                   <>
-                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa&nbsp;zaregistrujte, aby ste mohli pokračovať.</p>
+                    <p className="text-lg text-gray-600">Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať.</p>
                     <div className="mt-6 flex justify-center space-x-4">
                       <a
                         href="login.html"
@@ -1097,7 +1124,6 @@ function App() {
     // Registrácia je otvorená, ak nie je nastavený začiatok, alebo je už po začiatku
     // A zároveň nie je nastavený koniec, alebo je ešte pred koncom
     // isRegistrationOpen je už definované vyššie pomocou useMemo
-    // const isRegistrationOpen = (!regStart || now >= regStart) && (!regEnd || now <= regEnd); // Už definované
 
     // Ak nie je admin registrácia a registrácia nie je otvorená, zobrazte správu
     if (!is_admin_register_page && !isRegistrationOpen) {
@@ -1484,7 +1510,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -1562,7 +1588,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -1615,7 +1641,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
