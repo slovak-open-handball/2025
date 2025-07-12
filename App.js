@@ -26,26 +26,20 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  // Nové stavy pre meno a priezvisko
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  // NOVÉ: Stav pre telefónne číslo kontaktnej osoby (pre registráciu)
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
-  // Odstránené newEmail
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
-  // Nové stavy pre zmenu mena a priezviska
   const [newFirstName, setNewFirstName] = React.useState('');
   const [newLastName, setNewLastName] = React.useState('');
-  // NOVÉ: Stav pre nové telefónne číslo (pre zmenu)
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
 
 
-  // Inicializácia profileView na základe URL hash alebo defaultne na 'my-data'
   const getInitialProfileView = () => {
-    const hash = window.location.hash.substring(1); // Odstráni '#'
+    const hash = window.location.hash.substring(1);
     return hash || 'my-data';
   };
   const [profileView, setProfileView] = React.useState(getInitialProfileView);
@@ -155,7 +149,7 @@ function App() {
         const registerLink = document.getElementById('register-link');
 
         // Aktualizácia viditeľnosti navigačných prvkov
-        if (authLink) {
+        if (authLink) { // Ak existuje authLink (čo by mal, ak je hlavička načítaná)
           if (currentUser) {
             authLink.classList.add('hidden'); // Skryť "Prihlásenie"
             profileLink && profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
@@ -992,8 +986,7 @@ function App() {
             )
           )
         )
-      )
-    );
+      );
   }
 
   if (currentPath === 'login.html') {
@@ -1058,8 +1051,7 @@ function App() {
             )
           )
         )
-      )
-    );
+      );
   }
 
   if (currentPath === 'logged-in.html') {
@@ -1103,7 +1095,7 @@ function App() {
                       changeProfileView('change-name');
                     },
                     className: `w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                        profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`
                   }, "Zmeniť meno a priezvisko") 
                 ),
