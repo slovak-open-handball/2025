@@ -342,7 +342,7 @@ function App() {
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
       // Krok 2: Skontrolujte stav schválenia
-      if (userData.approved === false) { // Zmenené na kontrolu len approved
+      if (userData.approved === false) { 
         setError("Váš účet je neaktívny alebo čaká na schválenie administrátorom.");
         await auth.signOut(); // Odhlásiť používateľa, ktorý nie je schválený
         setLoading(false);
@@ -488,7 +488,7 @@ function App() {
   const fetchAllUsers = async () => {
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Odstránená správa o načítaní používateľov
     try {
       if (!db) {
         setError("Firestore nie je inicializovaný.");
@@ -502,7 +502,7 @@ function App() {
       const snapshot = await usersCollectionRef.get();
       const usersList = snapshot.docs.map(doc => doc.data());
       setAllUsersData(usersList);
-      setMessage("Zoznam používateľov načítaný z Firestore.");
+      // setMessage("Zoznam používateľov načítaný z Firestore."); // Odstránená správa o načítaní používateľov
 
     } catch (e) {
       console.error("Chyba pri získavaní používateľov z Firestore:", e);
@@ -526,7 +526,7 @@ function App() {
 
   // Upravená funkcia handleDeleteUser pre "mäkké odstránenie"
   const handleDeleteUser = async () => {
-    if (!userToDelete || !db) { // Odstránené auth, lebo už nemažeme z Auth priamo
+    if (!userToDelete || !db) { 
       setError("Používateľ na odstránenie nie je definovaný alebo Firebase nie je inicializovaný.");
       return;
     }
@@ -573,7 +573,21 @@ function App() {
     setError('');
     setMessage('');
     try {
-      await db.collection('users').doc(userToEditRole.uid).update({ role: newRole });
+      let updateData = { role: newRole };
+
+      // Ak sa nová rola nastavuje na 'user', automaticky schváliť
+      if (newRole === 'user') {
+        updateData.approved = true;
+      }
+      // Ak sa rola nastavuje na 'admin', zachovať existujúci stav schválenia používateľa.
+      // Toto zahŕňa prípady, keď bol používateľ neschválený admin (zostane neschválený)
+      // alebo schválený používateľ/admin (zostane schválený).
+      else if (newRole === 'admin') {
+          updateData.approved = userToEditRole.approved; // Zachovať existujúci stav schválenia
+      }
+
+
+      await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
       // Obnovenie zoznamu používateľov po zmene roly
       fetchAllUsers();
@@ -635,30 +649,37 @@ function App() {
   const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
-    // Definujeme obsah pre prihláseného a neprihláseného používateľa
-    const loggedInContent = React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností.");
-    const loggedOutContent = React.createElement(React.Fragment, null,
-      React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
-      React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
-        React.createElement("a", {
-          href: "login.html",
-          className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-        }, "Prihlásenie"),
-        React.createElement("a", {
-          href: "register.html",
-          className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-        }, "Registrácia")
-      )
-    );
-
-    // Vytvoríme premennú pre podmienený obsah
-    const mainPageContent = user ? loggedInContent : loggedOutContent;
-
-    return React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
-      React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
-        React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
-          React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
-          [mainPageContent] // Použijeme premennú s už vyhodnoteným obsahom, zabalenú v poli
+    return (
+      React.createElement("div", { className: "min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto" },
+        React.createElement("div", { className: "w-full max-w-md mt-20 mb-10 p-4" },
+          React.createElement("div", { className: "bg-white p-8 rounded-lg shadow-xl w-full text-center" },
+            React.createElement("h1", { className: "text-3xl font-bold text-gray-800 mb-4" }, "Vitajte na stránke Slovak Open Handball"),
+            user ? (
+              React.createElement(React.Fragment, null,
+                React.createElement("p", { className: "text-lg text-gray-600" }, "Ste prihlásený. Prejdite do svojej zóny pre viac možností."),
+                React.createElement("div", { className: "mt-6 flex justify-center" },
+                  React.createElement("a", {
+                    href: "logged-in.html",
+                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Moja zóna")
+                )
+              )
+            ) : (
+              React.createElement(React.Fragment, null,
+                React.createElement("p", { className: "text-lg text-gray-600" }, "Prosím, prihláste sa alebo sa zaregistrujte, aby ste mohli pokračovať."),
+                React.createElement("div", { className: "mt-6 flex justify-center space-x-4" },
+                  React.createElement("a", {
+                    href: "login.html",
+                    className: "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Prihlásenie"),
+                  React.createElement("a", {
+                    href: "register.html",
+                    className: "bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                  }, "Registrácia")
+                )
+              )
+            )
+          )
         )
       )
     );
@@ -1052,13 +1073,12 @@ function App() {
                         React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
                           React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
                           React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), // Zobrazenie roly
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) // Zobrazenie stavu schválenia
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`), 
+                          React.createElement("p", { className: "text-gray-500 text-xs" }, `Schválený: ${u.approved ? 'Áno' : 'Nie'}`) 
                         ),
-                        // Tlačidlá pre správu používateľov
-                        user && user.uid !== u.uid && ( // Zobrazí tlačidlá len ak je admin a nie je to jeho vlastný účet
+                        user && user.uid !== u.uid && ( 
                           React.createElement("div", { className: "flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0" },
-                            // Tlačidlo "Povoliť používateľa" (zobrazí sa len pre neschválených adminov)
                             u.role === 'admin' && u.approved === false && (
                               React.createElement("button", {
                                 onClick: () => handleApproveUser(u),
@@ -1069,10 +1089,12 @@ function App() {
                               onClick: () => openRoleEditModal(u),
                               className: "bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
                             }, "Upraviť rolu"),
-                            React.createElement("button", {
-                              onClick: () => openDeleteConfirmationModal(u),
+                            React.createElement("a", { // Zmenené na <a> tag pre presmerovanie
+                              href: "https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users",
+                              target: "_blank", // Otvorí v novom tabe
+                              rel: "noopener noreferrer", // Bezpečnostné odporúčanie pre target="_blank"
                               className: "bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded-lg transition-colors duration-200"
-                            }, "Deaktivovať používateľa")
+                            }, "Odstrániť používateľa") 
                           )
                         )
                       )
@@ -1086,12 +1108,12 @@ function App() {
           )
         ),
 
-        // Modálne okno pre potvrdenie odstránenia
+        // Modálne okno pre potvrdenie odstránenia (ponechané, ak by bolo potrebné pre iné akcie)
         showDeleteConfirmationModal && (
           React.createElement("div", { className: "fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" },
             React.createElement("div", { className: "relative p-5 border w-96 shadow-lg rounded-md bg-white" },
-              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť deaktiváciu"),
-              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete deaktivovať používateľa ${userToDelete?.email}? Tento používateľ sa už nebude môcť prihlásiť.`),
+              React.createElement("h3", { className: "text-lg font-bold text-gray-900 mb-4" }, "Potvrdiť deaktiváciu"), 
+              React.createElement("p", { className: "text-gray-700 mb-6" }, `Naozaj chcete deaktivovať používateľa ${userToDelete?.email}? Tento používateľ sa už nebude môcť prihlásiť.`), 
               React.createElement("div", { className: "flex justify-end space-x-4" },
                 React.createElement("button", {
                   onClick: closeDeleteConfirmationModal,
@@ -1101,7 +1123,7 @@ function App() {
                   onClick: handleDeleteUser,
                   className: "px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200",
                   disabled: loading
-                }, loading ? 'Deaktivujem...' : 'Deaktivovať')
+                }, loading ? 'Deaktivujem...' : 'Deaktivovať') 
               )
             )
           )
