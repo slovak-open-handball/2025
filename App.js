@@ -1010,7 +1010,6 @@ function App() {
                         React.createElement("div", { className: "flex-grow mb-2 sm:mb-0" },
                           React.createElement("p", { className: "text-gray-800 font-semibold" }, u.displayName || 'Neznámy používateľ'),
                           React.createElement("p", { className: "text-gray-600 text-sm" }, u.email),
-                          React.createElement("p", { className: "text-gray-500 text-xs" }, `UID: ${u.uid}`),
                           React.createElement("p", { className: "text-gray-500 text-xs" }, `Rola: ${u.role || 'user'}`) // Zobrazenie roly
                         ),
                         // Tlačidlá pre správu používateľov
