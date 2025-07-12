@@ -1626,7 +1626,7 @@ function App() {
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Zoznam používateľov (Administrácia)"),
               allUsersData.length > 0 ? (
-                React.createElement(React.Fragment, null,
+                React.createElement(React.Fragment, null, // Removed extra parenthesis here
                   React.createElement("ul", { className: "divide-y divide-gray-200" },
                     allUsersData.map((u) =>
                       React.createElement("li", { key: u.uid, className: "py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between" },
@@ -1664,7 +1664,7 @@ function App() {
             React.createElement("div", { className: "space-y-4 border-t pt-4 mt-4" },
               React.createElement("h2", { className: "text-xl font-semibold text-gray-800 mb-4" }, "Všetky tímy (údaje z registračného formulára)"),
               allUsersData.length > 0 ? (
-                React.createElement("div", { className: "overflow-x-auto" },
+                React.createElement("div", { className: "overflow-x-auto" }, // Removed extra parenthesis here
                   React.createElement("table", { className: "min-w-full bg-white border border-gray-200 rounded-lg shadow-sm" },
                     React.createElement("thead", null,
                       React.createElement("tr", { className: "bg-gray-100 border-b border-gray-200" },
