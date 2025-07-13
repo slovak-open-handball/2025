@@ -592,7 +592,7 @@ function App() {
       }));
 
 
-      setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
+      setMessage("Prihlásenie úspešné!");
       setError('');
       setEmail('');
       setPassword('');
