@@ -167,11 +167,11 @@ function App() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
 
-  // Nový stav pre notifikácie administrátorov
+  // Nový stav pre upozornenia administrátorov
   const [adminNotifications, setAdminNotifications] = React.useState([]);
   const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
-  const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje poslednú zobrazenú notifikáciu
+  const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje posledné zobrazené upozornenie
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
@@ -421,16 +421,14 @@ function App() {
     };
   }, []); // Bez závislostí, aby sa spustil len raz
 
-  // Nový useEffect pre real-time notifikácie administrátorov
   React.useEffect(() => {
     let unsubscribeNotifications;
     if (db && isAdmin) {
       console.log("Admin: Setting up real-time listener for notifications.");
-      // Cesta k notifikáciám: /artifacts/{appId}/public/data/notifications
       const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
       unsubscribeNotifications = notificationsCollectionRef
         .orderBy('timestamp', 'desc') // Zobraziť najnovšie ako prvé
-        .limit(20) // Obmedziť na posledných 20 notifikácií
+        .limit(20)
         .onSnapshot(snapshot => {
           const notificationsList = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -439,22 +437,20 @@ function App() {
           setAdminNotifications(notificationsList);
           console.log("Admin: Fetched notifications in real-time:", notificationsList);
 
-          // Logika pre zobrazenie modálneho okna s notifikáciou
           if (notificationsList.length > 0) {
             const latestNotification = notificationsList[0];
             if (latestNotification.id !== lastShownNotificationId) {
               setAdminNotificationMessage(latestNotification.message);
               setShowAdminNotificationModal(true);
-              setLastShownNotificationId(latestNotification.id); // Uložiť ID zobrazené notifikácie
+              setLastShownNotificationId(latestNotification.id); 
             }
           }
 
         }, error => {
-          console.error("Chyba pri načítaní notifikácií (onSnapshot):", error);
-          setError(`Chyba pri načítaní notifikácií: ${error.message}`);
+          console.error("Chyba pri načítaní upozornenia (onSnapshot):", error);
+          setError(`Chyba pri načítaní upozornenia: ${error.message}`);
         });
     } else {
-      // Vyčistiť notifikácie, ak používateľ nie je administrátor
       setAdminNotifications([]);
     }
 
@@ -862,7 +858,6 @@ function App() {
         displayName: updatedDisplayName
       });
 
-      // Zistiť, čo sa zmenilo pre notifikáciu
       let changedFields = [];
       if (newFirstName && newFirstName !== oldFirstName) {
         changedFields.push(`meno z '${oldFirstName || 'nezadané'}' na '${newFirstName}'`);
@@ -873,7 +868,6 @@ function App() {
 
       if (changedFields.length > 0) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
-        // Pridanie notifikácie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: notificationMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -887,7 +881,7 @@ function App() {
             newLastName: updatedLastName,
           }
         });
-        console.log("Admin notifikácia odoslaná pre zmenu mena.");
+        console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
 
       setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
@@ -961,10 +955,8 @@ function App() {
         contactPhoneNumber: newContactPhoneNumber
       });
 
-      // Odoslať notifikáciu pre zmenu telefónneho čísla
       if (newContactPhoneNumber !== oldContactPhoneNumber) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
-        // Pridanie notifikácie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: notificationMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -976,7 +968,7 @@ function App() {
             newPhoneNumber: newContactPhoneNumber,
           }
         });
-        console.log("Admin notifikácia odoslaná pre zmenu telefónneho čísla.");
+        console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
       }
 
       setMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber);
@@ -1156,7 +1148,7 @@ function App() {
 
   const handleClearNotifications = async () => {
     if (!db || !isAdmin) {
-      setError("Nemáte oprávnenie na vymazanie notifikácií.");
+      setError("Nemáte oprávnenie na vymazanie upozornení.");
       return;
     }
     setLoading(true);
@@ -1170,10 +1162,10 @@ function App() {
         batch.delete(doc.ref);
       });
       await batch.commit();
-      setMessage("Všetky notifikácie boli vymazané.");
+      setMessage("Všetky upozornenia boli vymazané.");
     } catch (e) {
-      console.error("Chyba pri mazaní notifikácií:", e);
-      setError(`Chyba pri mazaní notifikácií: ${e.message}`);
+      console.error("Chyba pri mazaní upozornení:", e);
+      setError(`Chyba pri mazaní upozornení: ${e.message}`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -1715,7 +1707,7 @@ function App() {
                         profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Notifikácie ({adminNotifications.length})
+                      Upozornenia ({adminNotifications.length})
                     </button>
                   </li>
                 )}
@@ -2054,10 +2046,9 @@ function App() {
               </form>
             )}
 
-            {/* Sekcia notifikácií pre administrátora */}
             {profileView === 'notifications' && isAdmin && (
               <div className="space-y-4 border-t pt-4 mt-4">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Notifikácie pre administrátora</h2>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Upozornenia pre administrátora</h2>
                 {adminNotifications.length > 0 ? (
                   <>
                     <button
@@ -2065,7 +2056,7 @@ function App() {
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 mb-4"
                       disabled={loading}
                     >
-                      {loading ? 'Mažem...' : 'Vymazať všetky notifikácie'}
+                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia'}
                     </button>
                     <ul className="divide-y divide-gray-200">
                       {adminNotifications.map(notification => (
@@ -2079,7 +2070,7 @@ function App() {
                     </ul>
                   </>
                 ) : (
-                  <p className="text-gray-600">Žiadne nové notifikácie.</p>
+                  <p className="text-gray-600">Žiadne nové upozornenia.</p>
                 )}
               </div>
             )}
