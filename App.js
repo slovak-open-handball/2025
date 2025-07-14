@@ -63,6 +63,45 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+// NotificationModal Component
+function NotificationModal({ message, isVisible, onClose }) {
+  const [show, setShow] = React.useState(false);
+
+  React.useEffect(() => {
+    let timeoutId;
+    if (isVisible) {
+      setShow(true);
+      timeoutId = setTimeout(() => {
+        setShow(false);
+        // Call onClose after the animation finishes, or slightly before
+        setTimeout(onClose, 500); // 500ms for slide-up animation
+      }, 5000); // Display for 5 seconds
+    } else {
+      setShow(false);
+      clearTimeout(timeoutId);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [isVisible, onClose]);
+
+  if (!show && !isVisible) return null; // Only render if it's visible or transitioning out
+
+  return (
+    <div
+      className={`fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+        show ? 'translate-y-0' : '-translate-y-full'
+      }`}
+      style={{ pointerEvents: 'none' }} // Allow clicks to pass through
+    >
+      <div
+        className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center"
+        style={{ pointerEvents: 'auto' }} // Re-enable clicks for the modal content
+      >
+        <p className="font-semibold">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -130,6 +169,8 @@ function App() {
 
   // Nový stav pre notifikácie administrátorov
   const [adminNotifications, setAdminNotifications] = React.useState([]);
+  const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
+  const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
@@ -759,33 +800,6 @@ function App() {
     }
   };
 
-  // Funkcia fetchAllUsers je teraz nahradená onSnapshot listenerom v React.useEffect
-  // takže ju môžeme odstrániť, alebo ju použiť len pre manuálne vyžiadanie, ak by bolo potrebné.
-  // Pre real-time aktualizácie už nie je potrebná.
-  /*
-  const fetchAllUsers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      if (!db) {
-        setError("Firestore nie je inicializovaný.");
-        return;
-      }
-      const usersCollectionRef = db.collection('users');
-      const snapshot = await usersCollectionRef.get();
-      const usersList = snapshot.docs.map(doc => doc.data());
-      setAllUsersData(usersList);
-
-    } catch (e) {
-      console.error("Chyba pri získavaní používateľov z Firestore:", e);
-      setError(`Chyba pri získavaní používateľov: ${e.message}`);
-    } finally {
-      setLoading(false);
-      clearMessages();
-    }
-  };
-  */
-
   const handleChangeName = async (e) => {
     e.preventDefault();
     if (!user || !auth || !db) {
@@ -862,6 +876,10 @@ function App() {
           }
         });
         console.log("Admin notifikácia odoslaná pre zmenu mena.");
+
+        // Trigger the modal notification for admin
+        setAdminNotificationMessage(notificationMessage);
+        setShowAdminNotificationModal(true);
       }
 
       setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
@@ -951,6 +969,10 @@ function App() {
           }
         });
         console.log("Admin notifikácia odoslaná pre zmenu telefónneho čísla.");
+
+        // Trigger the modal notification for admin
+        setAdminNotificationMessage(notificationMessage);
+        setShowAdminNotificationModal(true);
       }
 
       setMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber);
@@ -1052,7 +1074,6 @@ function App() {
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
       
       closeDeleteConfirmationModal();
-      // fetchAllUsers(); // Už nepotrebné, real-time listener sa postará o aktualizáciu
       // Otvorenie Firebase konzoly v novom okne pre manuálne odstránenie z Authentication
       window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
 
@@ -1098,7 +1119,6 @@ function App() {
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      // fetchAllUsers(); // Už nepotrebné, real-time listener sa postará o aktualizáciu
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
@@ -1121,7 +1141,6 @@ function App() {
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      // fetchAllUsers(); // Už nepotrebné, real-time listener sa postará o aktualizáciu
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
@@ -1173,7 +1192,6 @@ function App() {
   const changeProfileView = (view) => {
     setProfileView(view);
     window.location.hash = view;
-    // fetchAllUsers sa už volá automaticky cez useEffect na základe profileView a isAdmin
     setNewContactPhoneNumber('');
     
     if (view === 'change-name') {
@@ -1583,6 +1601,14 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
+
+        {isAdmin && (
+            <NotificationModal
+                message={adminNotificationMessage}
+                isVisible={showAdminNotificationModal}
+                onClose={() => setShowAdminNotificationModal(false)}
+            />
+        )}
 
         <div className="flex flex-grow w-full pb-10">
           <div className="fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-[271px] bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4">
