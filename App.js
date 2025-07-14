@@ -168,10 +168,10 @@ function App() {
   const [newRole, setNewRole] = React.useState('');
 
   // Nový stav pre upozornenia administrátorov
-  const [adminNotifications, setAdminNotifications] = React.useState([]);
-  const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
-  const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
-  const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje posledné zobrazené upozornenie
+  const [adminUpozornenia, setAdminUpozornenia] = React.useState([]);
+  const [showAdminUpozornenieModal, setShowAdminUpozornenieModal] = React.useState(false);
+  const [adminUpozornenieMessage, setAdminUpozornenieMessage] = React.useState('');
+  const [lastShownUpozornenieId, setLastShownUpozornenieId] = React.useState(null); // Sleduje poslednú zobrazenú upozornenie
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
@@ -421,46 +421,50 @@ function App() {
     };
   }, []); // Bez závislostí, aby sa spustil len raz
 
+  // Nový useEffect pre real-time upozornenia administrátorov
   React.useEffect(() => {
-    let unsubscribeNotifications;
+    let unsubscribeUpozornenia;
     if (db && isAdmin) {
-      console.log("Admin: Setting up real-time listener for notifications.");
-      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      unsubscribeNotifications = notificationsCollectionRef
+      console.log("Admin: Setting up real-time listener for upozornenia.");
+      // Cesta k upozorneniam: /artifacts/{appId}/public/data/notifications
+      const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
+      unsubscribeUpozornenia = upozorneniaCollectionRef
         .orderBy('timestamp', 'desc') // Zobraziť najnovšie ako prvé
-        .limit(20)
+        .limit(20) // Obmedziť na posledných 20 upozornení
         .onSnapshot(snapshot => {
-          const notificationsList = snapshot.docs.map(doc => ({
+          const upozorneniaList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
-          setAdminNotifications(notificationsList);
-          console.log("Admin: Fetched notifications in real-time:", notificationsList);
+          setAdminUpozornenia(upozorneniaList);
+          console.log("Admin: Fetched upozornenia in real-time:", upozorneniaList);
 
-          if (notificationsList.length > 0) {
-            const latestNotification = notificationsList[0];
-            if (latestNotification.id !== lastShownNotificationId) {
-              setAdminNotificationMessage(latestNotification.message);
-              setShowAdminNotificationModal(true);
-              setLastShownNotificationId(latestNotification.id); 
+          // Logika pre zobrazenie modálneho okna s upozornením
+          if (upozorneniaList.length > 0) {
+            const latestUpozornenie = upozorneniaList[0];
+            if (latestUpozornenie.id !== lastShownUpozornenieId) {
+              setAdminUpozornenieMessage(latestUpozornenie.message);
+              setShowAdminUpozornenieModal(true);
+              setLastShownUpozornenieId(latestUpozornenie.id); // Uložiť ID zobrazené upozornenie
             }
           }
 
         }, error => {
-          console.error("Chyba pri načítaní upozornenia (onSnapshot):", error);
-          setError(`Chyba pri načítaní upozornenia: ${error.message}`);
+          console.error("Chyba pri načítaní upozornení (onSnapshot):", error);
+          setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
     } else {
-      setAdminNotifications([]);
+      // Vyčistiť upozornenia, ak používateľ nie je administrátor
+      setAdminUpozornenia([]);
     }
 
     return () => {
-      if (unsubscribeNotifications) {
-        unsubscribeNotifications();
-        console.log("Admin: Unsubscribed from notifications listener.");
+      if (unsubscribeUpozornenia) {
+        unsubscribeUpozornenia();
+        console.log("Admin: Unsubscribed from upozornenia listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownNotificationId]); // Závisí od db, isAdmin, appId a lastShownNotificationId
+  }, [db, isAdmin, appId, lastShownUpozornenieId]); // Závisí od db, isAdmin, appId a lastShownUpozornenieId
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -566,7 +570,7 @@ function App() {
     if (!isAdminRegistration) {
       const phoneRegex = /^\+\d+$/;
       if (!phoneRegex.test(contactPhoneNumber)) {
-          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+          setError("Telefónne číslo kontaktnej osoby musí začať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
           return;
       }
     }
@@ -858,6 +862,7 @@ function App() {
         displayName: updatedDisplayName
       });
 
+      // Zistiť, čo sa zmenilo pre upozornenie
       let changedFields = [];
       if (newFirstName && newFirstName !== oldFirstName) {
         changedFields.push(`meno z '${oldFirstName || 'nezadané'}' na '${newFirstName}'`);
@@ -867,9 +872,10 @@ function App() {
       }
 
       if (changedFields.length > 0) {
-        const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
+        const upozornenieMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
+        // Pridanie upozornenie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
-          message: notificationMessage,
+          message: upozornenieMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
@@ -881,7 +887,7 @@ function App() {
             newLastName: updatedLastName,
           }
         });
-        console.log("Admin upozornenie odoslaná pre zmenu mena.");
+        console.log("Admin upozornenie odoslané pre zmenu mena.");
       }
 
       setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
@@ -923,7 +929,7 @@ function App() {
 
     const phoneRegex = /^\+\d+$/;
     if (!phoneRegex.test(newContactPhoneNumber)) {
-        setError("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+        setError("Telefónne číslo musí začať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
         return;
     }
 
@@ -955,10 +961,12 @@ function App() {
         contactPhoneNumber: newContactPhoneNumber
       });
 
+      // Odoslať upozornenie pre zmenu telefónneho čísla
       if (newContactPhoneNumber !== oldContactPhoneNumber) {
-        const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
+        const upozornenieMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
+        // Pridanie upozornenie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
-          message: notificationMessage,
+          message: upozornenieMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
@@ -1146,7 +1154,7 @@ function App() {
     }
   };
 
-  const handleClearNotifications = async () => {
+  const handleClearUpozornenia = async () => {
     if (!db || !isAdmin) {
       setError("Nemáte oprávnenie na vymazanie upozornení.");
       return;
@@ -1155,8 +1163,8 @@ function App() {
     setError('');
     setMessage('');
     try {
-      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      const snapshot = await notificationsCollectionRef.get();
+      const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
+      const snapshot = await upozorneniaCollectionRef.get();
       const batch = db.batch();
       snapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
@@ -1443,7 +1451,7 @@ function App() {
                     required
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
-                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                    title="Telefónne číslo musí začať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
                   />
                 </div>
               )}
@@ -1600,9 +1608,9 @@ function App() {
 
         {isAdmin && (
             <NotificationModal
-                message={adminNotificationMessage}
-                isVisible={showAdminNotificationModal}
-                onClose={() => setShowAdminNotificationModal(false)}
+                message={adminUpozornenieMessage}
+                isVisible={showAdminUpozornenieModal}
+                onClose={() => setShowAdminUpozornenieModal(false)}
             />
         )}
 
@@ -1707,7 +1715,7 @@ function App() {
                         profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Upozornenia ({adminNotifications.length})
+                      Upozornenia ({adminUpozornenia.length})
                     </button>
                   </li>
                 )}
@@ -1881,7 +1889,7 @@ function App() {
                     required
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
-                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                    title="Telefónne číslo musí začať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
                     disabled={!isEditAllowed}
                   />
                 </div>
@@ -2046,24 +2054,25 @@ function App() {
               </form>
             )}
 
+            {/* Sekcia upozornení pre administrátora */}
             {profileView === 'notifications' && isAdmin && (
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Upozornenia pre administrátora</h2>
-                {adminNotifications.length > 0 ? (
+                {adminUpozornenia.length > 0 ? (
                   <>
                     <button
-                      onClick={handleClearNotifications}
+                      onClick={handleClearUpozornenia}
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 mb-4"
                       disabled={loading}
                     >
                       {loading ? 'Mažem...' : 'Vymazať všetky upozornenia'}
                     </button>
                     <ul className="divide-y divide-gray-200">
-                      {adminNotifications.map(notification => (
-                        <li key={notification.id} className="py-2 text-gray-700">
-                          <p className="font-semibold">{notification.message}</p>
+                      {adminUpozornenia.map(upozornenie => (
+                        <li key={upozornenie.id} className="py-2 text-gray-700">
+                          <p className="font-semibold">{upozornenie.message}</p>
                           <p className="text-xs text-gray-500">
-                            {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
+                            {upozornenie.timestamp ? upozornenie.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
                           </p>
                         </li>
                       ))}
