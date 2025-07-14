@@ -171,6 +171,7 @@ function App() {
   const [adminNotifications, setAdminNotifications] = React.useState([]);
   const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
+  const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje poslednú zobrazenú notifikáciu
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
@@ -437,6 +438,17 @@ function App() {
           }));
           setAdminNotifications(notificationsList);
           console.log("Admin: Fetched notifications in real-time:", notificationsList);
+
+          // Logika pre zobrazenie modálneho okna s notifikáciou
+          if (notificationsList.length > 0) {
+            const latestNotification = notificationsList[0];
+            if (latestNotification.id !== lastShownNotificationId) {
+              setAdminNotificationMessage(latestNotification.message);
+              setShowAdminNotificationModal(true);
+              setLastShownNotificationId(latestNotification.id); // Uložiť ID zobrazené notifikácie
+            }
+          }
+
         }, error => {
           console.error("Chyba pri načítaní notifikácií (onSnapshot):", error);
           setError(`Chyba pri načítaní notifikácií: ${error.message}`);
@@ -452,7 +464,7 @@ function App() {
         console.log("Admin: Unsubscribed from notifications listener.");
       }
     };
-  }, [db, isAdmin, appId]); // Závisí od db, isAdmin a appId
+  }, [db, isAdmin, appId, lastShownNotificationId]); // Závisí od db, isAdmin, appId a lastShownNotificationId
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -876,10 +888,6 @@ function App() {
           }
         });
         console.log("Admin notifikácia odoslaná pre zmenu mena.");
-
-        // Trigger the modal notification for admin
-        setAdminNotificationMessage(notificationMessage);
-        setShowAdminNotificationModal(true);
       }
 
       setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
@@ -969,10 +977,6 @@ function App() {
           }
         });
         console.log("Admin notifikácia odoslaná pre zmenu telefónneho čísla.");
-
-        // Trigger the modal notification for admin
-        setAdminNotificationMessage(notificationMessage);
-        setShowAdminNotificationModal(true);
       }
 
       setMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber);
