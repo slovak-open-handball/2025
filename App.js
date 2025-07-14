@@ -93,7 +93,7 @@ function NotificationModal({ message, isVisible, onClose }) {
       style={{ pointerEvents: 'none' }} // Allow clicks to pass through
     >
       <div
-        className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center"
+        className="bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center"
         style={{ pointerEvents: 'auto' }} // Re-enable clicks for the modal content
       >
         <p className="font-semibold">{message}</p>
@@ -479,7 +479,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`);
+        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`);
         setLoading(false);
       });
     } else {
