@@ -110,7 +110,21 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
+  // Zmena: Inicializácia user ako prázdneho objektu s predvolenými hodnotami
+  const [user, setUser] = React.useState({ 
+    uid: null, 
+    email: '', 
+    firstName: '', 
+    lastName: '', 
+    contactPhoneNumber: '', 
+    role: 'guest', 
+    approved: false, 
+    displayName: '',
+    emailVerified: false,
+    phoneNumber: '',
+    photoURL: '',
+    registeredAt: null,
+  });
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
@@ -297,8 +311,8 @@ function App() {
               approved: false, 
               displayName: currentUser.email || '',
               emailVerified: currentUser.emailVerified || false,
-              phoneNumber: currentUser.phoneNumber || '',
-              photoURL: currentUser.photoURL || '',
+              phoneNumber: '',
+              photoURL: '',
               registeredAt: null,
             });
           } finally {
@@ -484,10 +498,10 @@ function App() {
             const latestUpozornenie = upozorneniaList[0];
             // Zobrazí upozornenie, len ak ho aktuálny admin ešte neoznačil ako prečítané
             if (latestUpozornenie.id !== lastShownUpozornenieId && 
-                (!latestUpozornenie.clearedByAdminUids || !latestUpozornenie.clearedByAdminUids.includes(user.uid))) {
+                (!latestUpozornenie.clearedByAdminUids || !latestUpozornenie.clearedByAdminUids.includes(user.uid))) { // user.uid here
               setAdminUpozornenieMessage(latestUpozornenie.message);
               setShowAdminUpozornenieModal(true);
-              setLastShownUpozornenieId(latestUpozornenie.id); // Uložiť ID zobrazené upozornenie
+              setLastShownUpozornenieId(latestUpozornenie.id);
             }
           }
 
@@ -496,7 +510,6 @@ function App() {
           setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
     } else {
-      // Vyčistiť upozornenia, ak používateľ nie je administrátor alebo user.uid nie je k dispozícii
       setAdminUpozornenia([]);
     }
 
@@ -1707,7 +1720,7 @@ function App() {
                       changeProfileView('change-name');
                     }}
                     className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                        profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     Zmeniť meno a priezvisko
