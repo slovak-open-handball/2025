@@ -424,7 +424,8 @@ function App() {
   // Nový useEffect pre real-time upozornenia administrátorov
   React.useEffect(() => {
     let unsubscribeUpozornenia;
-    if (db && isAdmin) {
+    // Overíme, či user a user.uid existujú, aby sme predišli chybám pri prístupe k user.uid
+    if (db && isAdmin && user?.uid) { 
       console.log("Admin: Setting up real-time listener for upozornenia.");
       // Cesta k upozorneniam: /artifacts/{appId}/public/data/notifications
       const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
@@ -456,7 +457,7 @@ function App() {
           setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
     } else {
-      // Vyčistiť upozornenia, ak používateľ nie je administrátor
+      // Vyčistiť upozornenia, ak používateľ nie je administrátor alebo user.uid nie je k dispozícii
       setAdminUpozornenia([]);
     }
 
@@ -466,7 +467,7 @@ function App() {
         console.log("Admin: Unsubscribed from upozornenia listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownUpozornenieId, user]); // Závisí od db, isAdmin, appId, lastShownUpozornenieId a user
+  }, [db, isAdmin, appId, lastShownUpozornenieId, user?.uid]); // Zmenené na user?.uid
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -1225,11 +1226,12 @@ function App() {
 
   // Filtrované upozornenia pre zobrazenie
   const displayedAdminUpozornenia = React.useMemo(() => {
+    // Zabezpečíme, že user a user.uid sú dostupné pred filtrovaním
     if (!user || !user.uid) return [];
     return adminUpozornenia.filter(upozornenie => 
       !upozornenie.clearedByAdminUids || !upozornenie.clearedByAdminUids.includes(user.uid)
     );
-  }, [adminUpozornenia, user]);
+  }, [adminUpozornenia, user?.uid]); // Zmenené na user?.uid
 
 
   if (currentPath === '' || currentPath === 'index.html') {
