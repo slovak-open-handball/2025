@@ -464,7 +464,7 @@ function App() {
   React.useEffect(() => {
     let unsubscribeUpozornenia;
     // Overíme, či user a user.uid existujú, aby sme predišli chybám pri prístupe k user.uid
-    if (db && isAdmin && user && user.uid) { // Zmenené na user && user.uid
+    if (db && isAdmin && user?.uid) { // Používame user?.uid priamo v podmienke
       console.log("Admin: Setting up real-time listener for upozornenia.");
       // Cesta k upozorneniam: /artifacts/{appId}/public/data/notifications
       const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
@@ -506,7 +506,7 @@ function App() {
         console.log("Admin: Unsubscribed from upozornenia listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownUpozornenieId, user]); // Zmenené na user (celý objekt)
+  }, [db, isAdmin, appId, lastShownUpozornenieId, user?.uid]); // Závislosť zmenená na user?.uid
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -1210,7 +1210,7 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  }, [db, isAdmin, user, displayedAdminUpozornenia, setMessage, setError, setLoading, clearMessages, appId]); // Zmenené na user (celý objekt)
+  }, [db, isAdmin, user?.uid, displayedAdminUpozornenia, setMessage, setError, setLoading, clearMessages, appId]); // Zmenené na user?.uid
 
   const changeProfileView = React.useCallback((view) => {
     setProfileView(view);
@@ -1277,7 +1277,7 @@ function App() {
       const isCleared = Array.isArray(clearedByAdminUids) && clearedByAdminUids.includes(currentUserId);
       return !isCleared;
     });
-  }, [adminUpozornenia, user]); // Dependency changed to 'user' object
+  }, [adminUpozornenia, user?.uid]); // Dependency changed to 'user?.uid'
 
 
   if (currentPath === '' || currentPath === 'index.html') {
@@ -1349,7 +1349,7 @@ function App() {
                         <span style={{ whiteSpace: 'nowrap' }}>
                           {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
                         </span>{" "}
-                        <span style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ whiteSpace: 'nowrap' }}>
                           {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
                         </span>
                       </p>
