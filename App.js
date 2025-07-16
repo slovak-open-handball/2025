@@ -268,11 +268,21 @@ function App() {
               setIsAdmin(false);
             }
             // Set the user state once with all combined data
-            setUser({
-              ...currentUser, // Firebase Auth user object
-              ...userData,    // Firestore user data
-              displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : currentUser.email
-            });
+            setUser(prevUser => ({
+              uid: currentUser.uid,
+              email: currentUser.email,
+              emailVerified: currentUser.emailVerified,
+              phoneNumber: currentUser.phoneNumber,
+              photoURL: currentUser.photoURL,
+              // Firestore data
+              firstName: userData.firstName || '', 
+              lastName: userData.lastName || '',
+              contactPhoneNumber: userData.contactPhoneNumber || '',
+              role: userData.role || 'user', 
+              approved: userData.approved !== undefined ? userData.approved : false, 
+              registeredAt: userData.registeredAt || null,
+              displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : currentUser.email
+            }));
 
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
@@ -708,9 +718,19 @@ function App() {
       }
 
       setUser(prevUser => ({
-        ...prevUser,
-        ...userData,
-        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
+        uid: currentUser.uid,
+        email: currentUser.email,
+        emailVerified: currentUser.emailVerified,
+        phoneNumber: currentUser.phoneNumber,
+        photoURL: currentUser.photoURL,
+        // Firestore data
+        firstName: userData.firstName || '', 
+        lastName: userData.lastName || '',
+        contactPhoneNumber: userData.contactPhoneNumber || '',
+        role: userData.role || 'user', 
+        approved: userData.approved !== undefined ? userData.approved : false, 
+        registeredAt: userData.registeredAt || null,
+        displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : currentUser.email
       }));
 
 
@@ -1200,14 +1220,34 @@ function App() {
 
   const currentPath = window.location.pathname.split('/').pop();
 
+  // Pomocná premenná pre stabilnú závislosť user ID
+  const userIdForNotifications = user ? user.uid : null;
+
   // Filtrované upozornenia pre zobrazenie
   const displayedAdminUpozornenia = React.useMemo(() => {
-    // Zabezpečíme, že user a user.uid sú dostupné pred filtrovaním
-    if (!user || !user.uid) return [];
-    return adminUpozornenia.filter(upozornenie => 
-      !upozornenie.clearedByAdminUids || !upozornenie.clearedByAdminUids.includes(user.uid)
-    );
-  }, [adminUpozornenia, user?.uid]); // Zmenené na user?.uid
+    // Ensure adminUpozornenia is an array
+    if (!Array.isArray(adminUpozornenia)) {
+      console.error("adminUpozornenia is not an array:", adminUpozornenia);
+      return [];
+    }
+
+    if (!userIdForNotifications) {
+      // If user is not logged in or uid is missing, no notifications to filter for them
+      return [];
+    }
+
+    return adminUpozornenia.filter(upozornenie => {
+      // Ensure upozornenie and its properties exist before accessing
+      if (!upozornenie || typeof upozornenie !== 'object') {
+        console.warn("Invalid notification object found:", upozornenie);
+        return false; // Skip invalid objects
+      }
+      const clearedByAdminUids = upozornenie.clearedByAdminUids;
+      // Ensure clearedByAdminUids is an array or undefined/null
+      const isCleared = Array.isArray(clearedByAdminUids) && clearedByAdminUids.includes(userIdForNotifications);
+      return !isCleared;
+    });
+  }, [adminUpozornenia, userIdForNotifications]);
 
 
   if (currentPath === '' || currentPath === 'index.html') {
