@@ -38,7 +38,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         onCut={onCut}
         required
         placeholder={placeholder}
-        autoComplete={autoComplete}
+        autoComplete="new-password" // Changed to new-password for consistency
       />
       <button
         type="button"
@@ -110,21 +110,7 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  // Zmena: Inicializácia user ako prázdneho objektu s predvolenými hodnotami
-  const [user, setUser] = React.useState({ 
-    uid: null, 
-    email: '', 
-    firstName: '', 
-    lastName: '', 
-    contactPhoneNumber: '', 
-    role: 'guest', 
-    approved: false, 
-    displayName: '',
-    emailVerified: false,
-    phoneNumber: '',
-    photoURL: '',
-    registeredAt: null,
-  });
+  const [user, setUser] = React.useState(null); // Vrátené na null, ako vo fungujúcom kóde
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
@@ -321,21 +307,8 @@ function App() {
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
-          // Always set user to an object, even if logged out
-          setUser({
-            uid: null, // uid is null for logged out
-            email: '',
-            firstName: '',
-            lastName: '',
-            contactPhoneNumber: '',
-            role: 'guest', 
-            approved: false,
-            displayName: '',
-            emailVerified: false,
-            phoneNumber: '',
-            photoURL: '',
-            registeredAt: null,
-          });
+          // Always set user to null if not logged in
+          setUser(null); 
           setIsRoleLoaded(true);
         }
       });
@@ -497,11 +470,12 @@ function App() {
           if (upozorneniaList.length > 0) {
             const latestUpozornenie = upozorneniaList[0];
             // Zobrazí upozornenie, len ak ho aktuálny admin ešte neoznačil ako prečítané
+            // Dôležité: Používame user?.uid na bezpečný prístup
             if (latestUpozornenie.id !== lastShownUpozornenieId && 
-                (!latestUpozornenie.clearedByAdminUids || !latestUpozornenie.clearedByAdminUids.includes(user.uid))) { // user.uid here
+                (!latestUpozornenie.clearedByAdminUids || !latestUpozornenie.clearedByAdminUids.includes(user?.uid))) { 
               setAdminUpozornenieMessage(latestUpozornenie.message);
               setShowAdminUpozornenieModal(true);
-              setLastShownUpozornenieId(latestUpozornenie.id);
+              setLastShownUpozornenieId(latestUpozornenie.id); // Uložiť ID zobrazené upozornenie
             }
           }
 
@@ -510,6 +484,7 @@ function App() {
           setError(`Chyba pri načítaní upozornení: ${error.message}`);
         });
     } else {
+      // Vyčistiť upozornenia, ak používateľ nie je administrátor alebo user.uid nie je k dispozícii
       setAdminUpozornenia([]);
     }
 
@@ -1266,7 +1241,7 @@ function App() {
   // Filtrované upozornenia pre zobrazenie
   const displayedAdminUpozornenia = React.useMemo(() => {
     // Get currentUserId inside useMemo to ensure it's evaluated with the current 'user' state
-    const currentUserId = user?.uid;
+    const currentUserId = user?.uid; // Používame voliteľné reťazenie
 
     // Ensure adminUpozornenia is an array
     if (!Array.isArray(adminUpozornenia)) {
@@ -1667,7 +1642,7 @@ function App() {
   }
 
   if (currentPath === 'logged-in.html') {
-    if (!user || !user.uid) { // Kontrola na user.uid pre presmerovanie
+    if (!user) { // Kontrola na user objekt, nie user.uid
       window.location.href = 'login.html';
       return null;
     }
