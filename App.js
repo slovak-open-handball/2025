@@ -105,7 +105,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -262,39 +262,66 @@ function App() {
               userData = userDoc.data();
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
               setIsAdmin(userData.role === 'admin');
-              console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
             }
-            // Set the user state once with all combined data
-            setUser(prevUser => ({
+            // Ensure user state always has these core properties
+            setUser({
               uid: currentUser.uid,
-              email: currentUser.email,
-              emailVerified: currentUser.emailVerified,
-              phoneNumber: currentUser.phoneNumber,
-              photoURL: currentUser.photoURL,
-              // Firestore data
+              email: currentUser.email || '',
               firstName: userData.firstName || '', 
               lastName: userData.lastName || '',
               contactPhoneNumber: userData.contactPhoneNumber || '',
               role: userData.role || 'user', 
               approved: userData.approved !== undefined ? userData.approved : false, 
+              displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : (currentUser.email || ''),
+              // Add other properties from currentUser if needed, with fallbacks
+              emailVerified: currentUser.emailVerified || false,
+              phoneNumber: currentUser.phoneNumber || '',
+              photoURL: currentUser.photoURL || '',
               registeredAt: userData.registeredAt || null,
-              displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : currentUser.email
-            }));
+            });
 
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
             setIsAdmin(false);
-            setUser(currentUser); // Fallback to just auth user if Firestore fails
+            // Fallback to a consistent user object even if Firestore fails
+            setUser({
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              firstName: '', 
+              lastName: '',
+              contactPhoneNumber: '',
+              role: 'user', 
+              approved: false, 
+              displayName: currentUser.email || '',
+              emailVerified: currentUser.emailVerified || false,
+              phoneNumber: currentUser.phoneNumber || '',
+              photoURL: currentUser.photoURL || '',
+              registeredAt: null,
+            });
           } finally {
             setIsRoleLoaded(true);
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
-          setUser(null); // Explicitne set user to null if not logged in
+          // Always set user to an object, even if logged out
+          setUser({
+            uid: null, // uid is null for logged out
+            email: '',
+            firstName: '',
+            lastName: '',
+            contactPhoneNumber: '',
+            role: 'guest', 
+            approved: false,
+            displayName: '',
+            emailVerified: false,
+            phoneNumber: '',
+            photoURL: '',
+            registeredAt: null,
+          });
           setIsRoleLoaded(true);
         }
       });
@@ -394,7 +421,7 @@ function App() {
     const registerLink = document.getElementById('register-link');
 
     if (authLink) {
-      if (user) { // Ak je používateľ prihlásený
+      if (user && user.uid) { // Ak je používateľ prihlásený a má UID
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
@@ -437,7 +464,7 @@ function App() {
   React.useEffect(() => {
     let unsubscribeUpozornenia;
     // Overíme, či user a user.uid existujú, aby sme predišli chybám pri prístupe k user.uid
-    if (db && isAdmin && user?.uid) { 
+    if (db && isAdmin && user && user.uid) { // Zmenené na user && user.uid
       console.log("Admin: Setting up real-time listener for upozornenia.");
       // Cesta k upozorneniam: /artifacts/{appId}/public/data/notifications
       const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
@@ -479,7 +506,7 @@ function App() {
         console.log("Admin: Unsubscribed from upozornenia listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownUpozornenieId, user?.uid]); // Zmenené na user?.uid
+  }, [db, isAdmin, appId, lastShownUpozornenieId, user]); // Zmenené na user (celý objekt)
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -717,21 +744,22 @@ function App() {
         return;
       }
 
-      setUser(prevUser => ({
+      // Ensure user state always has these core properties
+      setUser({
         uid: currentUser.uid,
-        email: currentUser.email,
-        emailVerified: currentUser.emailVerified,
-        phoneNumber: currentUser.phoneNumber,
-        photoURL: currentUser.photoURL,
-        // Firestore data
+        email: currentUser.email || '',
         firstName: userData.firstName || '', 
         lastName: userData.lastName || '',
         contactPhoneNumber: userData.contactPhoneNumber || '',
         role: userData.role || 'user', 
         approved: userData.approved !== undefined ? userData.approved : false, 
+        displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : (currentUser.email || ''),
+        // Add other properties from currentUser if needed, with fallbacks
+        emailVerified: currentUser.emailVerified || false,
+        phoneNumber: currentUser.phoneNumber || '',
+        photoURL: currentUser.photoURL || '',
         registeredAt: userData.registeredAt || null,
-        displayName: (userData.firstName && userData.lastName) ? `${userData.firstName} ${userData.lastName}` : currentUser.email
-      }));
+      });
 
 
       setMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
@@ -908,6 +936,7 @@ function App() {
       setNewFirstName('');
       setNewLastName('');
       setCurrentPassword('');
+      // Ensure user state always has these core properties
       setUser(prevUser => ({
         ...prevUser,
         firstName: updatedFirstName,
@@ -991,6 +1020,7 @@ function App() {
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
+      // Ensure user state always has these core properties
       setUser(prevUser => ({ ...prevUser, contactPhoneNumber: newContactPhoneNumber }));
     } catch (e) {
       console.error("Chyba pri zmene telefónneho čísla:", e);
@@ -1180,7 +1210,7 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  }, [db, isAdmin, user?.uid, displayedAdminUpozornenia, setMessage, setError, setLoading, clearMessages, appId]);
+  }, [db, isAdmin, user, displayedAdminUpozornenia, setMessage, setError, setLoading, clearMessages, appId]); // Zmenené na user (celý objekt)
 
   const changeProfileView = React.useCallback((view) => {
     setProfileView(view);
@@ -1220,18 +1250,18 @@ function App() {
 
   const currentPath = window.location.pathname.split('/').pop();
 
-  // Pomocná premenná pre stabilnú závislosť user ID
-  const userIdForNotifications = user ? user.uid : null;
-
   // Filtrované upozornenia pre zobrazenie
   const displayedAdminUpozornenia = React.useMemo(() => {
+    // Get currentUserId inside useMemo to ensure it's evaluated with the current 'user' state
+    const currentUserId = user?.uid;
+
     // Ensure adminUpozornenia is an array
     if (!Array.isArray(adminUpozornenia)) {
       console.error("adminUpozornenia is not an array:", adminUpozornenia);
       return [];
     }
 
-    if (!userIdForNotifications) {
+    if (!currentUserId) {
       // If user is not logged in or uid is missing, no notifications to filter for them
       return [];
     }
@@ -1244,10 +1274,10 @@ function App() {
       }
       const clearedByAdminUids = upozornenie.clearedByAdminUids;
       // Ensure clearedByAdminUids is an array or undefined/null
-      const isCleared = Array.isArray(clearedByAdminUids) && clearedByAdminUids.includes(userIdForNotifications);
+      const isCleared = Array.isArray(clearedByAdminUids) && clearedByAdminUids.includes(currentUserId);
       return !isCleared;
     });
-  }, [adminUpozornenia, userIdForNotifications]);
+  }, [adminUpozornenia, user]); // Dependency changed to 'user' object
 
 
   if (currentPath === '' || currentPath === 'index.html') {
@@ -1260,7 +1290,7 @@ function App() {
         <div className="w-full max-w-md mt-20 mb-10 p-4">
           <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
             <h1 className="text-3xl font-bold text-gray-800 mb-4">Vitajte na stránke Slovak Open Handball</h1>
-            {user ? (
+            {user && user.uid ? ( // Kontrola na user.uid pre zobrazenie "Moja zóna"
               <>
                 <p className="text-lg text-gray-600">Ste prihlásený. Prejdite do svojej zóny pre viac možností.</p>
                 <div className="mt-6 flex justify-center">
@@ -1343,7 +1373,7 @@ function App() {
   }
 
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
-    if (user) {
+    if (user && user.uid) { // Kontrola na user.uid pre presmerovanie
       window.location.href = 'logged-in.html';
       return null;
     }
@@ -1540,7 +1570,7 @@ function App() {
               />
               <button
                 type="submit"
-                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                className="bg-green-500 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
                 disabled={loading}
               >
                 {loading ? 'Registrujem...' : 'Registrovať sa'}
@@ -1624,7 +1654,7 @@ function App() {
   }
 
   if (currentPath === 'logged-in.html') {
-    if (!user) {
+    if (!user || !user.uid) { // Kontrola na user.uid pre presmerovanie
       window.location.href = 'login.html';
       return null;
     }
