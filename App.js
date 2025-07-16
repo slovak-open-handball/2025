@@ -442,7 +442,9 @@ function App() {
           // Logika pre zobrazenie modálneho okna s upozornením
           if (upozorneniaList.length > 0) {
             const latestUpozornenie = upozorneniaList[0];
-            if (latestUpozornenie.id !== lastShownUpozornenieId) {
+            // Zobrazí upozornenie, len ak ho aktuálny admin ešte neoznačil ako prečítané
+            if (latestUpozornenie.id !== lastShownUpozornenieId && 
+                (!latestUpozornenie.clearedByAdminUids || !latestUpozornenie.clearedByAdminUids.includes(user.uid))) {
               setAdminUpozornenieMessage(latestUpozornenie.message);
               setShowAdminUpozornenieModal(true);
               setLastShownUpozornenieId(latestUpozornenie.id); // Uložiť ID zobrazené upozornenie
@@ -464,7 +466,7 @@ function App() {
         console.log("Admin: Unsubscribed from upozornenia listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownUpozornenieId]); // Závisí od db, isAdmin, appId a lastShownUpozornenieId
+  }, [db, isAdmin, appId, lastShownUpozornenieId, user]); // Závisí od db, isAdmin, appId, lastShownUpozornenieId a user
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -1154,26 +1156,29 @@ function App() {
     }
   };
 
-  const handleClearUpozornenia = async () => {
-    if (!db || !isAdmin) {
-      setError("Nemáte oprávnenie na vymazanie upozornení.");
+  const handleMarkAllUpozorneniaAsRead = async () => {
+    if (!db || !isAdmin || !user || !user.uid) {
+      setError("Nemáte oprávnenie na označenie upozornení ako prečítaných.");
       return;
     }
     setLoading(true);
     setError('');
     setMessage('');
     try {
-      const upozorneniaCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      const snapshot = await upozorneniaCollectionRef.get();
       const batch = db.batch();
-      snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
+      // Iterujeme cez všetky aktuálne zobrazené upozornenia, aby sme ich označili ako prečítané
+      displayedAdminUpozornenia.forEach(upozornenie => {
+        const upozornenieRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(upozornenie.id);
+        // Použijeme arrayUnion na pridanie UID aktuálneho admina do poľa clearedByAdminUids
+        batch.update(upozornenieRef, {
+          clearedByAdminUids: firebase.firestore.FieldValue.arrayUnion(user.uid)
+        });
       });
       await batch.commit();
-      setMessage("Všetky upozornenia boli vymazané.");
+      setMessage("Všetky zobrazené upozornenia boli označené ako prečítané.");
     } catch (e) {
-      console.error("Chyba pri mazaní upozornení:", e);
-      setError(`Chyba pri mazaní upozornení: ${e.message}`);
+      console.error("Chyba pri označovaní upozornení ako prečítaných:", e);
+      setError(`Chyba pri označovaní upozornení ako prečítaných: ${e.message}`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -1217,6 +1222,15 @@ function App() {
   }
 
   const currentPath = window.location.pathname.split('/').pop();
+
+  // Filtrované upozornenia pre zobrazenie
+  const displayedAdminUpozornenia = React.useMemo(() => {
+    if (!user || !user.uid) return [];
+    return adminUpozornenia.filter(upozornenie => 
+      !upozornenie.clearedByAdminUids || !upozornenie.clearedByAdminUids.includes(user.uid)
+    );
+  }, [adminUpozornenia, user]);
+
 
   if (currentPath === '' || currentPath === 'index.html') {
     const now = new Date();
@@ -1715,7 +1729,7 @@ function App() {
                         profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Upozornenia ({adminUpozornenia.length})
+                      Upozornenia ({displayedAdminUpozornenia.length})
                     </button>
                   </li>
                 )}
@@ -2058,17 +2072,17 @@ function App() {
             {profileView === 'notifications' && isAdmin && (
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Upozornenia pre administrátora</h2>
-                {adminUpozornenia.length > 0 ? (
+                {displayedAdminUpozornenia.length > 0 ? (
                   <>
                     <button
-                      onClick={handleClearUpozornenia}
+                      onClick={handleMarkAllUpozorneniaAsRead}
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 mb-4"
                       disabled={loading}
                     >
-                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia'}
+                      {loading ? 'Označujem...' : 'Označiť všetky ako prečítané'}
                     </button>
                     <ul className="divide-y divide-gray-200">
-                      {adminUpozornenia.map(upozornenie => (
+                      {displayedAdminUpozornenia.map(upozornenie => (
                         <li key={upozornenie.id} className="py-2 text-gray-700">
                           <p className="font-semibold">{upozornenie.message}</p>
                           <p className="text-xs text-gray-500">
