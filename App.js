@@ -249,40 +249,42 @@ function App() {
 
       // Listener pre zmeny stavu autentifikácie
       const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser);
         setIsAuthReady(true);
-        setIsRoleLoaded(false);
+        setIsRoleLoaded(false); // Reset role loaded status
 
         if (currentUser && firestoreInstance) {
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
           try {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get();
+            let userData = {};
             if (userDoc.exists) {
-              const userData = userDoc.data();
+              userData = userDoc.data();
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
               setIsAdmin(userData.role === 'admin');
               console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
-              
-              setUser(prevUser => ({
-                ...prevUser,
-                ...userData,
-                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
-              }));
-
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
             }
+            // Set the user state once with all combined data
+            setUser({
+              ...currentUser, // Firebase Auth user object
+              ...userData,    // Firestore user data
+              displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : currentUser.email
+            });
+
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
             setIsAdmin(false);
+            setUser(currentUser); // Fallback to just auth user if Firestore fails
           } finally {
             setIsRoleLoaded(true);
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo db nie je k dispozícii.");
           setIsAdmin(false);
+          setUser(null); // Explicitne set user to null if not logged in
           setIsRoleLoaded(true);
         }
       });
