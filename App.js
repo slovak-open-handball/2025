@@ -500,7 +500,8 @@ function App() {
   }, [db, isAdmin, profileView]); // Závisí od db, isAdmin a profileView
 
 
-  const getRecaptchaToken = async (action) => {
+  // Memoizované funkcie pre stabilitu referencií
+  const getRecaptchaToken = React.useCallback(async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
       setError("reCAPTCHA API nie je načítané alebo pripravené.");
       return null;
@@ -513,19 +514,16 @@ function App() {
       setError(`Chyba reCAPTCHA: ${e.message}`);
       return null;
     }
-  };
+  }, [RECAPTCHA_SITE_KEY, setError]);
 
-  const clearMessages = () => {
-    // Táto funkcia už nie je primárne používaná pre automatické čistenie správ po presmerovaní.
-    // Správy sa teraz zobrazujú po dobu trvania setTimeout.
-    // Ponechaná pre potenciálne budúce využitie alebo iné typy správ.
+  const clearMessages = React.useCallback(() => {
     setTimeout(() => {
       setMessage('');
       setError('');
     }, 5000);
-  };
+  }, [setMessage, setError]);
 
-  const validatePassword = (pwd) => {
+  const validatePassword = React.useCallback((pwd) => {
     const errors = [];
 
     if (pwd.length < 10) {
@@ -549,9 +547,9 @@ function App() {
     } else {
       return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
-  };
+  }, []); // Bez závislostí, pretože nepristupuje k žiadnym premenným z kontextu komponentu, ktoré by sa mohli meniť
 
-  const handleRegister = async (e, isAdminRegistration = false) => {
+  const handleRegister = React.useCallback(async (e, isAdminRegistration = false) => {
     e.preventDefault();
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -662,9 +660,9 @@ function App() {
       setLoading(false); // V prípade chyby sa loading vypne okamžite
       clearMessages(); // A správy sa tiež vyčistia po 5 sekundách
     } 
-  };
+  }, [auth, db, email, password, confirmPassword, firstName, lastName, contactPhoneNumber, validatePassword, getRecaptchaToken, GOOGLE_APPS_SCRIPT_URL, setMessage, setError, setLoading, clearMessages, appId]);
 
-  const handleLogin = async (e) => {
+  const handleLogin = React.useCallback(async (e) => {
     e.preventDefault();
     if (!auth || !db) { 
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -740,9 +738,9 @@ function App() {
       setLoading(false);
       clearMessages();
     } 
-  };
+  }, [auth, db, email, password, getRecaptchaToken, setMessage, setError, setLoading, clearMessages, setUser]);
 
-  const handleLogout = async () => {
+  const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
       setLoading(true);
@@ -757,11 +755,11 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [auth, setMessage, setError, setLoading, clearMessages]);
 
-  const handleChangePassword = async (e) => {
+  const handleChangePassword = React.useCallback(async (e) => {
     e.preventDefault();
-    if (!user || !auth) { // Pridaná kontrola pre auth inštanciu
+    if (!user || !auth) { 
       setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
@@ -782,7 +780,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -792,10 +789,8 @@ function App() {
 
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       
-      // Reautentifikácia sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
-      // Zmena hesla sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updatePassword(newPassword);
       setMessage("Heslo úspešne zmenené!");
       setError('');
@@ -815,21 +810,19 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [user, auth, currentPassword, newPassword, confirmNewPassword, validatePassword, setMessage, setError, setLoading, clearMessages, setNewPassword, setNewConfirmPassword, setCurrentPassword]);
 
-  const handleChangeName = async (e) => {
+  const handleChangeName = React.useCallback(async (e) => {
     e.preventDefault();
     if (!user || !auth || !db) {
       setError("Nie ste prihlásený alebo Firebase Auth/Firestore nie je inicializovaný.");
       return;
     }
-    // Zmenená validácia: vyžaduje aspoň jedno z mien A aktuálne heslo
     if ((!newFirstName && !newLastName) || !currentPassword) {
       setError("Prosím, zadajte aspoň nové meno alebo priezvisko a aktuálne heslo pre overenie.");
       return;
     }
 
-    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -839,7 +832,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -847,7 +839,6 @@ function App() {
         return;
       }
 
-      // Reautentifikácia je potrebná vždy, keďže sa menia citlivé údaje
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
@@ -858,16 +849,14 @@ function App() {
       const updatedLastName = newLastName || oldLastName;
       const updatedDisplayName = `${updatedFirstName} ${updatedLastName}`;
       
-      // Aktualizácia profilu sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updateProfile({ displayName: updatedDisplayName });
       
       await db.collection('users').doc(user.uid).update({ 
-        firstName: updatedFirstName, // Ak je prázdne, ponechá starú hodnotu
-        lastName: updatedLastName,   // Ak je prázdne, ponechá starú hodnotu
+        firstName: updatedFirstName, 
+        lastName: updatedLastName,   
         displayName: updatedDisplayName
       });
 
-      // Zistiť, čo sa zmenilo pre upozornenie
       let changedFields = [];
       if (newFirstName && newFirstName !== oldFirstName) {
         changedFields.push(`meno z '${oldFirstName || 'nezadané'}' na '${newFirstName}'`);
@@ -878,7 +867,6 @@ function App() {
 
       if (changedFields.length > 0) {
         const upozornenieMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
-        // Pridanie upozornenie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: upozornenieMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -919,11 +907,11 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [user, auth, db, newFirstName, newLastName, currentPassword, userDataEditEndDate, setMessage, setError, setLoading, clearMessages, setCurrentPassword, setNewFirstName, setNewLastName, setUser, appId]);
 
-  const handleChangeContactPhoneNumber = async (e) => {
+  const handleChangeContactPhoneNumber = React.useCallback(async (e) => {
     e.preventDefault();
-    if (!user || !auth || !db) { // Pridaná kontrola pre auth inštanciu
+    if (!user || !auth || !db) { 
       setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
@@ -938,7 +926,6 @@ function App() {
         return;
     }
 
-    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -948,7 +935,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -956,7 +942,6 @@ function App() {
         return;
       }
 
-      // Reautentifikácia je potrebná
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
@@ -966,10 +951,8 @@ function App() {
         contactPhoneNumber: newContactPhoneNumber
       });
 
-      // Odoslať upozornenie pre zmenu telefónneho čísla
       if (newContactPhoneNumber !== oldContactPhoneNumber) {
         const upozornenieMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
-        // Pridanie upozornenie do Firestore
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: upozornenieMessage,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1002,10 +985,9 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [user, auth, db, newContactPhoneNumber, currentPassword, userDataEditEndDate, setMessage, setError, setLoading, clearMessages, setCurrentPassword, setNewContactPhoneNumber, setUser, appId]);
 
-  // Funkcia na ukladanie nastavení pre administrátora
-  const handleSaveSettings = async (e) => {
+  const handleSaveSettings = React.useCallback(async (e) => {
     e.preventDefault();
     if (!db || !isAdmin) {
         setError("Nemáte oprávnenie na ukladanie nastavení.");
@@ -1016,12 +998,10 @@ function App() {
     setError('');
     setMessage('');
 
-    // Konvertovať dátumy na Date objekty pre validáciu
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
     const userEditEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
 
-    // Validácia 1: Koniec registrácie musí byť po začiatku registrácie
     if (regStart && regEnd && regEnd <= regStart) {
         setError("Dátum 'Koniec registrácie' musí byť neskôr ako 'Začiatok registrácie'.");
         setLoading(false);
@@ -1029,7 +1009,6 @@ function App() {
         return;
     }
 
-    // Validácia 2: Koniec úprav používateľských dát musí byť po konci registrácie
     if (regEnd && userEditEnd && userEditEnd <= regEnd) {
         setError("Dátum 'Koniec úprav používateľských dát' musí byť neskôr ako 'Koniec registrácie'.");
         setLoading(false);
@@ -1040,9 +1019,6 @@ function App() {
     try {
         const settingsDocRef = db.collection('settings').doc('registration');
         await settingsDocRef.set({
-            // Pri ukladaní vytvárame Timestamp z Date objektu, ktorý je vytvorený z datetime-local stringu.
-            // new Date() s datetime-local stringom sa interpretuje ako lokálny čas.
-            // Timestamp.fromDate() potom tento lokálny čas správne prekonvertuje na UTC pre uloženie.
             registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
@@ -1055,20 +1031,20 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [db, isAdmin, registrationStartDate, registrationEndDate, userDataEditEndDate, setMessage, setError, setLoading, clearMessages]);
 
 
-  const openDeleteConfirmationModal = (user) => {
+  const openDeleteConfirmationModal = React.useCallback((user) => {
     setUserToDelete(user);
     setShowDeleteConfirmationModal(true);
-  };
+  }, [setUserToDelete, setShowDeleteConfirmationModal]);
 
-  const closeDeleteConfirmationModal = () => {
+  const closeDeleteConfirmationModal = React.useCallback(() => {
     setUserToDelete(null);
     setShowDeleteConfirmationModal(false);
-  };
+  }, [setUserToDelete, setShowDeleteConfirmationModal]);
 
-  const handleDeleteUser = async () => {
+  const handleDeleteUser = React.useCallback(async () => {
     if (!userToDelete || !db) { 
       setError("Používateľ na odstránenie nie je definovaný alebo Firebase nie je inicializovaný.");
       return;
@@ -1078,12 +1054,10 @@ function App() {
     setError('');
     setMessage('');
     try {
-      // Odstránenie používateľa z Firestore databázy
       await db.collection('users').doc(userToDelete.uid).delete();
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
       
       closeDeleteConfirmationModal();
-      // Otvorenie Firebase konzoly v novom okne pre manuálne odstránenie z Authentication
       window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
 
     } catch (e) {
@@ -1093,21 +1067,21 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [userToDelete, db, setMessage, setError, setLoading, clearMessages, closeDeleteConfirmationModal, firebaseConfig]);
 
-  const openRoleEditModal = (user) => {
+  const openRoleEditModal = React.useCallback((user) => {
     setUserToEditRole(user);
     setNewRole(user.role || 'user');
     setShowRoleEditModal(true);
-  };
+  }, [setUserToEditRole, setNewRole, setShowRoleEditModal]);
 
-  const closeRoleEditModal = () => {
+  const closeRoleEditModal = React.useCallback(() => {
     setUserToEditRole(null);
     setNewRole('');
     setShowRoleEditModal(false);
-  };
+  }, [setUserToEditRole, setNewRole, setShowRoleEditModal]);
 
-  const handleUpdateUserRole = async () => {
+  const handleUpdateUserRole = React.useCallback(async () => {
     if (!userToEditRole || !db || !newRole) {
       setError("Používateľ alebo nová rola nie sú definované.");
       return;
@@ -1136,9 +1110,9 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [userToEditRole, db, newRole, setMessage, setError, setLoading, clearMessages, closeRoleEditModal]);
 
-  const handleApproveUser = async (userToApprove) => {
+  const handleApproveUser = React.useCallback(async (userToApprove) => {
     if (!userToApprove || !db) {
       setError("Používateľ na schválenie nie je definovaný.");
       return;
@@ -1157,9 +1131,9 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [db, setMessage, setError, setLoading, clearMessages]);
 
-  const handleMarkAllUpozorneniaAsRead = async () => {
+  const handleMarkAllUpozorneniaAsRead = React.useCallback(async () => {
     if (!db || !isAdmin || !user || !user.uid) {
       setError("Nemáte oprávnenie na označenie upozornení ako prečítaných.");
       return;
@@ -1186,7 +1160,21 @@ function App() {
       setLoading(false);
       clearMessages();
     }
-  };
+  }, [db, isAdmin, user?.uid, displayedAdminUpozornenia, setMessage, setError, setLoading, clearMessages, appId]);
+
+  const changeProfileView = React.useCallback((view) => {
+    setProfileView(view);
+    window.location.hash = view;
+    setNewContactPhoneNumber('');
+    
+    if (view === 'change-name') {
+        setNewFirstName('');
+        setNewLastName('');
+    }
+    setCurrentPassword('');
+    setNewPassword('');
+    setNewConfirmPassword('');
+  }, [setProfileView, setNewContactPhoneNumber, setNewFirstName, setNewLastName, setCurrentPassword, setNewPassword, setNewConfirmPassword]);
 
 
   React.useEffect(() => {
@@ -1200,20 +1188,6 @@ function App() {
       }
     };
   }, [handleLogout]);
-
-  const changeProfileView = (view) => {
-    setProfileView(view);
-    window.location.hash = view;
-    setNewContactPhoneNumber('');
-    
-    if (view === 'change-name') {
-        setNewFirstName('');
-        setNewLastName('');
-    }
-    setCurrentPassword('');
-    setNewPassword('');
-    setNewConfirmPassword('');
-  };
 
 
   if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded) || !settingsLoaded) {
