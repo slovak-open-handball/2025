@@ -815,6 +815,29 @@ function App() {
 
       if (userData.role === 'admin' && userData.approved === false) { 
         setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom."); // Updated message
+        
+        // --- NOVÁ LOGIKA: Odoslanie e-mailu pre neschváleného administrátora ---
+        try {
+          await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'sendAdminApprovalReminder', // Nová akcia pre Apps Script
+              email: userData.email,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              isAdmin: true // Dôležité pre Apps Script, aby vedel, že ide o admina
+            })
+          });
+          console.log("Žiadosť na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+        } catch (emailError) {
+          console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script:", emailError);
+        }
+        // --- KONIEC NOVEJ LOGIKY ---
+
         await auth.signOut(); 
         setLoading(false);
         // clearMessages(); // Removed as per request for persistent error
