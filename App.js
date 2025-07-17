@@ -660,6 +660,16 @@ function App() {
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený.`);
+
+        // Explicitné načítanie a logovanie dát po úspešnom zápise
+        const userDocRef = db.collection('users').doc(userCredential.user.uid);
+        const userDocSnapshot = await userDocRef.get();
+        if (userDocSnapshot.exists) {
+          console.log("Data loaded from Firestore after registration:", userDocSnapshot.data());
+        } else {
+          console.log("User document not found in Firestore after registration (unexpected).");
+        }
+
       } catch (firestoreError) {
         console.error("Firestore Save Error:", firestoreError);
         setError(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
@@ -710,10 +720,10 @@ function App() {
         setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Počkajte prosím na schválenie iným administrátorom. Po schválení sa budete môcť prihlásiť.`);
       }
       
-      // Presmerovanie po 10 sekundách pre oba typy registrácií
+      // Presmerovanie po 5 sekundách (skrátené z 10s pre rýchlejšie testovanie)
       setTimeout(() => {
         window.location.href = 'login.html'; 
-      }, 10000); 
+      }, 5000); 
 
     } catch (e) {
       console.error("Chyba pri registrácii (Auth alebo iné):", e); // Zmenený log pre odlíšenie
