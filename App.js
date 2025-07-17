@@ -1106,7 +1106,7 @@ function App() {
             newPhoneNumber: newContactPhoneNumber,
           }
         });
-        console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
+        console.log("Admin upozornenie odoslaná pre zmenu telefónneho čísla.");
       }
 
       setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); 
@@ -1404,35 +1404,34 @@ function App() {
   };
 
 
-  if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded) || !settingsLoaded) {
-    // Check if we are on a registration page and a success message is already set
-    const currentPath = window.location.pathname.split('/').pop();
-    const isRegistrationPage = currentPath === 'register.html' || currentPath === 'admin-register.html';
+  const currentPath = window.location.pathname.split('/').pop();
+  const isRegistrationPage = currentPath === 'register.html' || currentPath === 'admin-register.html';
 
-    if (isRegistrationPage && message) {
-      return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
-          <div className="w-full max-w-md mt-20 mb-10 p-4">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
+  // Prioritné zobrazenie správy o úspešnej registrácii na registračných stránkach
+  if (isRegistrationPage && message) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+        <div className="w-full max-w-md mt-20 mb-10 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+              {message}
             </div>
+            <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
           </div>
         </div>
-      );
-    }
-    // Fallback to generic loading message if no specific registration message
+      </div>
+    );
+  }
+
+  // Ak nie je registrácia s úspešnou správou, potom kontrolujeme ostatné stavy načítania
+  if (loading || !isAuthReady || (currentPath === 'logged-in.html' && !isRoleLoaded) || !settingsLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-xl font-semibold text-gray-700">Načítava sa...</div>
       </div>
     );
   }
-
-  const currentPath = window.location.pathname.split('/').pop();
 
   if (currentPath === '' || currentPath === 'index.html') {
     const now = new Date();
@@ -1526,7 +1525,7 @@ function App() {
     );
   }
 
-  if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
+  if (isRegistrationPage) { // Simplified condition as the message check is now at the top
     const is_admin_register_page = currentPath === 'admin-register.html';
 
     // Ak je používateľ už prihlásený, presmerujeme ho na logged-in.html
@@ -1601,11 +1600,7 @@ function App() {
                 {error}
               </div>
             )}
-            {message && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-            )}
+            {/* Message je teraz spracovaná v prioritnom bloku vyššie, tu sa už nezobrazuje */}
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
               {is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"}
             </h1>
