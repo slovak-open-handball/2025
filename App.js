@@ -112,7 +112,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVJJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -1654,50 +1654,65 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
-                {/* Email input field - always visible for both registration types */}
-                <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
-                    <input
-                        type="email"
-                        id="reg-email"
-                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="Zadajte svoju e-mailovú adresu"
-                        autoComplete="email"
-                        disabled={loading || !!message} // Disable if loading or message is shown
-                    />
-                </div>
-                {/* Podmienene nezobrazovať telefónne číslo pre admin registráciu */}
-                {!is_admin_register_page && (
-                  <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
-                      <input
-                          type="tel"
-                          id="reg-phone-number"
-                          className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                          value={contactPhoneNumber}
-                          onChange={(e) => {
-                              const value = e.target.value;
-                              const strictPhoneRegex = /^\+\d*$/;
-                              if (value === '' || strictPhoneRegex.test(value)) {
-                                  setContactPhoneNumber(value);
-                              }
-                          }}
-                          required
-                          placeholder="+421901234567"
-                          pattern="^\+\d+$"
-                          title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                          disabled={loading || !!message} // Disable if loading or message is shown
-                      />
-                  </div>
-                )}
-                {/* Podmienene nezobrazovať pomocný text pod telefónnym číslom */}
-                {!is_admin_register_page && (
-                  <p className="text-gray-600 text-sm mt-4">
-                      E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                  </p>
+                {/* Conditional rendering for email and phone number based on registration type */}
+                {is_admin_register_page ? (
+                    // Admin registration: only email
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
+                        <input
+                            type="email"
+                            id="reg-email"
+                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="Zadajte svoju e-mailovú adresu"
+                            autoComplete="email"
+                            disabled={loading || !!message}
+                        />
+                    </div>
+                ) : (
+                    // Regular registration: phone number then email
+                    <>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                            <input
+                                type="tel"
+                                id="reg-phone-number"
+                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                value={contactPhoneNumber}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    const strictPhoneRegex = /^\+\d*$/;
+                                    if (value === '' || strictPhoneRegex.test(value)) {
+                                        setContactPhoneNumber(value);
+                                    }
+                                }}
+                                required
+                                placeholder="+421901234567"
+                                pattern="^\+\d+$"
+                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                                disabled={loading || !!message}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
+                            <input
+                                type="email"
+                                id="reg-email"
+                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                placeholder="Zadajte svoju e-mailovú adresu"
+                                autoComplete="email"
+                                disabled={loading || !!message}
+                            />
+                        </div>
+                        <p className="text-gray-600 text-sm mt-4">
+                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                        </p>
+                    </>
                 )}
                 <PasswordInput
                     id="reg-password"
