@@ -1,7 +1,10 @@
 import React from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
+// Importujeme celý Firebase objekt, aby sme mohli používať namespaced syntax (Firebase SDK v8)
+// Predpokladá sa, že Firebase SDK (v8) je načítané globálne v index.html
+// napr. <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+// a ďalšie moduly ako auth, firestore:
+// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 // Global variables provided by the Canvas environment - Explicitly set by user
 const appId = 'default-app-id'; 
@@ -226,21 +229,31 @@ function App() {
   // Efekt pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
   React.useEffect(() => {
     try {
-      // Removed the check for global firebase object as we are using modular imports
-      const firebaseApp = initializeApp(firebaseConfig);
+      // Dôležité: Kontrola, či je globálny objekt 'firebase' dostupný
+      if (typeof firebase === 'undefined') {
+        setError("Firebase SDK nie je načítané. Skontrolujte, či sú skripty Firebase správne načítané v index.html (verzia 8).");
+        setLoading(false);
+        return;
+      }
+
+      const firebaseApp = firebase.initializeApp(firebaseConfig);
       setApp(firebaseApp);
 
-      const authInstance = getAuth(firebaseApp);
+      const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      const firestoreInstance = getFirestore(firebaseApp);
+      const firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
       const signIn = async () => {
         try {
           if (initialAuthToken) {
-            await signInWithCustomToken(authInstance, initialAuthToken);
+            await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            await signInAnonymously(authInstance); // Prihlásiť anonymne, ak nie je token
+            // Prihlásiť anonymne, ak nie je token.
+            // Ak nechcete automatické prihlásenie anonymného používateľa,
+            // odstráňte tento riadok. Používateľ bude musieť explicitne
+            // prihlásiť sa alebo zaregistrovať.
+            await authInstance.signInAnonymously();
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -249,7 +262,7 @@ function App() {
       };
 
       // Listener pre zmeny stavu autentifikácie
-      const unsubscribe = onAuthStateChanged(authInstance, async (currentUser) => {
+      const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
         setIsRoleLoaded(false);
@@ -257,9 +270,9 @@ function App() {
         if (currentUser && firestoreInstance) {
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
           try {
-            const userDocRef = doc(firestoreInstance, 'users', currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
+            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
+            const userDoc = await userDocRef.get();
+            if (userDoc.exists) {
               const userData = userDoc.data();
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
               setIsAdmin(userData.role === 'admin');
@@ -306,9 +319,9 @@ function App() {
       }
       try {
           // Používame onSnapshot pre real-time aktualizácie nastavení
-          const settingsDocRef = doc(db, 'settings', 'registration');
-          const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
-            if (docSnapshot.exists()) {
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
                 const data = docSnapshot.data();
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
@@ -426,8 +439,8 @@ function App() {
     let unsubscribeNotifications;
     if (db && isAdmin && user) { // Ensure user is available for filtering
       console.log("Admin: Setting up real-time listener for notifications.");
-      const notificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
-      unsubscribeNotifications = onSnapshot(query(notificationsCollectionRef), snapshot => { // Removed orderBy and limit to fetch all for client-side filtering
+      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
+      unsubscribeNotifications = notificationsCollectionRef.onSnapshot(snapshot => { // Removed orderBy and limit to fetch all for client-side filtering
           const allNotifications = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -472,8 +485,8 @@ function App() {
     let unsubscribeUsers;
     if (db && isAdmin) { // Zmenená podmienka: už nezávisí od profileView
       console.log("Admin: Setting up real-time listener for all users data.");
-      const usersCollectionRef = collection(db, 'users');
-      unsubscribeUsers = onSnapshot(usersCollectionRef, snapshot => {
+      const usersCollectionRef = db.collection('users');
+      unsubscribeUsers = usersCollectionRef.onSnapshot(snapshot => {
         const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Include id for potential use
         setAllUsersData(usersList);
         console.log("Admin: Fetched all users data in real-time:", usersList);
@@ -587,12 +600,12 @@ function App() {
     setLoading(true); // Zobraziť loading indikátor
     try {
       console.log("Attempting to create user with auth object:", auth); // Debug log before call
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
       const isApproved = !isAdminRegistration; 
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
@@ -601,7 +614,7 @@ function App() {
         displayName: `${firstName} ${lastName}`,
         role: userRole,
         approved: isApproved, 
-        registeredAt: Timestamp.now()
+        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
@@ -684,13 +697,13 @@ function App() {
     setLoading(true);
     try {
       console.log("Attempting to sign in user with auth object:", auth); // Debug log before call
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
 
-      const userDocRef = doc(db, 'users', currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      const userDocRef = db.collection('users').doc(currentUser.uid);
+      const userDoc = await userDocRef.get();
 
-      if (!userDoc.exists()) {
+      if (!userDoc.exists) {
         setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
         await auth.signOut(); 
         setLoading(false);
@@ -790,7 +803,7 @@ function App() {
         return;
       }
 
-      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       
       // Reautentifikácia sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.reauthenticateWithCredential(credential);
@@ -848,7 +861,7 @@ function App() {
       }
 
       // Reautentifikácia je potrebná vždy, keďže sa menia citlivé údaje
-      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       const oldFirstName = user.firstName;
@@ -861,7 +874,7 @@ function App() {
       // Aktualizácia profilu sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updateProfile({ displayName: updatedDisplayName });
       
-      await updateDoc(doc(db, 'users', user.uid), { 
+      await db.collection('users').doc(user.uid).update({ 
         firstName: updatedFirstName, // Ak je prázdne, ponechá starú hodnotu
         lastName: updatedLastName,   // Ak je prázdne, ponechá starú hodnotu
         displayName: updatedDisplayName
@@ -877,9 +890,9 @@ function App() {
 
       if (changedFields.length > 0) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: notificationMessage,
-          timestamp: Timestamp.now(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
           type: 'user_data_change',
@@ -956,20 +969,20 @@ function App() {
       }
 
       // Reautentifikácia je potrebná
-      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       const oldContactPhoneNumber = user.contactPhoneNumber;
 
-      await updateDoc(doc(db, 'users', user.uid), { 
+      await db.collection('users').doc(user.uid).update({ 
         contactPhoneNumber: newContactPhoneNumber
       });
 
       if (newContactPhoneNumber !== oldContactPhoneNumber) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
           message: notificationMessage,
-          timestamp: Timestamp.now(),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
           type: 'user_data_change',
@@ -1036,14 +1049,14 @@ function App() {
     }
 
     try {
-        const settingsDocRef = doc(db, 'settings', 'registration');
-        await setDoc(settingsDocRef, {
+        const settingsDocRef = db.collection('settings').doc('registration');
+        await settingsDocRef.set({
             // Pri ukladaní vytvárame Timestamp z Date objektu, ktorý je vytvorený z datetime-local stringu.
             // new Date() s datetime-local stringom sa interpretuje ako lokálny čas.
             // Timestamp.fromDate() potom tento lokálny čas správne prekonvertuje na UTC pre uloženie.
-            registrationStartDate: registrationStartDate ? Timestamp.fromDate(new Date(registrationStartDate)) : null,
-            registrationEndDate: registrationEndDate ? Timestamp.fromDate(new Date(registrationEndDate)) : null,
-            userDataEditEndDate: userDataEditEndDate ? Timestamp.fromDate(new Date(userDataEditEndDate)) : null
+            registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
+            registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
+            userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
         setMessage("Nastavenia úspešne uložené!");
     } catch (e) {
@@ -1077,7 +1090,7 @@ function App() {
     setMessage('');
     try {
       // Odstránenie používateľa z Firestore databázy
-      await deleteDoc(doc(db, 'users', userToDelete.uid));
+      await db.collection('users').doc(userToDelete.uid).delete();
       setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
       
       closeDeleteConfirmationModal();
@@ -1124,7 +1137,7 @@ function App() {
           updateData.approved = userToEditRole.approved;
       }
 
-      await updateDoc(doc(db, 'users', userToEditRole.uid), updateData);
+      await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
       closeRoleEditModal();
     } catch (e) {
@@ -1146,7 +1159,7 @@ function App() {
     setError('');
     setMessage('');
     try {
-      await updateDoc(doc(db, 'users', userToApprove.uid), { approved: true });
+      await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
@@ -1167,10 +1180,10 @@ function App() {
     setMessage('');
 
     try {
-      const notificationRef = doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notificationId);
-      const notificationDoc = await getDoc(notificationRef);
+      const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
+      const notificationDoc = await notificationRef.get();
 
-      if (notificationDoc.exists()) {
+      if (notificationDoc.exists) {
         const data = notificationDoc.data();
         const updatedDeletedBy = { ...(data.deletedBy || {}), [user.uid]: true };
 
@@ -1181,10 +1194,10 @@ function App() {
         console.log("handleDeleteNotification: allAdminsDeleted:", allAdminsDeleted);
 
         if (allAdminsDeleted) {
-          await deleteDoc(notificationRef); // Truly delete from DB
+          await notificationRef.delete(); // Truly delete from DB
           setMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
         } else {
-          await updateDoc(notificationRef, { deletedBy: updatedDeletedBy }); // Mark as deleted for current admin
+          await notificationRef.update({ deletedBy: updatedDeletedBy }); // Mark as deleted for current admin
           setMessage("Upozornenie bolo vymazané z vášho zobrazenia.");
         }
       } else {
@@ -1208,9 +1221,9 @@ function App() {
     setError('');
     setMessage('');
     try {
-      const notificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
-      const snapshot = await getDocs(notificationsCollectionRef);
-      const batch = writeBatch(db);
+      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
+      const snapshot = await notificationsCollectionRef.get();
+      const batch = db.batch();
       
       const adminUids = allUsersData.filter(u => u.role === 'admin' && u.approved).map(u => u.uid);
       console.log("handleClearNotifications: Active Admin UIDs:", adminUids);
@@ -1549,7 +1562,7 @@ function App() {
                 placeholder="Zvoľte heslo (min. 10 znakov)"
                 autoComplete="new-password"
                 showPassword={showPasswordReg}
-                toggleShowPassword={() => setShowRegPassword(!showPasswordReg)}
+                toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
               />
               <PasswordInput
                 id="reg-confirm-password"
