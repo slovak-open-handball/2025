@@ -278,7 +278,6 @@ function App() {
                     displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
                   }));
                   setIsRoleLoaded(true); // Rola je načítaná
-                  // Pôvodné: unsubscribeUserDoc(); // <--- TENTO RIADOK BOL ODSTRÁNENÝ
                 } else {
                   console.log("onAuthStateChanged (onSnapshot): Dokument používateľa vo Firestore neexistuje pre UID:", currentUser.uid);
                   setIsAdmin(false);
@@ -286,14 +285,12 @@ function App() {
                     ...prevUser,
                     displayNotifications: true
                   }));
-                  // Ak dokument neexistuje, stále chceme indikovať, že načítanie roly je dokončené.
-                  // UI by potom malo elegantne spracovať chýbajúce používateľské dáta.
-                  setIsRoleLoaded(true); 
+                  setIsRoleLoaded(false); // Keep loading state if doc doesn't exist
                 }
               }, error => {
                 console.error("Chyba pri načítaní roly používateľa z Firestore (onSnapshot) pre UID:", currentUser.uid, error);
                 setIsAdmin(false);
-                setIsRoleLoaded(true); // Nastavíme, že rola je načítaná aj pri chybe
+                setIsRoleLoaded(false); // Nastavíme, že rola je načítaná aj pri chybe
               });
 
               // Vráťte funkciu unsubscribe pre userDoc listener, aby sa tiež vyčistil
@@ -306,17 +303,17 @@ function App() {
             } catch (e) {
               console.error("Chyba pri nastavení onSnapshot pre rolu používateľa:", e);
               setIsAdmin(false);
-              setIsRoleLoaded(true);
+              setIsRoleLoaded(false);
             }
           } else {
             console.log("onAuthStateChanged: Firestore DB inštancia nie je k dispozícii.");
             setIsAdmin(false);
-            setIsRoleLoaded(true);
+            setIsRoleLoaded(false);
           }
         } else {
           console.log("onAuthStateChanged: Používateľ nie je prihlásený.");
           setIsAdmin(false);
-          setIsRoleLoaded(true);
+          setIsRoleLoaded(true); // Ak nie je prihlásený, rola je "načítaná" (žiadna)
         }
       });
 
@@ -504,7 +501,7 @@ function App() {
 
         }, error => {
           console.error("Chyba pri načítaní upozornenia (onSnapshot):", error);
-          setError(`Chyba pri načítaní upozornenia: ${error.message}`);
+          setError(`Chyba pri načítaní upozornenia: ${e.message}`);
         });
     } else {
       setAdminNotifications([]);
@@ -534,7 +531,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
+        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
         setLoading(false);
       });
     } else {
