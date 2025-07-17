@@ -637,19 +637,31 @@ function App() {
       const isApproved = !isAdminRegistration; 
       
       console.log("Pokúšam sa uložiť používateľa do Firestore...");
-      await db.collection('users').doc(userCredential.user.uid).set({
-        uid: userCredential.user.uid,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber,
-        displayName: `${firstName} ${lastName}`,
-        role: userRole,
-        approved: isApproved, 
-        registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
-        displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
-      });
-      console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol úspešne uložený do Firestore.`);
+      try { // Added a new try-catch block specifically for Firestore write
+        await db.collection('users').doc(userCredential.user.uid).set({
+          uid: userCredential.user.uid,
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber,
+          displayName: `${firstName} ${lastName}`,
+          role: userRole,
+          approved: isApproved, 
+          registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+          displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
+        });
+        console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol úspešne uložený do Firestore.`);
+      } catch (firestoreError) {
+        console.error("Chyba pri ukladaní používateľa do Firestore:", firestoreError);
+        setError(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}`);
+        // Important: If Firestore save fails, we should still proceed with other steps
+        // like sending email and signing out, but the user should be informed.
+        // Also, it's crucial to sign out the user created in Auth if Firestore save fails.
+        await auth.signOut(); // Ensure user is signed out if Firestore save fails
+        setLoading(false);
+        return; // Stop further execution if Firestore save failed
+      }
+
 
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -706,8 +718,8 @@ function App() {
         }, 10000); // 10 sekúnd
       }
 
-    } catch (e) {
-      console.error("Chyba pri registrácii:", e);
+    } catch (e) { // This catch block handles errors from createUserWithEmailAndPassword
+      console.error("Chyba pri registrácii (Firebase Auth):", e); // Clarified log message
       if (e.code === 'auth/email-already-in-use') {
         setError("E-mailová adresa už existuje. Prosím, zvoľte inú.");
       } else if (e.code === 'auth/weak-password') {
@@ -1284,7 +1296,7 @@ function App() {
       }
     } catch (e) {
       console.error("Chyba pri mazaní upozornenia:", e);
-      setError(`Chyba pri mazaní upozornenia: ${e.message}`);
+      setError(`Chyba pri mazaní upozornení: ${e.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
