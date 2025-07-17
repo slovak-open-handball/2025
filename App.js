@@ -217,6 +217,9 @@ function App() {
 
   // Efekt pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
   React.useEffect(() => {
+    let unsubscribeAuth;
+    let firestoreInstance; // Deklarujeme ju tu, aby bola dostupná v celom efekte
+
     try {
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
@@ -229,8 +232,8 @@ function App() {
 
       const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      const firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
+      firestoreInstance = firebase.firestore(firebaseApp); // Nastavíme ju tu
+      setDb(firestoreInstance); // Uložíme ju do stavu
 
       const signIn = async () => {
         try {
@@ -248,12 +251,13 @@ function App() {
       };
 
       // Listener pre zmeny stavu autentifikácie
-      const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
+      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
         setIsRoleLoaded(false);
 
-        if (currentUser && firestoreInstance) {
+        // Až teraz, keď máme istotu, že firestoreInstance je definovaná, ju použijeme
+        if (currentUser && firestoreInstance) { 
           console.log("onAuthStateChanged: Používateľ je prihlásený, načítavam rolu a ďalšie dáta z Firestore...");
           try {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
@@ -296,7 +300,11 @@ function App() {
 
       signIn(); // Spustí počiatočné prihlásenie
 
-      return () => unsubscribe(); // Vyčistenie listenera
+      return () => {
+        if (unsubscribeAuth) {
+          unsubscribeAuth(); // Vyčistenie listenera
+        }
+      }; 
     } catch (e) {
       console.error("Failed to initialize Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
