@@ -105,7 +105,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://your-google-apps-script-url-here/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -1482,7 +1482,7 @@ function App() {
                   </span>{" "}
                   <span style={{ whiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
-                  </p>
+                  </span>
                 </p>
               )}
               <div className="mt-6 flex justify-center">
