@@ -597,6 +597,7 @@ function App() {
 
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
+    console.log("handleRegister funkcia bola spustená."); // NOVÝ LOG
     // Používame state pre auth a db, aby sme zabezpečili, že sú inicializované
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -1592,7 +1593,7 @@ function App() {
                   <span style={{ whiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
                   </span>{" "}
-                  <span style={{ whiteSpace: 'nowrap' }}>
+                  <span style={{ whiteWhiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
                   </span>
                 </p>
@@ -2509,3 +2510,5 @@ function App() {
 
   return null;
 }
+
+ReactDOM.render(<App />, document.getElementById('root'));
