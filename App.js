@@ -1,5 +1,3 @@
-import React from 'react';
-
 const appId = 'default-app-id'; 
 const firebaseConfig = {
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -11,7 +9,8 @@ const firebaseConfig = {
 };
 const initialAuthToken = null;
 
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled }) {
+// Komponenta pre vstup hesla s prepínaním viditeľnosti
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -40,13 +39,11 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         required
         placeholder={placeholder}
         autoComplete={autoComplete}
-        disabled={disabled}
       />
       <button
         type="button"
         onClick={toggleShowPassword}
         className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-        disabled={disabled}
       >
         {showPassword ? EyeOffIcon : EyeIcon}
       </button>
@@ -221,9 +218,8 @@ function App() {
   // Efekt pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
   React.useEffect(() => {
     try {
-      // Dôležité: Kontrola, či je globálny objekt 'firebase' dostupný
       if (typeof firebase === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte, či sú skripty Firebase správne načítané v index.html (verzia 8).");
+        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
         setLoading(false);
         return;
       }
@@ -241,11 +237,9 @@ function App() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            // Prihlásiť anonymne, ak nie je token.
             // Ak nechcete automatické prihlásenie anonymného používateľa,
             // odstráňte tento riadok. Používateľ bude musieť explicitne
             // prihlásiť sa alebo zaregistrovať.
-            await authInstance.signInAnonymously();
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -429,25 +423,22 @@ function App() {
 
   React.useEffect(() => {
     let unsubscribeNotifications;
-    if (db && isAdmin && user) { // Ensure user is available for filtering
+    if (db && isAdmin) {
       console.log("Admin: Setting up real-time listener for notifications.");
       const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      unsubscribeNotifications = notificationsCollectionRef.onSnapshot(snapshot => { // Removed orderBy and limit to fetch all for client-side filtering
-          const allNotifications = snapshot.docs.map(doc => ({
+      unsubscribeNotifications = notificationsCollectionRef
+        .orderBy('timestamp', 'desc') // Zobraziť najnovšie ako prvé
+        .limit(20)
+        .onSnapshot(snapshot => {
+          const notificationsList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
-          
-          // Filter notifications: only show those not marked as deleted by the current admin
-          const filteredNotifications = allNotifications.filter(n => 
-            !n.deletedBy || !n.deletedBy[user.uid]
-          ).sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0)); // Sort client-side
+          setAdminNotifications(notificationsList);
+          console.log("Admin: Fetched notifications in real-time:", notificationsList);
 
-          setAdminNotifications(filteredNotifications);
-          console.log("Admin: Fetched and filtered notifications in real-time:", filteredNotifications);
-
-          if (filteredNotifications.length > 0) {
-            const latestNotification = filteredNotifications[0];
+          if (notificationsList.length > 0) {
+            const latestNotification = notificationsList[0];
             if (latestNotification.id !== lastShownNotificationId) {
               setAdminNotificationMessage(latestNotification.message);
               setShowAdminNotificationModal(true);
@@ -469,27 +460,26 @@ function App() {
         console.log("Admin: Unsubscribed from notifications listener.");
       }
     };
-  }, [db, isAdmin, user, appId, lastShownNotificationId]); // Added user to dependencies
+  }, [db, isAdmin, appId, lastShownNotificationId]); // Závisí od db, isAdmin, appId a lastShownNotificationId
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
-  // Tento useEffect sa teraz vždy spustí, ak je používateľ adminom, aby sa zabezpečili aktuálne dáta pre logiku upozornení.
   React.useEffect(() => {
     let unsubscribeUsers;
-    if (db && isAdmin) { // Zmenená podmienka: už nezávisí od profileView
+    if (db && isAdmin && (profileView === 'users' || profileView === 'all-teams')) {
       console.log("Admin: Setting up real-time listener for all users data.");
       const usersCollectionRef = db.collection('users');
       unsubscribeUsers = usersCollectionRef.onSnapshot(snapshot => {
-        const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // Include id for potential use
+        const usersList = snapshot.docs.map(doc => doc.data());
         setAllUsersData(usersList);
         console.log("Admin: Fetched all users data in real-time:", usersList);
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); // Fixed error variable
+        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`);
         setLoading(false);
       });
     } else {
-      setAllUsersData([]); // Vyčistiť dáta, ak nie je admin
+      setAllUsersData([]); // Vyčistiť dáta, ak nie je admin alebo nie je v relevantnom zobrazení
     }
 
     return () => {
@@ -498,7 +488,7 @@ function App() {
         console.log("Admin: Unsubscribed from all users listener.");
       }
     };
-  }, [db, isAdmin]); // Závisí od db a isAdmin
+  }, [db, isAdmin, profileView]); // Závisí od db, isAdmin a profileView
 
 
   const getRecaptchaToken = async (action) => {
@@ -555,7 +545,6 @@ function App() {
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
     if (!auth || !db) {
-      console.error("Firebase Auth alebo Firestore nie je inicializovaný. Auth:", auth, "DB:", db); // Debug log
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
@@ -591,7 +580,6 @@ function App() {
 
     setLoading(true); // Zobraziť loading indikátor
     try {
-      console.log("Attempting to create user with auth object:", auth); // Debug log before call
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
@@ -670,7 +658,6 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!auth || !db) { 
-      console.error("Firebase Auth alebo Firestore nie je inicializovaný. Auth:", auth, "DB:", db); // Debug log
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
@@ -688,7 +675,6 @@ function App() {
 
     setLoading(true);
     try {
-      console.log("Attempting to sign in user with auth object:", auth); // Debug log before call
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
 
@@ -893,8 +879,7 @@ function App() {
             newFirstName: updatedFirstName,
             originalLastName: oldLastName,
             newLastName: updatedLastName,
-          },
-          deletedBy: {} // Initialize with an empty object
+          }
         });
         console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
@@ -981,8 +966,7 @@ function App() {
           details: {
             originalPhoneNumber: oldContactPhoneNumber,
             newPhoneNumber: newContactPhoneNumber,
-          },
-          deletedBy: {} // Initialize with an empty object
+          }
         });
         console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
       }
@@ -1162,50 +1146,8 @@ function App() {
     }
   };
 
-  const handleDeleteNotification = async (notificationId) => {
-    if (!db || !isAdmin || !user) {
-      setError("Nemáte oprávnenie na vymazanie upozornení.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setMessage('');
-
-    try {
-      const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
-      const notificationDoc = await notificationRef.get();
-
-      if (notificationDoc.exists) {
-        const data = notificationDoc.data();
-        const updatedDeletedBy = { ...(data.deletedBy || {}), [user.uid]: true };
-
-        // Get all active admin UIDs
-        const adminUids = allUsersData.filter(u => u.role === 'admin' && u.approved).map(u => u.uid);
-        console.log("handleDeleteNotification: Active Admin UIDs:", adminUids);
-        const allAdminsDeleted = adminUids.every(adminUid => updatedDeletedBy[adminUid]);
-        console.log("handleDeleteNotification: allAdminsDeleted:", allAdminsDeleted);
-
-        if (allAdminsDeleted) {
-          await notificationRef.delete(); // Truly delete from DB
-          setMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
-        } else {
-          await notificationRef.update({ deletedBy: updatedDeletedBy }); // Mark as deleted for current admin
-          setMessage("Upozornenie bolo vymazané z vášho zobrazenia.");
-        }
-      } else {
-        setMessage("Upozornenie už neexistuje.");
-      }
-    } catch (e) {
-      console.error("Chyba pri mazaní upozornenia:", e);
-      setError(`Chyba pri mazaní upozornenia: ${e.message}`);
-    } finally {
-      setLoading(false);
-      clearMessages();
-    }
-  };
-
   const handleClearNotifications = async () => {
-    if (!db || !isAdmin || !user) {
+    if (!db || !isAdmin) {
       setError("Nemáte oprávnenie na vymazanie upozornení.");
       return;
     }
@@ -1216,24 +1158,11 @@ function App() {
       const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
       const snapshot = await notificationsCollectionRef.get();
       const batch = db.batch();
-      
-      const adminUids = allUsersData.filter(u => u.role === 'admin' && u.approved).map(u => u.uid);
-      console.log("handleClearNotifications: Active Admin UIDs:", adminUids);
-
-      snapshot.docs.forEach(docSnapshot => {
-        const data = docSnapshot.data();
-        const updatedDeletedBy = { ...(data.deletedBy || {}), [user.uid]: true };
-        const allAdminsDeleted = adminUids.every(adminUid => updatedDeletedBy[adminUid]);
-        console.log(`handleClearNotifications: Notification ${docSnapshot.id}, allAdminsDeleted: ${allAdminsDeleted}`);
-
-        if (allAdminsDeleted) {
-          batch.delete(docSnapshot.ref); // Truly delete
-        } else {
-          batch.update(docSnapshot.ref, { deletedBy: updatedDeletedBy }); // Mark for current admin
-        }
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
       });
       await batch.commit();
-      setMessage("Všetky upozornenia boli vymazané z vášho zobrazenia.");
+      setMessage("Všetky upozornenia boli vymazané.");
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -1798,7 +1727,7 @@ function App() {
               </div>
             )}
 
-            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Vitajte, {user?.displayName || user?.email || 'Používateľ'}!</h1>
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Vitajte, {user.displayName || 'Používateľ'}!</h1>
             
             {profileView === 'my-data' && (
               <div className="space-y-4 border-t pt-4 mt-4">
@@ -2127,24 +2056,15 @@ function App() {
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 mb-4"
                       disabled={loading}
                     >
-                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia z môjho zobrazenia'}
+                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia'}
                     </button>
                     <ul className="divide-y divide-gray-200">
                       {adminNotifications.map(notification => (
-                        <li key={notification.id} className="py-2 text-gray-700 flex justify-between items-center">
-                          <div>
-                            <p className="font-semibold">{notification.message}</p>
-                            <p className="text-xs text-gray-500">
-                              {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteNotification(notification.id)}
-                            className="ml-4 bg-red-400 hover:bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-lg transition-colors duration-200"
-                            disabled={loading}
-                          >
-                            X
-                          </button>
+                        <li key={notification.id} className="py-2 text-gray-700">
+                          <p className="font-semibold">{notification.message}</p>
+                          <p className="text-xs text-gray-500">
+                            {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -2182,7 +2102,7 @@ function App() {
         )}
 
         {showRoleEditModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50" style={{ backdropFilter: 'blur(5px)' }}>
+          <div className="fixed inset-0 bg-gray-600 bg-opacity50 overflow-y-auto h-full w-full flex justify-center items-center z-50" style={{ backdropFilter: 'blur(5px)' }}>
             <div className="relative p-5 border w-96 shadow-lg rounded-md bg-white">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Upraviť rolu pre {userToEditRole?.email}</h3>
               <div className="mb-4">
@@ -2221,5 +2141,3 @@ function App() {
 
   return null;
 }
-
-export default App;
