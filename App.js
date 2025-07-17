@@ -719,27 +719,28 @@ function App() {
 
       // Pokus o odoslanie e-mailu cez Apps Script
       try {
+        const payload = {
+          action: 'sendRegistrationEmail',
+          email: email,
+          password: password, 
+          isAdmin: isAdminRegistration, 
+          firstName: firstName,
+          lastName: lastName,
+          contactPhoneNumber: contactPhoneNumber 
+        };
+        console.log("Odosielam dáta na Apps Script:", payload); // Log the payload
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // Používa sa pre obídenie CORS, ale znamená, že nemôžete čítať odpoveď servera
+          mode: 'no-cors', 
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            action: 'sendRegistrationEmail',
-            email: email,
-            password: password, 
-            isAdmin: isAdminRegistration, 
-            firstName: firstName,
-            lastName: lastName,
-            contactPhoneNumber: contactPhoneNumber // Telefónne číslo sa odosiela vždy
-          })
+          body: JSON.stringify(payload)
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
-        // Poznámka: Pri mode 'no-cors' nebudete mať prístup k response.status alebo response.ok
+        console.log("Odpoveď z Apps Scriptu (fetch):", response); // Log the response
       } catch (emailError) {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
-        // Táto chyba naznačuje problém s fetch volaním samotným (napr. sieť), nie s Apps Scriptom
       }
 
       // Set the success message BEFORE signing out or redirecting
@@ -761,7 +762,7 @@ function App() {
       }, 5000); 
 
     } catch (e) {
-      console.error("Chyba pri registrácii (Auth alebo iné):", e); // Zmenený log pre odlíšenie
+      console.error("Chyba pri registrácii (Auth alebo iné):", e); 
       if (e.code === 'auth/email-already-in-use') {
         setError("E-mailová adresa už existuje. Prosím, zvoľte inú.");
       } else if (e.code === 'auth/weak-password') {
@@ -771,8 +772,8 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
-      setLoading(false); // V prípade chyby sa loading vypne okamžite
-      clearMessages(); // A správy sa tiež vyčistia po 5 sekundách
+      setLoading(false); 
+      clearMessages(); 
     } 
   };
 
@@ -806,7 +807,6 @@ function App() {
         setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
         await auth.signOut(); 
         setLoading(false);
-        // clearMessages(); // Removed as per request for persistent error
         return;
       }
 
@@ -814,25 +814,28 @@ function App() {
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
       if (userData.role === 'admin' && userData.approved === false) { 
-        setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom."); // Updated message
+        setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom."); 
         
         // --- NOVÁ LOGIKA: Odoslanie e-mailu pre neschváleného administrátora ---
         try {
-          await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          const payload = {
+            action: 'sendAdminApprovalReminder', 
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            isAdmin: true 
+          };
+          console.log("Odosielam dáta na Apps Script (pripomienka schválenia admina):", payload);
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              action: 'sendAdminApprovalReminder', // Nová akcia pre Apps Script
-              email: userData.email,
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              isAdmin: true // Dôležité pre Apps Script, aby vedel, že ide o admina
-            })
+            body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+          console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", response);
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script:", emailError);
         }
@@ -840,7 +843,6 @@ function App() {
 
         await auth.signOut(); 
         setLoading(false);
-        // clearMessages(); // Removed as per request for persistent error
         return;
       }
 
@@ -848,7 +850,7 @@ function App() {
         ...prevUser,
         ...userData,
         displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
-        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true // Načítanie nastavenia notifikácií
+        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true 
       }));
 
 
@@ -857,12 +859,11 @@ function App() {
       setEmail('');
       setPassword('');
       
-      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
+      setLoading(false); 
 
-      // Presmerovanie po 5 sekundách
       setTimeout(() => {
         window.location.href = 'logged-in.html';
-      }, 5000); // 5 sekúnd
+      }, 5000); 
 
     } catch (e) {
       console.error("Chyba pri prihlasovaní:", e);
@@ -897,7 +898,7 @@ function App() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!user || !auth) { // Pridaná kontrola pre auth inštanciu
+    if (!user || !auth) { 
       setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
@@ -918,7 +919,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -927,14 +927,11 @@ function App() {
       }
 
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
-      
-      // Reautentifikácia sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
-      // Zmena hesla sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updatePassword(newPassword);
-      setAdminNotificationMessage("Heslo úspešne zmenené!"); // Používame admin notifikáciu pre pop-up
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setAdminNotificationMessage("Heslo úspešne zmenené!"); 
+      setShowAdminNotificationModal(true); 
       setError('');
       setNewPassword('');
       setNewConfirmPassword('');
@@ -950,7 +947,6 @@ function App() {
       }
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -960,13 +956,11 @@ function App() {
       setError("Nie ste prihlásený alebo Firebase Auth/Firestore nie je inicializovaný.");
       return;
     }
-    // Zmenená validácia: vyžaduje aspoň jedno z mien A aktuálne heslo
     if ((!newFirstName && !newLastName) || !currentPassword) {
       setError("Prosím, zadajte aspoň nové meno alebo priezvisko a aktuálne heslo pre overenie.");
       return;
     }
 
-    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -976,7 +970,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -984,7 +977,6 @@ function App() {
         return;
       }
 
-      // Reautentifikácia je potrebná vždy, keďže sa menia citlivé údaje
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
@@ -995,12 +987,11 @@ function App() {
       const updatedLastName = newLastName || oldLastName;
       const updatedDisplayName = `${updatedFirstName} ${updatedLastName}`;
       
-      // Aktualizácia profilu sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updateProfile({ displayName: updatedDisplayName });
       
       await db.collection('users').doc(user.uid).update({ 
-        firstName: updatedFirstName, // Ak je prázdne, ponechá starú hodnotu
-        lastName: updatedLastName,   // Ak je prázdne, ponechá starú hodnotu
+        firstName: updatedFirstName, 
+        lastName: updatedLastName,   
         displayName: updatedDisplayName
       });
 
@@ -1029,8 +1020,8 @@ function App() {
         console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
 
-      setAdminNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); // Používame admin notifikáciu pre pop-up
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setAdminNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); 
+      setShowAdminNotificationModal(true); 
       setError('');
       setNewFirstName('');
       setNewLastName('');
@@ -1052,13 +1043,12 @@ function App() {
       }
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
   const handleChangeContactPhoneNumber = async (e) => {
     e.preventDefault();
-    if (!user || !auth || !db) { // Pridaná kontrola pre auth inštanciu
+    if (!user || !auth || !db) { 
       setError("Nie ste prihlásený alebo Firebase Auth nie je inicializovaný.");
       return;
     }
@@ -1073,7 +1063,6 @@ function App() {
         return;
     }
 
-    // Kontrola, či je povolená úprava dát
     const now = new Date();
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     if (editEnd && now > editEnd) {
@@ -1083,7 +1072,6 @@ function App() {
 
     setLoading(true);
     try {
-      // Použitie auth.currentUser pre získanie aktuálneho používateľa
       const currentUserForReauth = auth.currentUser;
       if (!currentUserForReauth) {
         setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
@@ -1091,7 +1079,6 @@ function App() {
         return;
       }
 
-      // Reautentifikácia je potrebná
       const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
@@ -1117,8 +1104,8 @@ function App() {
         console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
       }
 
-      setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); // Používame admin notifikáciu pre pop-up
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); 
+      setShowAdminNotificationModal(true); 
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
@@ -1134,7 +1121,6 @@ function App() {
       }
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1148,14 +1134,11 @@ function App() {
 
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
 
-    // Konvertovať dátumy na Date objekty pre validáciu
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
     const userEditEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
 
-    // Validácia 1: Koniec registrácie musí byť po začiatku registrácie
     if (regStart && regEnd && regEnd <= regStart) {
         setError("Dátum 'Koniec registrácie' musí byť neskôr ako 'Začiatok registrácie'.");
         setLoading(false);
@@ -1163,7 +1146,6 @@ function App() {
         return;
     }
 
-    // Validácia 2: Koniec úprav používateľských dát musí byť po konci registrácie
     if (regEnd && userEditEnd && userEditEnd <= regEnd) {
         setError("Dátum 'Koniec úprav používateľských dát' musí byť neskôr ako 'Koniec registrácie'.");
         setLoading(false);
@@ -1174,21 +1156,17 @@ function App() {
     try {
         const settingsDocRef = db.collection('settings').doc('registration');
         await settingsDocRef.set({
-            // Pri ukladaní vytvárame Timestamp z Date objektu, ktorý je vytvorený z datetime-local stringu.
-            // new Date() s datetime-local stringom sa interpretuje ako lokálny čas.
-            // Timestamp.fromDate() potom tento lokálny čas správne prekonvertuje na UTC pre uloženie.
             registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
-        setAdminNotificationMessage("Nastavenia úspešne uložené!"); // Používame admin notifikáciu pre pop-up
-        setShowAdminNotificationModal(true); // Zobraziť pop-up
+        setAdminNotificationMessage("Nastavenia úspešne uložené!"); 
+        setShowAdminNotificationModal(true); 
     } catch (e) {
         console.error("Chyba pri ukladaní nastavení:", e);
         setError(`Chyba pri ukladaní nastavení: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1211,15 +1189,12 @@ function App() {
 
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
-      // Odstránenie používateľa z Firestore databázy
       await db.collection('users').doc(userToDelete.uid).delete();
       setAdminNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setShowAdminNotificationModal(true); 
       
       closeDeleteConfirmationModal();
-      // Otvorenie Firebase konzoly v novom okne pre manuálne odstránenie z Authentication
       window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
 
     } catch (e) {
@@ -1227,7 +1202,6 @@ function App() {
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}. Uistite sa, že máte dostatočné Firebase Security Rules.`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1251,7 +1225,6 @@ function App() {
 
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       let updateData = { role: newRole };
 
@@ -1264,14 +1237,13 @@ function App() {
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setAdminNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setShowAdminNotificationModal(true); 
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
       setError(`Chyba pri aktualizácii roly: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1283,17 +1255,15 @@ function App() {
 
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setAdminNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setShowAdminNotificationModal(true); 
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1305,7 +1275,6 @@ function App() {
     }
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
 
     try {
       const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
@@ -1313,25 +1282,22 @@ function App() {
 
       if (!notificationDoc.exists) {
         setAdminNotificationMessage("Upozornenie už neexistuje.");
-        setShowAdminNotificationModal(true); // Zobraziť pop-up
+        setShowAdminNotificationModal(true); 
         setLoading(false);
         return;
       }
 
       const notificationData = notificationDoc.data();
       let dismissedBy = notificationData.dismissedBy || [];
-      let seenBy = notificationData.seenBy || []; // Get existing seenBy array
+      let seenBy = notificationData.seenBy || []; 
 
-      // Add current user's UID to dismissedBy if not already present
       if (!dismissedBy.includes(user.uid)) {
         dismissedBy.push(user.uid);
       }
-      // Add current user's UID to seenBy if not already present
       if (!seenBy.includes(user.uid)) {
         seenBy.push(user.uid);
       }
 
-      // Get all active admin UIDs
       const activeAdminUids = allUsersData
         .filter(u => u.role === 'admin' && u.approved === true)
         .map(u => u.uid);
@@ -1339,33 +1305,28 @@ function App() {
       console.log("dismissNotification: Aktívni administrátori UIDs:", activeAdminUids);
       console.log("dismissNotification: dismissedBy pre upozornenie:", dismissedBy);
 
-      // Check if all active admins have dismissed this notification
       const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
 
       if (allAdminsDismissed) {
-        // If all admins have dismissed it, delete the notification
         await notificationRef.delete();
         setAdminNotificationMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
-        setShowAdminNotificationModal(true); // Zobraziť pop-up
+        setShowAdminNotificationModal(true); 
       } else {
-        // Otherwise, just update the dismissedBy and seenBy arrays
         await notificationRef.update({ 
-          dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid), // Používame arrayUnion pre istotu
-          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Používame arrayUnion pre istotu
+          dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid), 
+          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) 
         });
         setAdminNotificationMessage("Upozornenie bolo vymazané z vášho zoznamu.");
-        setShowAdminNotificationModal(true); // Zobraziť pop-up
+        setShowAdminNotificationModal(true); 
       }
     } catch (e) {
       console.error("Chyba pri mazaní upozornenia:", e);
       setError(`Chyba pri mazaní upozornenia: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
-  // Modified handleClearNotifications to use dismissNotification
   const handleClearNotifications = async () => {
     if (!db || !user || !isAdmin) {
       setError("Nemáte oprávnenie na vymazanie upozornení.");
@@ -1373,25 +1334,20 @@ function App() {
     }
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
-      // Iterate through currently displayed notifications and dismiss them one by one
-      // This will trigger the logic in dismissNotification for each
       for (const notification of adminNotifications) {
         await dismissNotification(notification.id);
       }
       setAdminNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setShowAdminNotificationModal(true); 
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
-  // Nová funkcia na prepínanie zobrazovania notifikácií na obrazovke
   const handleToggleDisplayNotifications = async (e) => {
     if (!db || !user) {
       setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
@@ -1399,22 +1355,19 @@ function App() {
     }
     setLoading(true);
     setError('');
-    // setMessage(''); // Už sa nepoužíva pre pop-up
     const newDisplayValue = e.target.checked;
     try {
       await db.collection('users').doc(user.uid).update({
         displayNotifications: newDisplayValue
       });
-      // Update the user state immediately to reflect the change
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
       setAdminNotificationMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
-      setShowAdminNotificationModal(true); // Zobraziť pop-up
+      setShowAdminNotificationModal(true); 
     } catch (e) {
       console.error("Chyba pri zmene nastavenia notifikácií:", e);
       setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
     } finally {
       setLoading(false);
-      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -2252,7 +2205,7 @@ function App() {
             )}
 
             {/* Sekcia nastavení pre administrátora */}
-            {profileView === 'tournament-settings' && isAdmin && ( // Zmenené z 'settings'
+            {profileView === 'tournament-settings' && isAdmin && ( 
               <form onSubmit={handleSaveSettings} className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Nastavenia turnaja</h2>
                 <div>
@@ -2311,12 +2264,11 @@ function App() {
                     <input
                       type="checkbox"
                       id="toggle-notifications"
-                      className="sr-only peer" // sr-only hides it visually but keeps it accessible
+                      className="sr-only peer" 
                       checked={user?.displayNotifications ?? true}
                       onChange={handleToggleDisplayNotifications}
                       disabled={loading}
                     />
-                    {/* The toggle switch visual */}
                     <div className={`w-11 h-6 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 transition-colors duration-200 ease-in-out
                                     ${user?.displayNotifications ? 'bg-green-600' : 'bg-red-600'}`}>
                       <div className={`after:content-[''] after:absolute after:top-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-200 after:ease-in-out dark:border-gray-600
