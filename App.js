@@ -1628,7 +1628,7 @@ function App() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        placeholder="Zadajte svoje meno"
+                        placeholder="Zadajte meno"
                         autoComplete="given-name"
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
@@ -1644,7 +1644,7 @@ function App() {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        placeholder="Zadajte svoje priezvisko"
+                        placeholder="Zadajte priezvisko"
                         autoComplete="family-name"
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
@@ -2010,7 +2010,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -2088,7 +2088,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -2141,7 +2141,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte svoje aktuálne heslo"
+                  placeholder="Zadajte aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
