@@ -583,6 +583,7 @@ function App() {
 
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
+    // Používame state pre auth a db, aby sme zabezpečili, že sú inicializované
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
@@ -624,6 +625,8 @@ function App() {
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
       const isApproved = !isAdminRegistration; 
+      
+      console.log("Pokúšam sa uložiť používateľa do Firestore...");
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
@@ -636,7 +639,7 @@ function App() {
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
       });
-      console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
+      console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol úspešne uložený do Firestore.`);
 
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
