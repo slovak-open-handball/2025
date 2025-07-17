@@ -1441,12 +1441,18 @@ function App() {
   }
 
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
+    const is_admin_register_page = currentPath === 'admin-register.html';
+
+    // Ak je aktuálna stránka admin-register.html, vráťte null, aby sa nič nezobrazilo.
+    if (is_admin_register_page) {
+      return null;
+    }
+
     if (user) {
       window.location.href = 'logged-in.html';
       return null;
     }
 
-    const is_admin_register_page = currentPath === 'admin-register.html';
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
@@ -1519,7 +1525,7 @@ function App() {
       );
     }
 
-    // Podmienka pre zobrazenie správy po registrácii - len pre administrátorov
+    // Podmienka pre zobrazenie správy po registrácii - len pre administrátorov (tento blok sa už nevykoná vďaka skorému return pre admin-register.html)
     if (message && currentPath === 'admin-register.html' && is_admin_register_page) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
