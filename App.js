@@ -612,7 +612,8 @@ function App() {
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
-      const isApproved = !isAdminRegistration; // Ak je admin registrácia, isApproved bude false. Ak je bežná, bude true.
+      // ZMENA: Nastavíme approved: true pre administrátorov aj bežných používateľov
+      const isApproved = true; 
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
