@@ -504,7 +504,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
+        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
         setLoading(false);
       });
     } else {
@@ -649,24 +649,36 @@ function App() {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
 
-      await auth.signOut();
-
-      // Zmena správy a odloženie presmerovania
-      setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
-      setError('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setFirstName('');
-      setLastName('');
-      setContactPhoneNumber('');
-      
-      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
-
-      // Presmerovanie po 10 sekundách
-      setTimeout(() => {
-        window.location.href = 'login.html'; 
-      }, 10000); // 10 sekúnd
+      // PODMIENENÉ ODHLÁSENIE A PRESMEROVANIE
+      if (!isAdminRegistration) {
+        await auth.signOut(); // Odhlásiť iba bežného používateľa po registrácii
+        setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
+        setError('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setFirstName('');
+        setLastName('');
+        setContactPhoneNumber('');
+        setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
+        setTimeout(() => {
+          window.location.href = 'login.html'; 
+        }, 10000); // 10 sekúnd
+      } else {
+        // Pre administrátora: neodhlasovať a presmerovať priamo na logged-in.html
+        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený a uložený do databázy. Presmerovanie na profilovú stránku...`);
+        setError('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setFirstName('');
+        setLastName('');
+        setContactPhoneNumber(''); // Aj keď pre admina nie je, vyčistíme pre istotu
+        setLoading(false);
+        setTimeout(() => {
+          window.location.href = 'logged-in.html'; 
+        }, 5000); // 5 sekúnd
+      }
 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -1496,8 +1508,8 @@ function App() {
       );
     }
 
-    // Podmienka pre zobrazenie správy po registrácii
-    if (message && currentPath === 'register.html') {
+    // Podmienka pre zobrazenie správy po registrácii - len pre bežných používateľov
+    if (message && currentPath === 'register.html' && !is_admin_register_page) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
           <div className="w-full max-w-md mt-20 mb-10 p-4">
@@ -1507,6 +1519,23 @@ function App() {
                 {message}
               </div>
               <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Podmienka pre zobrazenie správy po registrácii - len pre administrátorov
+    if (message && currentPath === 'admin-register.html' && is_admin_register_page) {
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+          <div className="w-full max-w-md mt-20 mb-10 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia administrátora úspešná!</h1>
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+              <p className="text-lg text-gray-600">Presmerovanie na profilovú stránku...</p>
             </div>
           </div>
         </div>
