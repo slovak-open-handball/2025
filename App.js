@@ -648,7 +648,14 @@ function App() {
 
     setLoading(true); // Zobraziť loading indikátor
     setError(''); // Clear previous errors
-    setMessage(''); // Clear previous messages
+    
+    // Set the specific message for admin registration immediately
+    if (isAdminRegistration) {
+      setMessage(`Administrátorský účet pre ${email} sa registruje. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
+    } else {
+      // For regular users, keep message empty for now, so the generic "Načítava sa..." from the button or general loading screen applies.
+      setMessage(''); 
+    }
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
@@ -745,15 +752,15 @@ function App() {
         console.error("Firestore Save/Update Error:", firestoreError);
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
+        setMessage(''); // Clear message on error
         return; // Stop further execution if Firestore save fails
       }
 
-      // Set the success message BEFORE signing out or redirecting
+      // Set the final success message for regular users
       if (!isAdminRegistration) {
         setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
-      } else {
-        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
       }
+      // For admin registration, the message is already set at the beginning.
       
       setLoading(false); // Stop loading so the message is visible on the form
 
@@ -778,6 +785,7 @@ function App() {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
       setLoading(false); 
+      setMessage(''); // Clear message on error
       clearMessages(); 
     } 
   };
