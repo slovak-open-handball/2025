@@ -256,60 +256,67 @@ function App() {
         setIsAuthReady(true);
         setIsRoleLoaded(false); // Reset pred pokusom o načítanie roly
 
-        if (currentUser && firestoreInstance) {
+        if (currentUser) { // Check for currentUser first
           console.log("onAuthStateChanged: Používateľ je prihlásený. UID:", currentUser.uid);
-          try {
-            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
-            // ZMENA: Používame onSnapshot namiesto get() pre robustnejšie načítanie dát používateľa
-            const unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-              console.log("onAuthStateChanged (onSnapshot): Skúšam načítať dokument pre UID:", currentUser.uid, "Dokument existuje:", docSnapshot.exists);
-              if (docSnapshot.exists) {
-                const userData = docSnapshot.data();
-                console.log("onAuthStateChanged (onSnapshot): Dáta používateľa z Firestore:", userData);
-                setIsAdmin(userData.role === 'admin');
-                console.log("onAuthStateChanged (onSnapshot): isAdmin nastavené na:", userData.role === 'admin');
-                
-                setUser(prevUser => ({
-                  ...prevUser,
-                  ...userData,
-                  displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
-                  displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
-                }));
-                setIsRoleLoaded(true); // Nastavíme, že rola je načítaná
+          console.log("onAuthStateChanged: DB instance is:", firestoreInstance); // Check if db is available
+          if (firestoreInstance) { // Ensure db is not null before using it
+            try {
+              const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
+              // ZMENA: Používame onSnapshot namiesto get() pre robustnejšie načítanie dát používateľa
+              const unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+                console.log("onAuthStateChanged (onSnapshot): Skúšam načítať dokument pre UID:", currentUser.uid, "Dokument existuje:", docSnapshot.exists);
+                if (docSnapshot.exists) {
+                  const userData = docSnapshot.data();
+                  console.log("onAuthStateChanged (onSnapshot): Dáta používateľa z Firestore:", userData);
+                  setIsAdmin(userData.role === 'admin');
+                  console.log("onAuthStateChanged (onSnapshot): isAdmin nastavené na:", userData.role === 'admin');
+                  
+                  setUser(prevUser => ({
+                    ...prevUser,
+                    ...userData,
+                    displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
+                    displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
+                  }));
+                  setIsRoleLoaded(true); // Rola je načítaná
+                  unsubscribeUserDoc(); // Odhlásiť sa po úspešnom načítaní
 
-                // Odhlásiť sa z tohto onSnapshot listenera, akonáhle sa dáta načítajú
-                // aby sa predišlo zbytočným počúvaniam, ak nechceme real-time pre užívateľské dáta
-                // Ak by sme chceli real-time aktualizácie užívateľských dát, tento unsubscribe by tu nebol.
-                unsubscribeUserDoc(); 
-
-              } else {
-                console.log("onAuthStateChanged (onSnapshot): Dokument používateľa vo Firestore neexistuje pre UID:", currentUser.uid);
+                } else {
+                  console.log("onAuthStateChanged (onSnapshot): Dokument používateľa vo Firestore neexistuje pre UID:", currentUser.uid);
+                  setIsAdmin(false);
+                  setUser(prevUser => ({
+                    ...prevUser,
+                    displayNotifications: true
+                  }));
+                  // ZMENA: Pridáme malú pauzu, ak dokument neexistuje, pre prípad, že sa ešte len propaguje
+                  setTimeout(() => {
+                      setIsRoleLoaded(true); // Nastavíme, že rola je načítaná (aj keď dokument neexistuje)
+                  }, 500); // 500ms pauza
+                }
+              }, error => {
+                console.error("Chyba pri načítaní roly používateľa z Firestore (onSnapshot) pre UID:", currentUser.uid, error);
                 setIsAdmin(false);
-                setUser(prevUser => ({
-                  ...prevUser,
-                  displayNotifications: true
-                }));
-                setIsRoleLoaded(true); // Nastavíme, že rola je načítaná (aj keď dokument neexistuje)
-              }
-            }, error => {
-              console.error("Chyba pri načítaní roly používateľa z Firestore (onSnapshot) pre UID:", currentUser.uid, error);
+                setIsRoleLoaded(true); // Nastavíme, že rola je načítaná aj pri chybe
+              });
+
+              // Vráťte funkciu unsubscribe pre userDoc listener, aby sa tiež vyčistil
+              // Toto je dôležité, aby sa listener vyčistil, ak sa komponent odpojí
+              return () => {
+                if (unsubscribeAuth) unsubscribeAuth();
+                if (unsubscribeUserDoc) unsubscribeUserDoc();
+              };
+
+            } catch (e) {
+              console.error("Chyba pri nastavení onSnapshot pre rolu používateľa:", e);
               setIsAdmin(false);
               setIsRoleLoaded(true);
-            });
-
-            // Vráťte funkciu unsubscribe pre userDoc listener, aby sa tiež vyčistil
-            return () => {
-              if (unsubscribeAuth) unsubscribeAuth();
-              if (unsubscribeUserDoc) unsubscribeUserDoc(); // Uistite sa, že sa aj toto vyčistí
-            };
-
-          } catch (e) {
-            console.error("Chyba pri nastavení onSnapshot pre rolu používateľa:", e);
+            }
+          } else {
+            console.log("onAuthStateChanged: Firestore DB inštancia nie je k dispozícii.");
             setIsAdmin(false);
             setIsRoleLoaded(true);
           }
         } else {
-          console.log("onAuthStateChanged: Používateľ nie je prihlásený alebo firestoreInstance nie je k dispozícii.");
+          console.log("onAuthStateChanged: Používateľ nie je prihlásený.");
           setIsAdmin(false);
           setIsRoleLoaded(true);
         }
