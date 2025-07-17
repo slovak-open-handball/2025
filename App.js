@@ -504,7 +504,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
+        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
         setLoading(false);
       });
     } else {
@@ -576,7 +576,8 @@ function App() {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    if (!email || !password || !confirmPassword || !firstName || !lastName || (!isAdminRegistration && !contactPhoneNumber)) {
+    // Zmenená podmienka: contactPhoneNumber je vždy vyžadované
+    if (!email || !password || !confirmPassword || !firstName || !lastName || !contactPhoneNumber) {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
@@ -591,12 +592,11 @@ function App() {
       return;
     }
 
-    if (!isAdminRegistration) {
-      const phoneRegex = /^\+\d+$/;
-      if (!phoneRegex.test(contactPhoneNumber)) {
-          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-          return;
-      }
+    // Validácia telefónneho čísla sa teraz aplikuje vždy
+    const phoneRegex = /^\+\d+$/;
+    if (!phoneRegex.test(contactPhoneNumber)) {
+        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+        return;
     }
 
     const recaptchaToken = await getRecaptchaToken('register');
@@ -618,7 +618,7 @@ function App() {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber,
+        contactPhoneNumber: contactPhoneNumber, // Telefónne číslo sa ukladá vždy
         displayName: `${firstName} ${lastName}`,
         role: userRole,
         approved: isApproved, 
@@ -627,10 +627,11 @@ function App() {
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
+      // Pokus o odoslanie e-mailu cez Apps Script
       try {
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', 
+          mode: 'no-cors', // Používa sa pre obídenie CORS, ale znamená, že nemôžete čítať odpoveď servera
           headers: {
             'Content-Type': 'application/json',
           },
@@ -641,12 +642,14 @@ function App() {
             isAdmin: isAdminRegistration, 
             firstName: firstName,
             lastName: lastName,
-            contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber
+            contactPhoneNumber: contactPhoneNumber // Telefónne číslo sa odosiela vždy
           })
         });
         console.log("Žiadosť na odoslanie e-mailu odoslaná.");
+        // Poznámka: Pri mode 'no-cors' nebudete mať prístup k response.status alebo response.ok
       } catch (emailError) {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
+        // Táto chyba naznačuje problém s fetch volaním samotným (napr. sieť), nie s Apps Scriptom
       }
 
       // Odhlásenie a presmerovanie pre oba typy registrácií
@@ -1546,195 +1549,113 @@ function App() {
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
               {is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"}
             </h1>
-            {is_admin_register_page ? (
-                <form onSubmit={(e) => handleRegister(e, true)} className="space-y-4">
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
-                            Meno
-                        </label>
-                        <input
-                            type="text"
-                            id="reg-first-name"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            required
-                            placeholder="Zadajte svoje meno"
-                            autoComplete="given-name"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
-                            Priezvisko
-                        </label>
-                        <input
-                            type="text"
-                            id="reg-last-name"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            required
-                            placeholder="Zadajte svoje priezvisko"
-                            autoComplete="family-name"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
-                            E-mailová adresa
-                        </label>
-                        <input
-                            type="email"
-                            id="reg-email"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="Zadajte svoju e-mailovú adresu"
-                            autoComplete="email"
-                        />
-                    </div>
-                    <PasswordInput
-                        id="reg-password"
-                        label="Heslo"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onCopy={(e) => e.preventDefault()}
-                        onPaste={(e) => e.preventDefault()}
-                        onCut={(e) => e.preventDefault()}
-                        placeholder="Zvoľte heslo (min. 10 znakov)"
-                        autoComplete="new-password"
-                        showPassword={showPasswordReg}
-                        toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+            {/* Formulár je teraz jednotný pre obe stránky */}
+            <form onSubmit={(e) => handleRegister(e, is_admin_register_page)} className="space-y-4">
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
+                        Meno kontaktnej osoby
+                    </label>
+                    <input
+                        type="text"
+                        id="reg-first-name"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        placeholder="Zadajte svoje meno"
+                        autoComplete="given-name"
                     />
-                    <PasswordInput
-                        id="reg-confirm-password"
-                        label="Potvrďte heslo"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        onCopy={(e) => e.preventDefault()}
-                        onPaste={(e) => e.preventDefault()}
-                        onCut={(e) => e.preventDefault()}
-                        placeholder="Potvrďte heslo"
-                        autoComplete="new-password"
-                        showPassword={showConfirmPasswordReg}
-                        toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+                </div>
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
+                        Priezvisko kontaktnej osoby
+                    </label>
+                    <input
+                        type="text"
+                        id="reg-last-name"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        placeholder="Zadajte svoje priezvisko"
+                        autoComplete="family-name"
                     />
-                    <button
-                        type="submit"
-                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                        disabled={loading}
-                    >
-                        {loading ? 'Registrujem...' : 'Registrovať sa'}
-                    </button>
-                </form>
-            ) : (
-                <form onSubmit={(e) => handleRegister(e, is_admin_register_page)} className="space-y-4">
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
-                            Meno kontaktnej osoby
-                        </label>
-                        <input
-                            type="text"
-                            id="reg-first-name"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            required
-                            placeholder="Zadajte svoje meno"
-                            autoComplete="given-name"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
-                            Priezvisko kontaktnej osoby
-                        </label>
-                        <input
-                            type="text"
-                            id="reg-last-name"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            required
-                            placeholder="Zadajte svoje priezvisko"
-                            autoComplete="family-name"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
-                        <input
-                            type="tel"
-                            id="reg-phone-number"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={contactPhoneNumber}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                const strictPhoneRegex = /^\+\d*$/;
-                                if (value === '' || strictPhoneRegex.test(value)) {
-                                    setContactPhoneNumber(value);
-                                }
-                            }}
-                            required
-                            placeholder="+421901234567"
-                            pattern="^\+\d+$"
-                            title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                        />
-                    </div>
-                    <p className="text-gray-600 text-sm mt-4">
-                        E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                    </p>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
-                            E-mailová adresa kontaktnej osoby
-                        </label>
-                        <input
-                            type="email"
-                            id="reg-email"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="Zadajte svoju e-mailovú adresu"
-                            autoComplete="email"
-                        />
-                    </div>
-                    <p className="text-gray-600 text-sm mt-4">
-                        E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
-                    </p>
-                    <PasswordInput
-                        id="reg-password"
-                        label="Heslo"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onCopy={(e) => e.preventDefault()}
-                        onPaste={(e) => e.preventDefault()}
-                        onCut={(e) => e.preventDefault()}
-                        placeholder="Zvoľte heslo (min. 10 znakov)"
-                        autoComplete="new-password"
-                        showPassword={showPasswordReg}
-                        toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+                </div>
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                    <input
+                        type="tel"
+                        id="reg-phone-number"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={contactPhoneNumber}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            const strictPhoneRegex = /^\+\d*$/;
+                            if (value === '' || strictPhoneRegex.test(value)) {
+                                setContactPhoneNumber(value);
+                            }
+                        }}
+                        required
+                        placeholder="+421901234567"
+                        pattern="^\+\d+$"
+                        title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
                     />
-                    <PasswordInput
-                        id="reg-confirm-password"
-                        label="Potvrďte heslo"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        onCopy={(e) => e.preventDefault()}
-                        onPaste={(e) => e.preventDefault()}
-                        onCut={(e) => e.preventDefault()}
-                        placeholder="Potvrďte heslo"
-                        autoComplete="new-password"
-                        showPassword={showConfirmPasswordReg}
-                        toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+                </div>
+                <p className="text-gray-600 text-sm mt-4">
+                    E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                </p>
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
+                        E-mailová adresa kontaktnej osoby
+                    </label>
+                    <input
+                        type="email"
+                        id="reg-email"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder="Zadajte svoju e-mailovú adresu"
+                        autoComplete="email"
                     />
-                    <button
-                        type="submit"
-                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                        disabled={loading}
-                    >
-                        {loading ? 'Registrujem...' : 'Registrovať sa'}
-                    </button>
-                </form>
-            )}
+                </div>
+                <p className="text-gray-600 text-sm mt-4">
+                    E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
+                </p>
+                <PasswordInput
+                    id="reg-password"
+                    label="Heslo"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onCopy={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    placeholder="Zvoľte heslo (min. 10 znakov)"
+                    autoComplete="new-password"
+                    showPassword={showPasswordReg}
+                    toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+                />
+                <PasswordInput
+                    id="reg-confirm-password"
+                    label="Potvrďte heslo"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onCopy={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
+                    onCut={(e) => e.preventDefault()}
+                    placeholder="Potvrďte heslo"
+                    autoComplete="new-password"
+                    showPassword={showConfirmPasswordReg}
+                    toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+                />
+                <button
+                    type="submit"
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                    disabled={loading}
+                >
+                    {loading ? 'Registrujem...' : 'Registrovať sa'}
+                </button>
+            </form>
           </div>
         </div>
       </div>
@@ -1977,11 +1898,10 @@ function App() {
                 <p className="text-gray-700">
                   <span className="font-semibold">Meno a priezvisko: </span>{user.displayName || '-'}
                 </p>
-                {!isAdmin && ( 
-                  <p className="text-gray-700">
-                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
-                  </p>
-                )}
+                {/* Telefónne číslo sa zobrazuje vždy, bez ohľadu na rolu admina */}
+                <p className="text-gray-700">
+                  <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
+                </p>
                 {!isEditAllowed && (
                     <p className="text-red-500 text-sm mt-2">
                         Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : '-'}
