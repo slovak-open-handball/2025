@@ -1405,6 +1405,26 @@ function App() {
 
 
   if (loading || !isAuthReady || (window.location.pathname.split('/').pop() === 'logged-in.html' && !isRoleLoaded) || !settingsLoaded) {
+    // Check if we are on a registration page and a success message is already set
+    const currentPath = window.location.pathname.split('/').pop();
+    const isRegistrationPage = currentPath === 'register.html' || currentPath === 'admin-register.html';
+
+    if (isRegistrationPage && message) {
+      return (
+        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+          <div className="w-full max-w-md mt-20 mb-10 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
+              </div>
+              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // Fallback to generic loading message if no specific registration message
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-xl font-semibold text-gray-700">Načítava sa...</div>
