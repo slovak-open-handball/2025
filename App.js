@@ -578,7 +578,7 @@ function App() {
     setLoading(true); // Zobraziť loading indikátor
     try {
       // Changed to Firebase v9 modular syntax
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailWithPassword(auth, email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
@@ -1316,7 +1316,7 @@ function App() {
                           <span style={{ whiteSpace: 'nowrap' }}>
                             {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
                           </span>{" "}
-                          <span style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ whiteWhiteSpace: 'nowrap' }}>
                             {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
                           </span>
                         </p>
@@ -1779,7 +1779,7 @@ function App() {
               </div>
             )}
 
-            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Vitajte, {user.displayName || 'Používateľ'}!</h1>
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Vitajte, {user?.displayName || user?.email || 'Používateľ'}!</h1>
             
             {profileView === 'my-data' && (
               <div className="space-y-4 border-t pt-4 mt-4">
