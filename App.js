@@ -105,7 +105,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVjJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -479,7 +479,8 @@ function App() {
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
     let unsubscribeUsers;
-    if (db && isAdmin && (profileView === 'users' || profileView === 'all-teams')) {
+    // Fetch all users data if db is ready and user is an admin, regardless of profileView
+    if (db && isAdmin) {
       console.log("Admin: Setting up real-time listener for all users data.");
       const usersCollectionRef = db.collection('users');
       unsubscribeUsers = usersCollectionRef.onSnapshot(snapshot => {
@@ -489,11 +490,11 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); // Changed e.message to error.message
+        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
         setLoading(false);
       });
     } else {
-      setAllUsersData([]); // Vyčistiť dáta, ak nie je admin alebo nie je v relevantnom zobrazení
+      setAllUsersData([]); // Vyčistiť dáta, ak nie je admin
     }
 
     return () => {
@@ -502,8 +503,7 @@ function App() {
         console.log("Admin: Unsubscribed from all users listener.");
       }
     };
-  }, [db, isAdmin, profileView]); // Závisí od db, isAdmin a profileView
-
+  }, [db, isAdmin]); // Závisí len od db a isAdmin
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -1192,6 +1192,9 @@ function App() {
       const activeAdminUids = allUsersData
         .filter(u => u.role === 'admin' && u.approved === true)
         .map(u => u.uid);
+
+      console.log("dismissNotification: Aktívni administrátori UIDs:", activeAdminUids);
+      console.log("dismissNotification: dismissedBy pre upozornenie:", dismissedBy);
 
       // Check if all active admins have dismissed this notification
       const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
@@ -1942,7 +1945,7 @@ function App() {
                       const value = e.target.value;
                       const strictPhoneRegex = /^\+\d*$/;
                       if (value === '' || strictPhoneRegex.test(value)) {
-                        setNewContactPhoneNumber(value);
+                        setContactPhoneNumber(value);
                       }
                     }}
                     required
