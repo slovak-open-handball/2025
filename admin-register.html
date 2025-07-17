@@ -82,20 +82,6 @@
     <script type="text/babel" src="App.js"></script>
 
     <script type="text/javascript">
-        // Funkcia na načítanie a vloženie hlavičky
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html'); // Načítať obsah header.html
-                if (!response.ok) {
-                    throw new Error(`HTTP chyba! Status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml; // Vložiť do placeholderu
-            } catch (error) {
-                console.error('Chyba pri načítaní hlavičky:', error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-            }
-        }
 
         // Tento skript sa spustí po načítaní App.js a hlavičky
         window.onload = function() {
