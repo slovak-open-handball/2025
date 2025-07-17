@@ -612,7 +612,7 @@ function App() {
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
-      const isApproved = !isAdminRegistration; 
+      const isApproved = !isAdminRegistration; // Ak je admin registrácia, isApproved bude false. Ak je bežná, bude true.
       await db.collection('users').doc(userCredential.user.uid).set({
         uid: userCredential.user.uid,
         email: email,
@@ -649,36 +649,27 @@ function App() {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
 
-      // PODMIENENÉ ODHLÁSENIE A PRESMEROVANIE
+      // Odhlásenie a presmerovanie pre oba typy registrácií
+      await auth.signOut(); 
+      setError('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setFirstName('');
+      setLastName('');
+      setContactPhoneNumber('');
+      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
+
       if (!isAdminRegistration) {
-        await auth.signOut(); // Odhlásiť iba bežného používateľa po registrácii
         setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
-        setError('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setFirstName('');
-        setLastName('');
-        setContactPhoneNumber('');
-        setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
-        setTimeout(() => {
-          window.location.href = 'login.html'; 
-        }, 10000); // 10 sekúnd
       } else {
-        // Pre administrátora: neodhlasovať a presmerovať priamo na logged-in.html
-        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený a uložený do databázy. Presmerovanie na profilovú stránku...`);
-        setError('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setFirstName('');
-        setLastName('');
-        setContactPhoneNumber(''); // Aj keď pre admina nie je, vyčistíme pre istotu
-        setLoading(false);
-        setTimeout(() => {
-          window.location.href = 'logged-in.html'; 
-        }, 5000); // 5 sekúnd
+        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Počkajte prosím na schválenie iným administrátorom. Po schválení sa budete môcť prihlásiť.`);
       }
+      
+      // Presmerovanie po 10 sekundách pre oba typy registrácií
+      setTimeout(() => {
+        window.location.href = 'login.html'; 
+      }, 10000); 
 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -1535,7 +1526,7 @@ function App() {
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
                 {message}
               </div>
-              <p className="text-lg text-gray-600">Presmerovanie na profilovú stránku...</p>
+              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
             </div>
           </div>
         </div>
