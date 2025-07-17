@@ -1628,7 +1628,7 @@ function App() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        placeholder="Zadajte meno"
+                        placeholder="Zadajte svoje meno"
                         autoComplete="given-name"
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
@@ -1644,7 +1644,7 @@ function App() {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        placeholder="Zadajte priezvisko"
+                        placeholder="Zadajte svoje priezvisko"
                         autoComplete="family-name"
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
@@ -1679,28 +1679,6 @@ function App() {
                       E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
                   </p>
                 )}
-                <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
-                        {is_admin_register_page ? "E-mailová adresa" : "E-mailová adresa kontaktnej osoby"}
-                    </label>
-                    <input
-                        type="email"
-                        id="reg-email"
-                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="Zadajte e-mailovú adresu"
-                        autoComplete="email"
-                        disabled={loading || !!message} // Disable if loading or message is shown
-                    />
-                </div>
-                {/* Podmienene nezobrazovať pomocný text pod e-mailovou adresou */}
-                {!is_admin_register_page && (
-                  <p className="text-gray-600 text-sm mt-4">
-                      E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
-                  </p>
-                )}
                 <PasswordInput
                     id="reg-password"
                     label="Heslo"
@@ -1715,6 +1693,15 @@ function App() {
                     toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
                     disabled={loading || !!message} // Disable if loading or message is shown
                 />
+                {/* Text s požiadavkami na heslo */}
+                <p className="text-gray-600 text-sm -mt-2">
+                    Heslo musí obsahovať:
+                    <ul className="list-disc list-inside ml-4">
+                        <li>aspoň jedno malé písmeno,</li>
+                        <li>aspoň jedno veľké písmeno,</li>
+                        <li>aspoň jednu číslicu.</li>
+                    </ul>
+                </p>
                 <PasswordInput
                     id="reg-confirm-password"
                     label="Potvrďte heslo"
@@ -1791,7 +1778,7 @@ function App() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="Zadajte e-mailovú adresu"
+                  placeholder="Zadajte svoju e-mailovú adresu"
                   autoComplete="email"
                 />
               </div>
@@ -2010,7 +1997,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -2088,7 +2075,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
@@ -2141,7 +2128,7 @@ function App() {
                   onCopy={(e) => e.preventDefault()}
                   onPaste={(e) => e.preventDefault()}
                   onCut={(e) => e.preventDefault()}
-                  placeholder="Zadajte aktuálne heslo"
+                  placeholder="Zadajte svoje aktuálne heslo"
                   autoComplete="current-password"
                   showPassword={showCurrentPasswordChange}
                   toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
