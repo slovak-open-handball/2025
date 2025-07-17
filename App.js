@@ -638,41 +638,65 @@ function App() {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
-      const userRole = isAdminRegistration ? 'admin' : 'user'; 
-      // ZMENA: Nastavíme approved: true pre administrátorov aj bežných používateľov
-      const isApproved = true; 
+      // Determine initial role and approval status
+      let initialUserRole = 'user';
+      let initialIsApproved = true; // Default for normal users, and initial for admins
+
+      if (isAdminRegistration) {
+        initialUserRole = 'user'; // Initially register admin as a regular user
+        initialIsApproved = true; // Initially approved
+      }
 
       const userDataToSave = {
         uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber, // Telefónne číslo sa ukladá vždy
+        contactPhoneNumber: contactPhoneNumber,
         displayName: `${firstName} ${lastName}`,
-        role: userRole,
-        approved: isApproved, 
+        role: initialUserRole, // Use initial role
+        approved: initialIsApproved, // Use initial approved status
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
-        displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
+        displayNotifications: true
       };
 
-      console.log("Attempting to save user to Firestore with data:", userDataToSave); // Detailed log
+      console.log("Attempting to save user to Firestore with initial data:", userDataToSave); // Detailed log
 
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
-        console.log(`Firestore: Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený.`);
+        console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
 
         // Explicitné načítanie a logovanie dát po úspešnom zápise
         const userDocRef = db.collection('users').doc(userCredential.user.uid);
-        const userDocSnapshot = await userDocRef.get();
+        let userDocSnapshot = await userDocRef.get();
         if (userDocSnapshot.exists) {
-          console.log("Data loaded from Firestore after registration:", userDocSnapshot.data());
+          console.log("Data loaded from Firestore immediately after initial registration:", userDocSnapshot.data());
         } else {
-          console.log("User document not found in Firestore after registration (unexpected).");
+          console.log("User document not found in Firestore immediately after initial registration (unexpected).");
         }
 
+        // --- NEW LOGIC FOR ADMIN REGISTRATION ---
+        if (isAdminRegistration) {
+          // Update role to admin and approved to false for admin registrations
+          await db.collection('users').doc(userCredential.user.uid).update({
+            role: 'admin',
+            approved: false
+          });
+          console.log(`Firestore: Rola používateľa ${email} bola aktualizovaná na 'admin' a schválenie na 'false'.`);
+
+          // Re-fetch and log data after the update
+          userDocSnapshot = await userDocRef.get(); // Get updated snapshot
+          if (userDocSnapshot.exists) {
+            console.log("Data loaded from Firestore after admin role update:", userDocSnapshot.data());
+          } else {
+            console.log("User document not found in Firestore after admin role update (unexpected).");
+          }
+        }
+        // --- END NEW LOGIC ---
+
       } catch (firestoreError) {
-        console.error("Firestore Save Error:", firestoreError);
-        setError(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
+        console.error("Firestore Save/Update Error:", firestoreError);
+        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
         return; // Stop further execution if Firestore save fails
       }
@@ -720,7 +744,7 @@ function App() {
         setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Počkajte prosím na schválenie iným administrátorom. Po schválení sa budete môcť prihlásiť.`);
       }
       
-      // Presmerovanie po 5 sekundách (skrátené z 10s pre rýchlejšie testovanie)
+      // Presmerovanie po 5 sekundách
       setTimeout(() => {
         window.location.href = 'login.html'; 
       }, 5000); 
