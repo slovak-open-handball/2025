@@ -1888,7 +1888,7 @@ function App() {
                 <li>
                   <button
                     onClick={() => {
-                      changeProfileView('change-name');
+                        changeProfileView('change-name');
                     }}
                     className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
@@ -2511,6 +2511,7 @@ function App() {
   return null;
 }
 
-window.onload = function() {
-  ReactDOM.render(<App />, document.getElementById('root'));
-};
+// Vykreslenie React aplikácie do DOM
+// Toto volanie by malo byť na konci súboru App.js, aby sa zabezpečilo,
+// že všetky závislosti (React, ReactDOM) sú načítané.
+ReactDOM.render(<App />, document.getElementById('root'));
