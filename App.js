@@ -112,6 +112,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+  // UPDATED: Zmenená URL adresa pre Google Apps Script
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
@@ -714,15 +715,20 @@ function App() {
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            // REMOVED: mode: 'no-cors', // Odstránené pre lepšiu diagnostiku odpovedí
+            mode: 'no-cors', // VRÁTENÉ: Používame no-cors pre Apps Script
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
-          // ADDED: Logovanie odpovede z Apps Scriptu
-          console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", await response.json()); 
+          // ZMENA: Pridanie try-catch pre response.json()
+          try {
+            const responseData = await response.json(); // Toto zlyhá pri no-cors
+            console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", responseData); 
+          } catch (jsonError) {
+            console.warn("Nepodarilo sa parsovať JSON odpoveď z Apps Scriptu (očakávané s 'no-cors'):", jsonError);
+          }
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script:", emailError);
         }
@@ -850,15 +856,20 @@ function App() {
           console.log("Odosielam dáta na Apps Script (pripomienka schválenia admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            // REMOVED: mode: 'no-cors', // Odstránené pre lepšiu diagnostiku odpovedí
+            mode: 'no-cors', // VRÁTENÉ: Používame no-cors pre Apps Script
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          // ADDED: Logovanie odpovede z Apps Scriptu
-          console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", await response.json());
+          // ZMENA: Pridanie try-catch pre response.json()
+          try {
+            const responseData = await response.json(); // Toto zlyhá pri no-cors
+            console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", responseData);
+          } catch (jsonError) {
+            console.warn("Nepodarilo sa parsovať JSON odpoveď z Apps Scriptu (očakávané s 'no-cors'):", jsonError);
+          }
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script:", emailError);
         }
