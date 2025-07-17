@@ -630,8 +630,15 @@ function App() {
 
       console.log("Attempting to save user to Firestore with data:", userDataToSave); // Detailed log
 
-      await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
-      console.log(`Firestore: Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený.`);
+      try {
+        await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+        console.log(`Firestore: Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený.`);
+      } catch (firestoreError) {
+        console.error("Firestore Save Error:", firestoreError);
+        setError(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
+        setLoading(false);
+        return; // Stop further execution if Firestore save fails
+      }
 
       // Pokus o odoslanie e-mailu cez Apps Script
       try {
@@ -682,7 +689,7 @@ function App() {
       }, 10000); 
 
     } catch (e) {
-      console.error("Chyba pri registrácii:", e);
+      console.error("Chyba pri registrácii (Auth alebo iné):", e); // Zmenený log pre odlíšenie
       if (e.code === 'auth/email-already-in-use') {
         setError("E-mailová adresa už existuje. Prosím, zvoľte inú.");
       } else if (e.code === 'auth/weak-password') {
