@@ -13,6 +13,7 @@ const initialAuthToken = null; // Globálne definované
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {/* Opravená cesta pre ikonu oka (viditeľné oko) */}
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
       <circle cx="12" cy="12" r="3"/>
     </svg>
@@ -20,6 +21,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   const EyeOffIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {/* Opravené cesty pre ikonu oka (preškrtnuté oko) */}
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a18.02 18.02 0 0 1 7.07-5.97M2.06 2.06 22 22"/>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.02 15.02a3.01 3.01 0 0 1-4.24-4.24M12 7v3M12 14v3"/>
     </svg>
