@@ -645,6 +645,9 @@ function App() {
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
     setLoading(true); // Zobraziť loading indikátor
+    setError(''); // Clear previous errors
+    setMessage(''); // Clear previous messages
+
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
@@ -737,23 +740,19 @@ function App() {
         // Táto chyba naznačuje problém s fetch volaním samotným (napr. sieť), nie s Apps Scriptom
       }
 
-      // Odhlásenie a presmerovanie pre oba typy registrácií
-      await auth.signOut(); 
-      setUser(null); // Explicitne nastaviť používateľa na null po odhlásení
-      setError('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setFirstName('');
-      setLastName('');
-      setContactPhoneNumber('');
-      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
-
+      // Set the success message BEFORE signing out or redirecting
       if (!isAdminRegistration) {
         setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       } else {
-        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Počkajte prosím na schválenie iným administrátorom. Po schválení sa budete môcť prihlásiť.`);
+        setMessage(`Administrátorský účet pre ${email} bol úspešne vytvorený. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
       }
+      
+      // Stop loading so the message is visible on the form
+      setLoading(false); 
+
+      // Now sign out and redirect after a delay
+      await auth.signOut(); 
+      setUser(null); // Explicitne nastaviť používateľa na null po odhlásení
       
       // Presmerovanie po 5 sekundách
       setTimeout(() => {
@@ -1588,49 +1587,21 @@ function App() {
         </div>
       );
     }
-
-    // Podmienka pre zobrazenie správy po registrácii - pre bežných používateľov
-    if (message && currentPath === 'register.html' && !is_admin_register_page) {
-      return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
-          <div className="w-full max-w-md mt-20 mb-10 p-4">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Podmienka pre zobrazenie správy po registrácii - pre administrátorov
-    if (message && currentPath === 'admin-register.html' && is_admin_register_page) {
-      return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
-          <div className="w-full max-w-md mt-20 mb-10 p-4">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia administrátora úspešná!</h1>
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
+    
+    // Zobrazenie registračného formulára s potenciálnou správou
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto">
         <div className="w-full max-w-md mt-20 mb-10 p-4">
           <div className="bg-white p-8 rounded-lg shadow-xl w-full">
-            {/* Správy a chyby sa zobrazia len ak nie je zobrazená špeciálna potvrdzujúca správa */}
-            {(!message && error) && (
+            {/* Správy a chyby sa zobrazia tu */}
+            {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
                 {error}
+              </div>
+            )}
+            {message && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                {message}
               </div>
             )}
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
@@ -1651,6 +1622,7 @@ function App() {
                         required
                         placeholder="Zadajte svoje meno"
                         autoComplete="given-name"
+                        disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
                 <div>
@@ -1666,6 +1638,7 @@ function App() {
                         required
                         placeholder="Zadajte svoje priezvisko"
                         autoComplete="family-name"
+                        disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
                 <div>
@@ -1686,6 +1659,7 @@ function App() {
                         placeholder="+421901234567"
                         pattern="^\+\d+$"
                         title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                        disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
                 <p className="text-gray-600 text-sm mt-4">
@@ -1704,6 +1678,7 @@ function App() {
                         required
                         placeholder="Zadajte svoju e-mailovú adresu"
                         autoComplete="email"
+                        disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
                 <p className="text-gray-600 text-sm mt-4">
@@ -1721,6 +1696,7 @@ function App() {
                     autoComplete="new-password"
                     showPassword={showPasswordReg}
                     toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+                    disabled={loading || !!message} // Disable if loading or message is shown
                 />
                 <PasswordInput
                     id="reg-confirm-password"
@@ -1734,11 +1710,12 @@ function App() {
                     autoComplete="new-password"
                     showPassword={showConfirmPasswordReg}
                     toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+                    disabled={loading || !!message} // Disable if loading or message is shown
                 />
                 <button
                     type="submit"
                     className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
-                    disabled={loading}
+                    disabled={loading || !!message} // Disable button if loading or message is shown
                 >
                     {loading ? 'Registrujem...' : 'Registrovať sa'}
                 </button>
