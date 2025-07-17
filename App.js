@@ -173,6 +173,10 @@ function App() {
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
   const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje posledné zobrazené upozornenie
 
+  // Stavy pre odosielanie upozornení
+  const [notificationRecipient, setNotificationRecipient] = React.useState('all-admins');
+  const [notificationMessageText, setNotificationMessageText] = React.useState('');
+
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false; // Počkajte, kým sa načítajú nastavenia
@@ -443,25 +447,32 @@ function App() {
             ...doc.data()
           }));
 
+          // Filter notifications that are relevant to the current user (either general or recipient)
+          const relevantNotifications = allFetchedNotifications.filter(notification => {
+            const isGeneral = !notification.recipientIds || notification.recipientIds.length === 0;
+            const isRecipient = notification.recipientIds && notification.recipientIds.includes(user.uid);
+            return isGeneral || isRecipient;
+          });
+
           // Filter notifications for the list view (only by dismissedBy)
-          setAdminNotifications(allFetchedNotifications.filter(notification => {
+          setAdminNotifications(relevantNotifications.filter(notification => {
             return !notification.dismissedBy || !notification.dismissedBy.includes(user.uid);
           }));
 
-          if (allFetchedNotifications.length > 0) {
-            const latestNotification = allFetchedNotifications[0]; // Get the very latest one
+          if (relevantNotifications.length > 0) {
+            const latestRelevantNotification = relevantNotifications[0]; // Get the very latest relevant one
             // Check if this latest notification has already been seen by the current user
-            const hasBeenSeenByCurrentUser = latestNotification.seenBy && latestNotification.seenBy.includes(user.uid);
+            const hasBeenSeenByCurrentUser = latestRelevantNotification.seenBy && latestRelevantNotification.seenBy.includes(user.uid);
 
             // Show the modal only if the user has displayNotifications enabled,
             // it's a new notification, AND it hasn't been seen by the current user yet.
-            if (latestNotification.id !== lastShownNotificationId && user?.displayNotifications && !hasBeenSeenByCurrentUser) {
-              setAdminNotificationMessage(latestNotification.message);
+            if (latestRelevantNotification.id !== lastShownNotificationId && user?.displayNotifications && !hasBeenSeenByCurrentUser) {
+              setAdminNotificationMessage(latestRelevantNotification.message);
               setShowAdminNotificationModal(true);
-              setLastShownNotificationId(latestNotification.id);
+              setLastShownNotificationId(latestRelevantNotification.id);
 
               // Mark this notification as seen by the current user in Firestore
-              const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestNotification.id);
+              const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestRelevantNotification.id);
               notificationRef.update({
                 seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
               }).catch(e => console.error("Error marking notification as seen:", e));
@@ -1304,6 +1315,58 @@ function App() {
     }
   };
 
+  // Funkcia na odoslanie upozornenia iným administrátorom
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    if (!db || !user || !isAdmin) {
+      setError("Nemáte oprávnenie na odoslanie upozornenia.");
+      return;
+    }
+    if (!notificationMessageText.trim()) {
+      setError("Správa upozornenia nemôže byť prázdna.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      let recipients = [];
+      if (notificationRecipient === 'all-admins') {
+        recipients = allUsersData
+          .filter(u => u.role === 'admin' && u.uid !== user.uid) // Všetci admini okrem seba
+          .map(u => u.uid);
+      } else {
+        recipients = [notificationRecipient]; // Konkrétny administrátor
+      }
+
+      if (recipients.length === 0) {
+        setError("Žiadni príjemcovia upozornenia. Ak chcete poslať všetkým, uistite sa, že existujú ďalší administrátori.");
+        setLoading(false);
+        return;
+      }
+
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
+        message: notificationMessageText.trim(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        senderId: user.uid,
+        senderName: user.displayName || user.email,
+        recipientIds: recipients, // Pole UID príjemcov
+        seenBy: [], // Inicializované prázdne pole
+        dismissedBy: [] // Inicializované prázdne pole
+      });
+
+      setAdminNotificationMessage("Upozornenie bolo úspešne odoslané!");
+      setShowAdminNotificationModal(true);
+      setNotificationMessageText(''); // Vyčistiť pole správy
+      setNotificationRecipient('all-admins'); // Resetovať výber príjemcu
+    } catch (e) {
+      console.error("Chyba pri odosielaní upozornenia:", e);
+      setError(`Chyba pri odosielaní upozornenia: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
@@ -1726,6 +1789,9 @@ function App() {
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     const isEditAllowed = !editEnd || now <= editEnd;
 
+    // Filter pre administrátorov, ktorí sú aktívni a nie sú aktuálnym používateľom
+    const otherAdmins = allUsersData.filter(u => u.role === 'admin' && u.approved && u.uid !== user.uid);
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
@@ -1826,6 +1892,20 @@ function App() {
                       }`}
                     >
                       Nastavenia turnaja
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('send-notification'); // Nová záložka
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'send-notification' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Poslať upozornenie
                     </button>
                   </li>
                 )}
@@ -2188,6 +2268,53 @@ function App() {
               </form>
             )}
 
+            {/* Nová sekcia pre odosielanie upozornení administrátorom */}
+            {profileView === 'send-notification' && isAdmin && (
+              <form onSubmit={handleSendNotification} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Poslať upozornenie</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="notification-recipient">
+                    Vyberte príjemcu
+                  </label>
+                  <select
+                    id="notification-recipient"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={notificationRecipient}
+                    onChange={(e) => setNotificationRecipient(e.target.value)}
+                    disabled={loading}
+                  >
+                    <option value="all-admins">Všetci administrátori</option>
+                    {otherAdmins.map(admin => (
+                      <option key={admin.uid} value={admin.uid}>
+                        {admin.displayName || admin.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="notification-message">
+                    Text správy
+                  </label>
+                  <textarea
+                    id="notification-message"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 h-32 resize-y"
+                    value={notificationMessageText}
+                    onChange={(e) => setNotificationMessageText(e.target.value)}
+                    placeholder="Zadajte text upozornenia..."
+                    required
+                    disabled={loading}
+                  ></textarea>
+                </div>
+                <button
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Odosielam...' : 'Odoslať upozornenie'}
+                </button>
+              </form>
+            )}
+
             {/* Nová sekcia pre osobné nastavenia administrátora */}
             {profileView === 'my-settings' && isAdmin && (
               <div className="space-y-4 border-t pt-4 mt-4">
@@ -2238,6 +2365,11 @@ function App() {
                             <p className="text-xs text-gray-500">
                               {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
                             </p>
+                            {notification.senderName && (
+                              <p className="text-xs text-gray-500">
+                                Od: {notification.senderName}
+                              </p>
+                            )}
                           </div>
                           <button
                             onClick={() => dismissNotification(notification.id)}
