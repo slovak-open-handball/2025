@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrácia administrátora - Slovak Open Handball</title>
+    <title>Registrácia administrátora</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,6 +25,8 @@
     <!-- React a ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone pre preklad JSX v prehliadači - ZNOVU PRIDANÉ -->
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- reCAPTCHA v3 script - DÔLEŽITÉ: Použite váš skutočný SITE KEY v parametri render! -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa" async defer></script>
 </head>
@@ -32,9 +34,9 @@
     <div id="header-placeholder"></div> <!-- Placeholder pre hlavičku -->
     <div id="root"></div>
 
-    <!-- Načítanie App.js ako modulu -->
-    <script type="module" src="App.js"></script>
-    <script type="module">
+    <!-- Načítanie App.js s type="text/babel" pre preklad JSX -->
+    <script type="text/babel" src="App.js"></script>
+    <script type="text/javascript"> <!-- Zmenené späť na text/javascript -->
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
             try {
