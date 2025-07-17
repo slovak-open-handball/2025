@@ -660,24 +660,37 @@ function App() {
         console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
 
-      await auth.signOut();
-
-      // Zmena správy a odloženie presmerovania
-      setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
-      setError('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setFirstName('');
-      setLastName('');
-      setContactPhoneNumber('');
-      
-      setLoading(false); // Skryť loading indikátor, aby bola správa viditeľná
-
-      // Presmerovanie po 10 sekundách
-      setTimeout(() => {
-        window.location.href = 'login.html'; 
-      }, 10000); // 10 sekúnd
+      // Ak je to registrácia administrátora, odhlásime ho a presmerujeme na login.html
+      if (isAdminRegistration) {
+        await auth.signOut();
+        setMessage(`Ďakujeme za registráciu Vášho administrátorského účtu. Váš účet čaká na schválenie iným administrátorom.`);
+        setError('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setFirstName('');
+        setLastName('');
+        setContactPhoneNumber('');
+        setLoading(false);
+        setTimeout(() => {
+          window.location.href = 'login.html'; 
+        }, 10000); // 10 sekúnd
+      } else {
+        // Pre bežnú registráciu zostáva pôvodné správanie
+        await auth.signOut();
+        setMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
+        setError('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setFirstName('');
+        setLastName('');
+        setContactPhoneNumber('');
+        setLoading(false);
+        setTimeout(() => {
+          window.location.href = 'login.html'; 
+        }, 10000); // 10 sekúnd
+      }
 
     } catch (e) {
       console.error("Chyba pri registrácii:", e);
@@ -722,7 +735,8 @@ function App() {
       const userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
-        setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
+        // Zmenená chybová správa
+        setError("Účet čaká na schválenie iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
@@ -733,7 +747,8 @@ function App() {
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
       if (userData.role === 'admin' && userData.approved === false) { 
-        setError("Váš administrátorský účet je neaktívny alebo čaká na schválenie iným administrátorom.");
+        // Zmenená chybová správa
+        setError("Účet čaká na schválenie iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
@@ -1560,7 +1575,7 @@ function App() {
     }
 
     // Podmienka pre zobrazenie správy po registrácii
-    if (message && currentPath === 'register.html') {
+    if (message && (currentPath === 'register.html' || currentPath === 'admin-register.html')) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
           <div className="w-full max-w-md mt-20 mb-10 p-4">
