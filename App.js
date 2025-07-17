@@ -1064,7 +1064,7 @@ function App() {
             newPhoneNumber: newContactPhoneNumber,
           }
         });
-        console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
+        console.log("Admin upozornenie odoslaná pre zmenu telefónneho čísla.");
       }
 
       setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); // Používame admin notifikáciu pre pop-up
@@ -1593,7 +1593,7 @@ function App() {
                   <span style={{ whiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
                   </span>{" "}
-                  <span style={{ whiteWhiteSpace: 'nowrap' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>
                     {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
                   </span>
                 </p>
@@ -2511,4 +2511,6 @@ function App() {
   return null;
 }
 
-ReactDOM.render(<App />, document.getElementById('root'));
+window.onload = function() {
+  ReactDOM.render(<App />, document.getElementById('root'));
+};
