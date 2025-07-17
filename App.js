@@ -806,7 +806,7 @@ function App() {
         setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
         await auth.signOut(); 
         setLoading(false);
-        clearMessages();
+        // clearMessages(); // Removed as per request for persistent error
         return;
       }
 
@@ -814,10 +814,10 @@ function App() {
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
       if (userData.role === 'admin' && userData.approved === false) { 
-        setError("Váš administrátorský účet je neaktívny alebo čaká na schválenie iným administrátorom.");
+        setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom."); // Updated message
         await auth.signOut(); 
         setLoading(false);
-        clearMessages();
+        // clearMessages(); // Removed as per request for persistent error
         return;
       }
 
