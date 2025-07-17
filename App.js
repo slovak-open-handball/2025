@@ -10,7 +10,7 @@ const firebaseConfig = { // Globálne definované
 const initialAuthToken = null; // Globálne definované
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -49,11 +49,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       >
         {showPassword ? EyeOffIcon : EyeIcon}
       </button>
-      {description && ( // Render description if provided
-        <p className="text-gray-600 text-sm -mt-2">
-          {description}
-        </p>
-      )}
     </div>
   );
 }
@@ -112,7 +107,6 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  // UPDATED: Zmenená URL adresa pre Google Apps Script
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
@@ -660,7 +654,7 @@ function App() {
     
     // Set the specific message for admin registration immediately
     if (isAdminRegistration) {
-      setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
+      setMessage(`Administrátorský účet pre ${email} sa registruje. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
     } else {
       // For regular users, keep message empty for now, so the generic "Načítava sa..." from the button or general loading screen applies.
       setMessage(''); 
@@ -715,20 +709,14 @@ function App() {
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // VRÁTENÉ: Používame no-cors pre Apps Script
+            mode: 'no-cors', 
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
-          // ZMENA: Pridanie try-catch pre response.json()
-          try {
-            const responseData = await response.json(); // Toto zlyhá pri no-cors
-            console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", responseData); 
-          } catch (jsonError) {
-            console.warn("Nepodarilo sa parsovať JSON odpoveď z Apps Scriptu (očakávané s 'no-cors'):", jsonError);
-          }
+          console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", response); // Log the response
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script:", emailError);
         }
@@ -856,20 +844,14 @@ function App() {
           console.log("Odosielam dáta na Apps Script (pripomienka schválenia admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // VRÁTENÉ: Používame no-cors pre Apps Script
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          // ZMENA: Pridanie try-catch pre response.json()
-          try {
-            const responseData = await response.json(); // Toto zlyhá pri no-cors
-            console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", responseData);
-          } catch (jsonError) {
-            console.warn("Nepodarilo sa parsovať JSON odpoveď z Apps Scriptu (očakávané s 'no-cors'):", jsonError);
-          }
+          console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", response);
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script:", emailError);
         }
@@ -1667,65 +1649,35 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
-                {/* Conditional rendering for email and phone number based on registration type */}
-                {is_admin_register_page ? (
-                    // Admin registration: only email
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
-                        <input
-                            type="email"
-                            id="reg-email"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="Zadajte svoju e-mailovú adresu"
-                            autoComplete="email"
-                            disabled={loading || !!message}
-                        />
-                    </div>
-                ) : (
-                    // Regular registration: phone number then email
-                    <>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
-                            <input
-                                type="tel"
-                                id="reg-phone-number"
-                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                value={contactPhoneNumber}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    const strictPhoneRegex = /^\+\d*$/;
-                                    if (value === '' || strictPhoneRegex.test(value)) {
-                                        setContactPhoneNumber(value);
-                                    }
-                                }}
-                                required
-                                placeholder="+421901234567"
-                                pattern="^\+\d+$"
-                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                                disabled={loading || !!message}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa kontaktnej osoby</label>
-                            <input
-                                type="email"
-                                id="reg-email"
-                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                placeholder="Zadajte svoju e-mailovú adresu"
-                                autoComplete="email"
-                                disabled={loading || !!message}
-                            />
-                        </div>
-                        <p className="text-gray-600 text-sm mt-4">
-                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                        </p>
-                    </>
+                {/* Podmienene nezobrazovať telefónne číslo pre admin registráciu */}
+                {!is_admin_register_page && (
+                  <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                      <input
+                          type="tel"
+                          id="reg-phone-number"
+                          className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                          value={contactPhoneNumber}
+                          onChange={(e) => {
+                              const value = e.target.value;
+                              const strictPhoneRegex = /^\+\d*$/;
+                              if (value === '' || strictPhoneRegex.test(value)) {
+                                  setContactPhoneNumber(value);
+                              }
+                          }}
+                          required
+                          placeholder="+421901234567"
+                          pattern="^\+\d+$"
+                          title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                          disabled={loading || !!message} // Disable if loading or message is shown
+                      />
+                  </div>
+                )}
+                {/* Podmienene nezobrazovať pomocný text pod telefónnym číslom */}
+                {!is_admin_register_page && (
+                  <p className="text-gray-600 text-sm mt-4">
+                      E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                  </p>
                 )}
                 <PasswordInput
                     id="reg-password"
@@ -1740,17 +1692,16 @@ function App() {
                     showPassword={showPasswordReg}
                     toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
                     disabled={loading || !!message} // Disable if loading or message is shown
-                    description={
-                      <>
-                        Heslo musí obsahovať:
-                        <ul className="list-disc list-inside ml-4">
-                            <li>aspoň jedno malé písmeno,</li>
-                            <li>aspoň jedno veľké písmeno,</li>
-                            <li>aspoň jednu číslicu.</li>
-                        </ul>
-                      </>
-                    }
                 />
+                {/* Text s požiadavkami na heslo */}
+                <p className="text-gray-600 text-sm -mt-2">
+                    Heslo musí obsahovať:
+                    <ul className="list-disc list-inside ml-4">
+                        <li>aspoň jedno malé písmeno,</li>
+                        <li>aspoň jedno veľké písmeno,</li>
+                        <li>aspoň jednu číslicu.</li>
+                    </ul>
+                </p>
                 <PasswordInput
                     id="reg-confirm-password"
                     label="Potvrďte heslo"
