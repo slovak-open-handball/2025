@@ -504,7 +504,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
+        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
         setLoading(false);
       });
     } else {
@@ -818,7 +818,8 @@ function App() {
 
       // Zmena hesla sa vykonáva na objekte currentUserForReauth
       await currentUserForReauth.updatePassword(newPassword);
-      setMessage("Heslo úspešne zmenené!");
+      setAdminNotificationMessage("Heslo úspešne zmenené!"); // Používame admin notifikáciu pre pop-up
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
       setError('');
       setNewPassword('');
       setNewConfirmPassword('');
@@ -834,7 +835,7 @@ function App() {
       }
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -914,7 +915,8 @@ function App() {
         console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
 
-      setMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName);
+      setAdminNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); // Používame admin notifikáciu pre pop-up
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
       setError('');
       setNewFirstName('');
       setNewLastName('');
@@ -936,7 +938,7 @@ function App() {
       }
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1001,7 +1003,8 @@ function App() {
         console.log("Admin upozornenie odoslané pre zmenu telefónneho čísla.");
       }
 
-      setMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber);
+      setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); // Používame admin notifikáciu pre pop-up
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
@@ -1017,7 +1020,7 @@ function App() {
       }
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1031,7 +1034,7 @@ function App() {
 
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
 
     // Konvertovať dátumy na Date objekty pre validáciu
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -1064,13 +1067,14 @@ function App() {
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
-        setMessage("Nastavenia úspešne uložené!");
+        setAdminNotificationMessage("Nastavenia úspešne uložené!"); // Používame admin notifikáciu pre pop-up
+        setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
         console.error("Chyba pri ukladaní nastavení:", e);
         setError(`Chyba pri ukladaní nastavení: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1093,11 +1097,12 @@ function App() {
 
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       // Odstránenie používateľa z Firestore databázy
       await db.collection('users').doc(userToDelete.uid).delete();
-      setMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
+      setAdminNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
       
       closeDeleteConfirmationModal();
       // Otvorenie Firebase konzoly v novom okne pre manuálne odstránenie z Authentication
@@ -1108,7 +1113,7 @@ function App() {
       setError(`Chyba pri odstraňovaní používateľa: ${e.message}. Uistite sa, že máte dostatočné Firebase Security Rules.`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1132,7 +1137,7 @@ function App() {
 
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       let updateData = { role: newRole };
 
@@ -1144,14 +1149,15 @@ function App() {
       }
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
-      setMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
+      setAdminNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
       setError(`Chyba pri aktualizácii roly: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1163,16 +1169,17 @@ function App() {
 
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
-      setMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
+      setAdminNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1184,14 +1191,15 @@ function App() {
     }
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
 
     try {
       const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
       const notificationDoc = await notificationRef.get();
 
       if (!notificationDoc.exists) {
-        setMessage("Upozornenie už neexistuje.");
+        setAdminNotificationMessage("Upozornenie už neexistuje.");
+        setShowAdminNotificationModal(true); // Zobraziť pop-up
         setLoading(false);
         return;
       }
@@ -1223,21 +1231,23 @@ function App() {
       if (allAdminsDismissed) {
         // If all admins have dismissed it, delete the notification
         await notificationRef.delete();
-        setMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
+        setAdminNotificationMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
+        setShowAdminNotificationModal(true); // Zobraziť pop-up
       } else {
         // Otherwise, just update the dismissedBy and seenBy arrays
         await notificationRef.update({ 
-          dismissedBy: dismissedBy,
-          seenBy: seenBy // Update seenBy array
+          dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid), // Používame arrayUnion pre istotu
+          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Používame arrayUnion pre istotu
         });
-        setMessage("Upozornenie bolo vymazané z vášho zoznamu.");
+        setAdminNotificationMessage("Upozornenie bolo vymazané z vášho zoznamu.");
+        setShowAdminNotificationModal(true); // Zobraziť pop-up
       }
     } catch (e) {
       console.error("Chyba pri mazaní upozornenia:", e);
       setError(`Chyba pri mazaní upozornenia: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1249,20 +1259,21 @@ function App() {
     }
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
     try {
       // Iterate through currently displayed notifications and dismiss them one by one
       // This will trigger the logic in dismissNotification for each
       for (const notification of adminNotifications) {
         await dismissNotification(notification.id);
       }
-      setMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
+      setAdminNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1274,7 +1285,7 @@ function App() {
     }
     setLoading(true);
     setError('');
-    setMessage('');
+    // setMessage(''); // Už sa nepoužíva pre pop-up
     const newDisplayValue = e.target.checked;
     try {
       await db.collection('users').doc(user.uid).update({
@@ -1282,13 +1293,14 @@ function App() {
       });
       // Update the user state immediately to reflect the change
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
-      setMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
+      setAdminNotificationMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
+      setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri zmene nastavenia notifikácií:", e);
       setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
     } finally {
       setLoading(false);
-      clearMessages();
+      // clearMessages(); // Odstránené, pretože modal má vlastný timeout
     }
   };
 
@@ -1850,11 +1862,7 @@ function App() {
           </div>
 
           <div className="flex-grow ml-[287px] p-8 bg-white rounded-lg shadow-xl overflow-x-auto overflow-y-auto mr-4">
-            {message && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-            )}
+            {/* Správy už nebudú zobrazené ako statický banner, ale cez NotificationModal */}
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
                 {error}
