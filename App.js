@@ -10,7 +10,7 @@ const firebaseConfig = { // Globálne definované
 const initialAuthToken = null; // Globálne definované
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -49,6 +49,11 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       >
         {showPassword ? EyeOffIcon : EyeIcon}
       </button>
+      {description && ( // Render description if provided
+        <p className="text-gray-600 text-sm -mt-2">
+          {description}
+        </p>
+      )}
     </div>
   );
 }
@@ -107,7 +112,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVJJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -1649,6 +1654,21 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
+                {/* Email input field - always visible for both registration types */}
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
+                    <input
+                        type="email"
+                        id="reg-email"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder="Zadajte svoju e-mailovú adresu"
+                        autoComplete="email"
+                        disabled={loading || !!message} // Disable if loading or message is shown
+                    />
+                </div>
                 {/* Podmienene nezobrazovať telefónne číslo pre admin registráciu */}
                 {!is_admin_register_page && (
                   <div>
@@ -1692,16 +1712,17 @@ function App() {
                     showPassword={showPasswordReg}
                     toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
                     disabled={loading || !!message} // Disable if loading or message is shown
+                    description={
+                      <>
+                        Heslo musí obsahovať:
+                        <ul className="list-disc list-inside ml-4">
+                            <li>aspoň jedno malé písmeno,</li>
+                            <li>aspoň jedno veľké písmeno,</li>
+                            <li>aspoň jednu číslicu.</li>
+                        </ul>
+                      </>
+                    }
                 />
-                {/* Text s požiadavkami na heslo */}
-                <p className="text-gray-600 text-sm -mt-2">
-                    Heslo musí obsahovať:
-                    <ul className="list-disc list-inside ml-4">
-                        <li>aspoň jedno malé písmeno,</li>
-                        <li>aspoň jedno veľké písmeno,</li>
-                        <li>aspoň jednu číslicu.</li>
-                    </ul>
-                </p>
                 <PasswordInput
                     id="reg-confirm-password"
                     label="Potvrďte heslo"
