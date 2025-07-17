@@ -617,7 +617,7 @@ function App() {
       return;
     }
     // Zmenená podmienka: contactPhoneNumber je vždy vyžadované
-    if (!email || !password || !confirmPassword || !firstName || !lastName || !contactPhoneNumber) {
+    if (!email || !password || !confirmPassword || !firstName || !lastName) {
       setError("Prosím, vyplňte všetky polia.");
       return;
     }
@@ -632,12 +632,15 @@ function App() {
       return;
     }
 
-    // Validácia telefónneho čísla sa teraz aplikuje vždy
-    const phoneRegex = /^\+\d+$/;
-    if (!phoneRegex.test(contactPhoneNumber)) {
-        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-        return;
+    // Validácia telefónneho čísla sa teraz aplikuje iba pre bežnú registráciu
+    if (!isAdminRegistration) {
+      const phoneRegex = /^\+\d+$/;
+      if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
+          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+          return;
+      }
     }
+
 
     const recaptchaToken = await getRecaptchaToken('register');
     if (!recaptchaToken) {
@@ -677,7 +680,7 @@ function App() {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber,
+        contactPhoneNumber: contactPhoneNumber, // Save even if empty for admin, to keep consistent schema
         displayName: `${firstName} ${lastName}`,
         role: initialUserRole, // Použijeme počiatočnú rolu
         approved: initialIsApproved, // Použijeme počiatočný stav schválenia
