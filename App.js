@@ -614,7 +614,8 @@ function App() {
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
       // ZMENA: Nastavíme approved: true pre administrátorov aj bežných používateľov
       const isApproved = true; 
-      await db.collection('users').doc(userCredential.user.uid).set({
+
+      const userDataToSave = {
         uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
@@ -625,8 +626,12 @@ function App() {
         approved: isApproved, 
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
-      });
-      console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
+      };
+
+      console.log("Attempting to save user to Firestore with data:", userDataToSave); // Detailed log
+
+      await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+      console.log(`Firestore: Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený.`);
 
       // Pokus o odoslanie e-mailu cez Apps Script
       try {
