@@ -267,12 +267,19 @@ function App() {
               setUser(prevUser => ({
                 ...prevUser,
                 ...userData,
-                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
+                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
+                // Nová vlastnosť pre nastavenie notifikácií, defaultne true
+                displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
               }));
 
             } else {
               console.log("onAuthStateChanged: Dokument používateľa vo Firestore neexistuje.");
               setIsAdmin(false);
+              // Nastavíme defaultnú hodnotu pre displayNotifications aj pre nových používateľov
+              setUser(prevUser => ({
+                ...prevUser,
+                displayNotifications: true
+              }));
             }
           } catch (e) {
             console.error("Chyba pri načítaní roly používateľa z Firestore:", e);
@@ -447,7 +454,8 @@ function App() {
 
           if (filteredNotifications.length > 0) {
             const latestNotification = filteredNotifications[0];
-            if (latestNotification.id !== lastShownNotificationId) {
+            // Show the modal only if the user has displayNotifications enabled
+            if (latestNotification.id !== lastShownNotificationId && user?.displayNotifications) {
               setAdminNotificationMessage(latestNotification.message);
               setShowAdminNotificationModal(true);
               setLastShownNotificationId(latestNotification.id);
@@ -474,7 +482,7 @@ function App() {
         console.log("Admin: Unsubscribed from notifications listener.");
       }
     };
-  }, [db, isAdmin, appId, user, lastShownNotificationId]); // Add user to dependencies
+  }, [db, isAdmin, appId, user, lastShownNotificationId, user?.displayNotifications]); // Add user?.displayNotifications to dependencies
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -608,7 +616,8 @@ function App() {
         displayName: `${firstName} ${lastName}`,
         role: userRole,
         approved: isApproved, 
-        registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+        registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+        displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
       });
       console.log(`Používateľ ${email} s rolou '${userRole}' a schválením '${isApproved}' bol uložený do Firestore.`);
 
@@ -717,7 +726,8 @@ function App() {
       setUser(prevUser => ({
         ...prevUser,
         ...userData,
-        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email
+        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
+        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true // Načítanie nastavenia notifikácií
       }));
 
 
@@ -1242,6 +1252,31 @@ function App() {
     }
   };
 
+  // Nová funkcia na prepínanie zobrazovania notifikácií na obrazovke
+  const handleToggleDisplayNotifications = async (e) => {
+    if (!db || !user) {
+      setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setMessage('');
+    const newDisplayValue = e.target.checked;
+    try {
+      await db.collection('users').doc(user.uid).update({
+        displayNotifications: newDisplayValue
+      });
+      setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
+      setMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
+    } catch (e) {
+      console.error("Chyba pri zmene nastavenia notifikácií:", e);
+      setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
 
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
@@ -1671,7 +1706,7 @@ function App() {
         {isAdmin && (
             <NotificationModal
                 message={adminNotificationMessage}
-                isVisible={showAdminNotificationModal}
+                isVisible={showAdminNotificationModal && (user?.displayNotifications ?? true)} // Zobrazí sa len ak admin má povolené
                 onClose={() => setShowAdminNotificationModal(false)}
             />
         )}
@@ -1757,13 +1792,27 @@ function App() {
                   <li>
                     <button
                       onClick={() => {
-                        changeProfileView('settings');
+                        changeProfileView('tournament-settings'); // Zmenené z 'settings'
                       }}
                       className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                        profileView === 'settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                        profileView === 'tournament-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      Nastavenia
+                      Nastavenia turnaja
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('my-settings'); // Nová záložka
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Moje nastavenia
                     </button>
                   </li>
                 )}
@@ -2067,9 +2116,9 @@ function App() {
             )}
 
             {/* Sekcia nastavení pre administrátora */}
-            {profileView === 'settings' && isAdmin && (
+            {profileView === 'tournament-settings' && isAdmin && ( // Zmenené z 'settings'
               <form onSubmit={handleSaveSettings} className="space-y-4 border-t pt-4 mt-4">
-                <h2 className="text-xl font-semibold text-gray-800">Nastavenia systému</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Nastavenia turnaja</h2>
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-start-date">
                     Začiatok registrácie (dátum a čas)
@@ -2114,6 +2163,27 @@ function App() {
                   {loading ? 'Ukladám...' : 'Uložiť nastavenia'}
                 </button>
               </form>
+            )}
+
+            {/* Nová sekcia pre osobné nastavenia administrátora */}
+            {profileView === 'my-settings' && isAdmin && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Moje nastavenia</h2>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="toggle-notifications"
+                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    checked={user?.displayNotifications ?? true} // Default to true if undefined
+                    onChange={handleToggleDisplayNotifications}
+                    disabled={loading}
+                  />
+                  <label htmlFor="toggle-notifications" className="text-gray-700">Zobrazovať upozornenia na hornej časti obrazovky</label>
+                </div>
+                <p className="text-gray-600 text-sm mt-2">
+                    Upozornenia v zozname (sekcia "Upozornenia") sa budú naďalej zobrazovať, kým ich individuálne nevymažete.
+                </p>
+              </div>
             )}
 
             {profileView === 'notifications' && isAdmin && (
