@@ -278,8 +278,7 @@ function App() {
                     displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
                   }));
                   setIsRoleLoaded(true); // Rola je načítaná
-                  unsubscribeUserDoc(); // Odhlásiť sa po úspešnom načítaní
-
+                  // Pôvodné: unsubscribeUserDoc(); // <--- TENTO RIADOK BOL ODSTRÁNENÝ
                 } else {
                   console.log("onAuthStateChanged (onSnapshot): Dokument používateľa vo Firestore neexistuje pre UID:", currentUser.uid);
                   setIsAdmin(false);
@@ -287,10 +286,9 @@ function App() {
                     ...prevUser,
                     displayNotifications: true
                   }));
-                  // ZMENA: Pridáme malú pauzu, ak dokument neexistuje, pre prípad, že sa ešte len propaguje
-                  setTimeout(() => {
-                      setIsRoleLoaded(true); // Nastavíme, že rola je načítaná (aj keď dokument neexistuje)
-                  }, 500); // 500ms pauza
+                  // Ak dokument neexistuje, stále chceme indikovať, že načítanie roly je dokončené.
+                  // UI by potom malo elegantne spracovať chýbajúce používateľské dáta.
+                  setIsRoleLoaded(true); 
                 }
               }, error => {
                 console.error("Chyba pri načítaní roly používateľa z Firestore (onSnapshot) pre UID:", currentUser.uid, error);
