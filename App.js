@@ -265,6 +265,16 @@ function App() {
             if (userDoc.exists) {
               const userData = userDoc.data();
               console.log("onAuthStateChanged: Dáta používateľa z Firestore:", userData);
+              
+              // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený, odhláste ho
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("onAuthStateChanged: Neschválený administrátor, odhlasujem a presmerovávam na login.html.");
+                  await authInstance.signOut();
+                  // Okamžité presmerovanie, aby sa zabránilo načítaniu obsahu pre prihláseného používateľa
+                  window.location.href = 'login.html'; 
+                  return; // Zastaví ďalšie spracovanie tohto onAuthStateChanged cyklu
+              }
+
               setIsAdmin(userData.role === 'admin');
               console.log("onAuthStateChanged: isAdmin nastavené na:", userData.role === 'admin');
               
@@ -666,6 +676,7 @@ function App() {
       // Ak je to registrácia administrátora, odhlásime ho a presmerujeme na login.html
       if (isAdminRegistration) {
         await auth.signOut();
+        console.log("After signOut in handleRegister, current user:", auth.currentUser); // Pridané pre diagnostiku
         setMessage(`Ďakujeme za registráciu Vášho administrátorského účtu. Váš účet čaká na schválenie iným administrátorom.`);
         setError('');
         setEmail('');
@@ -1797,6 +1808,9 @@ function App() {
   }
 
   if (currentPath === 'logged-in.html') {
+    // Táto kontrola je teraz redundantná, pretože onAuthStateChanged by mal odhlásiť neschválených adminov
+    // a presmerovať ich na login.html ešte predtým, než sa sem dostanú.
+    // Ponechané ako záložný mechanizmus, ale hlavná logika je v onAuthStateChanged.
     if (!user) {
       window.location.href = 'login.html';
       return null;
