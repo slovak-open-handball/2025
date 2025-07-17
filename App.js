@@ -443,22 +443,28 @@ function App() {
             ...doc.data()
           }));
 
-          // Client-side filtering: Only show notifications not dismissed by current user
-          const filteredNotifications = allFetchedNotifications.filter(notification => {
-            // If dismissedBy array doesn't exist or doesn't contain current user's UID
+          // Filter notifications for the list view (only by dismissedBy)
+          setAdminNotifications(allFetchedNotifications.filter(notification => {
             return !notification.dismissedBy || !notification.dismissedBy.includes(user.uid);
-          });
+          }));
 
-          setAdminNotifications(filteredNotifications);
-          console.log("Admin: Fetched and filtered notifications in real-time:", filteredNotifications);
+          if (allFetchedNotifications.length > 0) {
+            const latestNotification = allFetchedNotifications[0]; // Get the very latest one
+            // Check if this latest notification has already been seen by the current user
+            const hasBeenSeenByCurrentUser = latestNotification.seenBy && latestNotification.seenBy.includes(user.uid);
 
-          if (filteredNotifications.length > 0) {
-            const latestNotification = filteredNotifications[0];
-            // Show the modal only if the user has displayNotifications enabled
-            if (latestNotification.id !== lastShownNotificationId && user?.displayNotifications) {
+            // Show the modal only if the user has displayNotifications enabled,
+            // it's a new notification, AND it hasn't been seen by the current user yet.
+            if (latestNotification.id !== lastShownNotificationId && user?.displayNotifications && !hasBeenSeenByCurrentUser) {
               setAdminNotificationMessage(latestNotification.message);
               setShowAdminNotificationModal(true);
               setLastShownNotificationId(latestNotification.id);
+
+              // Mark this notification as seen by the current user in Firestore
+              const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestNotification.id);
+              notificationRef.update({
+                seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+              }).catch(e => console.error("Error marking notification as seen:", e));
             }
           } else {
             // If no notifications are left after filtering, hide the modal
@@ -1192,10 +1198,15 @@ function App() {
 
       const notificationData = notificationDoc.data();
       let dismissedBy = notificationData.dismissedBy || [];
+      let seenBy = notificationData.seenBy || []; // Get existing seenBy array
 
-      // Add current user's UID if not already present
+      // Add current user's UID to dismissedBy if not already present
       if (!dismissedBy.includes(user.uid)) {
         dismissedBy.push(user.uid);
+      }
+      // Add current user's UID to seenBy if not already present
+      if (!seenBy.includes(user.uid)) {
+        seenBy.push(user.uid);
       }
 
       // Get all active admin UIDs
@@ -1214,8 +1225,11 @@ function App() {
         await notificationRef.delete();
         setMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
       } else {
-        // Otherwise, just update the dismissedBy array
-        await notificationRef.update({ dismissedBy: dismissedBy });
+        // Otherwise, just update the dismissedBy and seenBy arrays
+        await notificationRef.update({ 
+          dismissedBy: dismissedBy,
+          seenBy: seenBy // Update seenBy array
+        });
         setMessage("Upozornenie bolo vymazané z vášho zoznamu.");
       }
     } catch (e) {
@@ -1242,7 +1256,7 @@ function App() {
       for (const notification of adminNotifications) {
         await dismissNotification(notification.id);
       }
-      setMessage("Všetky viditeľné upozornenia boli vymazané z vášho zoznamu.");
+      setMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -1743,7 +1757,7 @@ function App() {
                       changeProfileView('change-name');
                     }}
                     className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                        profileView === 'change-name' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     Zmeniť meno a priezvisko
@@ -2181,7 +2195,13 @@ function App() {
                       onChange={handleToggleDisplayNotifications}
                       disabled={loading}
                     />
-                    <div className="w-11 h-6 bg-red-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    {/* The toggle switch visual */}
+                    <div className={`w-11 h-6 rounded-full peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 transition-colors duration-200 ease-in-out
+                                    ${user?.displayNotifications ? 'bg-green-600' : 'bg-red-600'}`}>
+                      <div className={`after:content-[''] after:absolute after:top-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-200 after:ease-in-out dark:border-gray-600
+                                        ${user?.displayNotifications ? 'after:translate-x-full after:left-[2px]' : 'after:left-[2px]'}`}>
+                      </div>
+                    </div>
                   </label>
                 </div>
                 <p className="text-gray-600 text-sm mt-2">
