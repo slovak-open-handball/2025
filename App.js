@@ -772,25 +772,26 @@ function App() {
       const userDocRef = db.collection('users').doc(currentUser.uid);
       const userDoc = await userDocRef.get();
 
+      // Dôležité: Táto kontrola sa vykoná ihneď po úspešnom prihlásení cez Firebase Auth.
+      // Ak používateľ nie je schválený administrátor, je okamžite odhlásený
+      // a je zobrazená chybová správa, čím sa zabráni presmerovaniu na logged-in.html.
       if (!userDoc.exists) {
-        // Zmenená chybová správa
         setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
-        return;
+        return; // Zastaví ďalšie spracovanie funkcie
       }
 
       const userData = userDoc.data();
       console.log("Login: Používateľské dáta z Firestore:", userData);
 
       if (userData.role === 'admin' && userData.approved === false) { 
-        // Zmenená chybová správa
         setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
-        return;
+        return; // Zastaví ďalšie spracovanie funkcie
       }
 
       setUser(prevUser => ({
