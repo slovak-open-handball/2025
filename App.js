@@ -1443,11 +1443,7 @@ function App() {
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
     const is_admin_register_page = currentPath === 'admin-register.html';
 
-    // Ak je aktuálna stránka admin-register.html, vráťte null, aby sa nič nezobrazilo.
-    if (is_admin_register_page) {
-      return null;
-    }
-
+    // Ak je používateľ už prihlásený, presmerujeme ho na logged-in.html
     if (user) {
       window.location.href = 'logged-in.html';
       return null;
@@ -1474,7 +1470,7 @@ function App() {
                     <span style={{ whiteSpace: 'nowrap' }}>
                       {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
                     </span>{" "}
-                    <span style={{ whiteSpace: 'nowrap' }}>
+                    <span style={{ whiteSpace: 'nowap' }}>
                       {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
                     </span>
                   </p>
@@ -1508,7 +1504,7 @@ function App() {
       );
     }
 
-    // Podmienka pre zobrazenie správy po registrácii - len pre bežných používateľov
+    // Podmienka pre zobrazenie správy po registrácii - pre bežných používateľov
     if (message && currentPath === 'register.html' && !is_admin_register_page) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
@@ -1525,7 +1521,7 @@ function App() {
       );
     }
 
-    // Podmienka pre zobrazenie správy po registrácii - len pre administrátorov (tento blok sa už nevykoná vďaka skorému return pre admin-register.html)
+    // Podmienka pre zobrazenie správy po registrácii - pre administrátorov
     if (message && currentPath === 'admin-register.html' && is_admin_register_page) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
@@ -1679,7 +1675,7 @@ function App() {
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
                 {message}
               </div>
-              <p className="text-lg text-gray-600">Presmerovanie na profilovú stránku...</p>
+              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
             </div>
           </div>
         </div>
