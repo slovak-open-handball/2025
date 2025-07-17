@@ -1390,7 +1390,7 @@ function App() {
       let recipients = [];
       if (notificationRecipient === 'all-admins') {
         recipients = allUsersData
-          .filter(u => u.role === 'admin' && u.uid !== user.uid) // Všetci admini okrem seba
+          .filter(u => u.role === 'admin' && u.approved && u.uid !== user.uid) // Všetci aktívni admini okrem seba
           .map(u => u.uid);
       } else {
         recipients = [notificationRecipient]; // Konkrétny administrátor
