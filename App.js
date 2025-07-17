@@ -247,7 +247,7 @@ function App() {
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
-          setError(`Chyba pri prihlasovaní: ${e.message}`);
+          setError(`Chyba pri prihlasovaní: ${error.message}`);
         }
       };
 
@@ -303,7 +303,7 @@ function App() {
       return () => unsubscribe(); // Vyčistenie listenera
     } catch (e) {
       console.error("Failed to initialize Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
+      setError(`Chyba pri inicializácii Firebase: ${error.message}`);
       setLoading(false);
     }
   }, []); // Prázdne pole závislostí - spustí sa len raz pri mountovaní komponentu
@@ -341,7 +341,7 @@ function App() {
           return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
       } catch (e) {
           console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
-          setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
+          setError(`Chyba pri nastavení listenera pre nastavenia: ${error.message}`);
           setSettingsLoaded(true);
           setLoading(false);
       }
@@ -515,7 +515,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
+        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); 
         setLoading(false);
       });
     } else {
@@ -540,7 +540,7 @@ function App() {
       return token;
     } catch (e) {
       console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
-      setError(`Chyba reCAPTCHA: ${e.message}`);
+      setError(`Chyba reCAPTCHA: ${error.message}`);
       return null;
     }
   };
@@ -701,7 +701,7 @@ function App() {
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
-        setError(`Chyba pri registrácii: ${e.message}`);
+        setError(`Chyba pri registrácii: ${error.message}`);
       }
       setLoading(false); // V prípade chyby sa loading vypne okamžite
       clearMessages(); // A správy sa tiež vyčistia po 5 sekundách
@@ -782,7 +782,7 @@ function App() {
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
-        setError(`Chyba pri prihlasovaní: ${e.message}`);
+        setError(`Chyba pri prihlasovaní: ${error.message}`);
       }
       setLoading(false);
       clearMessages();
@@ -799,7 +799,7 @@ function App() {
       window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri odhlasovaní:", e);
-      setError(`Chyba pri odhlasovaní: ${e.message}`);
+      setError(`Chyba pri odhlasovaní: ${error.message}`);
     } finally {
       setLoading(false);
       clearMessages();
@@ -857,7 +857,7 @@ function App() {
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
       } else {
-        setError(`Chyba pri zmene hesla: ${e.message}`);
+        setError(`Chyba pri zmene hesla: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -960,7 +960,7 @@ function App() {
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
       } else {
-        setError(`Chyba pri zmene mena a priezviska: ${e.message}`);
+        setError(`Chyba pri zmene mena a priezviska: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -1042,7 +1042,7 @@ function App() {
       } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
       } else {
-        setError(`Chyba pri zmene telefónneho čísla: ${e.message}`);
+        setError(`Chyba pri zmene telefónneho čísla: ${error.message}`);
       }
     } finally {
       setLoading(false);
@@ -1097,7 +1097,7 @@ function App() {
         setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
         console.error("Chyba pri ukladaní nastavení:", e);
-        setError(`Chyba pri ukladaní nastavení: ${e.message}`);
+        setError(`Chyba pri ukladaní nastavení: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1136,7 +1136,7 @@ function App() {
 
     } catch (e) {
       console.error("Chyba pri odstraňovaní používateľa z databázy:", e);
-      setError(`Chyba pri odstraňovaní používateľa: ${e.message}. Uistite sa, že máte dostatočné Firebase Security Rules.`);
+      setError(`Chyba pri odstraňovaní používateľa: ${error.message}. Uistite sa, že máte dostatočné Firebase Security Rules.`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1180,7 +1180,7 @@ function App() {
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
-      setError(`Chyba pri aktualizácii roly: ${e.message}`);
+      setError(`Chyba pri aktualizácii roly: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1202,7 +1202,7 @@ function App() {
       setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
-      setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
+      setError(`Chyba pri schvaľovaní používateľa: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1270,7 +1270,7 @@ function App() {
       }
     } catch (e) {
       console.error("Chyba pri mazaní upozornenia:", e);
-      setError(`Chyba pri mazaní upozornenia: ${e.message}`);
+      setError(`Chyba pri mazaní upozornenia: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1296,7 +1296,7 @@ function App() {
       setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
-      setError(`Chyba pri mazaní upozornení: ${e.message}`);
+      setError(`Chyba pri mazaní upozornení: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1323,7 +1323,7 @@ function App() {
       setShowAdminNotificationModal(true); // Zobraziť pop-up
     } catch (e) {
       console.error("Chyba pri zmene nastavenia notifikácií:", e);
-      setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
+      setError(`Chyba pri zmene nastavenia notifikácií: ${error.message}`);
     } finally {
       setLoading(false);
       // clearMessages(); // Odstránené, pretože modal má vlastný timeout
@@ -1376,7 +1376,7 @@ function App() {
       setNotificationRecipient('all-admins'); // Resetovať výber príjemcu
     } catch (e) {
       console.error("Chyba pri odosielaní upozornenia:", e);
-      setError(`Chyba pri odosielaní upozornenia: ${e.message}`);
+      setError(`Chyba pri odosielaní upozornenia: ${error.message}`);
     } finally {
       setLoading(false);
     }
