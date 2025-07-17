@@ -1443,11 +1443,7 @@ function App() {
   if (currentPath === 'register.html' || currentPath === 'admin-register.html') {
     const is_admin_register_page = currentPath === 'admin-register.html';
 
-    // Ak je aktuálna stránka admin-register.html, vráťte null, aby sa nič nezobrazilo.
-    if (is_admin_register_page) {
-      return null;
-    }
-
+    // Ak je používateľ už prihlásený, presmerujte ho na profilovú stránku
     if (user) {
       window.location.href = 'logged-in.html';
       return null;
@@ -1457,7 +1453,8 @@ function App() {
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
 
-    // Ak nie je admin registrácia a registrácia nie je otvorená, zobrazte správu
+    // Zobrazenie správy, ak registrácia nie je otvorená a nie je to admin registrácia
+    // Admin registrácia môže prebiehať nezávisle od dátumov registrácie turnaja
     if (!is_admin_register_page && !isRegistrationOpen) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
@@ -1508,30 +1505,13 @@ function App() {
       );
     }
 
-    // Podmienka pre zobrazenie správy po registrácii - len pre bežných používateľov
-    if (message && currentPath === 'register.html' && !is_admin_register_page) {
+    // Podmienka pre zobrazenie správy po registrácii (pre oba typy registrácií)
+    if (message) {
       return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
           <div className="w-full max-w-md mt-20 mb-10 p-4">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
               <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia úspešná!</h1>
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                {message}
-              </div>
-              <p className="text-lg text-gray-600">Presmerovanie na prihlasovaciu stránku...</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Podmienka pre zobrazenie správy po registrácii - len pre administrátorov (tento blok sa už nevykoná vďaka skorému return pre admin-register.html)
-    if (message && currentPath === 'admin-register.html' && is_admin_register_page) {
-      return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
-          <div className="w-full max-w-md mt-20 mb-10 p-4">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Registrácia administrátora úspešná!</h1>
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
                 {message}
               </div>
