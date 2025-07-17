@@ -112,6 +112,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+  // UPDATED: Zmenená URL adresa pre Google Apps Script
   const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVmJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
 
   const [app, setApp] = React.useState(null);
@@ -659,7 +660,7 @@ function App() {
     
     // Set the specific message for admin registration immediately
     if (isAdminRegistration) {
-      setMessage(`Administrátorský účet pre ${email} sa registruje. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
+      setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
     } else {
       // For regular users, keep message empty for now, so the generic "Načítava sa..." from the button or general loading screen applies.
       setMessage(''); 
@@ -714,14 +715,15 @@ function App() {
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
+            // REMOVED: mode: 'no-cors', // Odstránené pre lepšiu diagnostiku odpovedí
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
-          console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", response); // Log the response
+          // ADDED: Logovanie odpovede z Apps Scriptu
+          console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", await response.json()); 
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script:", emailError);
         }
@@ -849,14 +851,15 @@ function App() {
           console.log("Odosielam dáta na Apps Script (pripomienka schválenia admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            // REMOVED: mode: 'no-cors', // Odstránené pre lepšiu diagnostiku odpovedí
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", response);
+          // ADDED: Logovanie odpovede z Apps Scriptu
+          console.log("Odpoveď z Apps Scriptu (fetch - pripomienka schválenia admina):", await response.json());
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script:", emailError);
         }
