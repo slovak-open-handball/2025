@@ -1,12 +1,5 @@
 import React from 'react';
-// Importujeme celý Firebase objekt, aby sme mohli používať namespaced syntax (Firebase SDK v8)
-// Predpokladá sa, že Firebase SDK (v8) je načítané globálne v index.html
-// napr. <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-// a ďalšie moduly ako auth, firestore:
-// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-// Global variables provided by the Canvas environment - Explicitly set by user
 const appId = 'default-app-id'; 
 const firebaseConfig = {
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -18,7 +11,6 @@ const firebaseConfig = {
 };
 const initialAuthToken = null;
 
-// Komponenta pre vstup hesla s prepínaním viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
