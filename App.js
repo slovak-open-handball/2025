@@ -658,9 +658,11 @@ function App() {
       let initialUserRole = 'user';
       let initialIsApproved = true; // Default for normal users, and initial for admins
 
+      // Ak je to administrátorská registrácia, nastavíme rolu na 'user' a schválenie na 'true'
+      // Neskôr sa to aktualizuje na 'admin' a 'false'
       if (isAdminRegistration) {
-        initialUserRole = 'user'; // Initially register admin as a regular user
-        initialIsApproved = true; // Initially approved
+        initialUserRole = 'user'; 
+        initialIsApproved = true; 
       }
 
       const userDataToSave = {
@@ -670,8 +672,8 @@ function App() {
         lastName: lastName,
         contactPhoneNumber: contactPhoneNumber,
         displayName: `${firstName} ${lastName}`,
-        role: initialUserRole, // Use initial role
-        approved: initialIsApproved, // Use initial approved status
+        role: initialUserRole, // Použijeme počiatočnú rolu
+        approved: initialIsApproved, // Použijeme počiatočný stav schválenia
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true
       };
@@ -682,6 +684,35 @@ function App() {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
 
+        // --- PRESUNUTÁ LOGIKA ODOSIELANIA EMAILU SEM ---
+        // Pokus o odoslanie e-mailu cez Apps Script hneď po uložení počiatočných dát
+        try {
+          const payload = {
+            action: 'sendRegistrationEmail',
+            email: email,
+            password: password, 
+            isAdmin: isAdminRegistration, 
+            firstName: firstName,
+            lastName: lastName,
+            contactPhoneNumber: contactPhoneNumber 
+          };
+          console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+          console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
+          console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail):", response); // Log the response
+        } catch (emailError) {
+          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script:", emailError);
+        }
+        // --- KONIEC PRESUNUTEJ LOGIKY ---
+
+
         // Explicitné načítanie a logovanie dát po úspešnom zápise
         const userDocRef = db.collection('users').doc(userCredential.user.uid);
         let userDocSnapshot = await userDocRef.get();
@@ -691,7 +722,7 @@ function App() {
           console.log("User document not found in Firestore immediately after initial registration (unexpected).");
         }
 
-        // --- NEW LOGIC FOR ADMIN REGISTRATION ---
+        // --- NEW LOGIC FOR ADMIN REGISTRATION (AFTER EMAIL SENT) ---
         if (isAdminRegistration) {
           // Update role to admin and approved to false for admin registrations
           await db.collection('users').doc(userCredential.user.uid).update({
@@ -715,32 +746,6 @@ function App() {
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
         return; // Stop further execution if Firestore save fails
-      }
-
-      // Pokus o odoslanie e-mailu cez Apps Script
-      try {
-        const payload = {
-          action: 'sendRegistrationEmail',
-          email: email,
-          password: password, 
-          isAdmin: isAdminRegistration, 
-          firstName: firstName,
-          lastName: lastName,
-          contactPhoneNumber: contactPhoneNumber 
-        };
-        console.log("Odosielam dáta na Apps Script:", payload); // Log the payload
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors', 
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        console.log("Žiadosť na odoslanie e-mailu odoslaná.");
-        console.log("Odpoveď z Apps Scriptu (fetch):", response); // Log the response
-      } catch (emailError) {
-        console.error("Chyba pri odosielaní e-mailu cez Apps Script:", emailError);
       }
 
       // Set the success message BEFORE signing out or redirecting
