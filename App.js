@@ -268,6 +268,17 @@ function App() {
                 if (docSnapshot.exists) {
                   const userData = docSnapshot.data();
                   console.log("onAuthStateChanged (onSnapshot): Dáta používateľa z Firestore:", userData);
+                  
+                  // NOVÁ KONTROLA: Ak je admin a approved je false, okamžite odhlásiť
+                  if (userData.role === 'admin' && userData.approved === false && window.location.pathname.split('/').pop() === 'logged-in.html') {
+                    console.log("Admin s approved: false je prihlásený. Okamžité odhlásenie.");
+                    authInstance.signOut().then(() => {
+                      setUser(null);
+                      window.location.href = 'login.html';
+                    }).catch(e => console.error("Chyba pri odhlasovaní neoprávneného admina:", e));
+                    return; // Zastaviť ďalšie spracovanie, kým sa používateľ odhlási
+                  }
+
                   setIsAdmin(userData.role === 'admin');
                   console.log("onAuthStateChanged (onSnapshot): isAdmin nastavené na:", userData.role === 'admin');
                   
