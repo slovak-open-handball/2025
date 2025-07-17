@@ -3,10 +3,17 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 
-// Global variables provided by the Canvas environment
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// Global variables provided by the Canvas environment - Explicitly set by user
+const appId = 'default-app-id'; 
+const firebaseConfig = {
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+  projectId: "prihlasovanie-4f3f3",
+  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+  messagingSenderId: "26454452024",
+  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+};
+const initialAuthToken = null;
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled }) {
@@ -578,7 +585,7 @@ function App() {
     setLoading(true); // Zobraziť loading indikátor
     try {
       // Changed to Firebase v9 modular syntax
-      const userCredential = await createUserWithEmailWithPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
@@ -1316,7 +1323,7 @@ function App() {
                           <span style={{ whiteSpace: 'nowrap' }}>
                             {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
                           </span>{" "}
-                          <span style={{ whiteWhiteSpace: 'nowrap' }}>
+                          <span style={{ whiteSpace: 'nowrap' }}>
                             {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
                           </span>
                         </p>
