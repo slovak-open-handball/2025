@@ -1,5 +1,5 @@
-const appId = 'default-app-id'; 
-const firebaseConfig = {
+const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Globálne definované
+const firebaseConfig = { // Globálne definované
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
   authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
   projectId: "prihlasovanie-4f3f3",
@@ -7,7 +7,7 @@ const firebaseConfig = {
   messagingSenderId: "26454452024",
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
-const initialAuthToken = null;
+const initialAuthToken = null; // Globálne definované
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut }) {
@@ -33,9 +33,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10"
         value={value}
         onChange={onChange}
-        onCopy={onCopy}
-        onPaste={onPaste}
-        onCut={onCut}
+        onCopy={(e) => e.preventDefault()}
+        onPaste={(e) => e.preventDefault()}
+        onCut={(e) => e.preventDefault()}
         required
         placeholder={placeholder}
         autoComplete={autoComplete}
@@ -421,29 +421,41 @@ function App() {
     };
   }, []); // Bez závislostí, aby sa spustil len raz
 
+  // Updated useEffect for real-time admin notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
-    if (db && isAdmin) {
+    if (db && isAdmin && user) { // Ensure user is available for filtering
       console.log("Admin: Setting up real-time listener for notifications.");
       const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
       unsubscribeNotifications = notificationsCollectionRef
-        .orderBy('timestamp', 'desc') // Zobraziť najnovšie ako prvé
-        .limit(20)
+        .orderBy('timestamp', 'desc')
+        .limit(20) // Still limit fetched docs to 20 for performance
         .onSnapshot(snapshot => {
-          const notificationsList = snapshot.docs.map(doc => ({
+          const allFetchedNotifications = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
-          setAdminNotifications(notificationsList);
-          console.log("Admin: Fetched notifications in real-time:", notificationsList);
 
-          if (notificationsList.length > 0) {
-            const latestNotification = notificationsList[0];
+          // Client-side filtering: Only show notifications not dismissed by current user
+          const filteredNotifications = allFetchedNotifications.filter(notification => {
+            // If dismissedBy array doesn't exist or doesn't contain current user's UID
+            return !notification.dismissedBy || !notification.dismissedBy.includes(user.uid);
+          });
+
+          setAdminNotifications(filteredNotifications);
+          console.log("Admin: Fetched and filtered notifications in real-time:", filteredNotifications);
+
+          if (filteredNotifications.length > 0) {
+            const latestNotification = filteredNotifications[0];
             if (latestNotification.id !== lastShownNotificationId) {
               setAdminNotificationMessage(latestNotification.message);
               setShowAdminNotificationModal(true);
-              setLastShownNotificationId(latestNotification.id); 
+              setLastShownNotificationId(latestNotification.id);
             }
+          } else {
+            // If no notifications are left after filtering, hide the modal
+            setShowAdminNotificationModal(false);
+            setLastShownNotificationId(null); // Reset last shown ID
           }
 
         }, error => {
@@ -452,6 +464,8 @@ function App() {
         });
     } else {
       setAdminNotifications([]);
+      setShowAdminNotificationModal(false); // Hide modal if not admin or not logged in
+      setLastShownNotificationId(null);
     }
 
     return () => {
@@ -460,7 +474,7 @@ function App() {
         console.log("Admin: Unsubscribed from notifications listener.");
       }
     };
-  }, [db, isAdmin, appId, lastShownNotificationId]); // Závisí od db, isAdmin, appId a lastShownNotificationId
+  }, [db, isAdmin, appId, user, lastShownNotificationId]); // Add user to dependencies
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -475,7 +489,7 @@ function App() {
         setLoading(false); // Zastaví loading po počiatočnom načítaní
       }, error => {
         console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`);
+        setError(`Chyba pri načítaní všetkých používateľov: ${error.message}`); // Changed e.message to error.message
         setLoading(false);
       });
     } else {
@@ -1146,8 +1160,63 @@ function App() {
     }
   };
 
+  // New function to dismiss a single notification
+  const dismissNotification = async (notificationId) => {
+    if (!db || !user || !isAdmin) {
+      setError("Nemáte oprávnenie na vymazanie upozornení.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
+      const notificationDoc = await notificationRef.get();
+
+      if (!notificationDoc.exists) {
+        setMessage("Upozornenie už neexistuje.");
+        setLoading(false);
+        return;
+      }
+
+      const notificationData = notificationDoc.data();
+      let dismissedBy = notificationData.dismissedBy || [];
+
+      // Add current user's UID if not already present
+      if (!dismissedBy.includes(user.uid)) {
+        dismissedBy.push(user.uid);
+      }
+
+      // Get all active admin UIDs
+      const activeAdminUids = allUsersData
+        .filter(u => u.role === 'admin' && u.approved === true)
+        .map(u => u.uid);
+
+      // Check if all active admins have dismissed this notification
+      const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
+
+      if (allAdminsDismissed) {
+        // If all admins have dismissed it, delete the notification
+        await notificationRef.delete();
+        setMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
+      } else {
+        // Otherwise, just update the dismissedBy array
+        await notificationRef.update({ dismissedBy: dismissedBy });
+        setMessage("Upozornenie bolo vymazané z vášho zoznamu.");
+      }
+    } catch (e) {
+      console.error("Chyba pri mazaní upozornenia:", e);
+      setError(`Chyba pri mazaní upozornenia: ${e.message}`);
+    } finally {
+      setLoading(false);
+      clearMessages();
+    }
+  };
+
+  // Modified handleClearNotifications to use dismissNotification
   const handleClearNotifications = async () => {
-    if (!db || !isAdmin) {
+    if (!db || !user || !isAdmin) {
       setError("Nemáte oprávnenie na vymazanie upozornení.");
       return;
     }
@@ -1155,14 +1224,12 @@ function App() {
     setError('');
     setMessage('');
     try {
-      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      const snapshot = await notificationsCollectionRef.get();
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
-      setMessage("Všetky upozornenia boli vymazané.");
+      // Iterate through currently displayed notifications and dismiss them one by one
+      // This will trigger the logic in dismissNotification for each
+      for (const notification of adminNotifications) {
+        await dismissNotification(notification.id);
+      }
+      setMessage("Všetky viditeľné upozornenia boli vymazané z vášho zoznamu.");
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -2056,15 +2123,24 @@ function App() {
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 mb-4"
                       disabled={loading}
                     >
-                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia'}
+                      {loading ? 'Mažem...' : 'Vymazať všetky upozornenia z môjho zoznamu'}
                     </button>
                     <ul className="divide-y divide-gray-200">
                       {adminNotifications.map(notification => (
-                        <li key={notification.id} className="py-2 text-gray-700">
-                          <p className="font-semibold">{notification.message}</p>
-                          <p className="text-xs text-gray-500">
-                            {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
-                          </p>
+                        <li key={notification.id} className="py-2 text-gray-700 flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold">{notification.message}</p>
+                            <p className="text-xs text-gray-500">
+                              {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => dismissNotification(notification.id)}
+                            className="ml-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm"
+                            disabled={loading}
+                          >
+                            X
+                          </button>
                         </li>
                       ))}
                     </ul>
