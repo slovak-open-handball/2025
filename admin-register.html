@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrácia administrátora - Slovak Open Handball</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -11,34 +12,37 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-        }
-        /* Custom styles for password input eye icon alignment */
-        .relative input {
-            padding-right: 2.5rem; /* Space for the icon */
-        }
-        .relative button {
-            top: 50%;
-            transform: translateY(-50%);
+            margin: 0;
+            padding: 0;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- React and ReactDOM CDN -->
-    <script src="https://unpkg.com/react/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX transformation (for development, consider build step for production) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- reCAPTCHA v3 script -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
-</head>
-<body>
-    <!-- Root div for React app -->
-    <div id="root"></div>
 
-    <!-- Your React App.js script -->
-    <script src="App.js"></script>
+    <!-- Firebase SDKs - Načítané z CDN (používame compat verzie) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- React a ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone pre preklad JSX v prehliadači -->
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- reCAPTCHA v3 script - DÔLEŽITÉ: Použite váš skutočný SITE KEY v parametri render! -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa" async defer></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="text/babel" src="App.js"></script>
+    <script type="text/babel">
+        window.onload = function() {
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof App === 'undefined') {
+                console.error("Chyba: React, ReactDOM alebo App komponent nie sú načítané.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App, null));
+        };
+    </script>
 </body>
 </html>
