@@ -105,7 +105,7 @@ function NotificationModal({ message, isVisible, onClose }) {
 
 function App() {
   const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPbN2BL4t9qRxRVjJs2CH6OGex-l-z21lg7_ULUH3249r93GKV_4B_Oenf6ydz0CyKrA/exec"; 
+  const GOOGLE_APPS_SCRIPT_URL = "https://your-google-apps-script-url-here/exec"; 
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -1266,6 +1266,7 @@ function App() {
       await db.collection('users').doc(user.uid).update({
         displayNotifications: newDisplayValue
       });
+      // Update the user state immediately to reflect the change
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
       setMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
     } catch (e) {
@@ -2169,16 +2170,21 @@ function App() {
             {profileView === 'my-settings' && isAdmin && (
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Moje nastavenia</h2>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="toggle-notifications"
-                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    checked={user?.displayNotifications ?? true} // Default to true if undefined
-                    onChange={handleToggleDisplayNotifications}
-                    disabled={loading}
-                  />
-                  <label htmlFor="toggle-notifications" className="text-gray-700">Zobrazovať upozornenia na hornej časti obrazovky</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700">Zobrazovať upozornenia na hornej časti obrazovky</span>
+                  <label htmlFor="toggle-notifications" className="relative inline-flex items-center cursor-pointer">
+                    <span className="mr-2 text-sm font-medium text-gray-900 dark:text-gray-300">Nezobrazovať</span>
+                    <input
+                      type="checkbox"
+                      id="toggle-notifications"
+                      className="sr-only peer" // sr-only hides it visually but keeps it accessible
+                      checked={user?.displayNotifications ?? true}
+                      onChange={handleToggleDisplayNotifications}
+                      disabled={loading}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Zobrazovať</span>
+                  </label>
                 </div>
                 <p className="text-gray-600 text-sm mt-2">
                     Upozornenia v zozname (sekcia "Upozornenia") sa budú naďalej zobrazovať, kým ich individuálne nevymažete.
