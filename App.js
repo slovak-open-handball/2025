@@ -1690,7 +1690,7 @@ function App() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        placeholder="Zadajte svoju e-mailovú adresu"
+                        placeholder="Zadajte e-mailovú adresu"
                         autoComplete="email"
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
@@ -1791,7 +1791,7 @@ function App() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="Zadajte svoju e-mailovú adresu"
+                  placeholder="Zadajte e-mailovú adresu"
                   autoComplete="email"
                 />
               </div>
