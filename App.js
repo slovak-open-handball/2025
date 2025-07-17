@@ -1,6 +1,6 @@
 import React from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider } from 'firebase/auth';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 
 // Global variables provided by the Canvas environment
@@ -219,12 +219,7 @@ function App() {
   // Efekt pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
   React.useEffect(() => {
     try {
-      if (typeof firebase === 'undefined' || typeof firebase.initializeApp === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
-        setLoading(false);
-        return;
-      }
-
+      // Removed the check for global firebase object as we are using modular imports
       const firebaseApp = initializeApp(firebaseConfig);
       setApp(firebaseApp);
 
@@ -582,7 +577,8 @@ function App() {
 
     setLoading(true); // Zobraziť loading indikátor
     try {
-      const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      // Changed to Firebase v9 modular syntax
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       const userRole = isAdminRegistration ? 'admin' : 'user'; 
@@ -677,7 +673,8 @@ function App() {
 
     setLoading(true);
     try {
-      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+      // Changed to Firebase v9 modular syntax
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const currentUser = userCredential.user;
 
       const userDocRef = doc(db, 'users', currentUser.uid);
