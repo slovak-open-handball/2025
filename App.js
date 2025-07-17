@@ -1646,30 +1646,36 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
-                <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
-                    <input
-                        type="tel"
-                        id="reg-phone-number"
-                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                        value={contactPhoneNumber}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            const strictPhoneRegex = /^\+\d*$/;
-                            if (value === '' || strictPhoneRegex.test(value)) {
-                                setContactPhoneNumber(value);
-                            }
-                        }}
-                        required
-                        placeholder="+421901234567"
-                        pattern="^\+\d+$"
-                        title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
-                        disabled={loading || !!message} // Disable if loading or message is shown
-                    />
-                </div>
-                <p className="text-gray-600 text-sm mt-4">
-                    E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                </p>
+                {/* Podmienene nezobrazovať telefónne číslo pre admin registráciu */}
+                {!is_admin_register_page && (
+                  <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                      <input
+                          type="tel"
+                          id="reg-phone-number"
+                          className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                          value={contactPhoneNumber}
+                          onChange={(e) => {
+                              const value = e.target.value;
+                              const strictPhoneRegex = /^\+\d*$/;
+                              if (value === '' || strictPhoneRegex.test(value)) {
+                                  setContactPhoneNumber(value);
+                              }
+                          }}
+                          required
+                          placeholder="+421901234567"
+                          pattern="^\+\d+$"
+                          title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                          disabled={loading || !!message} // Disable if loading or message is shown
+                      />
+                  </div>
+                )}
+                {/* Podmienene nezobrazovať pomocný text pod telefónnym číslom */}
+                {!is_admin_register_page && (
+                  <p className="text-gray-600 text-sm mt-4">
+                      E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                  </p>
+                )}
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
                         E-mailová adresa kontaktnej osoby
@@ -1686,9 +1692,12 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
-                <p className="text-gray-600 text-sm mt-4">
-                    E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
-                </p>
+                {/* Podmienene nezobrazovať pomocný text pod e-mailovou adresou */}
+                {!is_admin_register_page && (
+                  <p className="text-gray-600 text-sm mt-4">
+                      E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.
+                  </p>
+                )}
                 <PasswordInput
                     id="reg-password"
                     label="Heslo"
