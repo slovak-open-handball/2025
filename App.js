@@ -651,6 +651,7 @@ function App() {
 
       // Odhlásenie a presmerovanie pre oba typy registrácií
       await auth.signOut(); 
+      setUser(null); // Explicitne nastaviť používateľa na null po odhlásení
       setError('');
       setEmail('');
       setPassword('');
@@ -1399,7 +1400,7 @@ function App() {
                           <span style={{ whiteSpace: 'nowrap' }}>
                             {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
                           </span>{" "}
-                          <span style={{ whiteSpace: 'nowrap' }}>
+                          <span style={{ whiteSpace: 'nowap' }}>
                             {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
                           </span>
                         </p>
