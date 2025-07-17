@@ -774,7 +774,7 @@ function App() {
 
       if (!userDoc.exists) {
         // Zmenená chybová správa
-        setError("Na aktiváciu vášho účtu je potrebné schválenie od iného administrátora.");
+        setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
@@ -786,7 +786,7 @@ function App() {
 
       if (userData.role === 'admin' && userData.approved === false) { 
         // Zmenená chybová správa
-        setError("Na aktiváciu vášho účtu je potrebné schválenie od iného administrátora.");
+        setError("Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.");
         await auth.signOut(); 
         setLoading(false);
         clearMessages();
