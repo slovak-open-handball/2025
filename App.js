@@ -637,42 +637,36 @@ function App() {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
-      // Počiatočné nastavenia pre všetkých používateľov (vrátane budúcich adminov)
-      const initialUserRole = 'user';
-      const initialIsApproved = true;
-
-      console.log("Pokúšam sa uložiť používateľa do Firestore s počiatočnými dátami...");
-      try { // Added a new try-catch block specifically for Firestore write
-        await db.collection('users').doc(userCredential.user.uid).set({
+      console.log("Pokúšam sa uložiť používateľa do Firestore...");
+      try {
+        const userDataToSave = {
           uid: userCredential.user.uid,
           email: email,
           firstName: firstName,
           lastName: lastName,
-          contactPhoneNumber: isAdminRegistration ? '' : contactPhoneNumber,
           displayName: `${firstName} ${lastName}`,
-          role: initialUserRole, // Vždy 'user' pri prvej registrácii
-          approved: initialIsApproved, // Vždy 'true' pri prvej registrácii
           registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
           displayNotifications: true // Nová vlastnosť pre všetkých používateľov, defaultne true
-        });
-        console.log(`Používateľ ${email} bol úspešne uložený do Firestore s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}'.`);
+        };
 
-        // Ak je to registrácia administrátora, okamžite aktualizujeme rolu a stav schválenia
         if (isAdminRegistration) {
-          console.log("Je to admin registrácia, aktualizujem rolu na 'admin' a schválenie na 'false'...");
-          await db.collection('users').doc(userCredential.user.uid).update({
-            role: 'admin',
-            approved: false
-          });
-          console.log(`Rola používateľa ${email} bola úspešne aktualizovaná na 'admin' a schválenie na 'false'.`);
+          userDataToSave.role = 'admin';
+          userDataToSave.approved = false;
+          userDataToSave.contactPhoneNumber = ''; // Admin nemá telefónne číslo
+          console.log("Admin registrácia: Pripravujem dáta pre uloženie:", userDataToSave);
+        } else {
+          userDataToSave.role = 'user';
+          userDataToSave.approved = true;
+          userDataToSave.contactPhoneNumber = contactPhoneNumber;
+          console.log("Bežná registrácia: Pripravujem dáta pre uloženie:", userDataToSave);
         }
 
+        await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+        console.log(`Používateľ ${email} bol úspešne uložený do Firestore s rolou '${userDataToSave.role}' a schválením '${userDataToSave.approved}'.`);
+
       } catch (firestoreError) {
-        console.error("Chyba pri ukladaní/aktualizácii používateľa do Firestore:", firestoreError);
-        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}`);
-        // Important: If Firestore save fails, we should still proceed with other steps
-        // like sending email and signing out, but the user should be informed.
-        // Also, it's crucial to sign out the user created in Auth if Firestore save fails.
+        console.error("Chyba pri ukladaní používateľa do Firestore:", firestoreError);
+        setError(`Chyba pri ukladaní používateľa do databázy: ${firestoreError.message}`);
         await auth.signOut(); // Ensure user is signed out if Firestore save fails
         setLoading(false);
         return; // Stop further execution if Firestore save failed
