@@ -1619,7 +1619,7 @@ function App() {
             <form onSubmit={(e) => handleRegister(e, is_admin_register_page)} className="space-y-4">
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
-                        Meno kontaktnej osoby
+                        {is_admin_register_page ? "Meno" : "Meno kontaktnej osoby"}
                     </label>
                     <input
                         type="text"
@@ -1635,7 +1635,7 @@ function App() {
                 </div>
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
-                        Priezvisko kontaktnej osoby
+                        {is_admin_register_page ? "Priezvisko" : "Priezvisko kontaktnej osoby"}
                     </label>
                     <input
                         type="text"
@@ -1681,7 +1681,7 @@ function App() {
                 )}
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">
-                        E-mailová adresa kontaktnej osoby
+                        {is_admin_register_page ? "E-mailová adresa" : "E-mailová adresa kontaktnej osoby"}
                     </label>
                     <input
                         type="email"
