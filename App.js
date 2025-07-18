@@ -181,6 +181,13 @@ function App() {
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
   const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje posledné zobrazené upozornenie
 
+  // Nové stavy pre posielanie správ
+  const [selectedRecipients, setSelectedRecipients] = React.useState([]);
+  const [messageSubject, setMessageSubject] = React.useState('');
+  const [messageContent, setMessageContent] = React.useState('');
+  const [receivedMessages, setReceivedMessages] = React.useState([]);
+
+
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false; // Počkajte, kým sa načítajú nastavenia
@@ -564,6 +571,39 @@ function App() {
       }
     };
   }, [db, isAdmin]); // Závisí len od db a isAdmin
+
+  // Nový useEffect pre načítanie prijatých správ pre aktuálneho používateľa
+  React.useEffect(() => {
+    let unsubscribeMessages;
+    if (db && user) {
+      console.log("Setting up real-time listener for received messages for UID:", user.uid);
+      const messagesCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages');
+      unsubscribeMessages = messagesCollectionRef
+        .where('recipients', 'array-contains', user.uid)
+        .orderBy('timestamp', 'desc')
+        .onSnapshot(snapshot => {
+          const messagesList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setReceivedMessages(messagesList);
+          console.log("Received messages updated:", messagesList);
+        }, error => {
+          console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
+          setError(`Chyba pri načítaní správ: ${error.message}`);
+        });
+    } else {
+      setReceivedMessages([]);
+    }
+
+    return () => {
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+        console.log("Unsubscribed from received messages listener.");
+      }
+    };
+  }, [db, user, appId]); // Závisí od db, user a appId
+
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -1407,6 +1447,63 @@ function App() {
     }
   };
 
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!db || !user || !isAdmin) {
+      setError("Nemáte oprávnenie na odosielanie správ.");
+      return;
+    }
+    if (selectedRecipients.length === 0) {
+      setError("Prosím, vyberte aspoň jedného príjemcu.");
+      return;
+    }
+    if (!messageSubject.trim()) {
+      setError("Predmet správy nemôže byť prázdny.");
+      return;
+    }
+    if (!messageContent.trim()) {
+      setError("Obsah správy nemôže byť prázdny.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').add({
+        senderId: user.uid,
+        senderName: user.displayName || user.email,
+        recipients: selectedRecipients,
+        subject: messageSubject,
+        content: messageContent,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        readBy: [] // Pole pre sledovanie, kto si správu prečítal
+      });
+      setAdminNotificationMessage("Správa bola úspešne odoslaná!");
+      setShowAdminNotificationModal(true);
+      setSelectedRecipients([]);
+      setMessageSubject('');
+      setMessageContent('');
+    } catch (e) {
+      console.error("Chyba pri odosielaní správy:", e);
+      setError(`Chyba pri odosielaní správy: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markMessageAsRead = async (messageId) => {
+    if (!db || !user) return;
+    try {
+      const messageRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').doc(messageId);
+      await messageRef.update({
+        readBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      });
+      console.log(`Správa ${messageId} označená ako prečítaná používateľom ${user.uid}`);
+    } catch (e) {
+      console.error("Chyba pri označovaní správy ako prečítanej:", e);
+    }
+  };
+
 
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
@@ -1871,6 +1968,9 @@ function App() {
     const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
     const isEditAllowed = !editEnd || now <= editEnd;
 
+    // Filter administrators for the send message feature
+    const administrators = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
@@ -1962,6 +2062,20 @@ function App() {
                   </li>
                 )}
                 {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('send-message');
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'send-message' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Poslať správu
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
                   <li className="my-2">
                     <hr className="border-t border-gray-300" />
                   </li>
@@ -2041,6 +2155,40 @@ function App() {
                     <p className="text-red-500 text-sm mt-2">
                         Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : '-'}
                     </p>
+                )}
+
+                {/* Sekcia prijatých správ pre administrátorov */}
+                {isAdmin && receivedMessages.length > 0 && (
+                  <div className="mt-8">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">Prijaté správy</h2>
+                    <ul className="divide-y divide-gray-200">
+                      {receivedMessages.map(msg => (
+                        <li key={msg.id} className={`py-4 ${msg.readBy && msg.readBy.includes(user.uid) ? 'bg-gray-50' : 'bg-blue-50'} rounded-lg px-4 mb-2`}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-gray-900">Predmet: {msg.subject}</p>
+                              <p className="text-sm text-gray-700">Od: {msg.senderName} ({msg.senderId})</p>
+                              <p className="text-xs text-gray-500">
+                                Dátum: {msg.timestamp ? msg.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
+                              </p>
+                              <p className="mt-2 text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                            </div>
+                            {! (msg.readBy && msg.readBy.includes(user.uid)) && (
+                              <button
+                                onClick={() => markMessageAsRead(msg.id)}
+                                className="ml-4 px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 text-sm"
+                              >
+                                Označiť ako prečítané
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {isAdmin && receivedMessages.length === 0 && (
+                  <p className="text-gray-600 mt-8">Žiadne prijaté správy.</p>
                 )}
               </div>
             )}
@@ -2206,6 +2354,71 @@ function App() {
                 { !isEditAllowed && editEnd && (
                     <p className="text-red-500 text-sm mt-2 text-center">Úpravy boli uzavreté dňa: {editEnd.toLocaleString('sk-SK')}</p>
                 )}
+              </form>
+            )}
+
+            {profileView === 'send-message' && isAdmin && (
+              <form onSubmit={handleSendMessage} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Poslať správu administrátorom</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-recipients">
+                    Vyberte príjemcov
+                  </label>
+                  <select
+                    id="message-recipients"
+                    multiple
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 h-32"
+                    value={selectedRecipients}
+                    onChange={(e) => {
+                      const options = Array.from(e.target.selectedOptions);
+                      setSelectedRecipients(options.map(option => option.value));
+                    }}
+                    disabled={loading}
+                  >
+                    <option value="all-admins">Všetci administrátori</option>
+                    {administrators.map(admin => (
+                      <option key={admin.uid} value={admin.uid}>
+                        {admin.displayName || admin.email} ({admin.uid})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-gray-600 text-sm mt-1">Podržte CTRL/CMD pre výber viacerých príjemcov.</p>
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-subject">
+                    Predmet správy
+                  </label>
+                  <input
+                    type="text"
+                    id="message-subject"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={messageSubject}
+                    onChange={(e) => setMessageSubject(e.target.value)}
+                    placeholder="Zadajte predmet správy"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-content">
+                    Správa
+                  </label>
+                  <textarea
+                    id="message-content"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 resize-y"
+                    rows="7"
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    placeholder="Napíšte svoju správu"
+                    disabled={loading}
+                  ></textarea>
+                </div>
+                <button
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4"
+                  disabled={loading}
+                >
+                  {loading ? 'Odosielam...' : 'Odoslať správu'}
+                </button>
               </form>
             )}
 
