@@ -185,6 +185,7 @@ function App() {
   const [messageSubject, setMessageSubject] = React.useState('');
   const [messageContent, setMessageContent] = React.useState('');
   const [receivedMessages, setReceivedMessages] = React.useState([]);
+  const [searchQuery, setSearchQuery] = React.useState(''); // NOVÉ: Stav pre vyhľadávací dotaz
 
   // New states to hold raw data from each collection
   const [systemAlerts, setSystemAlerts] = React.useState([]);
@@ -567,7 +568,7 @@ function App() {
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${error.message}`);
+          setError(`Chyba pri načítaní správ: ${e.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -1553,6 +1554,7 @@ function App() {
       setCheckedRecipients({}); // Clear all checkboxes after sending
       setMessageSubject('');
       setMessageContent('');
+      setSearchQuery(''); // Clear search query
     } catch (e) {
       console.error("Chyba pri odosielaní správy:", e);
       setError(`Chyba pri odosielaní správy: ${e.message}`);
@@ -1614,7 +1616,7 @@ function App() {
       targetUsers = allUsersData.filter(u => u.role === 'user' && u.uid !== user.uid);
     }
 
-    const allOfTypeChecked = targetUsers.every(u => checkedRecipients[u.uid]);
+    const allOfTypeChecked = targetUsers.every(u => newCheckedRecipients[u.uid]);
 
     targetUsers.forEach(u => {
       newCheckedRecipients[u.uid] = !allOfTypeChecked;
@@ -1643,6 +1645,18 @@ function App() {
     if (targetUsers.length === 0) return false; // No users of this type to check
     return targetUsers.every(u => checkedRecipients[u.uid]);
   }, [allUsersData, checkedRecipients, user]);
+
+  // NOVÉ: Filtrovaný zoznam používateľov na základe vyhľadávacieho dotazu
+  const filteredUsers = React.useMemo(() => {
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return allUsersData.filter(u => 
+      u.uid !== user.uid && // Exclude current user
+      (u.displayName?.toLowerCase().includes(lowerCaseQuery) ||
+       u.email?.toLowerCase().includes(lowerCaseQuery) ||
+       u.firstName?.toLowerCase().includes(lowerCaseQuery) ||
+       u.lastName?.toLowerCase().includes(lowerCaseQuery))
+    );
+  }, [allUsersData, searchQuery, user]);
 
 
   const currentPath = window.location.pathname.split('/').pop();
@@ -2528,24 +2542,7 @@ function App() {
                     />
                     <label htmlFor="select-all-admins" className="ml-2 text-gray-700 font-semibold">Všetci administrátori</label>
                   </div>
-                  <div className="ml-4 space-y-1">
-                    {administrators.map(admin => (
-                      <div key={admin.uid} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={`recipient-${admin.uid}`}
-                          className="form-checkbox h-4 w-4 text-indigo-600 rounded-md"
-                          checked={!!checkedRecipients[admin.uid]}
-                          onChange={() => handleIndividualRecipientChange(admin.uid)}
-                          disabled={loading}
-                        />
-                        <label htmlFor={`recipient-${admin.uid}`} className="ml-2 text-gray-700">
-                          {admin.displayName || admin.email} ({admin.role})
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-
+                  
                   {/* "Všetci používatelia" checkbox */}
                   <div className="flex items-center mt-4 mb-2">
                     <input
@@ -2558,22 +2555,46 @@ function App() {
                     />
                     <label htmlFor="select-all-users" className="ml-2 text-gray-700 font-semibold">Všetci používatelia</label>
                   </div>
-                  <div className="ml-4 space-y-1">
-                    {regularUsers.map(regUser => (
-                      <div key={regUser.uid} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={`recipient-${regUser.uid}`}
-                          className="form-checkbox h-4 w-4 text-indigo-600 rounded-md"
-                          checked={!!checkedRecipients[regUser.uid]}
-                          onChange={() => handleIndividualRecipientChange(regUser.uid)}
-                          disabled={loading}
-                        />
-                        <label htmlFor={`recipient-${regUser.uid}`} className="ml-2 text-gray-700">
-                          {regUser.displayName || regUser.email} ({regUser.role})
-                        </label>
+
+                  {/* NOVÉ: Vyhľadávacie pole */}
+                  <div className="mb-4">
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="search-recipients">
+                      Filtrovať používateľov
+                    </label>
+                    <input
+                      type="text"
+                      id="search-recipients"
+                      className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Hľadať podľa mena, priezviska alebo e-mailu"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  {/* Skrolovateľný zoznam individuálnych používateľov */}
+                  <div className="border border-gray-300 rounded-lg p-3 max-h-60 overflow-y-auto bg-gray-50">
+                    {filteredUsers.length > 0 ? (
+                      <div className="space-y-1">
+                        {filteredUsers.map(u => (
+                          <div key={u.uid} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`recipient-${u.uid}`}
+                              className="form-checkbox h-4 w-4 text-indigo-600 rounded-md"
+                              checked={!!checkedRecipients[u.uid]}
+                              onChange={() => handleIndividualRecipientChange(u.uid)}
+                              disabled={loading}
+                            />
+                            <label htmlFor={`recipient-${u.uid}`} className="ml-2 text-gray-700">
+                              {u.displayName || u.email} ({u.role})
+                            </label>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-gray-600 text-sm">Žiadni používatelia zodpovedajúci filtru.</p>
+                    )}
                   </div>
 
                 </div>
