@@ -1900,16 +1900,6 @@ function App() {
                 </li>
                 <li>
                   <button
-                    onClick={() => changeProfileView('change-password')}
-                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Zmeniť heslo
-                  </button>
-                </li>
-                <li>
-                  <button
                     onClick={() => {
                       changeProfileView('change-name');
                     }}
@@ -1919,6 +1909,16 @@ function App() {
                   >
                     Zmeniť meno a priezvisko
                   </button> 
+                </li>
+                <li>
+                  <button
+                    onClick={() => changeProfileView('change-password')}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      profileView === 'change-password' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Zmeniť heslo
+                  </button>
                 </li>
                 {/* NOVÁ POLOŽKA MENU: Zmena telefónneho čísla (len pre bežných používateľov) */}
                 {!isAdmin && (
@@ -1931,6 +1931,39 @@ function App() {
                     >
                       Zmeniť telefónne číslo
                     </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('my-settings'); // Nová záložka
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Moje nastavenia
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('notifications');
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Upozornenia ({adminNotifications.length})
+                    </button>
+                  </li>
+                )}
+                {isAdmin && (
+                  <li className="my-2">
+                    <hr className="border-t border-gray-300" />
                   </li>
                 )}
                 {isAdmin && (
@@ -1972,34 +2005,6 @@ function App() {
                       }`}
                     >
                       Nastavenia turnaja
-                    </button>
-                  </li>
-                )}
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => {
-                        changeProfileView('my-settings'); // Nová záložka
-                      }}
-                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                        profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Moje nastavenia
-                    </button>
-                  </li>
-                )}
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => {
-                        changeProfileView('notifications');
-                      }}
-                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                        profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Upozornenia ({adminNotifications.length})
                     </button>
                   </li>
                 )}
