@@ -535,7 +535,7 @@ function App() {
           setSystemAlerts(alerts);
         }, error => {
           console.error("Chyba pri načítaní systémových upozornení (onSnapshot):", error);
-          setError(`Chyba pri načítaní systémových upozornení: ${error.message}`);
+          setError(`Chyba pri načítaní systémových upozornení: ${e.message}`);
         });
     } else {
       setSystemAlerts([]);
@@ -567,7 +567,7 @@ function App() {
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${error.message}`);
+          setError(`Chyba pri načítaní správ: ${e.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -2172,7 +2172,7 @@ function App() {
                     Upozornenia ({userNotifications.length})
                   </button>
                 </li>
-                {isAdmin && (
+                {isAdmin && ( // This condition makes the entire <li> visible only for admins
                   <li>
                     <button
                       onClick={() => {
@@ -2468,7 +2468,8 @@ function App() {
               </form>
             )}
 
-            {isAdmin && (
+            {/* ZMENA: Formulár na odosielanie správ je teraz podmienený aj profileView */}
+            {profileView === 'send-message' && isAdmin && (
               <form onSubmit={handleSendMessage} className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Poslať správu administrátorom</h2>
                 <div>
