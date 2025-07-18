@@ -71,38 +71,54 @@ const formatToDatetimeLocal = (date) => {
 };
 
 // NotificationModal Component
-function NotificationModal({ message, isVisible, onClose }) {
+function NotificationModal({ message, onClose }) { // isVisible prop removed
   const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null); // Use a ref to store the timer ID
 
   React.useEffect(() => {
-    let timeoutId;
-    if (isVisible) {
+    // If a message is provided, show the modal and start the timer
+    if (message) {
       setShow(true);
-      // ZMENA: Zvýšené trvanie zobrazenia pop-upu na 10 sekúnd (10000 ms)
-      timeoutId = setTimeout(() => {
-        setShow(false);
-        // Call onClose after the animation finishes, or slightly before
-        setTimeout(onClose, 500); // 500ms for slide-up animation
+      // Clear any existing timer to prevent multiple timers running
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false); // Trigger fade-out animation
+        // Call onClose after the fade-out animation completes
+        setTimeout(onClose, 500); // 500ms for slide-up/fade-out animation
       }, 10000); // Display for 10 seconds
     } else {
+      // If message is empty/null, hide the modal immediately and clear timer
       setShow(false);
-      clearTimeout(timeoutId);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
-    return () => clearTimeout(timeoutId);
-  }, [isVisible, onClose]);
 
-  if (!show && !isVisible) return null; // Only render if it's visible or transitioning out
+    // Cleanup function: clear timer when component unmounts or dependencies change
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [message, onClose]); // Re-run when message or onClose changes
+
+  // Only render the component if 'show' is true (for animation) or if there's a message (initial render)
+  if (!show && !message) return null;
 
   return (
     <div
       className={`fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`}
-      style={{ pointerEvents: 'none' }} // Allow clicks to pass through
+      style={{ pointerEvents: 'none' }} // Allows clicks to pass through
     >
       <div
         className="bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center"
-        style={{ pointerEvents: 'auto' }} // Re-enable clicks for the modal content
+        style={{ pointerEvents: 'auto' }} // Re-enables clicks for the modal content
       >
         <p className="font-semibold">{message}</p>
       </div>
@@ -178,7 +194,7 @@ function App() {
 
   // ZMENA: Nový stav pre upozornenia pre VŠETKÝCH používateľov
   const [userNotifications, setUserNotifications] = React.useState([]);
-  const [showUserNotificationModal, setShowUserNotificationModal] = React.useState(false);
+  // ZMENA: Odstránený showUserNotificationModal, teraz sa spravuje cez userNotificationMessage
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // Nové stavy pre posielanie správ
@@ -570,7 +586,7 @@ function App() {
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${error.message}`);
+          setError(`Chyba pri načítaní správ: ${e.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -589,7 +605,7 @@ function App() {
   React.useEffect(() => {
     if (!user) { // No user, no notifications
       setUserNotifications([]);
-      setShowUserNotificationModal(false);
+      setUserNotificationMessage(''); // Clear message when user logs out
       return;
     }
 
@@ -619,33 +635,44 @@ function App() {
     setUserNotifications(filteredForList);
 
     // Logic for pop-up notification
-    const latestUnseenAlert = filteredForList.find(alert => {
-      // Check if the alert has been seen by the current user (using the correct 'seenBy' field)
+    // Find the latest unseen alert that is eligible for a pop-up
+    const potentialPopups = allRelevantAlerts.filter(alert => {
+      let isDismissed = false;
+      if (alert.type === 'system_alert') {
+        isDismissed = alert.dismissedBy && alert.dismissedBy.includes(user.uid);
+      } else if (alert.type === 'direct_message') {
+        isDismissed = alert.acknowledgedBy && alert.acknowledgedBy.includes(user.uid);
+      }
       const hasBeenSeen = alert.seenBy && alert.seenBy.includes(user.uid);
-      return !hasBeenSeen;
+      
+      // Only consider if it's not dismissed, not seen, and for admin if it's a system alert or any if direct message
+      return !isDismissed && !hasBeenSeen && (isAdmin || alert.type === 'direct_message');
     });
 
-    // ZMENA: Pop-up sa zobrazí len ak je používateľ admin
-    if (latestUnseenAlert && user?.displayNotifications && isAdmin) { 
-      let messageText = latestUnseenAlert.message;
-      if (latestUnseenAlert.type === 'direct_message') {
-        messageText = `Nová správa od ${latestUnseenAlert.senderName || 'Neznámy odosielateľ'}: ${latestUnseenAlert.subject}`;
+    // Sort potential popups by timestamp to get the latest
+    potentialPopups.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+
+    const latestUnseenPopup = potentialPopups[0]; // Get the very latest unseen alert
+
+    // If there's a new latest unseen alert and the user has notifications enabled and is admin
+    // AND there is currently no message being displayed in the pop-up
+    if (latestUnseenPopup && user?.displayNotifications && isAdmin && !userNotificationMessage) { 
+      let messageText = latestUnseenPopup.message;
+      if (latestUnseenPopup.type === 'direct_message') {
+        messageText = `Nová správa od ${latestUnseenPopup.senderName || 'Neznámy odosielateľ'}: ${latestUnseenPopup.subject}`;
       }
       setUserNotificationMessage(messageText);
-      setShowUserNotificationModal(true);
 
-      // Mark this alert as seen by the current user in Firestore (only update 'seenBy')
-      const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenAlert.collection).doc(latestUnseenAlert.id);
-
-      // Update only the 'seenBy' field. 'readBy'/'acknowledgedBy' is for explicit dismissal/read status.
+      // Mark this alert as seen by the current user in Firestore
+      const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenPopup.collection).doc(latestUnseenPopup.id);
       alertRef.update({
         seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
-      }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen:`, e));
-    } else if (!latestUnseenAlert || !isAdmin) { // ZMENA: Ak nie je admin, pop-up sa skryje
-      setShowUserNotificationModal(false);
+      }).catch(e => console.error(`Error marking ${latestUnseenPopup.type} as seen:`, e));
     }
+    // The NotificationModal's internal timer will handle clearing userNotificationMessage via onClose.
+    // No `else if` to hide it from here, as the modal itself controls its disappearance.
 
-  }, [user, isAdmin, db, appId, systemAlerts, receivedMessages, user?.displayNotifications]); // Dependencies for this combined effect
+  }, [user, isAdmin, db, appId, systemAlerts, receivedMessages, user?.displayNotifications, userNotificationMessage]); // Add userNotificationMessage as dependency to re-run when it's cleared
 
 
   const getRecaptchaToken = async (action) => {
@@ -1050,7 +1077,8 @@ function App() {
 
       await currentUserForReauth.updatePassword(newPassword);
       setUserNotificationMessage("Heslo úspešne zmenené!"); 
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
+      setUserNotificationMessage("Heslo úspešne zmenené!");
       setError('');
       setNewPassword('');
       setNewConfirmPassword('');
@@ -1142,7 +1170,7 @@ function App() {
       }
 
       setUserNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); 
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       setError('');
       setNewFirstName('');
       setNewLastName('');
@@ -1228,7 +1256,7 @@ function App() {
       }
 
       setUserNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); 
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
@@ -1284,7 +1312,7 @@ function App() {
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
         setUserNotificationMessage("Nastavenia úspešne uložené!"); 
-        setShowUserNotificationModal(true); 
+        // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
     } catch (e) {
         console.error("Chyba pri ukladaní nastavení:", e);
         setError(`Chyba pri ukladaní nastavení: ${e.message}`);
@@ -1315,7 +1343,7 @@ function App() {
     try {
       await db.collection('users').doc(userToDelete.uid).delete();
       setUserNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       
       closeDeleteConfirmationModal();
       window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
@@ -1360,7 +1388,7 @@ function App() {
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
@@ -1381,7 +1409,7 @@ function App() {
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
       setUserNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
@@ -1405,7 +1433,7 @@ function App() {
 
       if (!docSnapshot.exists) {
         setUserNotificationMessage("Upozornenie/Správa už neexistuje.");
-        setShowUserNotificationModal(true);
+        // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
         setLoading(false);
         return;
       }
@@ -1415,7 +1443,7 @@ function App() {
       if (notificationType === 'system_alert') {
         if (!isAdmin) {
           setUserNotificationMessage("Nemáte oprávnenie na vymazanie systémových upozornení.");
-          setShowUserNotificationModal(true);
+          // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
           setLoading(false);
           return;
         }
@@ -1438,14 +1466,14 @@ function App() {
         if (allAdminsDismissed) {
           await docRef.delete();
           setUserNotificationMessage("Systémové upozornenie bolo vymazané pre všetkých administrátorov.");
-          setShowUserNotificationModal(true);
+          // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
         } else {
           await docRef.update({
             dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
             seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
           });
           setUserNotificationMessage("Systémové upozornenie bolo vymazané z vášho zoznamu.");
-          setShowUserNotificationModal(true);
+          // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
         }
       } else if (notificationType === 'direct_message') {
         // ZMENA: Pre priame správy používame acknowledgedBy na vymazanie zo zoznamu
@@ -1454,7 +1482,7 @@ function App() {
           seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
         });
         setUserNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
-        setShowUserNotificationModal(true);
+        // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       }
 
     } catch (e) {
@@ -1476,7 +1504,7 @@ function App() {
         seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Ensure it's also seen
       });
       setUserNotificationMessage("Správa bola označená ako prečítaná.");
-      setShowUserNotificationModal(true);
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       console.log(`Správa ${messageId} označená ako prečítaná používateľom ${user.uid}`);
     } catch (e) {
       console.error("Chyba pri označovaní správy ako prečítanej:", e);
@@ -1505,7 +1533,7 @@ function App() {
         await dismissNotification(alert.id, alert.type, alert.collection);
       }
       setUserNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
-      setShowUserNotificationModal(true);
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -1528,7 +1556,7 @@ function App() {
       });
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
       setUserNotificationMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
-      setShowUserNotificationModal(true); 
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
     } catch (e) {
       console.error("Chyba pri zmene nastavenia notifikácií:", e);
       setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
@@ -1575,7 +1603,7 @@ function App() {
         acknowledgedBy: [] // NEW: Pole pre sledovanie, kto si správu "vymazal" zo zoznamu
       });
       setUserNotificationMessage("Správa bola úspešne odoslaná!");
-      setShowUserNotificationModal(true);
+      // ZMENA: showUserNotificationModal je odstránený, spravuje sa cez userNotificationMessage
       setCheckedRecipients({}); // Clear all checkboxes after sending
       setMessageSubject('');
       setMessageContent('');
@@ -2145,11 +2173,12 @@ function App() {
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
 
-        {/* ZMENA: NotificationModal je teraz userNotificationModal */}
+        {/* ZMENA: NotificationModal je teraz riadený len cez userNotificationMessage */}
         <NotificationModal
             message={userNotificationMessage}
-            isVisible={showUserNotificationModal && (user?.displayNotifications ?? true)} 
-            onClose={() => setShowUserNotificationModal(false)}
+            onClose={() => {
+                setUserNotificationMessage(''); // Toto je jediný spôsob, ako vymazať správu a skryť modal
+            }}
         />
 
         <div className="flex flex-grow w-full pb-10">
