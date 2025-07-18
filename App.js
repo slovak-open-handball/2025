@@ -590,10 +590,15 @@ function App() {
       return;
     }
 
-    const allRelevantAlerts = [
-      ...systemAlerts,
-      ...receivedMessages // Now using receivedMessages for all direct messages
-    ];
+    let allRelevantAlerts = [];
+    if (isAdmin) {
+        allRelevantAlerts = [
+            ...systemAlerts,
+            ...receivedMessages
+        ];
+    } else { // For 'user' role, only include direct messages
+        allRelevantAlerts = receivedMessages;
+    }
 
     // Filter for the list view (only items not dismissed by current user)
     const filteredForList = allRelevantAlerts.filter(alert => {
@@ -612,7 +617,8 @@ function App() {
       return !hasBeenSeen;
     });
 
-    if (latestUnseenAlert && user?.displayNotifications) {
+    // ZMENA: Pop-up sa zobrazí len ak je používateľ admin
+    if (latestUnseenAlert && user?.displayNotifications && isAdmin) { 
       let messageText = latestUnseenAlert.message;
       if (latestUnseenAlert.type === 'direct_message') {
         messageText = `Nová správa od ${latestUnseenAlert.senderName || 'Neznámy odosielateľ'}: ${latestUnseenAlert.subject}`;
@@ -627,11 +633,11 @@ function App() {
       alertRef.update({
         seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
       }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen:`, e));
-    } else if (!latestUnseenAlert) {
+    } else if (!latestUnseenAlert || !isAdmin) { // ZMENA: Ak nie je admin, pop-up sa skryje
       setShowUserNotificationModal(false);
     }
 
-  }, [user, db, appId, systemAlerts, receivedMessages, user?.displayNotifications]); // Dependencies for this combined effect
+  }, [user, isAdmin, db, appId, systemAlerts, receivedMessages, user?.displayNotifications]); // Dependencies for this combined effect
 
 
   const getRecaptchaToken = async (action) => {
@@ -1399,6 +1405,13 @@ function App() {
       const data = docSnapshot.data();
 
       if (notificationType === 'system_alert') {
+        if (!isAdmin) { // Regular users cannot dismiss system alerts directly
+          setUserNotificationMessage("Nemáte oprávnenie na vymazanie systémových upozornení.");
+          setShowUserNotificationModal(true);
+          setLoading(false);
+          return;
+        }
+
         let dismissedBy = data.dismissedBy || [];
         // Only mark as dismissed if not already
         if (!dismissedBy.includes(user.uid)) {
@@ -1456,8 +1469,14 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      const notificationsToDismiss = [...userNotifications]; // Use the filtered list
-      for (const alert of notificationsToDismiss) { // Renamed notification to alert
+      // ZMENA: Iterujeme len cez userNotifications, ktoré sú už filtrované podľa roly
+      const notificationsToDismiss = [...userNotifications]; 
+      for (const alert of notificationsToDismiss) { 
+        // ZMENA: Ak je to systémové upozornenie a používateľ nie je admin, preskočíme ho
+        if (alert.type === 'system_alert' && !isAdmin) {
+          console.log("Používateľ nie je admin, preskakujem mazanie systémového upozornenia.");
+          continue; 
+        }
         await dismissNotification(alert.id, alert.type, alert.collection);
       }
       setUserNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
