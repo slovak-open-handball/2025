@@ -159,7 +159,7 @@ function App() {
   const [profileView, setProfileView] = React.useState(getInitialProfileView);
 
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const [allUsersData, setAllUsersData] = React.useState([]);
+  const [allUsersData, setAllUsersData] = React.useState([]); // State to hold all user data
   const [isRoleLoaded, setIsRoleLoaded] = React.useState(false);
 
   const [showPasswordReg, setShowPasswordReg] = React.useState(false);
@@ -483,6 +483,37 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, []); // Bez závislostí, aby sa spustil len raz
+
+  // NOVÝ useEffect pre načítanie všetkých používateľov (pre administrátorov)
+  React.useEffect(() => {
+    let unsubscribeAllUsers;
+    if (db && user && isAdmin) { // Len ak je DB pripravená, používateľ prihlásený a je admin
+      console.log("Setting up real-time listener for all users for admin view.");
+      const usersCollectionRef = db.collection('users');
+      unsubscribeAllUsers = usersCollectionRef.onSnapshot(snapshot => {
+        const usersList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          uid: doc.id // Ensure uid is also available as doc.id
+        }));
+        setAllUsersData(usersList);
+        console.log("All users data updated:", usersList);
+      }, error => {
+        console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
+        setError(`Chyba pri načítaní používateľov: ${error.message}`);
+      });
+    } else {
+      setAllUsersData([]); // Vyčistite dáta, ak nie je admin
+    }
+
+    return () => {
+      if (unsubscribeAllUsers) {
+        unsubscribeAllUsers();
+        console.log("Unsubscribed from all users listener.");
+      }
+    };
+  }, [db, user, isAdmin]); // Závisí od db, user a isAdmin
+
 
   // useEffect for fetching system alerts for admins
   React.useEffect(() => {
@@ -1511,11 +1542,16 @@ function App() {
 
     let actualRecipients = [];
     if (selectedRecipients.includes("all-admins")) {
+      // Filter for active and approved admins, excluding the sender
       actualRecipients = allUsersData
-        .filter(u => u.role === 'admin' && u.uid !== user.uid) // Exclude sender
+        .filter(u => u.role === 'admin' && u.approved === true && u.uid !== user.uid) 
         .map(u => u.uid);
     } else {
-      actualRecipients = selectedRecipients.filter(uid => uid !== user.uid); // Ensure sender is not a recipient
+      // Filter selected recipients to ensure they are valid and not the sender
+      actualRecipients = selectedRecipients.filter(uid => {
+        const recipientUser = allUsersData.find(u => u.uid === uid);
+        return recipientUser && recipientUser.uid !== user.uid;
+      });
     }
 
     if (actualRecipients.length === 0) {
@@ -2025,6 +2061,7 @@ function App() {
     const isEditAllowed = !editEnd || now <= editEnd;
 
     // Filter administrators for the send message feature
+    // Now using allUsersData which is populated by the new useEffect
     const administrators = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
 
     // Definícia admin-only zobrazení
@@ -2517,6 +2554,7 @@ function App() {
                           <p className="text-gray-600 text-sm">{u.email}</p>
                           <p className="text-gray-500 text-xs">Rola: {u.role || 'user'}</p> 
                           <p className="text-gray-500 text-xs">Schválený: {u.approved ? 'Áno' : 'Nie'}</p> 
+                          <p className="text-gray-500 text-xs">UID: {u.uid}</p> {/* Display UID */}
                         </div>
                         {user && user.uid !== u.uid && ( 
                           <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
