@@ -2231,18 +2231,21 @@ function App() {
                     </button>
                   </li>
                 )}
-                <li> {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
-                  <button
-                    onClick={() => {
-                      changeProfileView('my-settings'); 
-                    }}
-                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                      profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Moje nastavenia
-                  </button>
-                </li>
+                {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
+                {isAdmin && ( // Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov
+                  <li> 
+                    <button
+                      onClick={() => {
+                        changeProfileView('my-settings'); 
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Moje nastavenia
+                    </button>
+                  </li>
+                )}
                 <li> {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
                   <button
                     onClick={() => {
