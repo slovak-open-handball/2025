@@ -2027,6 +2027,34 @@ function App() {
     // Filter administrators for the send message feature
     const administrators = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
 
+    // Definícia admin-only zobrazení
+    const adminOnlyViews = ['users', 'all-teams', 'tournament-settings', 'notifications', 'send-message'];
+
+    // Kontrola prístupu pre ne-administrátorov
+    if (!isAdmin && adminOnlyViews.includes(profileView)) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
+                <div className="w-full max-w-md mt-20 mb-10 p-4">
+                    <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-4">Prístup je obmedzený.</h1>
+                        <p className="text-lg text-gray-600">
+                            Stránka, ktorú sa pokúšate zobraziť, je dostupná iba pre administrátorov turnaja.
+                            Ak máte akékoľvek otázky alebo potrebujete prístup, obráťte sa na administrátora.
+                        </p>
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                onClick={() => changeProfileView('my-data')}
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
+                            >
+                                Späť na Moje údaje
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
