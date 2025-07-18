@@ -13,7 +13,7 @@ const initialAuthToken = null; // Globálne definované
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 0 11-6 0 3 3 0 016 0z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
     </svg>
   );
@@ -562,13 +562,14 @@ function App() {
             type: 'direct_message',
             collection: 'messages',
             seenBy: doc.data().seenBy || [], // Use specific seenBy for pop-up
-            dismissedBy: doc.data().readBy || [] // Use readBy for list dismissal
+            readBy: doc.data().readBy || [], // Keep readBy for read status
+            acknowledgedBy: doc.data().acknowledgedBy || [] // NEW: Use acknowledgedBy for dismissal
           }));
           setReceivedMessages(messagesList);
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${e.message}`);
+          setError(`Chyba pri načítaní správ: ${error.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -601,9 +602,14 @@ function App() {
         allRelevantAlerts = receivedMessages;
     }
 
-    // Filter for the list view (only items not dismissed by current user)
+    // Filter for the list view (only items not dismissed/acknowledged by current user)
     const filteredForList = allRelevantAlerts.filter(alert => {
-      const isDismissed = alert.dismissedBy && alert.dismissedBy.includes(user.uid);
+      let isDismissed = false;
+      if (alert.type === 'system_alert') {
+        isDismissed = alert.dismissedBy && alert.dismissedBy.includes(user.uid);
+      } else if (alert.type === 'direct_message') {
+        isDismissed = alert.acknowledgedBy && alert.acknowledgedBy.includes(user.uid); // NEW: Use acknowledgedBy for dismissal
+      }
       return !isDismissed;
     });
 
@@ -630,7 +636,7 @@ function App() {
       // Mark this alert as seen by the current user in Firestore (only update 'seenBy')
       const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenAlert.collection).doc(latestUnseenAlert.id);
 
-      // Update only the 'seenBy' field. 'readBy'/'dismissedBy' is for explicit dismissal.
+      // Update only the 'seenBy' field. 'readBy'/'acknowledgedBy' is for explicit dismissal/read status.
       alertRef.update({
         seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
       }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen:`, e));
@@ -1383,9 +1389,9 @@ function App() {
     }
   };
 
-  // ZMENA: New function to dismiss a single notification
+  // ZMENA: Funkcia na vymazanie upozornenia/správy zo zoznamu používateľa
   const dismissNotification = async (notificationId, notificationType, collectionName) => {
-    if (!db || !user) { // Any logged-in user can dismiss their notifications
+    if (!db || !user) {
       setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
       return;
     }
@@ -1406,7 +1412,7 @@ function App() {
       const data = docSnapshot.data();
 
       if (notificationType === 'system_alert') {
-        if (!isAdmin) { // Regular users cannot dismiss system alerts directly
+        if (!isAdmin) {
           setUserNotificationMessage("Nemáte oprávnenie na vymazanie systémových upozornení.");
           setShowUserNotificationModal(true);
           setLoading(false);
@@ -1414,17 +1420,14 @@ function App() {
         }
 
         let dismissedBy = data.dismissedBy || [];
-        // Only mark as dismissed if not already
         if (!dismissedBy.includes(user.uid)) {
           dismissedBy.push(user.uid);
         }
-        // Ensure it's also marked as seen if it's being dismissed
         let seenBy = data.seenBy || [];
         if (!seenBy.includes(user.uid)) {
           seenBy.push(user.uid);
         }
 
-        // If all active admins have dismissed it, delete the alert
         const activeAdminUids = allUsersData
           .filter(u => u.role === 'admin' && u.approved === true)
           .map(u => u.uid);
@@ -1444,10 +1447,9 @@ function App() {
           setShowUserNotificationModal(true);
         }
       } else if (notificationType === 'direct_message') {
-        // For direct messages, mark as read/dismissed for the current user in 'readBy' field
-        // Also ensure it's marked as seen if it's being dismissed
+        // ZMENA: Pre priame správy používame acknowledgedBy na vymazanie zo zoznamu
         await docRef.update({
-          readBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
+          acknowledgedBy: firebase.firestore.FieldValue.arrayUnion(user.uid), // NEW: Mark as acknowledged
           seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
         });
         setUserNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
@@ -1457,6 +1459,27 @@ function App() {
     } catch (e) {
       console.error("Chyba pri mazaní upozornenia/správy:", e);
       setError(`Chyba pri mazaní upozornenia/správy: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NOVÁ FUNKCIA: Označiť správu ako prečítanú (nemá ju odstrániť zo zoznamu)
+  const markMessageAsRead = async (messageId) => {
+    if (!db || !user) return;
+    setLoading(true);
+    try {
+      const messageRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').doc(messageId);
+      await messageRef.update({
+        readBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
+        seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Ensure it's also seen
+      });
+      setUserNotificationMessage("Správa bola označená ako prečítaná.");
+      setShowUserNotificationModal(true);
+      console.log(`Správa ${messageId} označená ako prečítaná používateľom ${user.uid}`);
+    } catch (e) {
+      console.error("Chyba pri označovaní správy ako prečítanej:", e);
+      setError(`Chyba pri označovaní správy ako prečítanej: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -1547,7 +1570,8 @@ function App() {
         content: messageContent,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         readBy: [], // Pole pre sledovanie, kto si správu prečítal (pre explicitné odmietnutie)
-        seenBy: [] // NOVÉ: Pole pre sledovanie, kto si správu pozrel (pop-up)
+        seenBy: [], // NOVÉ: Pole pre sledovanie, kto si správu pozrel (pop-up)
+        acknowledgedBy: [] // NEW: Pole pre sledovanie, kto si správu "vymazal" zo zoznamu
       });
       setUserNotificationMessage("Správa bola úspešne odoslaná!");
       setShowUserNotificationModal(true);
@@ -1560,19 +1584,6 @@ function App() {
       setError(`Chyba pri odosielaní správy: ${e.message}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const markMessageAsRead = async (messageId) => {
-    if (!db || !user) return;
-    try {
-      const messageRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').doc(messageId);
-      await messageRef.update({
-        readBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
-      });
-      console.log(`Správa ${messageId} označená ako prečítaná používateľom ${user.uid}`);
-    } catch (e) {
-      console.error("Chyba pri označovaní správy ako prečítanej:", e);
     }
   };
 
@@ -2309,40 +2320,6 @@ function App() {
                         Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : '-'}
                     </p>
                 )}
-
-                {/* Sekcia prijatých správ pre VŠETKÝCH používateľov (vrátane administrátorov) */}
-                {receivedMessages.length > 0 && (
-                  <div className="mt-8">
-                    <h2 className="text-xl font-semibold text-gray-800 mb-4">Prijaté správy</h2>
-                    <ul className="divide-y divide-gray-200">
-                      {receivedMessages.map(msg => (
-                        <li key={msg.id} className={`py-4 ${msg.readBy && msg.readBy.includes(user.uid) ? 'bg-gray-50' : 'bg-blue-50'} rounded-lg px-4 mb-2`}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold text-gray-900">Predmet: {msg.subject}</p>
-                              <p className="text-sm text-gray-700">Od: {msg.senderName} ({msg.senderId})</p>
-                              <p className="text-xs text-gray-500">
-                                Dátum: {msg.timestamp ? msg.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
-                              </p>
-                              <p className="mt-2 text-gray-800 whitespace-pre-wrap">{msg.content}</p>
-                            </div>
-                            {! (msg.readBy && msg.readBy.includes(user.uid)) && (
-                              <button
-                                onClick={() => markMessageAsRead(msg.id)}
-                                className="ml-4 px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 text-sm"
-                              >
-                                Označiť ako prečítané
-                              </button>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {receivedMessages.length === 0 && (
-                  <p className="text-gray-600 mt-8">Žiadne prijaté správy.</p>
-                )}
               </div>
             )}
 
@@ -2814,8 +2791,10 @@ function App() {
                     </button>
                     <ul className="divide-y divide-gray-200">
                       {userNotifications.map(alert => ( 
-                        <li key={alert.id} className="py-2 text-gray-700 flex justify-between items-center">
-                          <div>
+                        <li key={alert.id} className={`py-2 text-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center ${
+                          alert.type === 'direct_message' && alert.readBy && alert.readBy.includes(user.uid) ? 'bg-gray-50' : 'bg-blue-50'
+                        } rounded-lg px-4 mb-2`}>
+                          <div className="flex-grow mb-2 sm:mb-0">
                             <p className="font-semibold">
                               {alert.type === 'direct_message' ? `Správa od ${alert.senderName || 'Neznámy odosielateľ'}: ${alert.subject}` : alert.message}
                             </p>
@@ -2826,13 +2805,24 @@ function App() {
                               {alert.timestamp ? alert.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
                             </p>
                           </div>
-                          <button
-                            onClick={() => dismissNotification(alert.id, alert.type, alert.collection)} 
-                            className="ml-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm"
-                            disabled={loading}
-                          >
-                            X
-                          </button>
+                          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                            {alert.type === 'direct_message' && !(alert.readBy && alert.readBy.includes(user.uid)) && (
+                              <button
+                                onClick={() => markMessageAsRead(alert.id)}
+                                className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 text-sm"
+                                disabled={loading}
+                              >
+                                Označiť ako prečítané
+                              </button>
+                            )}
+                            <button
+                              onClick={() => dismissNotification(alert.id, alert.type, alert.collection)} 
+                              className="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm"
+                              disabled={loading}
+                            >
+                              Vymazať
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
