@@ -179,7 +179,7 @@ function App() {
   const [adminNotifications, setAdminNotifications] = React.useState([]);
   const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
-  const [lastShownNotificationId, setLastShownNotificationId] = React.useState(null); // Sleduje posledné zobrazené upozornenie
+  // Removed lastShownNotificationId, as seenBy array in Firestore will handle it
 
   // Nové stavy pre posielanie správ
   const [selectedRecipients, setSelectedRecipients] = React.useState([]);
@@ -501,29 +501,26 @@ function App() {
             return !notification.dismissedBy || !notification.dismissedBy.includes(user.uid);
           }));
 
-          if (allFetchedNotifications.length > 0) {
-            const latestNotification = allFetchedNotifications[0]; // Get the very latest one
-            // Check if this latest notification has already been seen by the current user
-            const hasBeenSeenByCurrentUser = latestNotification.seenBy && latestNotification.seenBy.includes(user.uid);
+          // --- NEW/MODIFIED LOGIC FOR POP-UP NOTIFICATIONS ---
+          // Find the latest notification that the current user has NOT seen yet
+          const latestUnseenNotification = allFetchedNotifications.find(notification => {
+            return !notification.seenBy || !notification.seenBy.includes(user.uid);
+          });
 
-            // Show the modal only if the user has displayNotifications enabled,
-            // it's a new notification, AND it hasn't been seen by the current user yet.
-            if (latestNotification.id !== lastShownNotificationId && user?.displayNotifications && !hasBeenSeenByCurrentUser) {
-              setAdminNotificationMessage(latestNotification.message);
-              setShowAdminNotificationModal(true);
-              setLastShownNotificationId(latestNotification.id);
+          if (latestUnseenNotification && user?.displayNotifications) {
+            setAdminNotificationMessage(latestUnseenNotification.message);
+            setShowAdminNotificationModal(true);
 
-              // Mark this notification as seen by the current user in Firestore
-              const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestNotification.id);
-              notificationRef.update({
-                seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
-              }).catch(e => console.error("Error marking notification as seen:", e));
-            }
-          } else {
-            // If no notifications are left after filtering, hide the modal
+            // Mark this notification as seen by the current user in Firestore
+            const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestUnseenNotification.id);
+            notificationRef.update({
+              seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+            }).catch(e => console.error("Error marking notification as seen:", e));
+          } else if (!latestUnseenNotification) {
+            // If there are no unseen notifications, hide the modal
             setShowAdminNotificationModal(false);
-            setLastShownNotificationId(null); // Reset last shown ID
           }
+          // --- END NEW/MODIFIED LOGIC ---
 
         }, error => {
           console.error("Chyba pri načítaní upozornenia (onSnapshot):", error);
@@ -532,7 +529,6 @@ function App() {
     } else {
       setAdminNotifications([]);
       setShowAdminNotificationModal(false); // Hide modal if not admin or not logged in
-      setLastShownNotificationId(null);
     }
 
     return () => {
@@ -541,7 +537,7 @@ function App() {
         console.log("Admin: Unsubscribed from notifications listener.");
       }
     };
-  }, [db, isAdmin, appId, user, lastShownNotificationId, user?.displayNotifications]); // Add user?.displayNotifications to dependencies
+  }, [db, isAdmin, appId, user, user?.displayNotifications]); // Removed lastShownNotificationId, added user?.displayNotifications
 
   // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
   React.useEffect(() => {
@@ -1091,7 +1087,9 @@ function App() {
             originalFirstName: oldFirstName,
             newFirstName: updatedFirstName,
             newLastName: updatedLastName,
-          }
+          },
+          dismissedBy: [], // Initialize as empty array
+          seenBy: [] // Initialize as empty array
         });
         console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
@@ -1175,7 +1173,9 @@ function App() {
           details: {
             originalPhoneNumber: oldContactPhoneNumber,
             newPhoneNumber: newContactPhoneNumber,
-          }
+          },
+          dismissedBy: [], // Initialize as empty array
+          seenBy: [] // Initialize as empty array
         });
         console.log("Admin upozornenie odoslaná pre zmenu telefónneho čísla.");
       }
@@ -1370,7 +1370,7 @@ function App() {
       if (!dismissedBy.includes(user.uid)) {
         dismissedBy.push(user.uid);
       }
-      if (!seenBy.includes(user.uid)) {
+      if (!seenBy.includes(user.uid)) { // Also mark as seen if dismissed
         seenBy.push(user.uid);
       }
 
@@ -1381,6 +1381,7 @@ function App() {
       console.log("dismissNotification: Aktívni administrátori UIDs:", activeAdminUids);
       console.log("dismissNotification: dismissedBy pre upozornenie:", dismissedBy);
 
+      // Check if all active admins have dismissed this notification
       const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
 
       if (allAdminsDismissed) {
@@ -1411,7 +1412,9 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      for (const notification of adminNotifications) {
+      // Iterate over a copy of adminNotifications to avoid issues during deletion
+      const notificationsToDismiss = [...adminNotifications]; 
+      for (const notification of notificationsToDismiss) {
         await dismissNotification(notification.id);
       }
       setAdminNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
@@ -1468,11 +1471,27 @@ function App() {
 
     setLoading(true);
     setError('');
+
+    let actualRecipients = [];
+    if (selectedRecipients.includes("all-admins")) {
+      actualRecipients = allUsersData
+        .filter(u => u.role === 'admin' && u.uid !== user.uid) // Exclude sender
+        .map(u => u.uid);
+    } else {
+      actualRecipients = selectedRecipients.filter(uid => uid !== user.uid); // Ensure sender is not a recipient
+    }
+
+    if (actualRecipients.length === 0) {
+      setError("Neboli nájdení žiadni platní príjemcovia.");
+      setLoading(false);
+      return;
+    }
+
     try {
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').add({
         senderId: user.uid,
         senderName: user.displayName || user.email,
-        recipients: selectedRecipients,
+        recipients: actualRecipients,
         subject: messageSubject,
         content: messageContent,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
