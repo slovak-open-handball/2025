@@ -181,7 +181,7 @@ function App() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // Nové stavy pre posielanie správ
-  const [selectedRecipients, setSelectedRecipients] = React.useState([]);
+  const [checkedRecipients, setCheckedRecipients] = React.useState({}); // ZMENA: Objekt pre začiarknuté políčka
   const [messageSubject, setMessageSubject] = React.useState('');
   const [messageContent, setMessageContent] = React.useState('');
   const [receivedMessages, setReceivedMessages] = React.useState([]);
@@ -535,7 +535,7 @@ function App() {
           setSystemAlerts(alerts);
         }, error => {
           console.error("Chyba pri načítaní systémových upozornení (onSnapshot):", error);
-          setError(`Chyba pri načítaní systémových upozornení: ${e.message}`);
+          setError(`Chyba pri načítaní systémových upozornení: ${error.message}`);
         });
     } else {
       setSystemAlerts([]);
@@ -567,7 +567,7 @@ function App() {
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${e.message}`);
+          setError(`Chyba pri načítaní správ: ${error.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -1518,7 +1518,10 @@ function App() {
       setError("Nemáte oprávnenie na odosielanie správ.");
       return;
     }
-    if (selectedRecipients.length === 0) {
+
+    const actualRecipients = Object.keys(checkedRecipients).filter(uid => checkedRecipients[uid] && uid !== user.uid);
+
+    if (actualRecipients.length === 0) {
       setError("Prosím, vyberte aspoň jedného príjemcu.");
       return;
     }
@@ -1534,26 +1537,6 @@ function App() {
     setLoading(true);
     setError('');
 
-    let actualRecipients = [];
-    if (selectedRecipients.includes("all-admins")) {
-      // Filter for active and approved admins, excluding the sender
-      actualRecipients = allUsersData
-        .filter(u => u.role === 'admin' && u.approved === true && u.uid !== user.uid) 
-        .map(u => u.uid);
-    } else {
-      // Filter selected recipients to ensure they are valid and not the sender
-      actualRecipients = selectedRecipients.filter(uid => {
-        const recipientUser = allUsersData.find(u => u.uid === uid);
-        return recipientUser && recipientUser.uid !== user.uid;
-      });
-    }
-
-    if (actualRecipients.length === 0) {
-      setError("Neboli nájdení žiadni platní príjemcovia.");
-      setLoading(false);
-      return;
-    }
-
     try {
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').add({
         senderId: user.uid,
@@ -1567,7 +1550,7 @@ function App() {
       });
       setUserNotificationMessage("Správa bola úspešne odoslaná!");
       setShowUserNotificationModal(true);
-      setSelectedRecipients([]);
+      setCheckedRecipients({}); // Clear all checkboxes after sending
       setMessageSubject('');
       setMessageContent('');
     } catch (e) {
@@ -1617,6 +1600,49 @@ function App() {
     setNewPassword('');
     setNewConfirmPassword('');
   };
+
+  // Helper functions for checkbox selection logic
+  const handleToggleAll = (type) => {
+    const newCheckedRecipients = { ...checkedRecipients };
+    let targetUsers = [];
+
+    if (type === 'all') {
+      targetUsers = allUsersData.filter(u => u.uid !== user.uid);
+    } else if (type === 'admin') {
+      targetUsers = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
+    } else if (type === 'user') {
+      targetUsers = allUsersData.filter(u => u.role === 'user' && u.uid !== user.uid);
+    }
+
+    const allOfTypeChecked = targetUsers.every(u => checkedRecipients[u.uid]);
+
+    targetUsers.forEach(u => {
+      newCheckedRecipients[u.uid] = !allOfTypeChecked;
+    });
+
+    setCheckedRecipients(newCheckedRecipients);
+  };
+
+  const handleIndividualRecipientChange = (uid) => {
+    setCheckedRecipients(prev => ({
+      ...prev,
+      [uid]: !prev[uid]
+    }));
+  };
+
+  const isAllChecked = React.useCallback((type) => {
+    let targetUsers = [];
+    if (type === 'all') {
+      targetUsers = allUsersData.filter(u => u.uid !== user.uid);
+    } else if (type === 'admin') {
+      targetUsers = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
+    } else if (type === 'user') {
+      targetUsers = allUsersData.filter(u => u.role === 'user' && u.uid !== user.uid);
+    }
+
+    if (targetUsers.length === 0) return false; // No users of this type to check
+    return targetUsers.every(u => checkedRecipients[u.uid]);
+  }, [allUsersData, checkedRecipients, user]);
 
 
   const currentPath = window.location.pathname.split('/').pop();
@@ -2058,6 +2084,8 @@ function App() {
     // Filter administrators for the send message feature
     // Now using allUsersData which is populated by the new useEffect
     const administrators = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
+    const regularUsers = allUsersData.filter(u => u.role === 'user' && u.uid !== user.uid);
+
 
     // Definícia admin-only zobrazení
     const adminOnlyViews = ['users', 'all-teams', 'tournament-settings', 'send-message']; // ZMENA: 'notifications' už nie je len pre adminov
@@ -2471,31 +2499,85 @@ function App() {
             {/* ZMENA: Formulár na odosielanie správ je teraz podmienený aj profileView */}
             {profileView === 'send-message' && isAdmin && (
               <form onSubmit={handleSendMessage} className="space-y-4 border-t pt-4 mt-4">
-                <h2 className="text-xl font-semibold text-gray-800">Poslať správu administrátorom</h2>
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-recipients">
-                    Vyberte príjemcov
-                  </label>
-                  <select
-                    id="message-recipients"
-                    multiple
-                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 h-32"
-                    value={selectedRecipients}
-                    onChange={(e) => {
-                      const options = Array.from(e.target.selectedOptions);
-                      setSelectedRecipients(options.map(option => option.value));
-                    }}
-                    disabled={loading}
-                  >
-                    <option value="all-admins">Všetci administrátori</option>
+                <h2 className="text-xl font-semibold text-gray-800">Poslať správu používateľom</h2>
+                <div className="space-y-2">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Vyberte príjemcov</label>
+                  
+                  {/* "Všetci" checkbox */}
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="select-all"
+                      className="form-checkbox h-5 w-5 text-blue-600 rounded-md"
+                      checked={isAllChecked('all')}
+                      onChange={() => handleToggleAll('all')}
+                      disabled={loading}
+                    />
+                    <label htmlFor="select-all" className="ml-2 text-gray-700 font-semibold">Všetci</label>
+                  </div>
+
+                  {/* "Všetci administrátori" checkbox */}
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="select-all-admins"
+                      className="form-checkbox h-5 w-5 text-blue-600 rounded-md"
+                      checked={isAllChecked('admin')}
+                      onChange={() => handleToggleAll('admin')}
+                      disabled={loading}
+                    />
+                    <label htmlFor="select-all-admins" className="ml-2 text-gray-700 font-semibold">Všetci administrátori</label>
+                  </div>
+                  <div className="ml-4 space-y-1">
                     {administrators.map(admin => (
-                      <option key={admin.uid} value={admin.uid}>
-                        {admin.displayName || admin.email} ({admin.uid})
-                      </option>
+                      <div key={admin.uid} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`recipient-${admin.uid}`}
+                          className="form-checkbox h-4 w-4 text-indigo-600 rounded-md"
+                          checked={!!checkedRecipients[admin.uid]}
+                          onChange={() => handleIndividualRecipientChange(admin.uid)}
+                          disabled={loading}
+                        />
+                        <label htmlFor={`recipient-${admin.uid}`} className="ml-2 text-gray-700">
+                          {admin.displayName || admin.email} ({admin.role})
+                        </label>
+                      </div>
                     ))}
-                  </select>
-                  <p className="text-gray-600 text-sm mt-1">Podržte CTRL/CMD pre výber viacerých príjemcov.</p>
+                  </div>
+
+                  {/* "Všetci používatelia" checkbox */}
+                  <div className="flex items-center mt-4 mb-2">
+                    <input
+                      type="checkbox"
+                      id="select-all-users"
+                      className="form-checkbox h-5 w-5 text-blue-600 rounded-md"
+                      checked={isAllChecked('user')}
+                      onChange={() => handleToggleAll('user')}
+                      disabled={loading}
+                    />
+                    <label htmlFor="select-all-users" className="ml-2 text-gray-700 font-semibold">Všetci používatelia</label>
+                  </div>
+                  <div className="ml-4 space-y-1">
+                    {regularUsers.map(regUser => (
+                      <div key={regUser.uid} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`recipient-${regUser.uid}`}
+                          className="form-checkbox h-4 w-4 text-indigo-600 rounded-md"
+                          checked={!!checkedRecipients[regUser.uid]}
+                          onChange={() => handleIndividualRecipientChange(regUser.uid)}
+                          disabled={loading}
+                        />
+                        <label htmlFor={`recipient-${regUser.uid}`} className="ml-2 text-gray-700">
+                          {regUser.displayName || regUser.email} ({regUser.role})
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
+                
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-subject">
                     Predmet správy
