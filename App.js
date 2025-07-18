@@ -2026,10 +2026,12 @@ function App() {
                 <p className="text-gray-700">
                   <span className="font-semibold">Meno a priezvisko: </span>{user.displayName || '-'}
                 </p>
-                {/* Telefónne číslo sa zobrazuje vždy, bez ohľadu na rolu admina */}
-                <p className="text-gray-700">
-                  <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
-                </p>
+                {/* Telefónne číslo sa zobrazuje len pre bežných používateľov, nie pre administrátorov */}
+                {!isAdmin && (
+                  <p className="text-gray-700">
+                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
+                  </p>
+                )}
                 {!isEditAllowed && (
                     <p className="text-red-500 text-sm mt-2">
                         Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: {editEnd ? editEnd.toLocaleString('sk-SK') : '-'}
