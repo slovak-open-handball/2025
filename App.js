@@ -78,11 +78,12 @@ function NotificationModal({ message, isVisible, onClose }) {
     let timeoutId;
     if (isVisible) {
       setShow(true);
+      // ZMENA: Zvýšené trvanie zobrazenia pop-upu na 10 sekúnd (10000 ms)
       timeoutId = setTimeout(() => {
         setShow(false);
         // Call onClose after the animation finishes, or slightly before
         setTimeout(onClose, 500); // 500ms for slide-up animation
-      }, 5000); // Display for 5 seconds
+      }, 10000); // Display for 10 seconds
     } else {
       setShow(false);
       clearTimeout(timeoutId);
