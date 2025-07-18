@@ -175,10 +175,10 @@ function App() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
 
-  // Nový stav pre upozornenia administrátorov (teraz bude kombinovať systémové a priame správy)
-  const [adminNotifications, setAdminNotifications] = React.useState([]);
-  const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
-  const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
+  // ZMENA: Nový stav pre upozornenia pre VŠETKÝCH používateľov
+  const [userNotifications, setUserNotifications] = React.useState([]);
+  const [showUserNotificationModal, setShowUserNotificationModal] = React.useState(false);
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // Nové stavy pre posielanie správ
   const [selectedRecipients, setSelectedRecipients] = React.useState([]);
@@ -186,9 +186,9 @@ function App() {
   const [messageContent, setMessageContent] = React.useState('');
   const [receivedMessages, setReceivedMessages] = React.useState([]);
 
-  // New states to hold raw data from each collection for admins
+  // New states to hold raw data from each collection
   const [systemAlerts, setSystemAlerts] = React.useState([]);
-  const [adminDirectMessages, setAdminDirectMessages] = React.useState([]);
+  // ZMENA: Odstránený stav adminDirectMessages, použijeme receivedMessages
 
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
@@ -515,10 +515,10 @@ function App() {
   }, [db, user, isAdmin]); // Závisí od db, user a isAdmin
 
 
-  // useEffect for fetching system alerts for admins
+  // ZMENA: useEffect for fetching system alerts for ALL logged-in users
   React.useEffect(() => {
     let unsubscribeSystemNotifications;
-    if (db && isAdmin && user) {
+    if (db && user) { // Fetch for any logged-in user
       const systemNotificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
       unsubscribeSystemNotifications = systemNotificationsCollectionRef
         .orderBy('timestamp', 'desc')
@@ -528,7 +528,9 @@ function App() {
             id: doc.id,
             ...doc.data(),
             type: 'system_alert',
-            collection: 'notifications'
+            collection: 'notifications',
+            seenBy: doc.data().seenBy || [],
+            dismissedBy: doc.data().dismissedBy || []
           }));
           setSystemAlerts(alerts);
         }, error => {
@@ -541,18 +543,19 @@ function App() {
     return () => {
       if (unsubscribeSystemNotifications) unsubscribeSystemNotifications();
     };
-  }, [db, isAdmin, appId, user]);
+  }, [db, appId, user]);
 
-  // useEffect for fetching direct messages for admins (these are the same as receivedMessages, but we need them in a separate state for the combined view logic)
+  // useEffect for fetching direct messages for the current user (all roles)
   React.useEffect(() => {
-    let unsubscribeDirectMessages;
-    if (db && isAdmin && user) { // Only fetch for admins
+    let unsubscribeMessages;
+    if (db && user) {
+      console.log("Setting up real-time listener for received messages for UID:", user.uid);
       const messagesCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages');
-      unsubscribeDirectMessages = messagesCollectionRef
+      unsubscribeMessages = messagesCollectionRef
         .where('recipients', 'array-contains', user.uid)
         .orderBy('timestamp', 'desc')
         .onSnapshot(snapshot => {
-          const messages = snapshot.docs.map(doc => ({
+          const messagesList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             type: 'direct_message',
@@ -560,31 +563,36 @@ function App() {
             seenBy: doc.data().seenBy || [], // Use specific seenBy for pop-up
             dismissedBy: doc.data().readBy || [] // Use readBy for list dismissal
           }));
-          setAdminDirectMessages(messages);
+          setReceivedMessages(messagesList);
+          console.log("Received messages updated:", messagesList);
         }, error => {
-          console.error("Chyba pri načítaní priamych správ pre admina (onSnapshot):", error);
-          setError(`Chyba pri načítaní priamych správ: ${e.message}`);
+          console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
+          setError(`Chyba pri načítaní správ: ${error.message}`);
         });
     } else {
-      setAdminDirectMessages([]);
+      setReceivedMessages([]);
     }
+
     return () => {
-      if (unsubscribeDirectMessages) unsubscribeDirectMessages();
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+        console.log("Unsubscribed from received messages listener.");
+      }
     };
-  }, [db, isAdmin, appId, user]);
+  }, [db, user, appId]); // Závisí od db, user a appId
 
 
-  // useEffect to combine system alerts and direct messages for admin display and pop-ups
+  // ZMENA: useEffect to combine system alerts and direct messages for ALL logged-in users
   React.useEffect(() => {
-    if (!user || !isAdmin) {
-      setAdminNotifications([]);
-      setShowAdminNotificationModal(false);
+    if (!user) { // No user, no notifications
+      setUserNotifications([]);
+      setShowUserNotificationModal(false);
       return;
     }
 
     const allRelevantAlerts = [
       ...systemAlerts,
-      ...adminDirectMessages
+      ...receivedMessages // Now using receivedMessages for all direct messages
     ];
 
     // Filter for the list view (only items not dismissed by current user)
@@ -595,7 +603,7 @@ function App() {
 
     // Sort by timestamp (most recent first)
     filteredForList.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
-    setAdminNotifications(filteredForList);
+    setUserNotifications(filteredForList);
 
     // Logic for pop-up notification
     const latestUnseenAlert = filteredForList.find(alert => {
@@ -609,8 +617,8 @@ function App() {
       if (latestUnseenAlert.type === 'direct_message') {
         messageText = `Nová správa od ${latestUnseenAlert.senderName || 'Neznámy odosielateľ'}: ${latestUnseenAlert.subject}`;
       }
-      setAdminNotificationMessage(messageText);
-      setShowAdminNotificationModal(true);
+      setUserNotificationMessage(messageText);
+      setShowUserNotificationModal(true);
 
       // Mark this alert as seen by the current user in Firestore (only update 'seenBy')
       const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenAlert.collection).doc(latestUnseenAlert.id);
@@ -620,43 +628,10 @@ function App() {
         seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
       }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen:`, e));
     } else if (!latestUnseenAlert) {
-      setShowAdminNotificationModal(false);
+      setShowUserNotificationModal(false);
     }
 
-  }, [user, isAdmin, db, appId, systemAlerts, adminDirectMessages, user?.displayNotifications]); // Dependencies for this combined effect
-
-
-  // Nový useEffect pre načítanie prijatých správ pre aktuálneho používateľa (pre sekciu "Moje údaje")
-  React.useEffect(() => {
-    let unsubscribeMessages;
-    if (db && user) {
-      console.log("Setting up real-time listener for received messages for UID:", user.uid);
-      const messagesCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages');
-      unsubscribeMessages = messagesCollectionRef
-        .where('recipients', 'array-contains', user.uid)
-        .orderBy('timestamp', 'desc')
-        .onSnapshot(snapshot => {
-          const messagesList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setReceivedMessages(messagesList);
-          console.log("Received messages updated:", messagesList);
-        }, error => {
-          console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${e.message}`);
-        });
-    } else {
-      setReceivedMessages([]);
-    }
-
-    return () => {
-      if (unsubscribeMessages) {
-        unsubscribeMessages();
-        console.log("Unsubscribed from received messages listener.");
-      }
-    };
-  }, [db, user, appId]); // Závisí od db, user a appId
+  }, [user, db, appId, systemAlerts, receivedMessages, user?.displayNotifications]); // Dependencies for this combined effect
 
 
   const getRecaptchaToken = async (action) => {
@@ -1060,8 +1035,8 @@ function App() {
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       await currentUserForReauth.updatePassword(newPassword);
-      setAdminNotificationMessage("Heslo úspešne zmenené!"); 
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage("Heslo úspešne zmenené!"); 
+      setShowUserNotificationModal(true); 
       setError('');
       setNewPassword('');
       setNewConfirmPassword('');
@@ -1152,8 +1127,8 @@ function App() {
         console.log("Admin upozornenie odoslaná pre zmenu mena.");
       }
 
-      setAdminNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); 
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage("Meno a priezvisko úspešne zmenené na " + updatedDisplayName); 
+      setShowUserNotificationModal(true); 
       setError('');
       setNewFirstName('');
       setNewLastName('');
@@ -1238,8 +1213,8 @@ function App() {
         console.log("Admin upozornenie odoslaná pre zmenu telefónneho čísla.");
       }
 
-      setAdminNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); 
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage("Telefónne číslo úspešne zmenené na " + newContactPhoneNumber); 
+      setShowUserNotificationModal(true); 
       setError('');
       setNewContactPhoneNumber('');
       setCurrentPassword('');
@@ -1294,8 +1269,8 @@ function App() {
             registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
             userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
         });
-        setAdminNotificationMessage("Nastavenia úspešne uložené!"); 
-        setShowAdminNotificationModal(true); 
+        setUserNotificationMessage("Nastavenia úspešne uložené!"); 
+        setShowUserNotificationModal(true); 
     } catch (e) {
         console.error("Chyba pri ukladaní nastavení:", e);
         setError(`Chyba pri ukladaní nastavení: ${e.message}`);
@@ -1325,8 +1300,8 @@ function App() {
     setError('');
     try {
       await db.collection('users').doc(userToDelete.uid).delete();
-      setAdminNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
+      setShowUserNotificationModal(true); 
       
       closeDeleteConfirmationModal();
       window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`, '_blank');
@@ -1370,8 +1345,8 @@ function App() {
       }
 
       await db.collection('users').doc(userToEditRole.uid).update(updateData);
-      setAdminNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
+      setShowUserNotificationModal(true); 
       closeRoleEditModal();
     } catch (e) {
       console.error("Chyba pri aktualizácii roly používateľa:", e);
@@ -1391,8 +1366,8 @@ function App() {
     setError('');
     try {
       await db.collection('users').doc(userToApprove.uid).update({ approved: true });
-      setAdminNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
+      setShowUserNotificationModal(true); 
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
@@ -1401,10 +1376,10 @@ function App() {
     }
   };
 
-  // New function to dismiss a single notification
+  // ZMENA: New function to dismiss a single notification
   const dismissNotification = async (notificationId, notificationType, collectionName) => {
-    if (!db || !user || !isAdmin) {
-      setError("Nemáte oprávnenie na vymazanie upozornení.");
+    if (!db || !user) { // Any logged-in user can dismiss their notifications
+      setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
       return;
     }
     setLoading(true);
@@ -1415,8 +1390,8 @@ function App() {
       const docSnapshot = await docRef.get();
 
       if (!docSnapshot.exists) {
-        setAdminNotificationMessage("Upozornenie/Správa už neexistuje.");
-        setShowAdminNotificationModal(true);
+        setUserNotificationMessage("Upozornenie/Správa už neexistuje.");
+        setShowUserNotificationModal(true);
         setLoading(false);
         return;
       }
@@ -1425,15 +1400,17 @@ function App() {
 
       if (notificationType === 'system_alert') {
         let dismissedBy = data.dismissedBy || [];
-        let seenBy = data.seenBy || [];
-
+        // Only mark as dismissed if not already
         if (!dismissedBy.includes(user.uid)) {
           dismissedBy.push(user.uid);
         }
-        if (!seenBy.includes(user.uid)) { // Ensure it's marked as seen too
+        // Ensure it's also marked as seen if it's being dismissed
+        let seenBy = data.seenBy || [];
+        if (!seenBy.includes(user.uid)) {
           seenBy.push(user.uid);
         }
 
+        // If all active admins have dismissed it, delete the alert
         const activeAdminUids = allUsersData
           .filter(u => u.role === 'admin' && u.approved === true)
           .map(u => u.uid);
@@ -1442,24 +1419,25 @@ function App() {
 
         if (allAdminsDismissed) {
           await docRef.delete();
-          setAdminNotificationMessage("Systémové upozornenie bolo vymazané pre všetkých administrátorov.");
-          setShowAdminNotificationModal(true);
+          setUserNotificationMessage("Systémové upozornenie bolo vymazané pre všetkých administrátorov.");
+          setShowUserNotificationModal(true);
         } else {
           await docRef.update({
             dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
             seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
           });
-          setAdminNotificationMessage("Systémové upozornenie bolo vymazané z vášho zoznamu.");
-          setShowAdminNotificationModal(true);
+          setUserNotificationMessage("Systémové upozornenie bolo vymazané z vášho zoznamu.");
+          setShowUserNotificationModal(true);
         }
       } else if (notificationType === 'direct_message') {
         // For direct messages, mark as read/dismissed for the current user in 'readBy' field
+        // Also ensure it's marked as seen if it's being dismissed
         await docRef.update({
           readBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
-          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Also mark as seen if dismissed
+          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
         });
-        setAdminNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
-        setShowAdminNotificationModal(true);
+        setUserNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
+        setShowUserNotificationModal(true);
       }
 
     } catch (e) {
@@ -1471,19 +1449,19 @@ function App() {
   };
 
   const handleClearNotifications = async () => {
-    if (!db || !user || !isAdmin) {
-      setError("Nemáte oprávnenie na vymazanie upozornení.");
+    if (!db || !user) { // Any logged-in user can clear their notifications
+      setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const notificationsToDismiss = [...adminNotifications]; // Use the filtered list
+      const notificationsToDismiss = [...userNotifications]; // Use the filtered list
       for (const alert of notificationsToDismiss) { // Renamed notification to alert
         await dismissNotification(alert.id, alert.type, alert.collection);
       }
-      setAdminNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
-      setShowAdminNotificationModal(true);
+      setUserNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
+      setShowUserNotificationModal(true);
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -1505,8 +1483,8 @@ function App() {
         displayNotifications: newDisplayValue
       });
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
-      setAdminNotificationMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
-      setShowAdminNotificationModal(true); 
+      setUserNotificationMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
+      setShowUserNotificationModal(true); 
     } catch (e) {
       console.error("Chyba pri zmene nastavenia notifikácií:", e);
       setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
@@ -1568,8 +1546,8 @@ function App() {
         readBy: [], // Pole pre sledovanie, kto si správu prečítal (pre explicitné odmietnutie)
         seenBy: [] // NOVÉ: Pole pre sledovanie, kto si správu pozrel (pop-up)
       });
-      setAdminNotificationMessage("Správa bola úspešne odoslaná!");
-      setShowAdminNotificationModal(true);
+      setUserNotificationMessage("Správa bola úspešne odoslaná!");
+      setShowUserNotificationModal(true);
       setSelectedRecipients([]);
       setMessageSubject('');
       setMessageContent('');
@@ -2063,7 +2041,7 @@ function App() {
     const administrators = allUsersData.filter(u => u.role === 'admin' && u.uid !== user.uid);
 
     // Definícia admin-only zobrazení
-    const adminOnlyViews = ['users', 'all-teams', 'tournament-settings', 'notifications', 'send-message'];
+    const adminOnlyViews = ['users', 'all-teams', 'tournament-settings', 'send-message']; // ZMENA: 'notifications' už nie je len pre adminov
 
     // Kontrola prístupu pre ne-administrátorov
     if (!isAdmin && adminOnlyViews.includes(profileView)) {
@@ -2094,13 +2072,12 @@ function App() {
       <div className="min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto">
         <div className="h-20"></div> 
 
-        {isAdmin && (
-            <NotificationModal
-                message={adminNotificationMessage}
-                isVisible={showAdminNotificationModal && (user?.displayNotifications ?? true)} // Zobrazí sa len ak admin má povolené
-                onClose={() => setShowAdminNotificationModal(false)}
-            />
-        )}
+        {/* ZMENA: NotificationModal je teraz userNotificationModal */}
+        <NotificationModal
+            message={userNotificationMessage}
+            isVisible={showUserNotificationModal && (user?.displayNotifications ?? true)} 
+            onClose={() => setShowUserNotificationModal(false)}
+        />
 
         <div className="flex flex-grow w-full pb-10">
           <div className="fixed top-20 left-0 h-[calc(100vh-theme(spacing.20))] w-[271px] bg-white p-6 rounded-lg shadow-xl overflow-y-auto z-40 ml-4">
@@ -2152,34 +2129,30 @@ function App() {
                     </button>
                   </li>
                 )}
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => {
-                        changeProfileView('my-settings'); // Nová záložka
-                      }}
-                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                        profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Moje nastavenia
-                    </button>
-                  </li>
-                )}
-                {isAdmin && (
-                  <li>
-                    <button
-                      onClick={() => {
-                        changeProfileView('notifications');
-                      }}
-                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
-                        profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Upozornenia ({adminNotifications.length})
-                    </button>
-                  </li>
-                )}
+                <li> {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
+                  <button
+                    onClick={() => {
+                      changeProfileView('my-settings'); 
+                    }}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      profileView === 'my-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Moje nastavenia
+                  </button>
+                </li>
+                <li> {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
+                  <button
+                    onClick={() => {
+                      changeProfileView('notifications');
+                    }}
+                    className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                      profileView === 'notifications' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Upozornenia ({userNotifications.length})
+                  </button>
+                </li>
                 {isAdmin && (
                   <li>
                     <button
@@ -2231,7 +2204,7 @@ function App() {
                   <li>
                     <button
                       onClick={() => {
-                        changeProfileView('tournament-settings'); // Zmenené z 'settings'
+                        changeProfileView('tournament-settings'); 
                       }}
                       className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
                         profileView === 'tournament-settings' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
@@ -2476,7 +2449,7 @@ function App() {
               </form>
             )}
 
-            {profileView === 'send-message' && isAdmin && (
+            {isAdmin && (
               <form onSubmit={handleSendMessage} className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Poslať správu administrátorom</h2>
                 <div>
@@ -2674,8 +2647,8 @@ function App() {
               </form>
             )}
 
-            {/* Nová sekcia pre osobné nastavenia administrátora */}
-            {profileView === 'my-settings' && isAdmin && (
+            {/* Nová sekcia pre osobné nastavenia používateľa (vrátane administrátora) */}
+            {profileView === 'my-settings' && user && (
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Moje nastavenia</h2>
                 <div className="flex items-center justify-between">
@@ -2703,10 +2676,11 @@ function App() {
               </div>
             )}
 
-            {profileView === 'notifications' && isAdmin && (
+            {/* ZMENA: Notifications section for ALL logged-in users */}
+            {profileView === 'notifications' && user && (
               <div className="space-y-4 border-t pt-4 mt-4">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Upozornenia pre administrátora</h2>
-                {adminNotifications.length > 0 ? (
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Moje upozornenia</h2>
+                {userNotifications.length > 0 ? (
                   <>
                     <button
                       onClick={handleClearNotifications}
@@ -2716,7 +2690,7 @@ function App() {
                       {loading ? 'Mažem...' : 'Vymazať všetky upozornenia z môjho zoznamu'}
                     </button>
                     <ul className="divide-y divide-gray-200">
-                      {adminNotifications.map(alert => ( // Renamed notification to alert for clarity
+                      {userNotifications.map(alert => ( 
                         <li key={alert.id} className="py-2 text-gray-700 flex justify-between items-center">
                           <div>
                             <p className="font-semibold">
@@ -2730,7 +2704,7 @@ function App() {
                             </p>
                           </div>
                           <button
-                            onClick={() => dismissNotification(alert.id, alert.type, alert.collection)} // Pass type and collection
+                            onClick={() => dismissNotification(alert.id, alert.type, alert.collection)} 
                             className="ml-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm"
                             disabled={loading}
                           >
