@@ -175,17 +175,20 @@ function App() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
   const [newRole, setNewRole] = React.useState('');
 
-  // Nový stav pre upozornenia administrátorov
+  // Nový stav pre upozornenia administrátorov (teraz bude kombinovať systémové a priame správy)
   const [adminNotifications, setAdminNotifications] = React.useState([]);
   const [showAdminNotificationModal, setShowAdminNotificationModal] = React.useState(false);
   const [adminNotificationMessage, setAdminNotificationMessage] = React.useState('');
-  // Removed lastShownNotificationId, as seenBy array in Firestore will handle it
 
   // Nové stavy pre posielanie správ
   const [selectedRecipients, setSelectedRecipients] = React.useState([]);
   const [messageSubject, setMessageSubject] = React.useState('');
   const [messageContent, setMessageContent] = React.useState('');
   const [receivedMessages, setReceivedMessages] = React.useState([]);
+
+  // New states to hold raw data from each collection for admins
+  const [systemAlerts, setSystemAlerts] = React.useState([]);
+  const [adminDirectMessages, setAdminDirectMessages] = React.useState([]);
 
 
   // Vypočítajte stav registrácie ako memoizovanú hodnotu
@@ -481,94 +484,121 @@ function App() {
     };
   }, []); // Bez závislostí, aby sa spustil len raz
 
-  // Updated useEffect for real-time admin notifications
+  // useEffect for fetching system alerts for admins
   React.useEffect(() => {
-    let unsubscribeNotifications;
-    if (db && isAdmin && user) { // Ensure user is available for filtering
-      console.log("Admin: Setting up real-time listener for notifications.");
-      const notificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      unsubscribeNotifications = notificationsCollectionRef
+    let unsubscribeSystemNotifications;
+    if (db && isAdmin && user) {
+      const systemNotificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
+      unsubscribeSystemNotifications = systemNotificationsCollectionRef
         .orderBy('timestamp', 'desc')
-        .limit(20) // Still limit fetched docs to 20 for performance
+        .limit(20)
         .onSnapshot(snapshot => {
-          const allFetchedNotifications = snapshot.docs.map(doc => ({
+          const alerts = snapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data()
+            ...doc.data(),
+            type: 'system_alert',
+            collection: 'notifications'
           }));
-
-          // Filter notifications for the list view (only by dismissedBy)
-          setAdminNotifications(allFetchedNotifications.filter(notification => {
-            return !notification.dismissedBy || !notification.dismissedBy.includes(user.uid);
-          }));
-
-          // --- NEW/MODIFIED LOGIC FOR POP-UP NOTIFICATIONS ---
-          // Find the latest notification that the current user has NOT seen yet
-          const latestUnseenNotification = allFetchedNotifications.find(notification => {
-            return !notification.seenBy || !notification.seenBy.includes(user.uid);
-          });
-
-          if (latestUnseenNotification && user?.displayNotifications) {
-            setAdminNotificationMessage(latestUnseenNotification.message);
-            setShowAdminNotificationModal(true);
-
-            // Mark this notification as seen by the current user in Firestore
-            const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(latestUnseenNotification.id);
-            notificationRef.update({
-              seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
-            }).catch(e => console.error("Error marking notification as seen:", e));
-          } else if (!latestUnseenNotification) {
-            // If there are no unseen notifications, hide the modal
-            setShowAdminNotificationModal(false);
-          }
-          // --- END NEW/MODIFIED LOGIC ---
-
+          setSystemAlerts(alerts);
         }, error => {
-          console.error("Chyba pri načítaní upozornenia (onSnapshot):", error);
-          setError(`Chyba pri načítaní upozornenia: ${e.message}`);
+          console.error("Chyba pri načítaní systémových upozornení (onSnapshot):", error);
+          setError(`Chyba pri načítaní systémových upozornení: ${error.message}`);
         });
     } else {
-      setAdminNotifications([]);
-      setShowAdminNotificationModal(false); // Hide modal if not admin or not logged in
+      setSystemAlerts([]);
     }
-
     return () => {
-      if (unsubscribeNotifications) {
-        unsubscribeNotifications();
-        console.log("Admin: Unsubscribed from notifications listener.");
-      }
+      if (unsubscribeSystemNotifications) unsubscribeSystemNotifications();
     };
-  }, [db, isAdmin, appId, user, user?.displayNotifications]); // Removed lastShownNotificationId, added user?.displayNotifications
+  }, [db, isAdmin, appId, user]);
 
-  // Nový useEffect pre real-time aktualizáciu všetkých používateľov pre admina
+  // useEffect for fetching direct messages for admins (these are the same as receivedMessages, but we need them in a separate state for the combined view logic)
   React.useEffect(() => {
-    let unsubscribeUsers;
-    // Fetch all users data if db is ready and user is an admin, regardless of profileView
-    if (db && isAdmin) {
-      console.log("Admin: Setting up real-time listener for all users data.");
-      const usersCollectionRef = db.collection('users');
-      unsubscribeUsers = usersCollectionRef.onSnapshot(snapshot => {
-        const usersList = snapshot.docs.map(doc => doc.data());
-        setAllUsersData(usersList);
-        console.log("Admin: Fetched all users data in real-time:", usersList);
-        setLoading(false); // Zastaví loading po počiatočnom načítaní
-      }, error => {
-        console.error("Chyba pri načítaní všetkých používateľov (onSnapshot):", error);
-        setError(`Chyba pri načítaní všetkých používateľov: ${e.message}`); 
-        setLoading(false);
-      });
+    let unsubscribeDirectMessages;
+    if (db && isAdmin && user) { // Only fetch for admins
+      const messagesCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages');
+      unsubscribeDirectMessages = messagesCollectionRef
+        .where('recipients', 'array-contains', user.uid)
+        .orderBy('timestamp', 'desc')
+        .onSnapshot(snapshot => {
+          const messages = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            type: 'direct_message',
+            collection: 'messages',
+            // Map readBy to seenBy/dismissedBy for consistent filtering in admin view
+            seenBy: doc.data().readBy || [],
+            dismissedBy: doc.data().readBy || []
+          }));
+          setAdminDirectMessages(messages);
+        }, error => {
+          console.error("Chyba pri načítaní priamych správ pre admina (onSnapshot):", error);
+          setError(`Chyba pri načítaní priamych správ: ${error.message}`);
+        });
     } else {
-      setAllUsersData([]); // Vyčistiť dáta, ak nie je admin
+      setAdminDirectMessages([]);
+    }
+    return () => {
+      if (unsubscribeDirectMessages) unsubscribeDirectMessages();
+    };
+  }, [db, isAdmin, appId, user]);
+
+
+  // useEffect to combine system alerts and direct messages for admin display and pop-ups
+  React.useEffect(() => {
+    if (!user || !isAdmin) {
+      setAdminNotifications([]);
+      setShowAdminNotificationModal(false);
+      return;
     }
 
-    return () => {
-      if (unsubscribeUsers) {
-        unsubscribeUsers();
-        console.log("Admin: Unsubscribed from all users listener.");
-      }
-    };
-  }, [db, isAdmin]); // Závisí len od db a isAdmin
+    const allRelevantAlerts = [
+      ...systemAlerts,
+      ...adminDirectMessages
+    ];
 
-  // Nový useEffect pre načítanie prijatých správ pre aktuálneho používateľa
+    // Filter for the list view (only items not dismissed by current user)
+    const filteredForList = allRelevantAlerts.filter(alert => {
+      // For direct messages, dismissedBy is equivalent to readBy
+      const isDismissed = alert.dismissedBy && alert.dismissedBy.includes(user.uid);
+      return !isDismissed;
+    });
+
+    // Sort by timestamp (most recent first)
+    filteredForList.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
+    setAdminNotifications(filteredForList);
+
+    // Logic for pop-up notification
+    const latestUnseenAlert = filteredForList.find(alert => {
+      // Check if the alert has been seen by the current user
+      const hasBeenSeen = alert.seenBy && alert.seenBy.includes(user.uid);
+      return !hasBeenSeen;
+    });
+
+    if (latestUnseenAlert && user?.displayNotifications) {
+      let messageText = latestUnseenAlert.message;
+      if (latestUnseenAlert.type === 'direct_message') {
+        messageText = `Nová správa od ${latestUnseenAlert.senderName || 'Neznámy odosielateľ'}: ${latestUnseenAlert.subject}`;
+      }
+      setAdminNotificationMessage(messageText);
+      setShowAdminNotificationModal(true);
+
+      // Mark this alert as seen by the current user in Firestore
+      const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenAlert.collection).doc(latestUnseenAlert.id);
+
+      const updateField = latestUnseenAlert.type === 'direct_message' ? 'readBy' : 'seenBy';
+
+      alertRef.update({
+        [updateField]: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen/read:`, e));
+    } else if (!latestUnseenAlert) {
+      setShowAdminNotificationModal(false);
+    }
+
+  }, [user, isAdmin, db, appId, systemAlerts, adminDirectMessages, user?.displayNotifications]); // Dependencies for this combined effect
+
+
+  // Nový useEffect pre načítanie prijatých správ pre aktuálneho používateľa (pre sekciu "Moje údaje")
   React.useEffect(() => {
     let unsubscribeMessages;
     if (db && user) {
@@ -1344,7 +1374,7 @@ function App() {
   };
 
   // New function to dismiss a single notification
-  const dismissNotification = async (notificationId) => {
+  const dismissNotification = async (notificationId, notificationType, collectionName) => {
     if (!db || !user || !isAdmin) {
       setError("Nemáte oprávnenie na vymazanie upozornení.");
       return;
@@ -1353,52 +1383,60 @@ function App() {
     setError('');
 
     try {
-      const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').doc(notificationId);
-      const notificationDoc = await notificationRef.get();
+      const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(collectionName).doc(notificationId);
+      const docSnapshot = await docRef.get();
 
-      if (!notificationDoc.exists) {
-        setAdminNotificationMessage("Upozornenie už neexistuje.");
-        setShowAdminNotificationModal(true); 
+      if (!docSnapshot.exists) {
+        setAdminNotificationMessage("Upozornenie/Správa už neexistuje.");
+        setShowAdminNotificationModal(true);
         setLoading(false);
         return;
       }
 
-      const notificationData = notificationDoc.data();
-      let dismissedBy = notificationData.dismissedBy || [];
-      let seenBy = notificationData.seenBy || []; 
+      const data = docSnapshot.data();
 
-      if (!dismissedBy.includes(user.uid)) {
-        dismissedBy.push(user.uid);
-      }
-      if (!seenBy.includes(user.uid)) { // Also mark as seen if dismissed
-        seenBy.push(user.uid);
-      }
+      if (notificationType === 'system_alert') {
+        let dismissedBy = data.dismissedBy || [];
+        let seenBy = data.seenBy || [];
 
-      const activeAdminUids = allUsersData
-        .filter(u => u.role === 'admin' && u.approved === true)
-        .map(u => u.uid);
+        if (!dismissedBy.includes(user.uid)) {
+          dismissedBy.push(user.uid);
+        }
+        if (!seenBy.includes(user.uid)) { // Ensure it's marked as seen too
+          seenBy.push(user.uid);
+        }
 
-      console.log("dismissNotification: Aktívni administrátori UIDs:", activeAdminUids);
-      console.log("dismissNotification: dismissedBy pre upozornenie:", dismissedBy);
+        const activeAdminUids = allUsersData
+          .filter(u => u.role === 'admin' && u.approved === true)
+          .map(u => u.uid);
 
-      // Check if all active admins have dismissed this notification
-      const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
+        const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
 
-      if (allAdminsDismissed) {
-        await notificationRef.delete();
-        setAdminNotificationMessage("Upozornenie bolo vymazané pre všetkých administrátorov.");
-        setShowAdminNotificationModal(true); 
-      } else {
-        await notificationRef.update({ 
-          dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid), 
-          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) 
+        if (allAdminsDismissed) {
+          await docRef.delete();
+          setAdminNotificationMessage("Systémové upozornenie bolo vymazané pre všetkých administrátorov.");
+          setShowAdminNotificationModal(true);
+        } else {
+          await docRef.update({
+            dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
+            seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+          });
+          setAdminNotificationMessage("Systémové upozornenie bolo vymazané z vášho zoznamu.");
+          setShowAdminNotificationModal(true);
+        }
+      } else if (notificationType === 'direct_message') {
+        // For direct messages, just mark as read/dismissed for the current user
+        // The 'readBy' array in messages serves as both 'seen' and 'dismissed' for individual admins.
+        await docRef.update({
+          readBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
         });
-        setAdminNotificationMessage("Upozornenie bolo vymazané z vášho zoznamu.");
-        setShowAdminNotificationModal(true); 
+        setAdminNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
+        setShowAdminNotificationModal(true);
       }
+
     } catch (e) {
-      console.error("Chyba pri mazaní upozornenia:", e);
-      setError(`Chyba pri mazaní upozornenia: ${e.message}`);
+      console.error("Chyba pri mazaní upozornenia/správy:", e);
+      setError(`Chyba pri mazaní upozornenia/správy: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -1412,13 +1450,12 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      // Iterate over a copy of adminNotifications to avoid issues during deletion
-      const notificationsToDismiss = [...adminNotifications]; 
-      for (const notification of notificationsToDismiss) {
-        await dismissNotification(notification.id);
+      const notificationsToDismiss = [...adminNotifications]; // Use the filtered list
+      for (const alert of notificationsToDismiss) { // Renamed notification to alert
+        await dismissNotification(alert.id, alert.type, alert.collection);
       }
       setAdminNotificationMessage("Všetky viditeľné upozornenia boli vymazané z môjho zoznamu.");
-      setShowAdminNotificationModal(true); 
+      setShowAdminNotificationModal(true);
     } catch (e) {
       console.error("Chyba pri mazaní upozornení:", e);
       setError(`Chyba pri mazaní upozornení: ${e.message}`);
@@ -2176,8 +2213,8 @@ function App() {
                     </p>
                 )}
 
-                {/* Sekcia prijatých správ pre administrátorov */}
-                {isAdmin && receivedMessages.length > 0 && (
+                {/* Sekcia prijatých správ pre VŠETKÝCH používateľov (vrátane administrátorov) */}
+                {receivedMessages.length > 0 && (
                   <div className="mt-8">
                     <h2 className="text-xl font-semibold text-gray-800 mb-4">Prijaté správy</h2>
                     <ul className="divide-y divide-gray-200">
@@ -2206,7 +2243,7 @@ function App() {
                     </ul>
                   </div>
                 )}
-                {isAdmin && receivedMessages.length === 0 && (
+                {receivedMessages.length === 0 && (
                   <p className="text-gray-600 mt-8">Žiadne prijaté správy.</p>
                 )}
               </div>
@@ -2615,16 +2652,21 @@ function App() {
                       {loading ? 'Mažem...' : 'Vymazať všetky upozornenia z môjho zoznamu'}
                     </button>
                     <ul className="divide-y divide-gray-200">
-                      {adminNotifications.map(notification => (
-                        <li key={notification.id} className="py-2 text-gray-700 flex justify-between items-center">
+                      {adminNotifications.map(alert => ( // Renamed notification to alert for clarity
+                        <li key={alert.id} className="py-2 text-gray-700 flex justify-between items-center">
                           <div>
-                            <p className="font-semibold">{notification.message}</p>
+                            <p className="font-semibold">
+                              {alert.type === 'direct_message' ? `Správa od ${alert.senderName || 'Neznámy odosielateľ'}: ${alert.subject}` : alert.message}
+                            </p>
+                            {alert.type === 'direct_message' && (
+                                <p className="text-sm text-gray-600 whitespace-pre-wrap">{alert.content}</p>
+                            )}
                             <p className="text-xs text-gray-500">
-                              {notification.timestamp ? notification.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
+                              {alert.timestamp ? alert.timestamp.toDate().toLocaleString('sk-SK') : 'N/A'}
                             </p>
                           </div>
                           <button
-                            onClick={() => dismissNotification(notification.id)}
+                            onClick={() => dismissNotification(alert.id, alert.type, alert.collection)} // Pass type and collection
                             className="ml-4 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm"
                             disabled={loading}
                           >
