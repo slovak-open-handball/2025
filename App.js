@@ -1920,6 +1920,7 @@ function App() {
                     Zmeniť meno a priezvisko
                   </button> 
                 </li>
+                {/* NOVÁ POLOŽKA MENU: Zmena telefónneho čísla (len pre bežných používateľov) */}
                 {!isAdmin && (
                   <li>
                     <button
@@ -2147,6 +2148,7 @@ function App() {
               </form>
             )}
 
+            {/* NOVÁ SEKCIA: Zmena telefónneho čísla */}
             {profileView === 'change-phone-number' && (
               <form onSubmit={handleChangeContactPhoneNumber} className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800">Zmeniť telefónne číslo</h2>
@@ -2159,9 +2161,9 @@ function App() {
                     value={newContactPhoneNumber}
                     onChange={(e) => {
                       const value = e.target.value;
-                      const strictPhoneRegex = /^\+\d*$/;
+                      const strictPhoneRegex = /^\+\d*$/; // Povoliť len '+' a číslice
                       if (value === '' || strictPhoneRegex.test(value)) {
-                        setContactPhoneNumber(value);
+                        setNewContactPhoneNumber(value); // Nastavte newContactPhoneNumber
                       }
                     }}
                     required
