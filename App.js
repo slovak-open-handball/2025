@@ -218,7 +218,7 @@ function App() {
         return null; 
     }
 
-    const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekundách
+    const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekách
 
     if (difference <= 0) {
         return null; // Čas už uplynul
@@ -557,14 +557,13 @@ function App() {
             ...doc.data(),
             type: 'direct_message',
             collection: 'messages',
-            // Map readBy to seenBy/dismissedBy for consistent filtering in admin view
-            seenBy: doc.data().readBy || [],
-            dismissedBy: doc.data().readBy || []
+            seenBy: doc.data().seenBy || [], // Use specific seenBy for pop-up
+            dismissedBy: doc.data().readBy || [] // Use readBy for list dismissal
           }));
           setAdminDirectMessages(messages);
         }, error => {
           console.error("Chyba pri načítaní priamych správ pre admina (onSnapshot):", error);
-          setError(`Chyba pri načítaní priamych správ: ${error.message}`);
+          setError(`Chyba pri načítaní priamych správ: ${e.message}`);
         });
     } else {
       setAdminDirectMessages([]);
@@ -590,7 +589,6 @@ function App() {
 
     // Filter for the list view (only items not dismissed by current user)
     const filteredForList = allRelevantAlerts.filter(alert => {
-      // For direct messages, dismissedBy is equivalent to readBy
       const isDismissed = alert.dismissedBy && alert.dismissedBy.includes(user.uid);
       return !isDismissed;
     });
@@ -601,7 +599,7 @@ function App() {
 
     // Logic for pop-up notification
     const latestUnseenAlert = filteredForList.find(alert => {
-      // Check if the alert has been seen by the current user
+      // Check if the alert has been seen by the current user (using the correct 'seenBy' field)
       const hasBeenSeen = alert.seenBy && alert.seenBy.includes(user.uid);
       return !hasBeenSeen;
     });
@@ -614,14 +612,13 @@ function App() {
       setAdminNotificationMessage(messageText);
       setShowAdminNotificationModal(true);
 
-      // Mark this alert as seen by the current user in Firestore
+      // Mark this alert as seen by the current user in Firestore (only update 'seenBy')
       const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenAlert.collection).doc(latestUnseenAlert.id);
 
-      const updateField = latestUnseenAlert.type === 'direct_message' ? 'readBy' : 'seenBy';
-
+      // Update only the 'seenBy' field. 'readBy'/'dismissedBy' is for explicit dismissal.
       alertRef.update({
-        [updateField]: firebase.firestore.FieldValue.arrayUnion(user.uid)
-      }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen/read:`, e));
+        seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      }).catch(e => console.error(`Error marking ${latestUnseenAlert.type} as seen:`, e));
     } else if (!latestUnseenAlert) {
       setShowAdminNotificationModal(false);
     }
@@ -647,7 +644,7 @@ function App() {
           console.log("Received messages updated:", messagesList);
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
-          setError(`Chyba pri načítaní správ: ${error.message}`);
+          setError(`Chyba pri načítaní správ: ${e.message}`);
         });
     } else {
       setReceivedMessages([]);
@@ -1456,10 +1453,10 @@ function App() {
           setShowAdminNotificationModal(true);
         }
       } else if (notificationType === 'direct_message') {
-        // For direct messages, just mark as read/dismissed for the current user
-        // The 'readBy' array in messages serves as both 'seen' and 'dismissed' for individual admins.
+        // For direct messages, mark as read/dismissed for the current user in 'readBy' field
         await docRef.update({
-          readBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+          readBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
+          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid) // Also mark as seen if dismissed
         });
         setAdminNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
         setShowAdminNotificationModal(true);
@@ -1568,7 +1565,8 @@ function App() {
         subject: messageSubject,
         content: messageContent,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        readBy: [] // Pole pre sledovanie, kto si správu prečítal
+        readBy: [], // Pole pre sledovanie, kto si správu prečítal (pre explicitné odmietnutie)
+        seenBy: [] // NOVÉ: Pole pre sledovanie, kto si správu pozrel (pop-up)
       });
       setAdminNotificationMessage("Správa bola úspešne odoslaná!");
       setShowAdminNotificationModal(true);
