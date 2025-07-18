@@ -11,10 +11,10 @@ const initialAuthToken = null; // Globálne definované
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
+  // ZMENA: Aktualizované SVG cesty pre ikony z Heroicons pre správnu funkčnosť
   const EyeIcon = (
     <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 0 11-6 0 3 3 0 016 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
 
@@ -2853,10 +2853,11 @@ function App() {
                               Vymazať
                             </button>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
                 ) : (
                   <p className="text-gray-600">Žiadne nové upozornenia.</p>
                 )}
