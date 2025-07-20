@@ -86,44 +86,52 @@
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script src="login.js"></script>
     <script>
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
+        // Funkcia na načítanie hlavičky a jej JS
+        async function loadHeaderAndScripts() {
             try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // 1. Načítať HTML hlavičky
+                const headerResponse = await fetch('header.html');
+                if (!headerResponse.ok) {
+                    throw new Error(`HTTP error! status: ${headerResponse.status}`);
                 }
-                const headerHtml = await response.text();
+                const headerHtml = await headerResponse.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
+                console.log("login.html: header.html načítaný.");
+
+                // 2. Načítať a spustiť header.js
+                const headerScript = document.createElement('script');
+                headerScript.src = 'header.js';
+                headerScript.onload = () => {
+                    console.log("login.html: header.js načítaný a spustený.");
+                    // 3. Až potom renderovať React aplikáciu
+                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                        return;
+                    }
+                    if (typeof App === 'undefined') {
+                        console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                        return;
+                    }
+
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(App, null));
+                    console.log("login.html: React App vykreslená.");
+                };
+                headerScript.onerror = (e) => {
+                    console.error("login.html: Chyba pri načítaní header.js:", e);
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní skriptu hlavičky.</div>';
+                };
+                document.body.appendChild(headerScript); // Pridáme skript do body
             } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+                console.error("Chyba pri inicializácii stránky (načítanie hlavičky/skriptov):", error);
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii stránky.</div>';
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane login.js
-        window.onload = function() {
-            // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
-                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                // Už nepotrebujeme kontrolovať App.js, pretože App je definovaný v login.js
-                if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
-
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
-        };
+        // Spustíme načítanie hlavičky a skriptov po načítaní DOM
+        window.onload = loadHeaderAndScripts;
     </script>
 </body>
 </html>
