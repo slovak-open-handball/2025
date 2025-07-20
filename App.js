@@ -1970,7 +1970,7 @@ function App() {
                                   }
                                   // First character must be '+'
                                   if (value.length === 1 && value !== '+') {
-                                    e.target.setCustomValidity("Prvý znak musí byť '+'");
+                                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'");
                                     e.target.reportValidity(); // Show message immediately
                                     return;
                                   }
@@ -1989,7 +1989,7 @@ function App() {
                                     if (e.target.value.length === 0) {
                                       e.target.setCustomValidity("Prosím, vyplňte toto pole.");
                                     } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                                      e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                                      e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                                     } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
                                       e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
                                     } else {
@@ -2520,7 +2520,7 @@ function App() {
                       }
                       // First character must be '+'
                       if (value.length === 1 && value !== '+') {
-                        e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                         e.target.reportValidity(); // Show message immediately
                         return;
                       }
@@ -2539,7 +2539,7 @@ function App() {
                       if (e.target.value.length === 0) {
                         e.target.setCustomValidity("Prosím, vyplňte toto pole.");
                       } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                        e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                       } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
                         e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
                       } else {
