@@ -169,7 +169,7 @@ function App() {
         setIsAuthReady(true);
         // If user is already logged in, redirect them
         if (currentUser) {
-            window.location.href = 'logged-in.html';
+            window.location.href = 'logged-in-my-data.html';
         }
         setLoading(false); // Auth state checked, stop loading
       });
@@ -298,7 +298,7 @@ function App() {
       setLoading(false); 
 
       setTimeout(() => {
-        window.location.href = 'logged-in.html';
+        window.location.href = 'logged-in-my-data.html';
       }, 5000); 
 
     } catch (e) {
@@ -317,7 +317,7 @@ function App() {
   // Display loading state
   if (loading || !isAuthReady || user) { // If user is already logged in, show loading and redirect
     if (user) {
-        window.location.href = 'logged-in.html'; // Redirect if already logged in
+        window.location.href = 'logged-in-my-data.html'; // Redirect if already logged in
         return null; // Don't render anything while redirecting
     }
     return React.createElement(
