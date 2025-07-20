@@ -80,10 +80,11 @@ function MyDataApp() {
   React.useEffect(() => {
     let unsubscribeAuth;
     let unsubscribeFirestore = null;
+    console.log("MyDataApp: useEffect spustený.");
 
     try {
       if (typeof firebase === 'undefined') {
-        console.error("Firebase SDK nie je načítané. Skontrolujte logged-in-my-data.html.");
+        console.error("MyDataApp: Firebase SDK nie je načítané. Skontrolujte logged-in-my-data.html.");
         setError("Firebase SDK nie je načítané.");
         setPageLoading(false);
         return;
@@ -93,8 +94,10 @@ function MyDataApp() {
       let firebaseAppInstance;
       try {
         firebaseAppInstance = firebase.app(); // Try to get default app
+        console.log("MyDataApp: Získaná existujúca Firebase app inštancia.");
       } catch (e) {
-        firebaseAppInstance = firebase.initializeApp(firebaseConfig); // Initialize if not already
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig, 'mydataApp'); // Use a specific name to avoid conflicts
+        console.log("MyDataApp: Inicializovaná nová Firebase app inštancia.");
       }
       setApp(firebaseAppInstance);
 
@@ -102,43 +105,49 @@ function MyDataApp() {
       setAuth(authInstance);
       const firestoreInstance = firebase.firestore(firebaseAppInstance);
       setDb(firestoreInstance);
+      console.log("MyDataApp: Firebase Auth a Firestore inštancie nastavené.");
 
       // Listen for auth state changes
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+        console.log("MyDataApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
+        setUser(currentUser); // Set user state
+        setIsAuthReady(true); // Auth state has been determined
+
         if (!currentUser) {
             // User is NOT authenticated, redirect to login page
-            console.log("Používateľ nie je prihlásený, presmerovanie na login.html");
+            console.log("MyDataApp: Používateľ nie je prihlásený, presmerovanie na login.html.");
             window.location.href = 'login.html';
+            setPageLoading(false); // Stop loading as we are redirecting
             return;
         }
 
         // User IS authenticated
-        setUser(currentUser);
-        setIsAuthReady(true); // Auth state has been determined
-
+        console.log("MyDataApp: Používateľ je prihlásený. Načítavam dáta z Firestore.");
         // Fetch user data from Firestore
         if (firestoreInstance) {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
             unsubscribeFirestore = userDocRef.onSnapshot(docSnapshot => {
+                console.log("MyDataApp: Firestore onSnapshot pre používateľské dáta.");
                 if (docSnapshot.exists) {
                     const data = docSnapshot.data();
                     setUserData(data);
                     setIsAdmin(data.role === 'admin'); // Set isAdmin state
                     setPageLoading(false); // Data loaded, stop page loading
+                    console.log("MyDataApp: Používateľské dáta načítané a pageLoading nastavené na false.");
                 } else {
-                    console.warn("Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
+                    console.warn("MyDataApp: Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
                     setError("Používateľské dáta sa nenašli. Kontaktujte podporu.");
                     authInstance.signOut(); // Force logout if data is missing
                     setPageLoading(false); // Stop page loading
                 }
             }, err => {
-                console.error("Chyba pri načítaní používateľských dát z Firestore:", err);
+                console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore:", err);
                 setError(`Chyba pri načítaní dát: ${err.message}`);
                 authInstance.signOut(); // Force logout on Firestore error
                 setPageLoading(false); // Stop page loading
             });
         } else {
-            console.warn("Firestore inštancia nie je dostupná po prihlásení.");
+            console.warn("MyDataApp: Firestore inštancia nie je dostupná po prihlásení.");
             setError("Chyba: Databázové služby nie sú dostupné.");
             setPageLoading(false);
         }
@@ -146,31 +155,37 @@ function MyDataApp() {
 
       // Attempt initial sign-in if token exists (this is non-blocking for onAuthStateChanged)
       if (initialAuthToken) {
+        console.log("MyDataApp: Pokus o prihlásenie s initialAuthToken.");
         authInstance.signInWithCustomToken(initialAuthToken).catch(e => {
-          console.error("Chyba pri počiatočnom prihlásení Firebase s tokenom:", e);
+          console.error("MyDataApp: Chyba pri počiatočnom prihlásení Firebase s tokenom:", e);
         });
       }
+      console.log("MyDataApp: useEffect nastavený.");
 
       return () => {
         // Cleanup function for both auth and firestore listeners
+        console.log("MyDataApp: Cleanup funkcia spustená.");
         if (unsubscribeAuth) {
           unsubscribeAuth();
+          console.log("MyDataApp: onAuthStateChanged odhlásený.");
         }
         if (unsubscribeFirestore) {
           unsubscribeFirestore();
+          console.log("MyDataApp: Firestore onSnapshot odhlásený.");
         }
       };
     }
     catch (e) {
-      console.error("Nepodarilo sa inicializovať Firebase:", e);
+      console.error("MyDataApp: Nepodarilo sa inicializovať Firebase v useEffect:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setPageLoading(false);
-      window.location.href = 'login.html';
+      window.location.href = 'login.html'; // Redirect on critical Firebase init error
     }
   }, []); // Empty dependency array - runs only once on component mount
 
   // Display initial page loading state
   if (pageLoading || !isAuthReady) {
+    console.log("MyDataApp: Zobrazujem načítavaciu obrazovku. pageLoading:", pageLoading, "isAuthReady:", isAuthReady);
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -179,7 +194,9 @@ function MyDataApp() {
   }
 
   // If user is null AFTER isAuthReady is true and pageLoading is false, it means they were redirected by onAuthStateChanged.
+  // This block should ideally not be reached if the redirect in onAuthStateChanged works correctly.
   if (!user) {
+    console.log("MyDataApp: Používateľ je null po inicializácii, nemalo by sa to stať, ak presmerovanie funguje.");
     return null; // Don't render anything, as a redirect should have occurred.
   }
 
