@@ -201,32 +201,30 @@ function MyDataApp() {
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
+      // No immediate redirect in signIn. Let onAuthStateChanged handle it.
       const signIn = async () => {
         try {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
-          } else {
-            // If no custom token, try anonymous sign-in or redirect if not logged in
-             if (!authInstance.currentUser) {
-                // If not already logged in, redirect to login
-                window.location.href = 'login.html';
-                return;
-            }
           }
+          // If no initialAuthToken, just let onAuthStateChanged handle the current user state.
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
-          window.location.href = 'login.html'; // Redirect on initial auth error
+          // Do not redirect here, let onAuthStateChanged decide.
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
-        setIsAuthReady(true);
+        setIsAuthReady(true); // Auth state has been determined
+
         if (!currentUser) {
-            window.location.href = 'login.html'; // Redirect if user logs out or is not authenticated
+            // If user is not authenticated, redirect to login page
+            window.location.href = 'login.html';
+            return; // Stop further execution in this effect
         } else {
-            // Fetch user data after successful authentication
+            // User is authenticated, now fetch their data
             if (db) { // Ensure db is available
                 const userDocRef = db.collection('users').doc(currentUser.uid);
                 const unsubscribeFirestore = userDocRef.onSnapshot(docSnapshot => {
@@ -242,18 +240,22 @@ function MyDataApp() {
                         setError("Používateľské dáta sa nenašli. Kontaktujte podporu.");
                         authInstance.signOut(); // Force logout if data is missing
                     }
-                    setPageLoading(false); // Data loaded, stop page loading
+                    setPageLoading(false); // Data loaded (or not found), stop page loading
                 }, err => {
                     console.error("Chyba pri načítaní používateľských dát z Firestore:", err);
                     setError(`Chyba pri načítaní dát: ${err.message}`);
                     setPageLoading(false); // Stop page loading on error
                 });
                 return () => unsubscribeFirestore(); // Clean up Firestore listener
+            } else {
+                // If db is not yet available, but user is authenticated, wait for db
+                // This case should be rare if db is set in the same effect.
+                setPageLoading(false); // Still set to false to avoid infinite loading if db never becomes available
             }
         }
       });
 
-      signIn();
+      signIn(); // Initiate sign-in attempt
 
       return () => {
         if (unsubscribeAuth) {
@@ -278,6 +280,8 @@ function MyDataApp() {
   }
 
   // If user is not authenticated after initial check (and not loading), redirect
+  // This check is now redundant because onAuthStateChanged handles the redirect.
+  // Keeping it for clarity, but it should ideally not be reached if onAuthStateChanged works.
   if (!user) {
     return null; // Should have been redirected by useEffect
   }
