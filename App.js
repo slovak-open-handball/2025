@@ -6,7 +6,7 @@ import { formatToDatetimeLocal, validatePassword, getRecaptchaToken } from './he
 // Firebase Modular SDK Imports
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp, FieldValue } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp, FieldValue, orderBy, limit } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
 
 
 // components
@@ -570,7 +570,7 @@ function App() {
     }
 
     try {
-      const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       let initialUserRole = 'user';
@@ -688,7 +688,7 @@ function App() {
 
     setLoading(true);
     try {
-      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
 
       const userDocRef = doc(db, 'users', currentUser.uid);
@@ -2246,6 +2246,9 @@ function App() {
 }
 
 // Render the App component into the root element
+// This part is crucial for the React app to initialize
+// It's placed outside the App component function to avoid re-rendering issues
+// and to ensure it runs once the DOM is ready and React is loaded.
 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
   console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
   document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
