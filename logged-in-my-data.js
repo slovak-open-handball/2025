@@ -767,13 +767,13 @@ function MyDataApp() {
   };
 
   // Display loading state
-  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
+  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
   // Ak je user objekt (prihlásený), ale role nie je admin a stránka je admin-panel, presmeruj.
   if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
     // Check if the current page is admin-panel.html
     const currentPath = window.location.pathname.split('/').pop();
     if (currentPath === 'admin-panel.html' && user && user.role !== 'admin') {
-      window.location.href = 'logged-in.html'; // Redirect non-admins from admin panel
+      window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
       return null;
     }
     if (user === null) { // If explicitly not logged in, redirect to login
@@ -805,7 +805,7 @@ function MyDataApp() {
 
   // If user is not admin and trying to access admin panel, redirect
   if (is_admin_panel_page && user && user.role !== 'admin') {
-    window.location.href = 'logged-in.html';
+    window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
     return null;
   }
 
