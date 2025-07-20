@@ -66,8 +66,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       },
       showPassword ? EyeOffIcon : EyeIcon
     ),
+    // Changed <p> to <div> to resolve DOM nesting warning
     description && React.createElement(
-      'p',
+      'div', // Changed from 'p' to 'div'
       { className: 'text-gray-600 text-sm -mt-2' },
       description
     )
@@ -621,7 +622,7 @@ function App() {
     );
   }
 
-  // Priority display of successful registration message on registration pages
+  // Priority display of successful registration message
   if (message) {
     return React.createElement(
       'div',
