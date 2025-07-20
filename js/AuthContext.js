@@ -74,10 +74,8 @@ function AuthProvider({ children }) {
         alerts = userData.systemAlerts;
       }
 
-      // ZMENA: Prístup k správam priamo z kolekcie 'messages' (ak sú tam uložené)
-      // Predpokladáme, že správy sú uložené priamo pod kolekciou 'messages'
-      // Ak sú správy uložené pod 'artifacts/{APP_ID}/public/data/messages', budete musieť túto cestu vrátiť späť.
-      const messagesSnapshot = await db.collection('messages')
+      // ZMENA: Prístup k správam cez cestu artifacts
+      const messagesSnapshot = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('messages')
         .where('recipientId', '==', uid)
         .where('read', '==', false)
         .orderBy('timestamp', 'desc')
