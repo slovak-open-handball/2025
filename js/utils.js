@@ -1,7 +1,6 @@
 // js/utils.js
 
-// Pomocná funkcia na formátovanie objektu Date do reťazca 'YYYY-MM-DDTHH:mm' pre input typu datetime-local
-// Zabezpečuje, že vstup datetime-local zobrazuje čas v lokálnom časovom pásme používateľa.
+// Pomocná funkcia na formátovanie Date objektu na 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -17,15 +16,14 @@ const calculateTimeLeft = (registrationStartDate) => {
   const now = new Date();
   const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
 
-  // Ak startDate nie je platný dátum, alebo už je v minulosti, odpočítavanie nie je potrebné
   if (!startDate || isNaN(startDate) || now >= startDate) {
       return null;
   }
 
-  const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekúndach
+  const difference = startDate.getTime() - now.getTime();
 
   if (difference <= 0) {
-      return null; // Čas už uplynul
+      return null;
   }
 
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -36,4 +34,28 @@ const calculateTimeLeft = (registrationStartDate) => {
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 };
 
-// Tieto funkcie budú dostupné globálne.
+// Funkcia pre validáciu hesla (prevzatá z pôvodného App.js)
+const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+        return "Heslo musí mať aspoň 8 znakov.";
+    }
+    if (!hasUpperCase) {
+        return "Heslo musí obsahovať aspoň jedno veľké písmeno.";
+    }
+    if (!hasLowerCase) {
+        return "Heslo musí obsahovať aspoň jedno malé písmeno.";
+    }
+    if (!hasDigit) {
+        return "Heslo musí obsahovať aspoň jedno číslo.";
+    }
+    if (!hasSpecialChar) {
+        return "Heslo musí obsahovať aspoň jeden špeciálny znak.";
+    }
+    return null; // Heslo je platné
+};
