@@ -775,6 +775,63 @@ function App() {
     setCurrentStep(1);
   };
 
+  // NOVÉ: Funkcia pre validáciu a formátovanie numerických inputov (IČO, DIČ, PSČ)
+  const handleNumericInputChange = (e, setter, exactLength = null) => {
+    let value = e.target.value;
+    const numericValue = value.replace(/\D/g, ''); // Remove non-digits
+
+    if (exactLength && numericValue.length > exactLength) {
+        value = numericValue.substring(0, exactLength);
+    } else {
+        value = numericValue;
+    }
+
+    setter(value);
+    e.target.setCustomValidity(''); // Clear custom validity on change
+  };
+
+  // NOVÉ: Funkcia pre validáciu IČ DPH
+  const handleIcDphChange = (e) => {
+    let value = e.target.value.toUpperCase();
+    let formattedValue = '';
+    if (value.length > 0) {
+        if (value.length <= 2) {
+            // Allow only letters for the first two characters
+            formattedValue = value.replace(/[^A-Z]/g, '');
+        } else {
+            // First two characters are letters, rest are digits
+            const prefix = value.substring(0, 2).replace(/[^A-Z]/g, '');
+            const suffix = value.substring(2).replace(/\D/g, '');
+            formattedValue = prefix + suffix;
+        }
+    }
+    setIcDph(formattedValue);
+    e.target.setCustomValidity('');
+  };
+
+  // NOVÉ: Funkcia pre formátovanie PSČ s medzerou
+  const handleZipCodeChange = (e) => {
+    let value = e.target.value.replace(/\s/g, ''); // Remove existing spaces
+    const numericValue = value.replace(/\D/g, ''); // Remove non-digits
+    let formattedValue = numericValue;
+
+    if (numericValue.length > 3) {
+        formattedValue = numericValue.substring(0, 3) + ' ' + numericValue.substring(3, 6);
+    } else if (numericValue.length > 6) {
+        formattedValue = numericValue.substring(0, 6); // Limit to 6 digits
+    }
+    setZipCode(formattedValue);
+    e.target.setCustomValidity('');
+  };
+
+  // NOVÉ: Funkcia pre nastavenie custom validity správ pre numerické polia
+  const setNumericInputValidity = (e, message) => {
+    if (!/^\d*$/.test(e.target.value)) {
+      e.target.setCustomValidity(message);
+    } else {
+      e.target.setCustomValidity('');
+    }
+  };
 
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
@@ -785,11 +842,26 @@ function App() {
 
     // Validácia pre Krok 2 (fakturačné údaje)
     if (currentStep === 2 && !isAdminRegistration) { // Fakturačné údaje sú len pre bežnú registráciu
-      if (!clubName || !ico || !street || !houseNumber || !city || !zipCode || !country) {
-        setError("Prosím, vyplňte všetky fakturačné údaje.");
+      if (!clubName || !street || !houseNumber || !city || !zipCode || !country) {
+        setError("Prosím, vyplňte všetky povinné fakturačné a adresné údaje.");
         return;
       }
-      // Voliteľné: Ďalšie validácie pre IČO, DIČ, IČ DPH formáty
+      // NOVÉ: Kontrola, či je aspoň jedno z IČO, DIČ, IČ DPH vyplnené
+      if (!ico && !dic && !icDph) {
+        setError("Prosím, vyplňte aspoň jedno z polí IČO, DIČ alebo IČ DPH.");
+        return;
+      }
+      // NOVÉ: Validácia PSČ dĺžky
+      const cleanZipCode = zipCode.replace(/\s/g, '');
+      if (cleanZipCode.length !== 6 || !/^\d{6}$/.test(cleanZipCode)) {
+          setError("PSČ musí obsahovať presne 6 číslic.");
+          return;
+      }
+      // NOVÉ: Validácia IČ DPH formátu
+      if (icDph && !/^[A-Z]{2}\d*$/.test(icDph)) {
+          setError("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).");
+          return;
+      }
     }
 
     const recaptchaToken = await getRecaptchaToken('register');
@@ -849,7 +921,7 @@ function App() {
             street: street,
             houseNumber: houseNumber,
             city: city,
-            zipCode: zipCode,
+            zipCode: zipCode.replace(/\s/g, ''), // Uložiť PSČ bez medzery
             country: country
           }
         };
@@ -873,7 +945,7 @@ function App() {
             lastName: lastName,
             contactPhoneNumber: contactPhoneNumber,
             // NOVÉ: Pridanie fakturačných údajov do payloadu pre Apps Script
-            billing: !isAdminRegistration ? { clubName, ico, dic, icDph, street, houseNumber, city, zipCode, country } : undefined
+            billing: !isAdminRegistration ? { clubName, ico, dic, icDph, street, houseNumber, city, zipCode: zipCode.replace(/\s/g, ''), country } : undefined
           };
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -2237,8 +2309,10 @@ function App() {
                         id="ico"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={ico}
-                        onChange={(e) => setIco(e.target.value)}
-                        required
+                        onChange={(e) => handleNumericInputChange(e, setIco)}
+                        onInvalid={(e) => setNumericInputValidity(e, "IČO môže obsahovať iba číslice.")}
+                        pattern="^\d*$"
+                        title="IČO môže obsahovať iba číslice."
                         placeholder="IČO"
                         disabled={loading || !!message}
                       />
@@ -2250,7 +2324,10 @@ function App() {
                         id="dic"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={dic}
-                        onChange={(e) => setDic(e.target.value)}
+                        onChange={(e) => handleNumericInputChange(e, setDic)}
+                        onInvalid={(e) => setNumericInputValidity(e, "DIČ môže obsahovať iba číslice.")}
+                        pattern="^\d*$"
+                        title="DIČ môže obsahovať iba číslice."
                         placeholder="DIČ (voliteľné)"
                         disabled={loading || !!message}
                       />
@@ -2262,12 +2339,15 @@ function App() {
                         id="ic-dph"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={icDph}
-                        onChange={(e) => setIcDph(e.target.value)}
+                        onChange={handleIcDphChange}
+                        onInvalid={(e) => e.target.setCustomValidity("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).")}
+                        pattern="^[A-Z]{2}\d*$"
+                        title="IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890)."
                         placeholder="IČ DPH (voliteľné)"
                         disabled={loading || !!message}
                       />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-2">Adresa</h3>
+                    <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-2">Fakturačná adresa</h3> {/* ZMENA NADPISU */}
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="street">Ulica</label>
                       <input
@@ -2314,7 +2394,11 @@ function App() {
                         id="zip-code"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value)}
+                        onChange={handleZipCodeChange}
+                        onInvalid={(e) => e.target.setCustomValidity("PSČ musí obsahovať presne 6 číslic (napr. 123 456).")}
+                        pattern="^\d{3}\s?\d{3}$" // Pattern for 3 digits, optional space, 3 digits
+                        maxLength="7" // 6 digits + 1 space
+                        title="PSČ musí obsahovať presne 6 číslic (napr. 123 456)."
                         required
                         placeholder="PSČ"
                         disabled={loading || !!message}
@@ -2670,9 +2754,9 @@ function App() {
                         <p className="text-gray-700"><span className="font-semibold">IČO: </span>{user.billing.ico || '-'}</p>
                         <p className="text-gray-700"><span className="font-semibold">DIČ: </span>{user.billing.dic || '-'}</p>
                         <p className="text-gray-700"><span className="font-semibold">IČ DPH: </span>{user.billing.icDph || '-'}</p>
-                        <h4 className="text-md font-semibold text-gray-700 mt-3 mb-1">Adresa:</h4>
+                        <h4 className="text-md font-semibold text-gray-700 mt-3 mb-1">Fakturačná adresa:</h4> {/* ZMENA NADPISU */}
                         <p className="text-gray-700">{user.billing.address?.street || '-'} {user.billing.address?.houseNumber || '-'}</p>
-                        <p className="text-gray-700">{user.billing.address?.zipCode || '-'} {user.billing.address?.city || '-'}</p>
+                        <p className="text-gray-700">{user.billing.address?.zipCode ? `${user.billing.address.zipCode.substring(0,3)} ${user.billing.address.zipCode.substring(3,6)}` : '-'} {user.billing.address?.city || '-'}</p> {/* ZOBRAZENIE PSČ S MEDZEROU */}
                         <p className="text-gray-700">{user.billing.address?.country || '-'}</p>
                       </div>
                     )}
@@ -3091,7 +3175,7 @@ function App() {
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.street || '-'}</td> {/* NOVÉ */}
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.houseNumber || '-'}</td> {/* NOVÉ */}
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.city || '-'}</td> {/* NOVÉ */}
-                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.zipCode || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.zipCode ? `${u.billing.address.zipCode.substring(0,3)} ${u.billing.address.zipCode.substring(3,6)}` : '-'}</td> {/* NOVÉ - zobrazenie PSČ s medzerou */}
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.country || '-'}</td> {/* NOVÉ */}
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
