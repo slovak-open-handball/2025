@@ -3,16 +3,16 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
 // Globálne premenné (budú poskytnuté prostredím Canvas)
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-    apiKey: "YOUR_API_KEY", // Nahraďte skutočným API kľúčom
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Globálne definované
+const firebaseConfig = { // Globálne definované
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+  projectId: "prihlasovanie-4f3f3",
+  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+  messagingSenderId: "26454452024",
+  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const initialAuthToken = null; // Globálne definované
 
 // Inicializácia Firebase
 const app = initializeApp(firebaseConfig);
