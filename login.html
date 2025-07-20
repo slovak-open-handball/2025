@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Prihlásenie</title>
+    <title>SOH 2025 - Slovak Open Handball</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -14,7 +14,7 @@
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
-        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -48,6 +48,32 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
+
+    <!-- Kľúčová ZMENA: Inicializácia Firebase aplikácie tu, pred akýmikoľvek inými skriptami, ktoré ju používajú -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = null; // Stále globálne definované
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Stále globálne definované
+
+        try {
+            // Inicializovať predvolenú Firebase aplikáciu len raz
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log("index.html: Firebase App '[DEFAULT]' inicializovaná v head.");
+            } else {
+                console.log("index.html: Firebase App '[DEFAULT]' už existuje.");
+            }
+        } catch (e) {
+            console.error("index.html: Chyba pri inicializácii Firebase App v head:", e);
+        }
+    </script>
 </head>
 <body class="bg-gray-100">
     <!-- Hlavička sa načíta dynamicky -->
@@ -58,7 +84,7 @@
     </div>
 
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="login.js"></script>
+    <script src="index.js"></script>
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -75,24 +101,34 @@
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane login.js
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane index.js
         window.onload = function() {
             // Načítať hlavičku ako prvú
             loadHeader().then(() => {
-                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
+                // Po načítaní header.html, načítame header.js
+                const headerScript = document.createElement('script');
+                headerScript.src = 'header.js';
+                headerScript.onload = () => {
+                    console.log("index.html: header.js načítaný a spustený.");
+                    // Pokračujeme s načítaním React aplikácie
+                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                        return;
+                    }
+                    if (typeof App === 'undefined') {
+                        console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                        return;
+                    }
 
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(App, null));
+                };
+                headerScript.onerror = (e) => {
+                    console.error("index.html: Chyba pri načítaní header.js:", e);
+                };
+                document.body.appendChild(headerScript); // Pridáme skript do body
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
