@@ -115,7 +115,7 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
+  const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
@@ -343,8 +343,9 @@ function App() {
 
     } catch (e) {
       console.error("Chyba pri prihlásení:", e);
+      // ZMENA: Upravená chybová správa pre nesprávne prihlasovacie údaje
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
-        setError("Nesprávne prihlasovacie údaje. Skontrolujte prosím svoju e-mailovú adresu a heslo a skúste to znova.");
+        setError("Nepodarilo sa prihlásiť – nesprávne meno alebo heslo.");
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
@@ -355,7 +356,7 @@ function App() {
   };
 
   // Display loading state
-  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
+  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
   // Ak je user objekt (prihlásený), presmeruj.
   if (user === undefined || loading) {
     if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
