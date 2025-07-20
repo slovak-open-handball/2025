@@ -1961,20 +1961,45 @@ function App() {
                                 className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                                 value={contactPhoneNumber}
                                 onChange={(e) => {
-                                    setContactPhoneNumber(e.target.value);
-                                    // Clear custom validity if the input is now valid according to the pattern
-                                    if (e.target.validity.valid) {
-                                        e.target.setCustomValidity('');
-                                    }
+                                  const value = e.target.value;
+                                  // Allow empty string for clearing input
+                                  if (value === '') {
+                                    setContactPhoneNumber('');
+                                    e.target.setCustomValidity('');
+                                    return;
+                                  }
+                                  // First character must be '+'
+                                  if (value.length === 1 && value !== '+') {
+                                    e.target.setCustomValidity("Prvý znak musí byť '+'");
+                                    e.target.reportValidity(); // Show message immediately
+                                    return;
+                                  }
+                                  // After '+', only digits are allowed
+                                  if (value.length > 1 && !/^\+\d*$/.test(value)) {
+                                    e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                                    e.target.reportValidity(); // Show message immediately
+                                    return;
+                                  }
+                                  // If valid so far, update state and clear custom validity
+                                  setContactPhoneNumber(value);
+                                  e.target.setCustomValidity('');
                                 }}
                                 onInvalid={(e) => {
                                     // Set custom validity message when the input is invalid
-                                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                                    if (e.target.value.length === 0) {
+                                      e.target.setCustomValidity("Prosím, vyplňte toto pole.");
+                                    } else if (e.target.value.length === 1 && e.target.value !== '+') {
+                                      e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                                    } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
+                                      e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                                    } else {
+                                      e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                                    }
                                 }}
                                 required
                                 placeholder="+421901234567"
-                                pattern="^\+\d+$"
-                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." // This title is now used by onInvalid
+                                pattern="^\+\d+$" // Keep pattern for browser's default validation on submit
+                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." 
                                 disabled={loading || !!message}
                             />
                         </div>
@@ -2485,7 +2510,42 @@ function App() {
                     id="new-contact-phone-number"
                     className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                     value={newContactPhoneNumber}
-                    onChange={(e) => setNewContactPhoneNumber(e.target.value)} // Removed filtering here
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string for clearing input
+                      if (value === '') {
+                        setNewContactPhoneNumber('');
+                        e.target.setCustomValidity('');
+                        return;
+                      }
+                      // First character must be '+'
+                      if (value.length === 1 && value !== '+') {
+                        e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                        e.target.reportValidity(); // Show message immediately
+                        return;
+                      }
+                      // After '+', only digits are allowed
+                      if (value.length > 1 && !/^\+\d*$/.test(value)) {
+                        e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                        e.target.reportValidity(); // Show message immediately
+                        return;
+                      }
+                      // If valid so far, update state and clear custom validity
+                      setNewContactPhoneNumber(value);
+                      e.target.setCustomValidity('');
+                    }}
+                    onInvalid={(e) => {
+                      // Set custom validity message when the input is invalid
+                      if (e.target.value.length === 0) {
+                        e.target.setCustomValidity("Prosím, vyplňte toto pole.");
+                      } else if (e.target.value.length === 1 && e.target.value !== '+') {
+                        e.target.setCustomValidity("Prvý znak musí byť '+'.");
+                      } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
+                        e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                      } else {
+                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                      }
+                    }}
                     required
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
@@ -2699,33 +2759,32 @@ function App() {
             {profileView === 'all-teams' && (
               <div className="space-y-4 border-t pt-4 mt-4">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Všetky tímy (údaje z registračného formulára)</h2>
-                {allUsersData.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
-                      <thead>
-                        <tr className="bg-gray-100 border-b border-gray-200">
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">E-mail</th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Meno kontaktnej osoby</th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Priezvisko kontaktnej osoby</th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Telefónne číslo</th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Rola</th>
-                          <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Schválený</th>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-200">
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">E-mail</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Meno kontaktnej osoby</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Priezvisko kontaktnej osoby</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Telefónne číslo</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Rola</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Schválený</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allUsersData.map((u) => (
+                        <tr key={u.uid} className="hover:bg-gray-50">
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.email}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || '-'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || '-'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || '-'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {allUsersData.map((u) => (
-                          <tr key={u.uid} className="hover:bg-gray-50">
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.email}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || '-'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || '-'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || '-'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
-                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 ) : (
                   <p className="text-gray-600">Žiadne registračné údaje na zobrazenie alebo načítavanie...</p>
                 )}
