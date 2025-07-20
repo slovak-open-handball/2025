@@ -19,7 +19,6 @@
         // No header loading for admin-register.html as per original file, it seems.
         // It's a special page for initial admin setup.
         // If you need header, uncomment loadHeader and firebase.auth().onAuthStateChanged
-        /*
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -70,7 +69,6 @@
         firebase.auth().onAuthStateChanged(user => {
             updateHeaderLinks();
         });
-        */
     </script>
 
     <script src="js/admin-register-page.js"></script>
