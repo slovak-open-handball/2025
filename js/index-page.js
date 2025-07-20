@@ -23,7 +23,7 @@ function IndexPage() {
       setLoading(true);
       try {
         // MODIFIKOVANÉ: Prístup k tímom cez cestu artifacts
-        const querySnapshot = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('teams').get();
+        const querySnapshot = await db.collection('teams').get();
         setTeamCount(querySnapshot.size);
       } catch (err) {
         console.error("Chyba pri načítavaní počtu tímov:", err);
