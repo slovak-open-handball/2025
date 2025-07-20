@@ -1,3 +1,4 @@
+/*
 // Global application ID and Firebase configuration (should be consistent across all React apps)
 const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
 const firebaseConfig = {
@@ -9,6 +10,7 @@ const firebaseConfig = {
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
 const initialAuthToken = null; // Global authentication token
+*/
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
