@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Nastavenia turnaja</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            background-color: #f3f4f6; /* Svetlo šedé pozadie */
+        }
+        /* Štýly pre modálne okná */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+    </style>
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel pre transformáciu JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="header-placeholder">
+        <!-- Hlavička sa načíta sem -->
+    </div>
+    <div id="root">
+        <!-- React aplikácia sa načíta sem -->
+        <div class="flex justify-center items-center h-screen">
+            <div class="text-center text-gray-600">
+                Načítavam aplikáciu...
+            </div>
+        </div>
+    </div>
+
+    <script type="text/babel" src="logged-in-tournament-settings.js"></script>
+    <script type="text/javascript">
+        // Funkcia na načítanie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP chyba! Status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+
+                // Po načítaní hlavičky inicializujeme poslucháča pre zmeny stavu autentifikácie
+                // Tieto globálne premenné by mali byť definované v App.js alebo podobnom súbore
+                // pre správnu funkčnosť v produkčnom prostredí. Tu sú len pre ukážku.
+                const firebaseConfig = {
+                    apiKey: "YOUR_API_KEY", // Nahraďte skutočným API kľúčom
+                    authDomain: "YOUR_AUTH_DOMAIN",
+                    projectId: "YOUR_PROJECT_ID",
+                    storageBucket: "YOUR_STORAGE_BUCKET",
+                    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                    appId: "YOUR_APP_ID"
+                };
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                // Dynamické importy Firebase
+                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                const { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                const { getFirestore } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+
+                // Prihlásenie používateľa
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    const authLink = document.getElementById('auth-link');
+                    const profileLink = document.getElementById('profile-link');
+                    const logoutButton = document.getElementById('logout-button');
+                    const registerLink = document.getElementById('register-link');
+
+                    if (authLink) authLink.classList.add('hidden');
+                    if (profileLink) profileLink.classList.add('hidden');
+                    if (logoutButton) logoutButton.classList.add('hidden');
+                    if (registerLink) registerLink.classList.add('hidden'); // Skryť aj registráciu na turnaj
+
+                    if (user) {
+                        // Používateľ je prihlásený
+                        if (authLink) authLink.classList.add('hidden');
+                        if (profileLink) profileLink.classList.remove('hidden');
+                        if (logoutButton) logoutButton.classList.remove('hidden');
+                        if (registerLink) registerLink.classList.remove('hidden'); // Zobraziť registráciu na turnaj
+                    } else {
+                        // Používateľ nie je prihlásený
+                        if (authLink) authLink.classList.remove('hidden');
+                        if (profileLink) profileLink.classList.add('hidden');
+                        if (logoutButton) logoutButton.classList.add('hidden');
+                        if (registerLink) registerLink.classList.add('hidden'); // Skryť registráciu na turnaj
+                    }
+                });
+
+                if (logoutButton) {
+                    logoutButton.onclick = async () => {
+                        try {
+                            await signOut(auth);
+                            window.location.href = 'login.html'; // Presmerovať na prihlasovaciu stránku po odhlásení
+                        } catch (error) {
+                            console.error("Chyba pri odhlasovaní:", error);
+                        }
+                    };
+                }
+
+            } catch (error) {
+                console.error("Chyba pri načítaní hlavičky:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+            }
+        }
+
+        // Tento skript sa spustí po načítaní App.js a hlavičky
+        window.onload = function() {
+            // Načítať hlavičku ako prvú
+            loadHeader().then(() => {
+                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof App === 'undefined') {
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            }).catch(error => {
+                console.error("Chyba pri inicializácii stránky:", error);
+            });
+        };
+    </script>
+</body>
+</html>
