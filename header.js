@@ -1,4 +1,3 @@
-/*
 const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
 const firebaseConfig = {
   apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -9,7 +8,6 @@ const firebaseConfig = {
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
 const initialAuthToken = null; // Globálne definované
-*/
 
 let firebaseAppHeader; // Použijeme iný názov pre inštanciu aplikácie hlavičky
 let authHeader;
