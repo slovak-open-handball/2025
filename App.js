@@ -1956,24 +1956,22 @@ function App() {
                         <div>
                             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
                             <input
-                                type="tel"
+                                type="tel" // Use type="tel" for phone numbers
                                 id="reg-phone-number"
                                 className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                                 value={contactPhoneNumber}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    const strictPhoneRegex = /^\+\d*$/;
-                                    if (value === '' || strictPhoneRegex.test(value)) {
-                                        setContactPhoneNumber(value);
-                                    }
-                                }}
+                                onChange={(e) => setContactPhoneNumber(e.target.value)} // Removed filtering here
                                 required
                                 placeholder="+421901234567"
                                 pattern="^\+\d+$"
-                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." // Custom validation message
                                 disabled={loading || !!message}
                             />
                         </div>
+                        {/* ZMENA: Presunutý <p> element pod inputbox pre telefónne číslo */}
+                        <p className="text-gray-600 text-sm -mt-2">
+                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                        </p>
                         <div>
                             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa kontaktnej osoby</label>
                             <input
@@ -1988,10 +1986,6 @@ function App() {
                                 disabled={loading || !!message}
                             />
                         </div>
-                        <p className="text-gray-600 text-sm mt-4">
-                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                        </p>
-                        {/* ZMENA: Nový <p> element pre text o hesle */}
                         <p className="text-gray-600 text-sm">
                             Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
                         </p>
@@ -2481,17 +2475,11 @@ function App() {
                     id="new-contact-phone-number"
                     className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                     value={newContactPhoneNumber}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const strictPhoneRegex = /^\+\d*$/; // Povoliť len '+' a číslice
-                      if (value === '' || strictPhoneRegex.test(value)) {
-                        setNewContactPhoneNumber(value); // Nastavte newContactPhoneNumber
-                      }
-                    }}
+                    onChange={(e) => setNewContactPhoneNumber(e.target.value)} // Removed filtering here
                     required
                     placeholder="+421901234567"
                     pattern="^\+\d+$"
-                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)"
+                    title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." // Custom validation message
                     disabled={!isEditAllowed}
                   />
                 </div>
