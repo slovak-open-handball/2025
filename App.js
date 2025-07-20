@@ -1,7 +1,9 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'https://esm.sh/react@18?dev'; // ZMENA: Import Reactu ako ES modulu
+import ReactDOM from 'https://esm.sh/react-dom@18/client?dev'; // ZMENA: Import ReactDOM ako ES modulu
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, updatePassword, updateEmail } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, onSnapshot, updateDoc, deleteDoc, addDoc, getDocs } from 'firebase/firestore';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
 
 // Globálne premenné pre Firebase konfiguráciu a token
 // Tieto premenné sú poskytované prostredím Canvas
@@ -1170,7 +1172,7 @@ export default function App() {
                   <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="admin-dic">DIČ</label>
                   <input
                     type="text"
-                    id="admin-dic"
+                    id="dic"
                     className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                     placeholder="DIČ (nepovinné)"
                     value={dic}
