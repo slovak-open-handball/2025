@@ -378,7 +378,7 @@ function App() {
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
-        React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na Slovak Open Handball'),
+        React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na stránke turnaja Slovak Open Handball'),
         user ? (
           React.createElement(
             React.Fragment,
