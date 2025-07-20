@@ -57,51 +57,61 @@ function ChangePasswordComponent({ setLoading, setError, setMessage }) {
     }
   };
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold text-blue-700 mb-4">Zmena hesla</h2>
-      <form onSubmit={handleChangePassword}>
-        <PasswordInput
-          id="old-password"
-          label="Staré heslo"
-          value={oldPassword}
-          onChange={(e) => setOldPassword(e.target.value)}
-          placeholder="Vaše staré heslo"
-          autoComplete="current-password"
-          showPassword={showOldPassword}
-          toggleShowPassword={() => setShowOldPassword(!showOldPassword)}
-        />
-        <PasswordInput
-          id="new-password"
-          label="Nové heslo"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Min. 8 znakov, veľké/malé písmeno, číslo, znak"
-          autoComplete="new-password"
-          showPassword={showNewPassword}
-          toggleShowPassword={() => setShowNewPassword(!showNewPassword)}
-          description={passwordError || "Heslo musí mať aspoň 8 znakov, veľké a malé písmeno, číslo a špeciálny znak."}
-        />
-        <PasswordInput
-          id="confirm-new-password"
-          label="Potvrdiť nové heslo"
-          value={confirmNewPassword}
-          onChange={(e) => setConfirmNewPassword(e.target.value)}
-          placeholder="Zopakujte nové heslo"
-          autoComplete="new-password"
-          showPassword={showNewPassword} // Použite rovnaký stav pre potvrdenie
-          toggleShowPassword={() => setShowNewPassword(!showNewPassword)}
-        />
-        {passwordError && <p className="text-red-500 text-sm mb-4">{passwordError}</p>}
-        <div className="flex justify-end mt-6">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Zmeniť heslo
-          </button>
-        </div>
-      </form>
-    </div>
+  return React.createElement(
+    'div',
+    { className: 'bg-white p-6 rounded-lg shadow-lg' },
+    React.createElement(
+      'h2',
+      { className: 'text-2xl font-semibold text-blue-700 mb-4' },
+      'Zmena hesla'
+    ),
+    React.createElement(
+      'form',
+      { onSubmit: handleChangePassword },
+      React.createElement(PasswordInput, {
+        id: 'old-password',
+        label: 'Staré heslo',
+        value: oldPassword,
+        onChange: (e) => setOldPassword(e.target.value),
+        placeholder: 'Vaše staré heslo',
+        autoComplete: 'current-password',
+        showPassword: showOldPassword,
+        toggleShowPassword: () => setShowOldPassword(!showOldPassword),
+      }),
+      React.createElement(PasswordInput, {
+        id: 'new-password',
+        label: 'Nové heslo',
+        value: newPassword,
+        onChange: (e) => setNewPassword(e.target.value),
+        placeholder: 'Min. 8 znakov, veľké/malé písmeno, číslo, znak',
+        autoComplete: 'new-password',
+        showPassword: showNewPassword,
+        toggleShowPassword: () => setShowNewPassword(!showNewPassword),
+        description: passwordError || 'Heslo musí mať aspoň 8 znakov, veľké a malé písmeno, číslo a špeciálny znak.',
+      }),
+      React.createElement(PasswordInput, {
+        id: 'confirm-new-password',
+        label: 'Potvrdiť nové heslo',
+        value: confirmNewPassword,
+        onChange: (e) => setConfirmNewPassword(e.target.value),
+        placeholder: 'Zopakujte nové heslo',
+        autoComplete: 'new-password',
+        showPassword: showNewPassword, // Použite rovnaký stav pre potvrdenie
+        toggleShowPassword: () => setShowNewPassword(!showNewPassword),
+      }),
+      passwordError && React.createElement('p', { className: 'text-red-500 text-sm mb-4' }, passwordError),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end mt-6' },
+        React.createElement(
+          'button',
+          {
+            type: 'submit',
+            className: 'px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200',
+          },
+          'Zmeniť heslo'
+        )
+      )
+    )
   );
 }
