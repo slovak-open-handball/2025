@@ -91,157 +91,223 @@ function MyDataComponent({ setLoading, setError, setMessage }) {
     setMessage('');
   };
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold text-blue-700 mb-4">Moje údaje</h2>
-      {!canEdit && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-          <p className="font-bold">Dátum na úpravu údajov vypršal.</p>
-          <p>Úpravy údajov sú povolené len do {userDataEditEndDate?.toLocaleString()}.</p>
-        </div>
-      )}
-
-      <form onSubmit={handleUpdateProfile}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="fullName">Meno a Priezvisko</label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.fullName || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="teamName">Názov tímu</label>
-            <input
-              type="text"
-              id="teamName"
-              name="teamName"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.teamName || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="birthDate">Dátum narodenia</label>
-            <input
-              type="datetime-local"
-              id="birthDate"
-              name="birthDate"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.birthDate || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="gender">Pohlavie</label>
-            <select
-              id="gender"
-              name="gender"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.gender || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            >
-              <option value="">Vyberte pohlavie</option>
-              <option value="muž">Muž</option>
-              <option value="žena">Žena</option>
-              <option value="iné">Iné</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="nationality">Národnosť</label>
-            <input
-              type="text"
-              id="nationality"
-              name="nationality"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.nationality || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="city">Mesto</label>
-            <input
-              type="text"
-              id="city"
-              name="city"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.city || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">Adresa</label>
-            <input
-              type="text"
-              id="address"
-              name="address"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.address || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone">Telefónne číslo</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={userData.phone || ''}
-              onChange={handleInputChange}
-              required
-              disabled={!isEditing}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end space-x-4 mt-6">
-          {!isEditing ? (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              disabled={!canEdit}
-            >
-              Upraviť
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
-              >
-                Zrušiť
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                disabled={!hasChanges() || !canEdit}
-              >
-                Uložiť zmeny
-              </button>
-            </>
-          )}
-        </div>
-      </form>
-    </div>
+  return React.createElement(
+    'div',
+    { className: 'bg-white p-6 rounded-lg shadow-lg' },
+    React.createElement(
+      'h2',
+      { className: 'text-2xl font-semibold text-blue-700 mb-4' },
+      'Moje údaje'
+    ),
+    !canEdit &&
+      React.createElement(
+        'div',
+        { className: 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4', role: 'alert' },
+        React.createElement('p', { className: 'font-bold' }, 'Dátum na úpravu údajov vypršal.'),
+        React.createElement('p', null, 'Úpravy údajov sú povolené len do ', userDataEditEndDate?.toLocaleString(), '.')
+      ),
+    React.createElement(
+      'form',
+      { onSubmit: handleUpdateProfile },
+      React.createElement(
+        'div',
+        { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'fullName' },
+            'Meno a Priezvisko'
+          ),
+          React.createElement('input', {
+            type: 'text',
+            id: 'fullName',
+            name: 'fullName',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.fullName || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'teamName' },
+            'Názov tímu'
+          ),
+          React.createElement('input', {
+            type: 'text',
+            id: 'teamName',
+            name: 'teamName',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.teamName || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'birthDate' },
+            'Dátum narodenia'
+          ),
+          React.createElement('input', {
+            type: 'datetime-local',
+            id: 'birthDate',
+            name: 'birthDate',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.birthDate || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'gender' },
+            'Pohlavie'
+          ),
+          React.createElement(
+            'select',
+            {
+              id: 'gender',
+              name: 'gender',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+              value: userData.gender || '',
+              onChange: handleInputChange,
+              required: true,
+              disabled: !isEditing,
+            },
+            React.createElement('option', { value: '' }, 'Vyberte pohlavie'),
+            React.createElement('option', { value: 'muž' }, 'Muž'),
+            React.createElement('option', { value: 'žena' }, 'Žena'),
+            React.createElement('option', { value: 'iné' }, 'Iné')
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'nationality' },
+            'Národnosť'
+          ),
+          React.createElement('input', {
+            type: 'text',
+            id: 'nationality',
+            name: 'nationality',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.nationality || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' },
+            'Mesto'
+          ),
+          React.createElement('input', {
+            type: 'text',
+            id: 'city',
+            name: 'city',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.city || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'address' },
+            'Adresa'
+          ),
+          React.createElement('input', {
+            type: 'text',
+            id: 'address',
+            name: 'address',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.address || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'phone' },
+            'Telefónne číslo'
+          ),
+          React.createElement('input', {
+            type: 'tel',
+            id: 'phone',
+            name: 'phone',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: userData.phone || '',
+            onChange: handleInputChange,
+            required: true,
+            disabled: !isEditing,
+          })
+        )
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end space-x-4 mt-6' },
+        !isEditing ?
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: () => setIsEditing(true),
+              className: 'px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200',
+              disabled: !canEdit,
+            },
+            'Upraviť'
+          ) :
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(
+              'button',
+              {
+                type: 'button',
+                onClick: handleCancelEdit,
+                className: 'px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
+              },
+              'Zrušiť'
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'submit',
+                className: 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200',
+                disabled: !hasChanges() || !canEdit,
+              },
+              'Uložiť zmeny'
+            )
+          )
+      )
+    )
   );
 }
