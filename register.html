@@ -63,6 +63,18 @@
     <script src="js/components.js"></script>
     <script src="js/AuthContext.js"></script>
 
+    <!-- Global reCAPTCHA callback function - MUST be defined before register-page.js -->
+    <script>
+        window.setRecaptchaToken = function(token) {
+            // Call the React component's state setter if it's exposed
+            if (window._setRecaptchaTokenFromPage) {
+                window._setRecaptchaTokenFromPage(token);
+            } else {
+                console.warn("RegisterPage's setRecaptchaToken is not yet available globally.");
+            }
+        };
+    </script>
+
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -73,7 +85,7 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-container').innerHTML = headerHtml;
-                updateHeaderLinks();
+                // updateHeaderLinks() sa teraz volá zvnútra React komponentu po inicializácii Firebase
             } catch (e) {
                 console.error("Chyba pri načítaní hlavičky:", e);
                 document.getElementById('header-container').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
@@ -82,6 +94,7 @@
 
         // Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke
         function updateHeaderLinks() {
+            // Táto funkcia je teraz volaná z React komponentov, kde je Firebase už inicializované
             const auth = firebase.auth();
             const user = auth.currentUser;
             const profileLink = document.getElementById('profile-link');
@@ -89,17 +102,10 @@
             const logoutButton = document.getElementById('logout-button');
             const registerLink = document.getElementById('register-link');
 
-            if (user) {
-                profileLink.classList.remove('hidden');
-                authLink.classList.add('hidden');
-                logoutButton.classList.remove('hidden');
-                registerLink.classList.add('hidden');
-            } else {
-                profileLink.classList.add('hidden');
-                authLink.classList.remove('hidden');
-                logoutButton.classList.add('hidden');
-                registerLink.classList.remove('hidden');
-            }
+            if (profileLink) profileLink.classList.toggle('hidden', !user);
+            if (authLink) authLink.classList.toggle('hidden', !!user);
+            if (logoutButton) logoutButton.classList.toggle('hidden', !user);
+            if (registerLink) registerLink.classList.toggle('hidden', !!user);
 
             if (logoutButton) {
                 logoutButton.onclick = async () => {
@@ -113,10 +119,10 @@
             }
         }
 
-        // Načítanie hlavičky a aktualizácia odkazov pri načítaní stránky a zmene stavu autentifikácie
-        loadHeader();
-        firebase.auth().onAuthStateChanged(user => {
-            updateHeaderLinks();
+        // Načítanie hlavičky pri načítaní DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHeader();
+            // firebase.auth().onAuthStateChanged() sa teraz riadi v AuthContext a volá updateHeaderLinks z React komponentov
         });
     </script>
 
