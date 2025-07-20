@@ -51,8 +51,16 @@
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
-    <div id="root">
-        <!-- React aplikácia sa tu vykreslí -->
+    <!-- Kontajner pre ľavé menu a hlavný obsah -->
+    <div class="flex">
+        <!-- Ľavé menu sa načíta dynamicky -->
+        <div id="left-menu-placeholder"></div>
+
+        <!-- Hlavná oblasť pre obsah -->
+        <main id="main-content-area" class="flex-grow p-4 ml-64 mt-0">
+            <!-- React aplikácia sa tu vykreslí -->
+            <div id="root"></div>
+        </main>
     </div>
 
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
@@ -73,25 +81,44 @@
             }
         }
 
+        // Funkcia na načítanie ľavého menu
+        async function loadLeftMenu() {
+            try {
+                const response = await fetch('left-menu.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const menuHtml = await response.text();
+                document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
+            } catch (error) {
+                console.error("Chyba pri načítaní ľavého menu:", error);
+                document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
+            }
+        }
+
         // Tento skript sa spustí po načítaní DOM a všetkých skriptov
         window.onload = function() {
-            loadHeader().then(() => {
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof MyDataApp === 'undefined') {
-                    console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
+            // Načítať hlavičku a ľavé menu paralelne
+            Promise.all([loadHeader(), loadLeftMenu()])
+                .then(() => {
+                    // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                        return;
+                    }
+                    if (typeof MyDataApp === 'undefined') {
+                        console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                        return;
+                    }
 
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(MyDataApp, null));
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(MyDataApp, null));
+                })
+                .catch(error => {
+                    console.error("Chyba pri inicializácii stránky:", error);
+                });
         };
     </script>
 </body>
