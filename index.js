@@ -149,42 +149,32 @@ function App() {
         return;
       }
 
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
-      setApp(firebaseApp);
+      // Initialize Firebase app only once
+      let firebaseAppInstance;
+      try {
+        firebaseAppInstance = firebase.app(); // Try to get default app
+      } catch (e) {
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig); // Initialize if not already
+      }
+      setApp(firebaseAppInstance);
 
-      const authInstance = firebase.auth(firebaseApp);
+      const authInstance = firebase.auth(firebaseAppInstance);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
+      firestoreInstance = firebase.firestore(firebaseAppInstance);
       setDb(firestoreInstance);
 
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          } else {
-            // Try anonymous sign-in if no custom token, or if user is not logged in
-            if (!authInstance.currentUser) {
-                await authInstance.signInAnonymously();
-            }
-          }
-        } catch (e) {
-          console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
+      // Listen for auth state changes
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser);
-        setIsAuthReady(true);
-        //If user is logged in, redirect to logged-in-my-data.html
-        if (currentUser) {
-            window.location.href = 'logged-in-my-data.html';
-            return; // Stop further rendering for this component
-        }
+        setUser(currentUser); // Set user state
+        setIsAuthReady(true); // Auth state has been determined
+
+        // No automatic redirection from index.html based on login status.
+        // The display will be handled by conditional rendering below.
         setPageLoading(false); // Auth state checked, stop page loading
       });
 
-      signIn();
+      // No explicit signIn() call here, as onAuthStateChanged handles existing sessions.
+      // Removed signInAnonymously() to prevent unwanted user creation.
 
       return () => {
         if (unsubscribeAuth) {
@@ -196,7 +186,7 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setPageLoading(false);
     }
-  }, []);
+  }, []); // Empty dependency array - runs only once on component mount
 
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
@@ -205,72 +195,135 @@ function App() {
         return; // Wait for DB and Auth to be initialized
       }
       try {
+          // Používame onSnapshot pre real-time aktualizácie nastavení
           const settingsDocRef = db.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+                // userDataEditEndDate is not relevant for index.js, but keeping it for consistency if needed elsewhere
+                // setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
             } else {
                 console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
+                // setUserDataEditEndDate('');
             }
-            setSettingsLoaded(true);
-            setPageLoading(false); // Page is now fully loaded (auth and settings)
+            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
+            // setLoading(false); // This is now handled by auth state check in the main useEffect
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            setPageLoading(false); // Also set false on error
+            // setLoading(false); // This is now handled by auth state check in the main useEffect
           });
 
-          return () => unsubscribeSettings();
+          return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
       } catch (e) {
-          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
-          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
+          setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          setPageLoading(false); // Also set false on error
+          // setLoading(false); // This is now handled by auth state check in the main useEffect
       }
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db, isAuthReady]); // Načíta nastavenia, keď je DB a Auth pripravené
 
-  // Effect for countdown (runs when registrationStartDate changes)
+
+  // Efekt pre odpočítavanie času (spustí sa pri zmene registrationStartDate)
   React.useEffect(() => {
     let timer;
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
         setCountdown(timeLeft);
+        // Ak čas vypršal, vynútime prepočítanie isRegistrationOpen
         if (timeLeft === null) {
             clearInterval(timer);
-            setForceRegistrationCheck(prev => prev + 1);
+            setForceRegistrationCheck(prev => prev + 1); // Zmeníme stav, aby sa isRegistrationOpen prepočítalo
         }
     };
 
+    // Spustite odpočítavanie len ak je nastavený dátum začiatku a je v budúcnosti
     if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
-        updateCountdown();
+        updateCountdown(); // Počiatočné volanie pre okamžité zobrazenie
         timer = setInterval(updateCountdown, 1000);
     } else {
-        setCountdown(null);
+        setCountdown(null); // Vymažte odpočítavanie, ak nie je relevantné
     }
 
-    return () => clearInterval(timer);
-  }, [registrationStartDate, calculateTimeLeft]);
+    return () => clearInterval(timer); // Vyčistenie intervalu pri unmount alebo zmene registrationStartDate
+  }, [registrationStartDate, calculateTimeLeft]); // Závisí od registrationStartDate a calculateTimeLeft
 
-  // New useEffect for periodic update of isRegistrationOpen
+  // NOVÝ useEffect pre periodickú aktualizáciu isRegistrationOpen
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); // Update every minute
+    }, 60 * 1000); // Aktualizovať každú minútu
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Spustí sa len raz pri mountovaní komponentu
 
-  // Removed useEffect for updating header link visibility, as it will be handled by header.js
 
-  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
+  // useEffect pre aktualizáciu viditeľnosti odkazov v hlavičke
+  // Táto logika by mala byť v header.js alebo v hlavnom App.js, ak sa hlavička načítava dynamicky.
+  // Pre účely index.js, ktorý sa sústredí na úvodnú stránku, ju tu necháme, ak sa header.html nenačítava ako React komponent.
+  React.useEffect(() => {
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+
+    if (authLink) {
+      if (user && !user.isAnonymous) { // Ak je používateľ prihlásený (a nie je anonymný)
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
+      } else { // Ak používateľ nie je prihlásený alebo je anonymný
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        // Podmienene zobraziť/skryť odkaz registrácie v hlavičke na základe stavu registrácie
+        if (isRegistrationOpen) {
+          registerLink && registerLink.classList.remove('hidden');
+        } else {
+          registerLink && registerLink.classList.add('hidden');
+        }
+      }
+    }
+  }, [user, isRegistrationOpen]); // Spustí sa pri zmene user alebo isRegistrationOpen
+
+  // handleLogout function for the header logout button
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      setPageLoading(true); // Use pageLoading for the whole page
+      await auth.signOut();
+      setMessage("Úspešne odhlásené.");
+      setError('');
+      window.location.href = 'login.html'; // Redirect to login page after logout
+    } catch (e) {
+      console.error("Chyba pri odhlasovaní:", e);
+      setError(`Chyba pri odhlasovaní: ${e.message}`);
+    } finally {
+      setPageLoading(false);
+    }
+  };
+
+  // Attach logout listener to the button in header.html
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]); // Re-run if handleLogout changes (unlikely)
 
 
   // Display loading state
@@ -280,11 +333,6 @@ function App() {
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
-  }
-
-  // If user is logged in (and pageLoading is false), it should have been redirected by useEffect
-  if (user) {
-    return null; // Should not reach here if redirection works
   }
 
   const now = new Date();
@@ -313,25 +361,25 @@ function App() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
         React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na stránke turnaja Slovak Open Handball'),
-        user ? ( // This block will now effectively not be rendered due to the redirect at the top
+        user && !user.isAnonymous ? ( // Ak je používateľ prihlásený (a nie je anonymný)
           React.createElement(
             React.Fragment,
             null,
-            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásení. Pre viac možností prejdite do svojej zóny.'),
+            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásený. Prejdite do svojej zóny pre viac možností.'),
             React.createElement(
               'div',
               { className: 'mt-6 flex justify-center' },
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in-my-data.html',
+                  href: 'logged-in.html', // Presmerovanie na hlavnú stránku prihlásených používateľov
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
               )
             )
           )
-        ) : (
+        ) : ( // Ak používateľ nie je prihlásený alebo je anonymný
           React.createElement(
             React.Fragment,
             null,
