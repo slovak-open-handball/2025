@@ -1960,11 +1960,21 @@ function App() {
                                 id="reg-phone-number"
                                 className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                                 value={contactPhoneNumber}
-                                onChange={(e) => setContactPhoneNumber(e.target.value)} // Removed filtering here
+                                onChange={(e) => {
+                                    setContactPhoneNumber(e.target.value);
+                                    // Clear custom validity if the input is now valid according to the pattern
+                                    if (e.target.validity.valid) {
+                                        e.target.setCustomValidity('');
+                                    }
+                                }}
+                                onInvalid={(e) => {
+                                    // Set custom validity message when the input is invalid
+                                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                                }}
                                 required
                                 placeholder="+421901234567"
                                 pattern="^\+\d+$"
-                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." // Custom validation message
+                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." // This title is now used by onInvalid
                                 disabled={loading || !!message}
                             />
                         </div>
