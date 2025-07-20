@@ -57,6 +57,8 @@
         <!-- React aplikácia sa tu vykreslí -->
     </div>
 
+    <!-- Načítanie hlavného React komponentu pre túto stránku -->
+    <script src="index.js"></script>
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -73,7 +75,7 @@
             }
         }
 
-        // Tento skript sa spustí po načítaní App.js a hlavičky
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane index.js
         window.onload = function() {
             // Načítať hlavičku ako prvú
             loadHeader().then(() => {
@@ -83,8 +85,9 @@
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                     return;
                 }
+                // Už nepotrebujeme kontrolovať App.js, pretože App je definovaný v index.js
                 if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                     return;
                 }
@@ -96,7 +99,5 @@
             });
         };
     </script>
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="index.js"></script>
 </body>
 </html>
