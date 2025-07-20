@@ -1,1 +1,103 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Registrácia administrátora</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            /* padding-top: 64px; /* Odsadenie pre pevnú hlavičku - už nie je potrebné, keďže hlavička sa nezobrazuje */
+        }
+        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: left;
+        }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- reCAPTCHA v3 -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Hlavička sa načíta dynamicky -->
+    <div id="header-placeholder"></div>
 
+    <div id="root">
+        <!-- React aplikácia sa tu vykreslí -->
+    </div>
+
+    <!-- Načítanie hlavného React komponentu pre túto stránku -->
+    <script src="admin-register.js"></script>
+    <script>
+        // Funkcia na načítanie hlavičky (ak je potrebná, inak ju môžete odstrániť)
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+            } catch (error) {
+                console.error("Chyba pri načítaní hlavičky:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+            }
+        }
+
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane admin-register.js
+        window.onload = function() {
+            // Načítanie hlavičky bolo odstránené z pôvodného admin-register.html, takže ho tu tiež vynechávame
+            // Ak by ste ju chceli späť, odkomentujte loadHeader().then(...)
+            // loadHeader().then(() => { 
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                // Už nepotrebujeme kontrolovať App.js, pretože App je definovaný v admin-register.js
+                if (typeof App === 'undefined') {
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte admin-register.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            // }).catch(error => {
+            //     console.error("Chyba pri inicializácii stránky:", error);
+            // });
+        };
+    </script>
+</body>
+</html>
