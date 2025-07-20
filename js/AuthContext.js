@@ -29,25 +29,23 @@ function AuthProvider({ children }) {
   const [userNotifications, setUserNotifications] = React.useState([]);
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-const fetchSettings = async () => {
-  console.log("Fetching settings...");
-  try {
-    const settingsDoc = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').get();
-    console.log("Settings document fetched. Exists:", settingsDoc.exists);
-    if (settingsDoc.exists) {
-      const data = settingsDoc.data();
-      console.log("Settings data:", data);
-      setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
-      setRegistrationEndDate(data.endDate ? data.endDate.toDate() : null);
-      setUserDataEditEndDate(data.userDataEditEndDate ? data.userDataEditEndDate.toDate() : null);
-    } else {
-      console.warn("Registration settings document not found at expected path.");
+  const fetchSettings = async () => {
+    try {
+      // ZMENA: Prístup k nastaveniam priamo z kolekcie 'settings'
+      const settingsDoc = await db.collection('settings').doc('registration').get();
+      if (settingsDoc.exists) {
+        const data = settingsDoc.data();
+        setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
+        setRegistrationEndDate(data.endDate ? data.endDate.toDate() : null);
+        setUserDataEditEndDate(data.userDataEditEndDate ? data.userDataEditEndDate.toDate() : null);
+      } else {
+        console.warn("Registration settings document not found at expected path: settings/registration");
+      }
+    } catch (err) {
+      console.error("Chyba pri načítavaní nastavení registrácie:", err);
+      setError("Chyba pri načítavaní nastavení registrácie.");
     }
-  } catch (err) {
-    console.error("Chyba pri načítavaní nastavení registrácie:", err);
-    setError("Chyba pri načítavaní nastavení registrácie.");
-  }
-};
+  };
 
   const fetchUserRole = async (uid) => {
     try {
@@ -76,9 +74,10 @@ const fetchSettings = async () => {
         alerts = userData.systemAlerts;
       }
 
-      // Check for new messages from admin
-      // MODIFIKOVANÉ: Prístup k správam cez cestu artifacts
-      const messagesSnapshot = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('messages')
+      // ZMENA: Prístup k správam priamo z kolekcie 'messages' (ak sú tam uložené)
+      // Predpokladáme, že správy sú uložené priamo pod kolekciou 'messages'
+      // Ak sú správy uložené pod 'artifacts/{APP_ID}/public/data/messages', budete musieť túto cestu vrátiť späť.
+      const messagesSnapshot = await db.collection('messages')
         .where('recipientId', '==', uid)
         .where('read', '==', false)
         .orderBy('timestamp', 'desc')
@@ -133,27 +132,24 @@ const fetchSettings = async () => {
   }, [registrationStartDate, registrationEndDate]);
 
   React.useEffect(() => {
-  const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
-    console.log("Auth state changed. Current user:", currentUser);
-    setUser(currentUser);
-    if (currentUser) {
-      console.log("User is logged in. Fetching role and notifications...");
-      await fetchUserRole(currentUser.uid);
-      await fetchNotifications(currentUser.uid);
-      const notificationInterval = setInterval(() => fetchNotifications(currentUser.uid), 30000);
-      return () => clearInterval(notificationInterval);
-    } else {
-      console.log("No user logged in.");
-      setIsAdmin(false);
-      setIsRoleLoaded(true);
-      setUserNotifications([]);
-    }
-    setIsAuthReady(true);
-    console.log("isAuthReady set to true.");
-  });
+    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchUserRole(currentUser.uid);
+        await fetchNotifications(currentUser.uid);
+        const notificationInterval = setInterval(() => fetchNotifications(currentUser.uid), 30000); // Refresh notifications every 30 seconds
+        return () => clearInterval(notificationInterval);
+      } else {
+        setIsAdmin(false);
+        setIsRoleLoaded(true); // Ensure role is loaded even if no user
+        setUserNotifications([]);
+      }
+      setIsAuthReady(true);
+      // console.log("isAuthReady set to true."); // Pre diagnostiku
+    });
 
-  return () => unsubscribeAuth();
-}, []);
+    return () => unsubscribeAuth();
+  }, []);
 
   const value = {
     user,
