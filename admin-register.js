@@ -123,7 +123,8 @@ function App() {
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
+  const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
 
@@ -146,7 +147,7 @@ function App() {
     try {
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte admin-register.html.");
-        setLoading(false);
+        setPageLoading(false); // Stop loading on critical error
         return;
       }
 
@@ -177,8 +178,9 @@ function App() {
         // If user is already logged in, redirect them to logged-in.html
         if (currentUser) {
             window.location.href = 'logged-in.html';
+            return; // Stop further rendering for this component
         }
-        setLoading(false); // Auth state checked, stop loading
+        setPageLoading(false); // Page is now fully loaded (auth is ready)
       });
 
       signIn();
@@ -191,7 +193,7 @@ function App() {
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
+      setPageLoading(false); // Stop loading on critical error
     }
   }, []); // Empty dependency array - runs only once on component mount
 
@@ -222,7 +224,7 @@ function App() {
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
-      setLoading(true);
+      setFormSubmitting(true); // Use formSubmitting for logout
       await auth.signOut();
       setMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
@@ -230,7 +232,7 @@ function App() {
       console.error("Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoading(false);
+      setFormSubmitting(false); // Reset formSubmitting
     }
   }, [auth]);
 
@@ -316,7 +318,7 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu admina:", recaptchaToken);
 
-    setLoading(true); // Show loading indicator
+    setFormSubmitting(true); // Show loading indicator for form submission
     setError(''); // Clear previous errors
     setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
@@ -384,12 +386,12 @@ function App() {
       } catch (firestoreError) {
         console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
-        setLoading(false);
+        setFormSubmitting(false); // Reset formSubmitting on error
         setMessage(''); // Clear message on error
         return;
       }
 
-      setLoading(false); // Stop loading so the message is visible on the form
+      setFormSubmitting(false); // Stop loading so the message is visible on the form
 
       // Now sign out and redirect after a delay
       await auth.signOut();
@@ -411,22 +413,24 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
-      setLoading(false);
+      setFormSubmitting(false); // Reset formSubmitting on error
       setMessage(''); // Clear message on error
     }
   };
 
-  // Display loading state
-  if (loading || !isAuthReady || user) { // If user is already logged in, show loading and redirect
-    if (user) {
-        window.location.href = 'logged-in.html'; // Redirect if already logged in
-        return null; // Don't render anything while redirecting
-    }
+  // Display initial page loading state
+  if (pageLoading) {
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
+  }
+
+  // If user is logged in (and pageLoading is false), redirect
+  if (user) {
+    window.location.href = 'logged-in.html';
+    return null;
   }
 
   // Priority display of successful registration message
@@ -488,7 +492,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje meno',
               autoComplete: 'given-name',
-              disabled: loading || !!message,
+              disabled: formSubmitting || !!message, // Use formSubmitting
             })
           ),
           React.createElement(
@@ -504,7 +508,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje priezvisko',
               autoComplete: 'family-name',
-              disabled: loading || !!message,
+              disabled: formSubmitting || !!message, // Use formSubmitting
             })
           ),
           React.createElement(
@@ -520,7 +524,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
-              disabled: loading || !!message,
+              disabled: formSubmitting || !!message, // Use formSubmitting
             })
           ),
           React.createElement(PasswordInput, {
@@ -535,7 +539,7 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showPasswordReg,
             toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-            disabled: loading || !!message,
+            disabled: formSubmitting || !!message, // Use formSubmitting
             description: React.createElement(
               React.Fragment,
               null,
@@ -561,16 +565,16 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-            disabled: loading || !!message,
+            disabled: formSubmitting || !!message, // Use formSubmitting
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading || !!message,
+              disabled: formSubmitting || !!message, // Use formSubmitting
             },
-            loading ? (
+            formSubmitting ? ( // Use formSubmitting
               React.createElement(
                 'div',
                 { className: 'flex items-center justify-center' },
