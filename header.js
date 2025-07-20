@@ -33,15 +33,19 @@ function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
     const registerLink = document.getElementById('register-link');
 
     if (authLink && profileLink && logoutButton && registerLink) {
-        if (currentUser) { // Ak je používateľ prihlásený
-            authLink.classList.add('hidden');
-            profileLink.classList.remove('hidden');
-            logoutButton.classList.remove('hidden');
-            registerLink.classList.add('hidden'); // Skryť registračný odkaz, ak je prihlásený
+        if (currentUser) { // Ak je používateľ prihlásený (akýkoľvek typ, vrátane anonymného, ak by bol povolený)
+            // Pre prihláseného používateľa: zobraziť "Moja zóna" a "Odhlásenie"
+            authLink.classList.add('hidden'); // Skryť "Prihlásenie"
+            profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
+            logoutButton.classList.remove('hidden'); // Zobraziť "Odhlásenie"
+            registerLink.classList.add('hidden'); // Skryť "Registrácia na turnaj"
         } else { // Ak používateľ nie je prihlásený
-            authLink.classList.remove('hidden');
-            profileLink.classList.add('hidden');
-            logoutButton.classList.add('hidden');
+            // Pre neprihláseného používateľa: zobraziť "Prihlásenie"
+            authLink.classList.remove('hidden'); // Zobraziť "Prihlásenie"
+            profileLink.classList.add('hidden'); // Skryť "Moja zóna"
+            logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
+
+            // Zobraziť "Registrácia na turnaj" len ak je registrácia otvorená
             if (isRegistrationOpenStatus) {
                 registerLink.classList.remove('hidden');
             } else {
@@ -59,6 +63,11 @@ let currentIsRegistrationOpenStatus = false;
 if (authHeader) {
     authHeader.onAuthStateChanged((user) => {
         currentHeaderUser = user;
+        // Ak je používateľ odhlásený, presmerovať na login.html
+        if (!user && window.location.pathname !== '/login.html' && window.location.pathname !== '/register.html' && window.location.pathname !== '/index.html' && window.location.pathname !== '/admin-register.html') {
+            console.log("Používateľ odhlásený, presmerovanie na login.html z header.js");
+            window.location.href = 'login.html';
+        }
         updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
     });
 
