@@ -85,7 +85,6 @@
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                     return;
                 }
-                // Už nepotrebujeme kontrolovať App.js, pretože App je definovaný v register.js
                 if (typeof App === 'undefined') {
                     console.error("Chyba: Komponent App nie je definovaný. Skontrolujte register.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
