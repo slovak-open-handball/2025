@@ -350,7 +350,7 @@ function App() {
   // Ak je user objekt (prihlásený), presmeruj.
   if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
     if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
-        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
+        window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
         return null; // Nič nevykresľuj počas presmerovania
     }
     return React.createElement(
@@ -397,7 +397,7 @@ function App() {
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in.html',
+                  href: 'logged-in-my-data.html', // ZMENA: Odkaz na logged-in-my-data.html
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
