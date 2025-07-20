@@ -169,6 +169,18 @@ function App() {
   const [newLastName, setNewLastName] = React.useState('');
   const [newContactPhoneNumber, setNewContactPhoneNumber] = React.useState('');
 
+  // NOVÉ: Stavy pre úpravu fakturačných údajov
+  const [editClubName, setEditClubName] = React.useState('');
+  const [editIco, setEditIco] = React.useState('');
+  const [editDic, setEditDic] = React.useState('');
+  const [editIcDph, setEditIcDph] = React.useState('');
+  const [editStreet, setEditStreet] = React.useState('');
+  const [editHouseNumber, setEditHouseNumber] = React.useState('');
+  const [editCity, setEditCity] = React.useState('');
+  const [editZipCode, setEditZipCode] = React.useState('');
+  const [editCountry, setEditCountry] = React.useState('');
+
+
   // Stavy pre nastavenia dátumov a časov
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
@@ -338,6 +350,31 @@ function App() {
                     displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
                     displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
                   }));
+
+                  // NOVÉ: Nastavenie stavov pre úpravu fakturačných údajov
+                  if (userData.billing) {
+                    setEditClubName(userData.billing.clubName || '');
+                    setEditIco(userData.billing.ico || '');
+                    setEditDic(userData.billing.dic || '');
+                    setEditIcDph(userData.billing.icDph || '');
+                    setEditStreet(userData.billing.address?.street || '');
+                    setEditHouseNumber(userData.billing.address?.houseNumber || '');
+                    setEditCity(userData.billing.address?.city || '');
+                    setEditZipCode(userData.billing.address?.zipCode || '');
+                    setEditCountry(userData.billing.address?.country || '');
+                  } else {
+                    // Clear billing data states if no billing data exists
+                    setEditClubName('');
+                    setEditIco('');
+                    setEditDic('');
+                    setEditIcDph('');
+                    setEditStreet('');
+                    setEditHouseNumber('');
+                    setEditCity('');
+                    setEditZipCode('');
+                    setEditCountry('');
+                  }
+
                   setIsRoleLoaded(true); // Rola je načítaná
                 } else {
                   console.log("onAuthStateChanged (onSnapshot): Dokument používateľa vo Firestore neexistuje pre UID:", currentUser.uid);
@@ -791,7 +828,7 @@ function App() {
   };
 
   // NOVÉ: Funkcia pre validáciu IČ DPH
-  const handleIcDphChange = (e) => {
+  const handleIcDphChange = (e, setter) => {
     let value = e.target.value.toUpperCase();
     let formattedValue = '';
     if (value.length > 0) {
@@ -805,22 +842,22 @@ function App() {
             formattedValue = prefix + suffix;
         }
     }
-    setIcDph(formattedValue);
+    setter(formattedValue);
     e.target.setCustomValidity('');
   };
 
   // NOVÉ: Funkcia pre formátovanie PSČ s medzerou
-  const handleZipCodeChange = (e) => {
+  const handleZipCodeChange = (e, setter) => {
     let value = e.target.value.replace(/\s/g, ''); // Remove existing spaces
     const numericValue = value.replace(/\D/g, ''); // Remove non-digits
     let formattedValue = numericValue;
 
     if (numericValue.length > 3) {
-        formattedValue = numericValue.substring(0, 3) + ' ' + numericValue.substring(3, 6);
-    } else if (numericValue.length > 6) {
-        formattedValue = numericValue.substring(0, 6); // Limit to 6 digits
+        formattedValue = numericValue.substring(0, 3) + ' ' + numericValue.substring(3, 5); // ZMENA: 5 číslic
+    } else if (numericValue.length > 5) { // ZMENA: 5 číslic
+        formattedValue = numericValue.substring(0, 5); // Limit to 5 digits
     }
-    setZipCode(formattedValue);
+    setter(formattedValue);
     e.target.setCustomValidity('');
   };
 
@@ -853,8 +890,8 @@ function App() {
       }
       // NOVÉ: Validácia PSČ dĺžky
       const cleanZipCode = zipCode.replace(/\s/g, '');
-      if (cleanZipCode.length !== 6 || !/^\d{6}$/.test(cleanZipCode)) {
-          setError("PSČ musí obsahovať presne 6 číslic.");
+      if (cleanZipCode.length !== 5 || !/^\d{5}$/.test(cleanZipCode)) { // ZMENA: 5 číslic
+          setError("PSČ musí obsahovať presne 5 číslic.");
           return;
       }
       // NOVÉ: Validácia IČ DPH formátu
@@ -1399,6 +1436,136 @@ function App() {
       setLoading(false);
     }
   };
+
+  // NOVÉ: Funkcia pre zmenu fakturačných údajov
+  const handleChangeBillingData = async (e) => {
+    e.preventDefault();
+    if (!user || !auth || !db) {
+      setError("Nie ste prihlásený alebo Firebase Auth/Firestore nie je inicializovaný.");
+      return;
+    }
+    if (!currentPassword) {
+      setError("Prosím, zadajte aktuálne heslo pre overenie.");
+      return;
+    }
+    if (!editClubName || !editStreet || !editHouseNumber || !editCity || !editZipCode || !editCountry) {
+      setError("Prosím, vyplňte všetky povinné fakturačné a adresné údaje.");
+      return;
+    }
+    // Kontrola, či je aspoň jedno z IČO, DIČ, IČ DPH vyplnené
+    if (!editIco && !editDic && !editIcDph) {
+      setError("Prosím, vyplňte aspoň jedno z polí IČO, DIČ alebo IČ DPH.");
+      return;
+    }
+    // Validácia PSČ dĺžky
+    const cleanZipCode = editZipCode.replace(/\s/g, '');
+    if (cleanZipCode.length !== 5 || !/^\d{5}$/.test(cleanZipCode)) {
+        setError("PSČ musí obsahovať presne 5 číslic.");
+        return;
+    }
+    // Validácia IČ DPH formátu
+    if (editIcDph && !/^[A-Z]{2}\d*$/.test(editIcDph)) {
+        setError("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).");
+        return;
+    }
+
+    const now = new Date();
+    const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+    if (editEnd && now > editEnd) {
+        setError("Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: " + (editEnd ? editEnd.toLocaleString('sk-SK') : '-'));
+        return;
+    }
+
+    setLoading(true);
+    try {
+      const currentUserForReauth = auth.currentUser;
+      if (!currentUserForReauth) {
+        setError("Aktuálny používateľ nie je k dispozícii pre reautentifikáciu.");
+        setLoading(false);
+        return;
+      }
+
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      await currentUserForReauth.reauthenticateWithCredential(credential);
+
+      const oldBilling = user.billing || {};
+      const updatedBilling = {
+        clubName: editClubName,
+        ico: editIco,
+        dic: editDic,
+        icDph: editIcDph,
+        address: {
+          street: editStreet,
+          houseNumber: editHouseNumber,
+          city: editCity,
+          zipCode: cleanZipCode, // Uložiť bez medzery
+          country: editCountry
+        }
+      };
+
+      await db.collection('users').doc(user.uid).update({ 
+        billing: updatedBilling
+      });
+
+      // Kontrola zmien pre notifikáciu administrátorom
+      let changedBillingFields = [];
+      const compareField = (oldVal, newVal, fieldName) => {
+        if (oldVal !== newVal) {
+          changedBillingFields.push(`${fieldName} z '${oldVal || 'nezadané'}' na '${newVal || 'nezadané'}'`);
+        }
+      };
+
+      compareField(oldBilling.clubName, updatedBilling.clubName, 'názov klubu');
+      compareField(oldBilling.ico, updatedBilling.ico, 'IČO');
+      compareField(oldBilling.dic, updatedBilling.dic, 'DIČ');
+      compareField(oldBilling.icDph, updatedBilling.icDph, 'IČ DPH');
+      compareField(oldBilling.address?.street, updatedBilling.address.street, 'ulicu');
+      compareField(oldBilling.address?.houseNumber, updatedBilling.address.houseNumber, 'popisné číslo');
+      compareField(oldBilling.address?.city, updatedBilling.address.city, 'mesto');
+      compareField(oldBilling.address?.zipCode, updatedBilling.address.zipCode, 'PSČ');
+      compareField(oldBilling.address?.country, updatedBilling.address.country, 'krajinu');
+
+      if (changedBillingFields.length > 0) {
+        const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil fakturačné údaje: ${changedBillingFields.join('; ')}.`;
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
+          message: notificationMessage,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          userId: user.uid,
+          userName: user.displayName || user.email,
+          type: 'user_data_change',
+          details: {
+            originalBilling: oldBilling,
+            newBilling: updatedBilling,
+          },
+          dismissedBy: [],
+          seenBy: []
+        });
+        console.log("Admin upozornenie odoslaná pre zmenu fakturačných údajov.");
+      }
+
+      setUserNotificationMessage("Fakturačné údaje úspešne zmenené!");
+      setError('');
+      setCurrentPassword(''); // Clear password after successful update
+      // Update user state to reflect changes
+      setUser(prevUser => ({
+        ...prevUser,
+        billing: updatedBilling
+      }));
+
+    } catch (e) {
+      console.error("Chyba pri zmene fakturačných údajov:", e);
+      if (e.code === 'auth/requires-recent-login') {
+        setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
+      } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
+        setError("Nesprávne aktuálne heslo. Prosím, zadajte správne heslo pre overenie.");
+      } else {
+        setError(`Chyba pri zmene fakturačných údajov: ${e.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // Funkcia na ukladanie nastavení pre administrátora
   const handleSaveSettings = async (e) => {
@@ -2339,7 +2506,7 @@ function App() {
                         id="ic-dph"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={icDph}
-                        onChange={handleIcDphChange}
+                        onChange={(e) => handleIcDphChange(e, setIcDph)}
                         onInvalid={(e) => e.target.setCustomValidity("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).")}
                         pattern="^[A-Z]{2}\d*$"
                         title="IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890)."
@@ -2394,11 +2561,11 @@ function App() {
                         id="zip-code"
                         className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
                         value={zipCode}
-                        onChange={handleZipCodeChange}
-                        onInvalid={(e) => e.target.setCustomValidity("PSČ musí obsahovať presne 6 číslic (napr. 123 456).")}
-                        pattern="^\d{3}\s?\d{3}$" // Pattern for 3 digits, optional space, 3 digits
-                        maxLength="7" // 6 digits + 1 space
-                        title="PSČ musí obsahovať presne 6 číslic (napr. 123 456)."
+                        onChange={(e) => handleZipCodeChange(e, setZipCode)}
+                        onInvalid={(e) => e.target.setCustomValidity("PSČ musí obsahovať presne 5 číslic (napr. 123 45).")}
+                        pattern="^\d{3}\s?\d{2}$" // Pattern for 3 digits, optional space, 2 digits
+                        maxLength="6" // 5 digits + 1 space
+                        title="PSČ musí obsahovať presne 5 číslic (napr. 123 45)."
                         required
                         placeholder="PSČ"
                         disabled={loading || !!message}
@@ -2630,6 +2797,32 @@ function App() {
                     </button>
                   </li>
                 )}
+                {/* NOVÁ POLOŽKA MENU: Zmena fakturačných údajov (len pre bežných používateľov) */}
+                {!isAdmin && (
+                  <li>
+                    <button
+                      onClick={() => {
+                        changeProfileView('billing-data');
+                        // Predvyplnenie dát pri prechode na sekciu
+                        setEditClubName(user.billing?.clubName || '');
+                        setEditIco(user.billing?.ico || '');
+                        setEditDic(user.billing?.dic || '');
+                        setEditIcDph(user.billing?.icDph || '');
+                        setEditStreet(user.billing?.address?.street || '');
+                        setEditHouseNumber(user.billing?.address?.houseNumber || '');
+                        setEditCity(user.billing?.address?.city || '');
+                        setEditZipCode(user.billing?.address?.zipCode || '');
+                        setEditCountry(user.billing?.address?.country || '');
+                        setCurrentPassword(''); // Vždy vyčistiť heslo pre overenie
+                      }}
+                      className={`w-full text-left py-2 px-4 rounded-lg transition-colors duration-200 whitespace-nowrap ${
+                        profileView === 'billing-data' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Zmeniť fakturačné údaje
+                    </button>
+                  </li>
+                )}
                 {/* ZMENA: Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov */}
                 {isAdmin && ( 
                   <li> 
@@ -2756,7 +2949,7 @@ function App() {
                         <p className="text-gray-700"><span className="font-semibold">IČ DPH: </span>{user.billing.icDph || '-'}</p>
                         <h4 className="text-md font-semibold text-gray-700 mt-3 mb-1">Fakturačná adresa:</h4> {/* ZMENA NADPISU */}
                         <p className="text-gray-700">{user.billing.address?.street || '-'} {user.billing.address?.houseNumber || '-'}</p>
-                        <p className="text-gray-700">{user.billing.address?.zipCode ? `${user.billing.address.zipCode.substring(0,3)} ${user.billing.address.zipCode.substring(3,6)}` : '-'} {user.billing.address?.city || '-'}</p> {/* ZOBRAZENIE PSČ S MEDZEROU */}
+                        <p className="text-gray-700">{user.billing.address?.zipCode ? `${user.billing.address.zipCode.substring(0,3)} ${user.billing.address.zipCode.substring(3,5)}` : '-'} {user.billing.address?.city || '-'}</p> {/* ZOBRAZENIE PSČ S MEDZEROU */}
                         <p className="text-gray-700">{user.billing.address?.country || '-'}</p>
                       </div>
                     )}
@@ -2962,6 +3155,168 @@ function App() {
                 )}
               </form>
             )}
+
+            {/* NOVÁ SEKCIA: Zmena fakturačných údajov */}
+            {profileView === 'billing-data' && !isAdmin && (
+              <form onSubmit={handleChangeBillingData} className="space-y-4 border-t pt-4 mt-4">
+                <h2 className="text-xl font-semibold text-gray-800">Zmeniť fakturačné údaje</h2>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-club-name">Oficiálny názov klubu</label>
+                  <input
+                    type="text"
+                    id="edit-club-name"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editClubName}
+                    onChange={(e) => setEditClubName(e.target.value)}
+                    required
+                    placeholder="Názov klubu"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-ico">IČO</label>
+                  <input
+                    type="text"
+                    id="edit-ico"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editIco}
+                    onChange={(e) => handleNumericInputChange(e, setEditIco)}
+                    onInvalid={(e) => setNumericInputValidity(e, "IČO môže obsahovať iba číslice.")}
+                    pattern="^\d*$"
+                    title="IČO môže obsahovať iba číslice."
+                    placeholder="IČO"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-dic">DIČ</label>
+                  <input
+                    type="text"
+                    id="edit-dic"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editDic}
+                    onChange={(e) => handleNumericInputChange(e, setEditDic)}
+                    onInvalid={(e) => setNumericInputValidity(e, "DIČ môže obsahovať iba číslice.")}
+                    pattern="^\d*$"
+                    title="DIČ môže obsahovať iba číslice."
+                    placeholder="DIČ (voliteľné)"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-ic-dph">IČ DPH</label>
+                  <input
+                    type="text"
+                    id="edit-ic-dph"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editIcDph}
+                    onChange={(e) => handleIcDphChange(e, setEditIcDph)}
+                    onInvalid={(e) => e.target.setCustomValidity("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).")}
+                    pattern="^[A-Z]{2}\d*$"
+                    title="IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890)."
+                    placeholder="IČ DPH (voliteľné)"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-2">Fakturačná adresa</h3>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-street">Ulica</label>
+                  <input
+                    type="text"
+                    id="edit-street"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editStreet}
+                    onChange={(e) => setEditStreet(e.target.value)}
+                    required
+                    placeholder="Ulica"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-house-number">Popisné číslo</label>
+                  <input
+                    type="text"
+                    id="edit-house-number"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editHouseNumber}
+                    onChange={(e) => setEditHouseNumber(e.target.value)}
+                    required
+                    placeholder="Popisné číslo"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-city">Mesto</label>
+                  <input
+                    type="text"
+                    id="edit-city"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    required
+                    placeholder="Mesto"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-zip-code">PSČ</label>
+                  <input
+                    type="text"
+                    id="edit-zip-code"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editZipCode}
+                    onChange={(e) => handleZipCodeChange(e, setEditZipCode)}
+                    onInvalid={(e) => e.target.setCustomValidity("PSČ musí obsahovať presne 5 číslic (napr. 123 45).")}
+                    pattern="^\d{3}\s?\d{2}$" // Pattern for 3 digits, optional space, 2 digits
+                    maxLength="6" // 5 digits + 1 space
+                    title="PSČ musí obsahovať presne 5 číslic (napr. 123 45)."
+                    required
+                    placeholder="PSČ"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="edit-country">Krajina</label>
+                  <input
+                    type="text"
+                    id="edit-country"
+                    className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                    value={editCountry}
+                    onChange={(e) => setEditCountry(e.target.value)}
+                    required
+                    placeholder="Krajina"
+                    disabled={!isEditAllowed}
+                  />
+                </div>
+                <PasswordInput
+                  id="current-password-billing-change"
+                  label="Aktuálne heslo (pre overenie)"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onPaste={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
+                  placeholder="Zadajte svoje aktuálne heslo"
+                  autoComplete="current-password"
+                  showPassword={showCurrentPasswordChange}
+                  toggleShowPassword={() => setShowCurrentPasswordChange(!showCurrentPasswordChange)}
+                  disabled={!isEditAllowed}
+                />
+                <button
+                  type="submit"
+                  className={`font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4 ${
+                    isEditAllowed ? 'bg-indigo-500 hover:bg-indigo-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={loading || !isEditAllowed}
+                >
+                  {loading ? 'Ukladám...' : (isEditAllowed ? 'Zmeniť fakturačné údaje' : 'Úpravy sú už uzavreté')}
+                </button>
+                { !isEditAllowed && editEnd && (
+                    <p className="text-red-500 text-sm mt-2 text-center">Úpravy boli uzavreté dňa: {editEnd.toLocaleString('sk-SK')}</p>
+                )}
+              </form>
+            )}
+
 
             {/* ZMENA: Formulár na odosielanie správ je teraz podmienený aj profileView */}
             {profileView === 'send-message' && isAdmin && (
