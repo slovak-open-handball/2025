@@ -167,9 +167,8 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        // No need to fetch user role for login page, just check if logged in
+        // If user is already logged in, redirect them
         if (currentUser) {
-            // If user is already logged in, redirect them
             window.location.href = 'logged-in.html';
         }
         setLoading(false); // Auth state checked, stop loading
@@ -189,57 +188,9 @@ function App() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
-  // useEffect for updating header link visibility (simplified for login.html)
-  React.useEffect(() => {
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+  // Removed useEffect for updating header link visibility, as it will be handled by header.js
 
-    if (authLink) {
-      if (user) { // If user is logged in
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-      } else { // If user is not logged in
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        // On login page, always show register link if not logged in (regardless of registration open status)
-        registerLink && registerLink.classList.remove('hidden'); 
-      }
-    }
-  }, [user]); // Runs on user change
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-    } catch (e) {
-      console.error("Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
