@@ -14,7 +14,7 @@
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
-        /* Štýly pre modálne okná */
+        /* Štýly pre modálne okná (základné, React modaly ich môžu predefinovať) */
         .modal {
             position: fixed;
             z-index: 100;
@@ -78,7 +78,7 @@
         <!-- Obsah React aplikácie bude vložený sem -->
     </div>
 
-    <!-- Váš React kód (App.js) -->
+    <!-- Váš React kód (App.js) - Teraz bude importovať ostatné komponenty -->
     <script type="text/babel" src="App.js"></script>
 
     <script type="text/javascript">
@@ -102,19 +102,16 @@
             // Načítať hlavičku ako prvú
             loadHeader().then(() => {
                 // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
+                // Kontrola pre React a ReactDOM je teraz v App.js, kde sa vykonáva renderovanie
                 if (typeof App === 'undefined') {
                     console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                     return;
                 }
 
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
+                // App.js teraz volá ReactDOM.createRoot(document.getElementById('root')).render(...)
+                // Nie je potrebné volať React.createElement(App, null) priamo tu.
+                // Hlavný App.js sa spustí automaticky po načítaní.
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
