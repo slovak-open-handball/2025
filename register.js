@@ -125,7 +125,7 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
@@ -207,7 +207,7 @@ function App() {
         return;
       }
 
-      // ZMENA: Získanie predvolenej Firebase aplikácie
+      // Získanie predvolenej Firebase aplikácie
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -230,6 +230,7 @@ function App() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+        console.log("RegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
         // If user is already logged in, redirect them to logged-in.html
@@ -272,12 +273,12 @@ function App() {
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
-            setLoading(false);
+            // setLoading(false); // Moved to authStateChanged
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            setLoading(false);
+            // setLoading(false); // Moved to authStateChanged
           });
 
           return () => unsubscribeSettings();
@@ -285,7 +286,7 @@ function App() {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          setLoading(false);
+          // setLoading(false); // Moved to authStateChanged
       }
     };
 
@@ -323,8 +324,9 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // useEffect for updating header link visibility (simplified for register.html)
+  // useEffect for updating header link visibility
   React.useEffect(() => {
+    console.log(`RegisterApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -336,12 +338,14 @@ function App() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
+        console.log("RegisterApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         // On registration page, always show register link if not logged in (regardless of registration open status)
         registerLink && registerLink.classList.remove('hidden');
+        console.log("RegisterApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
   }, [user]); // Runs on user change
@@ -580,7 +584,7 @@ function App() {
 
       // Now sign out and redirect after a delay
       await auth.signOut(); 
-      setUser(null); // Explicitly set user to null after logout
+      setUser(null); // Explicitne nastavíme user na null po odhlásení
       
       // Redirect after 5 seconds
       setTimeout(() => {
@@ -604,9 +608,11 @@ function App() {
   };
 
   // Display loading state
-  if (loading || !isAuthReady || user) { // If user is already logged in, show loading and redirect
+  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
+  // Ak je user objekt (prihlásený), presmeruj.
+  if (user === undefined || loading || !isAuthReady) { // Pridaná isAuthReady
     if (user) {
-        window.location.href = 'logged-in.html'; // Redirect if already logged in
+        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
         return null; // Don't render anything while redirecting
     }
     return React.createElement(
