@@ -37,7 +37,8 @@ function AdminPanelComponent({ setLoading, setError, setMessage }) {
   const fetchAdminSettings = async () => {
     setLoading(true);
     try {
-      const settingsDoc = await db.collection('settings').doc('registration').get();
+      // MODIFIKOVANÉ: Prístup k nastaveniam cez cestu artifacts
+      const settingsDoc = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').get();
       if (settingsDoc.exists) {
         const data = settingsDoc.data();
         setRegistrationStart(data.startDate ? formatToDatetimeLocal(data.startDate.toDate()) : '');
@@ -120,7 +121,8 @@ function AdminPanelComponent({ setLoading, setError, setMessage }) {
         return;
       }
 
-      await db.collection('messages').add({
+      // MODIFIKOVANÉ: Odosielanie správ cez cestu artifacts
+      await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('messages').add({
         recipientId: recipient.id,
         senderId: user.uid, // Admin's UID
         senderEmail: user.email,
@@ -148,7 +150,8 @@ function AdminPanelComponent({ setLoading, setError, setMessage }) {
     setError('');
 
     try {
-      await db.collection('settings').doc('registration').set({
+      // MODIFIKOVANÉ: Aktualizácia nastavení cez cestu artifacts
+      await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').set({
         startDate: registrationStart ? firebase.firestore.Timestamp.fromDate(new Date(registrationStart)) : null,
         endDate: registrationEnd ? firebase.firestore.Timestamp.fromDate(new Date(registrationEnd)) : null,
         userDataEditEndDate: dataEditEnd ? firebase.firestore.Timestamp.fromDate(new Date(dataEditEnd)) : null,
@@ -198,178 +201,279 @@ function AdminPanelComponent({ setLoading, setError, setMessage }) {
 
 
   if (!isAdmin) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Prístup zamietnutý!</strong>
-        <span className="block sm:inline"> Nemáte oprávnenie na prístup k admin panelu.</span>
-      </div>
+    return React.createElement(
+      'div',
+      { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative', role: 'alert' },
+      React.createElement('strong', { className: 'font-bold' }, 'Prístup zamietnutý!'),
+      React.createElement('span', { className: 'block sm:inline' }, ' Nemáte oprávnenie na prístup k admin panelu.')
     );
   }
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold text-blue-700 mb-4">Admin Panel</h2>
-
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-3">Správa užívateľov</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 border-b">Email</th>
-                <th className="py-2 px-4 border-b">Rola</th>
-                <th className="py-2 px-4 border-b">Akcie</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{u.email}</td>
-                  <td className="py-2 px-4 border-b">{u.role}</td>
-                  <td className="py-2 px-4 border-b">
-                    <button
-                      onClick={() => openRoleEditModal(u)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm mr-2"
-                      disabled={user.uid === u.id} // Nemôžete zmeniť vlastnú rolu
-                    >
-                      Upraviť rolu
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(u.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm"
-                      disabled={user.uid === u.id} // Nemôžete zmazať samého seba
-                    >
-                      Zmazať
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-3">Odoslať správu užívateľovi</h3>
-        <form onSubmit={handleSendMessage}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="recipient-email">Príjemca</label>
-            <select
-              id="recipient-email"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={selectedUserEmail}
-              onChange={(e) => setSelectedUserEmail(e.target.value)}
-              required
-            >
-              <option value="">Vyberte užívateľa</option>
-              {users.map(u => (
-                <option key={u.id} value={u.email}>{u.email}</option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="message-content">Obsah správy</label>
-            <textarea
-              id="message-content"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32 resize-y"
-              placeholder="Napíšte správu..."
-              value={messageContent}
-              onChange={(e) => setMessageContent(e.target.value)}
-              required
-            ></textarea>
-          </div>
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              disabled={loading}
-            >
-              Odoslať správu
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section>
-        <h3 className="text-xl font-semibold text-gray-800 mb-3">Nastavenia Dátumov</h3>
-        <form onSubmit={handleUpdateSettings}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-start">Začiatok registrácie</label>
-            <input
-              type="datetime-local"
-              id="reg-start"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={registrationStart}
-              onChange={(e) => setRegistrationStart(e.target.value)}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-end">Koniec registrácie</label>
-            <input
-              type="datetime-local"
-              id="reg-end"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={registrationEnd}
-              onChange={(e) => setRegistrationEnd(e.target.value)}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="data-edit-end">Koniec úpravy dát užívateľa</label>
-            <input
-              type="datetime-local"
-              id="data-edit-end"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={dataEditEnd}
-              onChange={(e) => setDataEditEnd(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              disabled={loading}
-            >
-              Uložiť nastavenia
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Modálne okno na úpravu roly */}
-      {isRoleEditModalOpen && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3 className="text-xl font-bold mb-4">Upraviť rolu pre {userToEditRole?.email}</h3>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="new-user-role">Nová rola</label>
-              <select
-                id="new-user-role"
-                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-              >
-                <option value="user">Používateľ</option>
-                <option value="admin">Administrátor</option>
-              </select>
-            </div>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={closeRoleEditModal}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
-              >
-                Zrušiť
-              </button>
-              <button
-                onClick={handleUpdateUserRole}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                disabled={loading}
-              >
-                {loading ? 'Ukladám...' : 'Uložiť'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+  return React.createElement(
+    'div',
+    { className: 'bg-white p-6 rounded-lg shadow-lg' },
+    React.createElement(
+      'h2',
+      { className: 'text-2xl font-semibold text-blue-700 mb-4' },
+      'Admin Panel'
+    ),
+    React.createElement(
+      'section',
+      { className: 'mb-8' },
+      React.createElement(
+        'h3',
+        { className: 'text-xl font-semibold text-gray-800 mb-3' },
+        'Správa užívateľov'
+      ),
+      React.createElement(
+        'div',
+        { className: 'overflow-x-auto' },
+        React.createElement(
+          'table',
+          { className: 'min-w-full bg-white border border-gray-200 rounded-lg' },
+          React.createElement(
+            'thead',
+            null,
+            React.createElement(
+              'tr',
+              { className: 'bg-gray-100' },
+              React.createElement('th', { className: 'py-2 px-4 border-b' }, 'Email'),
+              React.createElement('th', { className: 'py-2 px-4 border-b' }, 'Rola'),
+              React.createElement('th', { className: 'py-2 px-4 border-b' }, 'Akcie')
+            )
+          ),
+          React.createElement(
+            'tbody',
+            null,
+            users.map((u) =>
+              React.createElement(
+                'tr',
+                { key: u.id, className: 'hover:bg-gray-50' },
+                React.createElement('td', { className: 'py-2 px-4 border-b' }, u.email),
+                React.createElement('td', { className: 'py-2 px-4 border-b' }, u.role),
+                React.createElement(
+                  'td',
+                  { className: 'py-2 px-4 border-b' },
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => openRoleEditModal(u),
+                      className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm mr-2',
+                      disabled: user.uid === u.id, // Nemôžete zmeniť vlastnú rolu
+                    },
+                    'Upraviť rolu'
+                  ),
+                  React.createElement(
+                    'button',
+                    {
+                      onClick: () => handleDeleteUser(u.id),
+                      className: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm',
+                      disabled: user.uid === u.id, // Nemôžete zmazať samého seba
+                    },
+                    'Zmazať'
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    React.createElement(
+      'section',
+      { className: 'mb-8' },
+      React.createElement(
+        'h3',
+        { className: 'text-xl font-semibold text-gray-800 mb-3' },
+        'Odoslať správu užívateľovi'
+      ),
+      React.createElement(
+        'form',
+        { onSubmit: handleSendMessage },
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'recipient-email' },
+            'Príjemca'
+          ),
+          React.createElement(
+            'select',
+            {
+              id: 'recipient-email',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+              value: selectedUserEmail,
+              onChange: (e) => setSelectedUserEmail(e.target.value),
+              required: true,
+            },
+            React.createElement('option', { value: '' }, 'Vyberte užívateľa'),
+            users.map((u) =>
+              React.createElement('option', { key: u.id, value: u.email }, u.email)
+            )
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'message-content' },
+            'Obsah správy'
+          ),
+          React.createElement('textarea', {
+            id: 'message-content',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32 resize-y',
+            placeholder: 'Napíšte správu...',
+            value: messageContent,
+            onChange: (e) => setMessageContent(e.target.value),
+            required: true,
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end' },
+          React.createElement(
+            'button',
+            {
+              type: 'submit',
+              className: 'px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200',
+              disabled: loading,
+            },
+            'Odoslať správu'
+          )
+        )
+      )
+    ),
+    React.createElement(
+      'section',
+      null,
+      React.createElement(
+        'h3',
+        { className: 'text-xl font-semibold text-gray-800 mb-3' },
+        'Nastavenia Dátumov'
+      ),
+      React.createElement(
+        'form',
+        { onSubmit: handleUpdateSettings },
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-start' },
+            'Začiatok registrácie'
+          ),
+          React.createElement('input', {
+            type: 'datetime-local',
+            id: 'reg-start',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: registrationStart,
+            onChange: (e) => setRegistrationStart(e.target.value),
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-end' },
+            'Koniec registrácie'
+          ),
+          React.createElement('input', {
+            type: 'datetime-local',
+            id: 'reg-end',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: registrationEnd,
+            onChange: (e) => setRegistrationEnd(e.target.value),
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-end' },
+            'Koniec úpravy dát užívateľa'
+          ),
+          React.createElement('input', {
+            type: 'datetime-local',
+            id: 'data-edit-end',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            value: dataEditEnd,
+            onChange: (e) => setDataEditEnd(e.target.value),
+          })
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end' },
+          React.createElement(
+            'button',
+            {
+              type: 'submit',
+              className: 'px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200',
+              disabled: loading,
+            },
+            'Uložiť nastavenia'
+          )
+        )
+      )
+    ),
+    isRoleEditModalOpen &&
+      React.createElement(
+        'div',
+        { className: 'modal' },
+        React.createElement(
+          'div',
+          { className: 'modal-content' },
+          React.createElement(
+            'h3',
+            { className: 'text-xl font-bold mb-4' },
+            'Upraviť rolu pre ',
+            userToEditRole?.email
+          ),
+          React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement(
+              'label',
+              { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'new-user-role' },
+              'Nová rola'
+            ),
+            React.createElement(
+              'select',
+              {
+                id: 'new-user-role',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                value: newRole,
+                onChange: (e) => setNewRole(e.target.value),
+              },
+              React.createElement('option', { value: 'user' }, 'Používateľ'),
+              React.createElement('option', { value: 'admin' }, 'Administrátor')
+            )
+          ),
+          React.createElement(
+            'div',
+            { className: 'flex justify-end space-x-4' },
+            React.createElement(
+              'button',
+              {
+                onClick: closeRoleEditModal,
+                className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
+              },
+              'Zrušiť'
+            ),
+            React.createElement(
+              'button',
+              {
+                onClick: handleUpdateUserRole,
+                className: 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200',
+                disabled: loading,
+              },
+              loading ? 'Ukladám...' : 'Uložiť'
+            )
+          )
+        )
+      )
   );
 }
