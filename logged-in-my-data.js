@@ -184,78 +184,81 @@ function MyDataApp() {
   // Effect for Firebase initialization and Auth Listener setup
   React.useEffect(() => {
     let unsubscribeAuth;
-    let unsubscribeFirestore = null; // Initialize to null
+    let unsubscribeFirestore = null;
 
     try {
       if (typeof firebase === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-my-data.html.");
+        console.error("Firebase SDK nie je načítané. Skontrolujte logged-in-my-data.html.");
+        setError("Firebase SDK nie je načítané.");
         setPageLoading(false);
         return;
       }
 
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
-      setApp(firebaseApp);
+      // Initialize Firebase app only once
+      let firebaseAppInstance;
+      try {
+        firebaseAppInstance = firebase.app(); // Try to get default app
+      } catch (e) {
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig); // Initialize if not already
+      }
+      setApp(firebaseAppInstance);
 
-      const authInstance = firebase.auth(firebaseApp);
+      const authInstance = firebase.auth(firebaseAppInstance);
       setAuth(authInstance);
-      const firestoreInstance = firebase.firestore(firebaseApp); // Define firestoreInstance here
+      const firestoreInstance = firebase.firestore(firebaseAppInstance);
       setDb(firestoreInstance);
 
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          }
-          // No explicit signInAnonymously here, onAuthStateChanged will handle current state
-        } catch (e) {
-          console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
+      // Listen for auth state changes
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser);
-        setIsAuthReady(true); // Auth state has been determined
-
         if (!currentUser) {
             // User is NOT authenticated, redirect to login page
             console.log("Používateľ nie je prihlásený, presmerovanie na login.html");
             window.location.href = 'login.html';
-            return; // Stop further execution in this effect
-        } else {
-            // User IS authenticated, now fetch their data
-            if (firestoreInstance) { // Use the locally defined firestoreInstance
-                const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
-                unsubscribeFirestore = userDocRef.onSnapshot(docSnapshot => {
-                    if (docSnapshot.exists) {
-                        const data = docSnapshot.data();
-                        setUserData(data);
-                        setFirstName(data.firstName || '');
-                        setLastName(data.lastName || '');
-                        setContactPhoneNumber(data.contactPhoneNumber || '');
-                        setDisplayNotifications(data.displayNotifications !== undefined ? data.displayNotifications : true);
-                        setPageLoading(false); // Data loaded, stop page loading
-                    } else {
-                        console.warn("Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
-                        setError("Používateľské dáta sa nenašli. Kontaktujte podporu.");
-                        authInstance.signOut(); // Force logout if data is missing
-                        setPageLoading(false); // Stop page loading
-                    }
-                }, err => {
-                    console.error("Chyba pri načítaní používateľských dát z Firestore:", err);
-                    setError(`Chyba pri načítaní dát: ${err.message}`);
-                    authInstance.signOut(); // Force logout on Firestore error
+            return;
+        }
+
+        // User IS authenticated
+        setUser(currentUser);
+        setIsAuthReady(true); // Auth state has been determined
+
+        // Fetch user data from Firestore
+        if (firestoreInstance) {
+            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
+            unsubscribeFirestore = userDocRef.onSnapshot(docSnapshot => {
+                if (docSnapshot.exists) {
+                    const data = docSnapshot.data();
+                    setUserData(data);
+                    setFirstName(data.firstName || '');
+                    setLastName(data.lastName || '');
+                    setContactPhoneNumber(data.contactPhoneNumber || '');
+                    setDisplayNotifications(data.displayNotifications !== undefined ? data.displayNotifications : true);
+                    setPageLoading(false); // Data loaded, stop page loading
+                } else {
+                    console.warn("Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
+                    setError("Používateľské dáta sa nenašli. Kontaktujte podporu.");
+                    authInstance.signOut(); // Force logout if data is missing
                     setPageLoading(false); // Stop page loading
-                });
-            } else {
-                console.warn("Firestore inštancia nie je dostupná po prihlásení.");
-                setError("Chyba: Databázové služby nie sú dostupné.");
-                setPageLoading(false);
-            }
+                }
+            }, err => {
+                console.error("Chyba pri načítaní používateľských dát z Firestore:", err);
+                setError(`Chyba pri načítaní dát: ${err.message}`);
+                authInstance.signOut(); // Force logout on Firestore error
+                setPageLoading(false); // Stop page loading
+            });
+        } else {
+            console.warn("Firestore inštancia nie je dostupná po prihlásení.");
+            setError("Chyba: Databázové služby nie sú dostupné.");
+            setPageLoading(false);
         }
       });
 
-      signIn(); // Initiate sign-in attempt
+      // Attempt initial sign-in if token exists (this is non-blocking for onAuthStateChanged)
+      if (initialAuthToken) {
+        authInstance.signInWithCustomToken(initialAuthToken).catch(e => {
+          console.error("Chyba pri počiatočnom prihlásení Firebase s tokenom:", e);
+          // Do not redirect here, onAuthStateChanged will handle if it fails to sign in.
+        });
+      }
 
       return () => {
         // Cleanup function for both auth and firestore listeners
@@ -270,7 +273,8 @@ function MyDataApp() {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setPageLoading(false);
-      window.location.href = 'login.html'; // Redirect on critical Firebase init error
+      // If Firebase initialization itself fails, redirect to login.
+      window.location.href = 'login.html';
     }
   }, []); // Empty dependency array - runs only once on component mount
 
@@ -283,8 +287,7 @@ function MyDataApp() {
     );
   }
 
-  // If user is null AFTER isAuthReady is true and pageLoading is false, it means they were redirected.
-  // This block should ideally not be reached if the redirect in onAuthStateChanged works.
+  // If user is null AFTER isAuthReady is true and pageLoading is false, it means they were redirected by onAuthStateChanged.
   if (!user) {
     return null; // Don't render anything, as a redirect should have occurred.
   }
