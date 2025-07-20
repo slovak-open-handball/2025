@@ -39,7 +39,7 @@
             text-align: left;
         }
     </style>
-    <!-- Firebase SDKs - Načítané raz v head pre všetky skripty -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -48,6 +48,32 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
+
+    <!-- Kľúčová ZMENA: Inicializácia Firebase aplikácie tu, pred akýmikoľvek inými skriptami, ktoré ju používajú -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = null; // Stále globálne definované
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Stále globálne definované
+
+        try {
+            // Inicializovať predvolenú Firebase aplikáciu len raz
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log("index.html: Firebase App '[DEFAULT]' inicializovaná v head.");
+            } else {
+                console.log("index.html: Firebase App '[DEFAULT]' už existuje.");
+            }
+        } catch (e) {
+            console.error("index.html: Chyba pri inicializácii Firebase App v head:", e);
+        }
+    </script>
 </head>
 <body class="bg-gray-100">
     <!-- Hlavička sa načíta dynamicky -->
