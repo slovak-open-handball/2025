@@ -72,7 +72,7 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -143,7 +143,7 @@ function App() {
         return;
       }
 
-      // ZMENA: Získanie predvolenej Firebase aplikácie
+      // Získanie predvolenej Firebase aplikácie
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -166,6 +166,7 @@ function App() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+        console.log("IndexApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
         if (currentUser && firestoreInstance) {
@@ -189,14 +190,15 @@ function App() {
             }, error => {
               console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
             });
+            // Return cleanup for userDoc snapshot
             return () => {
-              if (unsubscribeAuth) unsubscribeAuth();
               if (unsubscribeUserDoc) unsubscribeUserDoc();
             };
           } catch (e) {
             console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
           }
         }
+        setLoading(false); // Auth state checked, stop loading
       });
 
       signIn();
@@ -232,12 +234,12 @@ function App() {
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
-            setLoading(false);
+            // setLoading(false); // Moved to authStateChanged
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            setLoading(false);
+            // setLoading(false); // Moved to authStateChanged
           });
 
           return () => unsubscribeSettings();
@@ -245,7 +247,7 @@ function App() {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          setLoading(false);
+          // setLoading(false); // Moved to authStateChanged
       }
     };
 
@@ -283,8 +285,9 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // useEffect for updating header link visibility (simplified for index.html)
+  // useEffect for updating header link visibility
   React.useEffect(() => {
+    console.log(`IndexApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -296,14 +299,17 @@ function App() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
+        console.log("IndexApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         if (isRegistrationOpen) {
           registerLink && registerLink.classList.remove('hidden');
+          console.log("IndexApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
         } else {
           registerLink && registerLink.classList.add('hidden');
+          console.log("IndexApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
         }
       }
     }
@@ -340,7 +346,13 @@ function App() {
 
 
   // Display loading state
-  if (loading || !isAuthReady || !settingsLoaded) {
+  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
+  // Ak je user objekt (prihlásený), presmeruj.
+  if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
+    if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
+        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
+        return null; // Nič nevykresľuj počas presmerovania
+    }
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -385,7 +397,7 @@ function App() {
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in-my-data.html',
+                  href: 'logged-in.html',
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
