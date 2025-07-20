@@ -10,6 +10,26 @@ function RegisterPage() {
   const [passwordError, setPasswordError] = React.useState('');
   const [recaptchaToken, setRecaptchaToken] = React.useState('');
 
+  // Expose setRecaptchaToken globally for the reCAPTCHA callback
+  React.useEffect(() => {
+    window._setRecaptchaTokenFromPage = setRecaptchaToken;
+    return () => {
+      delete window._setRecaptchaTokenFromPage; // Clean up on unmount
+    };
+  }, [setRecaptchaToken]);
+
+  // Volanie updateHeaderLinks po inicializácii Firebase a overení stavu autentifikácie
+  React.useEffect(() => {
+    if (isAuthReady) {
+      // Funkcia updateHeaderLinks je globálne dostupná
+      if (typeof updateHeaderLinks === 'function') {
+        updateHeaderLinks();
+      } else {
+        console.warn("Global updateHeaderLinks function not found.");
+      }
+    }
+  }, [isAuthReady, user]); // Závisí od isAuthReady a user na aktualizáciu odkazov
+
   // Presmerovanie, ak je používateľ už prihlásený
   React.useEffect(() => {
     if (user && isAuthReady) {
@@ -173,30 +193,7 @@ function RegisterPage() {
           {message && <p className="text-green-600 text-sm mb-4">{message}</p>}
 
           <div className="g-recaptcha" data-sitekey={RECAPTCHA_SITE_KEY} data-callback="setRecaptchaToken"></div>
-          {/* Funkcia setRecaptchaToken musí byť globálne dostupná pre reCAPTCHA */}
-            <script>
-                window.setRecaptchaToken = function(token) {
-                    // Pre React aplikáciu, ktorá sa renderuje do #root, musíme aktualizovať stav
-                    // Nájdeme inštanciu komponentu RegisterPage a zavoláme jej metódu na nastavenie tokenu
-                    // Toto je zjednodušená verzia, v komplexnejšej app by sa použil React Context alebo Redux
-                    const rootElement = document.getElementById('root');
-                    if (rootElement && rootElement._reactRootContainer) {
-                        // Ak používate React 18 createRoot, prístup k inštancii je zložitejší.
-                        // Pre tento účel, ak sa RegisterPage renderuje priamo, môžeme predať token cez props.
-                        // Alebo ak je to jednoduchá stránka, môžeme token nastaviť priamo do stavu komponentu.
-                        // Tu je zjednodušený prístup, ktorý môže fungovať, ak sa RegisterPage renderuje znova.
-                        // Alebo môžete použiť ref pre komponent RegisterPage a volať metódu na ňom.
-                        // Pre túto štruktúru je najlepšie, aby sa token nastavil cez props pri renderovaní.
-                        // V tomto prípade, ak sa token nastavuje cez globálnu funkciu,
-                        // je potrebné, aby React komponent RegisterPage vedel o zmene.
-                        // Toto je realizované v kóde `register-page.js` pomocou `setRecaptchaToken(token);`.
-                        // Predpokladáme, že `window.setRecaptchaToken` je definovaná v `register-page.js` a je dostupná globálne.
-                        // To sa dosiahne tým, že `RegisterPage` je renderovaný do DOM a jeho stavová funkcia je prístupná.
-                        // Pre GitHub Pages a jednoduchý React setup, toto môže fungovať.
-                    }
-                };
-            </script>
-
+          {/* Funkcia setRecaptchaToken je teraz definovaná globálne v register.html */}
 
           <div className="flex items-center justify-between mt-6">
             <button
