@@ -67,8 +67,7 @@ function MyDataApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Indicates if auth state has been determined
+  const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
   const [pageLoading, setPageLoading] = React.useState(true); // Initial page loading state
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
@@ -92,12 +91,13 @@ function MyDataApp() {
 
       let firebaseAppInstance;
       try {
-        firebaseAppInstance = firebase.app(); // Try to get default app instance
-        console.log("MyDataApp: Získaná existujúca Firebase app inštancia.");
+        // ZMENA: Pokúsime sa získať predvolenú aplikáciu.
+        firebaseAppInstance = firebase.app();
+        console.log("MyDataApp: Získaná existujúca predvolená Firebase app inštancia.");
       } catch (e) {
-        // If default app doesn't exist, initialize it with a specific name
-        firebaseAppInstance = firebase.initializeApp(firebaseConfig, 'mydataApp');
-        console.log("MyDataApp: Inicializovaná nová Firebase app inštancia s názvom 'mydataApp'.");
+        // Ak predvolená aplikácia neexistuje, inicializujeme ju ako predvolenú.
+        console.warn("MyDataApp: Predvolená Firebase app nebola nájdená. Inicializujem ju.", e);
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig);
       }
       setApp(firebaseAppInstance);
 
@@ -110,8 +110,7 @@ function MyDataApp() {
       // Listen for auth state changes
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("MyDataApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Set user state
-        setIsAuthReady(true); // Auth state has been determined
+        setUser(currentUser); // Set user state to null or user object
 
         if (currentUser) {
             // User IS authenticated, fetch data
@@ -119,34 +118,34 @@ function MyDataApp() {
             if (firestoreInstance) {
                 const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
                 unsubscribeFirestore = userDocRef.onSnapshot(docSnapshot => {
-                    console.log("MyDataApp: Firestore onSnapshot pre používateľské dáta.");
+                    console.log("MyDataApp: Firestore onSnapshot pre používateľské dáta. Document exists:", docSnapshot.exists);
                     if (docSnapshot.exists) {
                         const data = docSnapshot.data();
                         setUserData(data);
-                        setIsAdmin(data.role === 'admin'); // Set isAdmin state
-                        setPageLoading(false); // Data loaded, stop page loading
+                        setIsAdmin(data.role === 'admin');
+                        setPageLoading(false); // Data loaded, overall loading done
                         console.log("MyDataApp: Používateľské dáta načítané a pageLoading nastavené na false.");
                     } else {
                         console.warn("MyDataApp: Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
                         setError("Používateľské dáta sa nenašli. Kontaktujte podporu.");
                         authInstance.signOut(); // Force logout if data is missing
-                        setPageLoading(false); // Stop page loading
+                        setPageLoading(false); // Overall loading done, will redirect
                     }
                 }, err => {
                     console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore:", err);
                     setError(`Chyba pri načítaní dát: ${err.message}`);
                     authInstance.signOut(); // Force logout on Firestore error
-                    setPageLoading(false); // Stop page loading
+                    setPageLoading(false); // Overall loading done, will redirect
                 });
             } else {
                 console.warn("MyDataApp: Firestore inštancia nie je dostupná po prihlásení.");
                 setError("Chyba: Databázové služby nie sú dostupné.");
-                setPageLoading(false);
+                setPageLoading(false); // Overall loading done
             }
         } else {
-            // User is NOT authenticated, set pageLoading to false as auth state is now determined
+            // User is NOT authenticated, overall loading is done
             console.log("MyDataApp: Používateľ nie je prihlásený. Nastavujem pageLoading na false.");
-            setPageLoading(false); // Auth state determined, even if no user
+            setPageLoading(false);
         }
       });
 
@@ -182,9 +181,10 @@ function MyDataApp() {
   }, []); // Empty dependency array - runs only once on component mount
 
   // Display initial page loading state
-  // We wait for isAuthReady to be true before deciding to show content or redirect.
-  if (pageLoading || !isAuthReady) {
-    console.log("MyDataApp: Zobrazujem načítavaciu obrazovku. pageLoading:", pageLoading, "isAuthReady:", isAuthReady);
+  // We wait for `user` to be explicitly null or an object (not undefined)
+  // before deciding to show content or redirect.
+  if (user === undefined || pageLoading) { // Podmienka pre načítavaciu obrazovku
+    console.log("MyDataApp: Zobrazujem načítavaciu obrazovku. user:", user, "pageLoading:", pageLoading);
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -192,9 +192,9 @@ function MyDataApp() {
     );
   }
 
-  // Perform redirect ONLY if auth state is ready AND no user is logged in
-  if (isAuthReady && !user) {
-    console.log("MyDataApp: isAuthReady je true a používateľ je null. Presmerovanie na login.html.");
+  // Perform redirect ONLY if user is definitively null (not undefined)
+  if (user === null) { // Podmienka pre presmerovanie
+    console.log("MyDataApp: Používateľ je null. Presmerovanie na login.html.");
     window.location.href = 'login.html';
     return null; // Don't render anything, as a redirect is happening
   }
