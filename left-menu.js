@@ -26,7 +26,7 @@ try {
 }
 
 // Funkcia na načítanie obsahu do hlavnej oblasti
-async function loadContent(pageName) {
+async function loadContent(htmlFilePath) {
     const contentArea = document.getElementById('main-content-area');
     if (!contentArea) {
         console.error("Element s ID 'main-content-area' nebol nájdený.");
@@ -37,45 +37,60 @@ async function loadContent(pageName) {
     contentArea.innerHTML = '<div class="flex items-center justify-center h-full text-xl text-gray-700">Načítavam obsah...</div>';
 
     try {
-        const response = await fetch(`${pageName}.html`);
+        const response = await fetch(htmlFilePath); // Použijeme htmlFilePath priamo
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const htmlContent = await response.text();
         contentArea.innerHTML = htmlContent;
 
-        // Ak stránka obsahuje React komponent, musíme ho znova vykresliť
-        // Toto je zjednodušená verzia, ktorá predpokladá, že každý JS súbor definuje globálny komponent
+        // Extrahovať základný názov pre JS súbor: napr. "logged-in-my-data" z "logged-in-my-data.html"
+        const jsFileName = htmlFilePath.replace('.html', ''); 
+
         const scriptElement = document.createElement('script');
-        scriptElement.src = `${pageName}.js`;
+        scriptElement.src = `${jsFileName}.js`; // Načítať zodpovedajúci JS súbor
         scriptElement.onload = () => {
-            // Po načítaní skriptu, ak existuje globálny komponent, vykreslíme ho
             let rootComponent = null;
-            if (pageName === 'logged-in-my-data' && typeof MyDataApp !== 'undefined') {
+            // Určiť, ktorý React komponent sa má vykresliť na základe jsFileName
+            // Táto časť sa bude musieť aktualizovať, keď sa vytvoria nové komponenty.
+            if (jsFileName === 'logged-in-my-data' && typeof MyDataApp !== 'undefined') {
                 rootComponent = MyDataApp;
+            } else if (jsFileName === 'logged-in-change-name' && typeof ChangeNameApp !== 'undefined') {
+                rootComponent = ChangeNameApp;
+            } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
+                rootComponent = ChangePasswordApp;
+            } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
+                rootComponent = MySettingsApp;
+            } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
+                rootComponent = NotificationsApp;
+            } else if (jsFileName === 'logged-in-send-message' && typeof SendMessageApp !== 'undefined') {
+                rootComponent = SendMessageApp;
+            } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
+                rootComponent = UsersApp;
+            } else if (jsFileName === 'logged-in-all-registrations' && typeof AllRegistrationsApp !== 'undefined') {
+                rootComponent = AllRegistrationsApp;
+            } else if (jsFileName === 'logged-in-tournament-settings' && typeof TournamentSettingsApp !== 'undefined') {
+                rootComponent = TournamentSettingsApp;
             }
-            // TODO: Pridať ďalšie podmienky pre iné komponenty, keď budú vytvorené
-            // else if (pageName === 'logged-in-change-name' && typeof ChangeNameApp !== 'undefined') {
-            //     rootComponent = ChangeNameApp;
-            // }
+
 
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
-                const rootElement = document.getElementById('root'); // Predpokladáme, že každý HTML fragment má #root
+                const rootElement = document.getElementById('root');
                 if (rootElement) {
                     const root = ReactDOM.createRoot(rootElement);
                     root.render(React.createElement(rootComponent, null));
                 } else {
-                    console.warn(`Element #root nebol nájdený pre stránku ${pageName}.`);
+                    console.warn(`Element #root nebol nájdený pre stránku ${htmlFilePath}.`);
                 }
             }
         };
         scriptElement.onerror = (e) => {
-            console.error(`Chyba pri načítaní skriptu ${pageName}.js:`, e);
-            contentArea.innerHTML = `<div class="text-red-500 text-center p-4">Chyba pri načítaní obsahu. Skript ${pageName}.js chýba alebo je poškodený.</div>`;
+            console.error(`Chyba pri načítaní skriptu ${jsFileName}.js:`, e);
+            contentArea.innerHTML = `<div class="text-red-500 text-center p-4">Chyba pri načítaní obsahu. Skript ${jsFileName}.js chýba alebo je poškodený.</div>`;
         };
-        document.body.appendChild(scriptElement); // Pridáme skript do body
+        document.body.appendChild(scriptElement);
     } catch (error) {
-        console.error(`Chyba pri načítaní obsahu pre ${pageName}.html:`, error);
+        console.error(`Chyba pri načítaní obsahu pre ${htmlFilePath}:`, error);
         contentArea.innerHTML = `<div class="text-red-500 text-center p-4">Chyba pri načítaní obsahu. ${error.message}</div>`;
     }
 }
@@ -126,24 +141,25 @@ if (authMenu && dbMenu) {
                 console.log("Používateľská rola (left-menu):", userRole);
                 updateMenuItemsVisibility(userRole);
 
-                // Načítať počiatočný obsah na základe hash alebo predvolene na Moje údaje
-                const initialHash = window.location.hash.substring(1); // Odstrániť '#'
-                if (initialHash) {
-                    loadContent(`logged-in-${initialHash}`);
+                // Načítať počiatočný obsah: buď z URL parametra 'page', alebo predvolene na 'logged-in-my-data.html'
+                const urlParams = new URLSearchParams(window.location.search);
+                const initialPage = urlParams.get('page');
+                if (initialPage) {
+                    loadContent(initialPage);
                 } else {
-                    loadContent('logged-in-my-data'); // Predvolená stránka
+                    loadContent('logged-in-my-data.html'); // Predvolená stránka
                 }
             } else {
                 console.warn("Používateľský dokument nebol nájdený pre ID:", user.uid);
                 // Ak sa nenájde dokument, predpokladáme rolu 'user' alebo odhlásime
                 updateMenuItemsVisibility('user');
-                loadContent('logged-in-my-data'); // Načítať predvolenú stránku
+                loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
             }
         } catch (error) {
             console.error("Chyba pri načítaní používateľskej roly z Firestore pre left-menu:", error);
             // V prípade chyby zobraziť len základné položky menu pre 'user'
             updateMenuItemsVisibility('user');
-            loadContent('logged-in-my-data'); // Načítať predvolenú stránku
+            loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
         }
     });
 
@@ -161,19 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault(); // Zabrániť predvolenému správaniu odkazu
-            const hash = link.getAttribute('href').substring(1); // Získať hash bez '#'
-            window.location.hash = hash; // Aktualizovať hash v URL
-            loadContent(`logged-in-${hash}`); // Načítať obsah
+            const fullPath = link.getAttribute('href'); // Získať celú cestu z href
+            loadContent(fullPath); // Načítať obsah
         });
     });
 
-    // Načítať obsah pri zmene hash v URL (napr. pri navigácii späť/vpred v prehliadači)
-    window.addEventListener('hashchange', () => {
-        const hash = window.location.hash.substring(1);
-        if (hash) {
-            loadContent(`logged-in-${hash}`);
-        } else {
-            loadContent('logged-in-my-data'); // Predvolená stránka, ak hash chýba
-        }
-    });
+    // Odstránený poslucháč 'hashchange', pretože už nepoužívame hash navigáciu.
+    // Počiatočné načítanie obsahu sa vykonáva v onAuthStateChanged.
 });
