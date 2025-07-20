@@ -4,6 +4,18 @@ function IndexPage() {
   const { user, isAuthReady, isRegistrationOpen, countdown, loading, setLoading, message, error } = useAuth();
   const [teamCount, setTeamCount] = React.useState(0);
 
+  // Volanie updateHeaderLinks po inicializácii Firebase a overení stavu autentifikácie
+  React.useEffect(() => {
+    if (isAuthReady) {
+      // Funkcia updateHeaderLinks je globálne dostupná
+      if (typeof updateHeaderLinks === 'function') {
+        updateHeaderLinks();
+      } else {
+        console.warn("Global updateHeaderLinks function not found.");
+      }
+    }
+  }, [isAuthReady, user]); // Závisí od isAuthReady a user na aktualizáciu odkazov
+
   React.useEffect(() => {
     // Db je k dispozícii z useAuth() po inicializácii Firebase
     if (!db) return;
