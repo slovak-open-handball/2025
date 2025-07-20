@@ -1,3 +1,4 @@
+/*
 // Global application ID and Firebase configuration (should be consistent across all React apps)
 // Tieto konštanty sú duplikované tu, aby bol left-menu.js samostatný.
 const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
@@ -10,6 +11,7 @@ const firebaseConfig = {
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
 const initialAuthToken = null; // Global authentication token
+*/
 
 // Inicializácia Firebase (ak už nie je inicializovaná iným skriptom)
 let firebaseAppMenu; // Použijeme iný názov pre inštanciu aplikácie menu
