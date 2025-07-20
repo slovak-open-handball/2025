@@ -1,14 +1,8 @@
 // Global application ID and Firebase configuration (should be consistent across all React apps)
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
+// Tieto konštanty sú teraz definované v <head> index.html
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 const formatToDatetimeLocal = (date) => {
@@ -21,7 +15,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -73,7 +67,7 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// Main React component for the index.html page
+// Main React component for the index.html page (converted to React.createElement)
 function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -144,12 +138,13 @@ function App() {
 
     try {
       if (typeof firebase === 'undefined') {
-        setError("Firebase SDK is not loaded. Check index.html.");
+        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
         setLoading(false);
         return;
       }
 
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
+      // ZMENA: Získanie predvolenej Firebase aplikácie
+      const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
@@ -165,8 +160,8 @@ function App() {
             // No anonymous sign-in for index.js, user will explicitly log in
           }
         } catch (e) {
-          console.error("Firebase initial sign-in failed:", e);
-          setError(`Login error: ${e.message}`);
+          console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
+          setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
@@ -192,14 +187,14 @@ function App() {
                 }));
               }
             }, error => {
-              console.error("Error loading user data from Firestore (onSnapshot):", error);
+              console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
             });
             return () => {
               if (unsubscribeAuth) unsubscribeAuth();
               if (unsubscribeUserDoc) unsubscribeUserDoc();
             };
           } catch (e) {
-            console.error("Error setting up onSnapshot for user data:", e);
+            console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
           }
         }
       });
@@ -212,8 +207,8 @@ function App() {
         }
       };
     } catch (e) {
-      console.error("Failed to initialize Firebase:", e);
-      setError(`Error initializing Firebase: ${e.message}`);
+      console.error("Nepodarilo sa inicializovať Firebase:", e);
+      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
   }, []);
@@ -232,23 +227,23 @@ function App() {
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
             } else {
-                console.log("Registration settings not found in Firestore. Using default empty values.");
+                console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
             setLoading(false);
           }, error => {
-            console.error("Error loading registration settings (onSnapshot):", error);
-            setError(`Error loading settings: ${error.message}`);
+            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
             setLoading(false);
           });
 
           return () => unsubscribeSettings();
       } catch (e) {
-          console.error("Error setting up onSnapshot for registration settings:", e);
-          setError(`Error setting up listener for settings: ${e.message}`);
+          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
           setLoading(false);
       }
@@ -320,11 +315,11 @@ function App() {
     try {
       setLoading(true);
       await auth.signOut();
-      setUserNotificationMessage("Successfully logged out.");
+      setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("Logout error:", e);
-      setError(`Logout error: ${e.message}`);
+      console.error("Chyba pri odhlásení:", e);
+      setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -346,12 +341,10 @@ function App() {
 
   // Display loading state
   if (loading || !isAuthReady || !settingsLoaded) {
-    return (
-      React.createElement(
-        'div',
-        { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-        React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
-      )
+    return React.createElement(
+      'div',
+      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
   }
 
@@ -381,51 +374,44 @@ function App() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
         React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na stránke turnaja Slovak Open Handball'),
-        user ? ( // Ak je používateľ prihlásený
+        user ? (
           React.createElement(
             React.Fragment,
             null,
-            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásený. Prejdite do svojej zóny pre viac možností.'),
+            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásení. Pre viac možností prejdite do svojej zóny.'),
             React.createElement(
               'div',
               { className: 'mt-6 flex justify-center' },
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in-my-data.html', // Presmerovanie na hlavnú stránku prihlásených používateľov
+                  href: 'logged-in.html',
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
               )
             )
           )
-        ) : ( // Ak používateľ nie je prihlásený
+        ) : (
           React.createElement(
             React.Fragment,
             null,
-            // Vždy zobraziť tlačidlo "Prihlásiť sa" pre odhláseného používateľa
-            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Pre pokračovanie sa prihláste.'),
-            React.createElement(
-              'div',
-              { className: 'mt-6 flex justify-center' },
-              React.createElement(
-                'a',
-                {
-                  href: 'login.html',
-                  className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-                },
-                'Prihlásiť sa' // ZMENA: Text tlačidla na "Prihlásiť sa"
-              )
-            ),
-            // Informácie o registrácii pod tlačidlom "Prihlásiť sa"
             isRegistrationOpen ? (
               React.createElement(
                 React.Fragment,
                 null,
-                React.createElement('p', { className: 'text-lg text-gray-600 mt-4' }, 'Alebo sa zaregistrujte na turnaj:'),
+                React.createElement('p', { className: 'text-lg text-gray-600' }, 'Pre pokračovanie sa prihláste alebo zaregistrujte.'),
                 React.createElement(
                   'div',
-                  { className: 'mt-2 flex justify-center' },
+                  { className: 'mt-6 flex justify-center space-x-4' },
+                  React.createElement(
+                    'a',
+                    {
+                      href: 'login.html',
+                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                    },
+                    'Prihlásenie'
+                  ),
                   React.createElement(
                     'a',
                     {
@@ -442,7 +428,7 @@ function App() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-lg text-gray-600 mt-4' },
+                  { className: 'text-lg text-gray-600' },
                   'Registračný formulár nie je prístupný.'
                 ),
                 regStart && !isNaN(regStart) && now < regStart && (
@@ -454,9 +440,9 @@ function App() {
                       { className: 'text-md text-gray-500 mt-2' },
                       'Registrácia bude možná od:',
                       ' ',
-                      React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationStartDate).toLocaleDateString('sk-SK') || 'Neznámy dátum'),
+                      React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationStartDate).toLocaleDateString('sk-SK')),
                       ' ',
-                      React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationStartDate).toLocaleTimeString('sk-SK') || 'Neznámy čas')
+                      React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationStartDate).toLocaleTimeString('sk-SK'))
                     ),
                     countdown && (
                         React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia začne o: ${countdown}`)
@@ -469,9 +455,21 @@ function App() {
                     { className: 'text-md text-gray-500 mt-2' },
                     'Registrácia skončila:',
                     ' ',
-                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleDateString('sk-SK') || 'Neznámy dátum'),
+                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleDateString('sk-SK')),
                     ' ',
-                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleTimeString('sk-SK') || 'Neznámy čas')
+                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleTimeString('sk-SK'))
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'mt-6 flex justify-center' },
+                  React.createElement(
+                    'a',
+                    {
+                      href: 'login.html',
+                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                    },
+                    'Prihlásenie'
                   )
                 )
               )
