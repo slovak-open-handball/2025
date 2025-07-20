@@ -1989,7 +1989,7 @@ function App() {
                             />
                         </div>
                         <p className="text-gray-600 text-sm mt-4">
-                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.<br>Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
                         </p>
                     </>
                 )}
