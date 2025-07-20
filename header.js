@@ -1,15 +1,7 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú duplikované tu, aby bol header.js samostatný.
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
+// Tieto konštanty NEBUDÚ deklarované, pretože sa predpokladá, že sú už globálne definované v index.html / index.js.
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
 // Inicializácia Firebase (ak už nie je inicializovaná iným skriptom)
 let firebaseAppHeader; // Použijeme iný názov pre inštanciu aplikácie hlavičky
@@ -18,6 +10,7 @@ let dbHeader;
 
 try {
     // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom
+    // Používame globálne dostupné firebaseConfig
     firebaseAppHeader = firebase.apps.find(app => app.name === 'headerApp') || firebase.initializeApp(firebaseConfig, 'headerApp');
     authHeader = firebase.auth(firebaseAppHeader);
     dbHeader = firebase.firestore(firebaseAppHeader);
