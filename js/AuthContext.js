@@ -170,15 +170,16 @@ function AuthProvider({ children }) {
     // functions // if you use firebase functions
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-      <NotificationModal message={userNotificationMessage} onClose={() => setUserNotificationMessage('')} />
-      <NotificationModal message={message} onClose={() => setMessage('')} />
-      {error && (
-        <NotificationModal message={`Chyba: ${error}`} onClose={() => setError('')} />
-      )}
-    </AuthContext.Provider>
+  return React.createElement(
+    AuthContext.Provider,
+    { value: value },
+    children,
+    React.createElement(NotificationModal, { message: userNotificationMessage, onClose: () => setUserNotificationMessage('') }),
+    React.createElement(NotificationModal, { message: message, onClose: () => setMessage('') }),
+    error && React.createElement(
+      NotificationModal,
+      { message: `Chyba: ${error}`, onClose: () => setError('') }
+    )
   );
 }
 
