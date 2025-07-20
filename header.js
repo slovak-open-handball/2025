@@ -71,13 +71,10 @@ if (authHeader) {
         authStateInitialized = true; // Označiť stav autentifikácie ako inicializovaný
         console.log("Header.js: onAuthStateChanged - Používateľ:", user ? user.uid : "null", "AuthStateInitialized:", authStateInitialized);
 
-        // Ak používateľ je odhlásený a nie je na povolených stránkach, presmerovať na login.html
-        const currentPathname = window.location.pathname;
-        const allowedPaths = ['/login.html', '/register.html', '/index.html', '/admin-register.html', '/']; // Pridal som aj '/' pre úvodnú stránku
-        if (!user && !allowedPaths.includes(currentPathname)) {
-            console.log("Header.js: Používateľ odhlásený, presmerovanie na login.html z header.js. Aktuálna cesta:", currentPathname);
-            window.location.href = 'login.html';
-        }
+        // *** ODSTRÁNENÁ AUTOMATICKÁ LOGIKA PRESMEROVANIA Z HEADER.JS ***
+        // Zodpovednosť za presmerovanie na login.html, ak používateľ nie je prihlásený
+        // a pokúša sa pristupovať k chráneným stránkam, bude teraz na týchto chránených stránkach (napr. logged-in-my-data.js).
+
         // Aktualizovať odkazy len ak sú oba stavy inicializované
         if (authStateInitialized && settingsStateInitialized) {
             console.log("Header.js: Oba stavy inicializované (Auth, Settings). Volám updateHeaderLinks z onAuthStateChanged.");
