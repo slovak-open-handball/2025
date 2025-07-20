@@ -266,64 +266,8 @@ function App() {
   }, []); // Spustí sa len raz pri mountovaní komponentu
 
 
-  // useEffect pre aktualizáciu viditeľnosti odkazov v hlavičke
-  // Táto logika by mala byť v header.js alebo v hlavnom App.js, ak sa hlavička načítava dynamicky.
-  // Pre účely index.js, ktorý sa sústredí na úvodnú stránku, ju tu necháme, ak sa header.html nenačítava ako React komponent.
-  React.useEffect(() => {
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user && !user.isAnonymous) { // Ak je používateľ prihlásený (a nie je anonymný)
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
-      } else { // Ak používateľ nie je prihlásený alebo je anonymný
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        // Podmienene zobraziť/skryť odkaz registrácie v hlavičke na základe stavu registrácie
-        if (isRegistrationOpen) {
-          registerLink && registerLink.classList.remove('hidden');
-        } else {
-          registerLink && registerLink.classList.add('hidden');
-        }
-      }
-    }
-  }, [user, isRegistrationOpen]); // Spustí sa pri zmene user alebo isRegistrationOpen
-
-  // handleLogout function for the header logout button
-  const handleLogout = async () => {
-    if (!auth) return;
-    try {
-      setPageLoading(true); // Use pageLoading for the whole page
-      await auth.signOut();
-      setMessage("Úspešne odhlásené.");
-      setError('');
-      window.location.href = 'login.html'; // Redirect to login page after logout
-    } catch (e) {
-      console.error("Chyba pri odhlasovaní:", e);
-      setError(`Chyba pri odhlasovaní: ${e.message}`);
-    } finally {
-      setPageLoading(false);
-    }
-  };
-
-  // Attach logout listener to the button in header.html
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]); // Re-run if handleLogout changes (unlikely)
+  // Removed useEffect for updating header link visibility, as it will be handled by header.js
+  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
 
 
   // Display loading state
@@ -372,7 +316,7 @@ function App() {
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in.html', // Presmerovanie na hlavnú stránku prihlásených používateľov
+                  href: 'logged-in-my-data.html', // Presmerovanie na hlavnú stránku prihlásených používateľov
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
