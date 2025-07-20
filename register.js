@@ -239,9 +239,8 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        // If user is already logged in, redirect them to logged-in.html
         if (currentUser) {
-            window.location.href = 'logged-in.html';
+            window.location.href = 'logged-in-my-data.html';
             return; // Stop further rendering for this component
         }
         // pageLoading will be set to false once settings are loaded
@@ -574,7 +573,7 @@ function App() {
 
   // If user is logged in (and pageLoading is false), redirect
   if (user) {
-    window.location.href = 'logged-in.html';
+    window.location.href = 'logged-in-my-data.html';
     return null;
   }
 
