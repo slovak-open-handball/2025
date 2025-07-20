@@ -111,6 +111,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadHeader();
             // firebase.auth().onAuthStateChanged() sa teraz riadi v AuthContext a volá updateHeaderLinks z React komponentov
+            // Tu už nie je potrebné volať updateHeaderLinks ani onAuthStateChanged
         });
     </script>
 
