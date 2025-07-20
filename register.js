@@ -240,7 +240,7 @@ function App() {
         setUser(currentUser);
         setIsAuthReady(true);
         if (currentUser) {
-            window.location.href = 'logged-in-my-data.html';
+            window.location.href = 'logged-in.html';
             return; // Stop further rendering for this component
         }
         // pageLoading will be set to false once settings are loaded
