@@ -32,7 +32,7 @@ function AuthProvider({ children }) {
   const fetchSettings = async () => {
     try {
       // MODIFIKOVANÉ: Prístup k nastaveniam cez cestu artifacts
-      const settingsDoc = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').get();
+      const settingsDoc = await db.collection('settings').doc('registration').get();
       if (settingsDoc.exists) {
         const data = settingsDoc.data();
         setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
