@@ -39,7 +39,7 @@
             text-align: left;
         }
     </style>
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs - Presunuté sem, aby sa načítali správne -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -63,6 +63,10 @@
         </main>
     </div>
 
+    <!-- Načítanie skriptov pre hlavičku a menu -->
+    <script src="header.js"></script> <!-- Header.js sa načítava tu -->
+    <script src="left-menu.js"></script> <!-- Left-menu.js sa načítava tu -->
+    
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script src="logged-in-my-data.js"></script>
     <script>
