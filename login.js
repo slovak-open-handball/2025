@@ -1,14 +1,8 @@
 // Global application ID and Firebase configuration (should be consistent across all React apps)
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
+// Tieto konštanty sú teraz definované v <head> login.html
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -142,21 +136,13 @@ function App() {
         return;
       }
 
-      let firebaseAppInstance;
-      try {
-        // ZMENA: Pokúsime sa získať predvolenú aplikáciu.
-        firebaseAppInstance = firebase.app();
-        console.log("LoginApp: Získaná existujúca predvolená Firebase app inštancia.");
-      } catch (e) {
-        // Ak predvolená aplikácia neexistuje, inicializujeme ju ako predvolenú.
-        console.warn("LoginApp: Predvolená Firebase app nebola nájdená. Inicializujem ju.", e);
-        firebaseAppInstance = firebase.initializeApp(firebaseConfig);
-      }
-      setApp(firebaseAppInstance);
+      // ZMENA: Získanie predvolenej Firebase aplikácie
+      const firebaseApp = firebase.app();
+      setApp(firebaseApp);
 
-      const authInstance = firebase.auth(firebaseAppInstance);
+      const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseAppInstance);
+      firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
       const signIn = async () => {
@@ -204,7 +190,7 @@ function App() {
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Always hide for logged-in users
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
@@ -312,7 +298,7 @@ function App() {
           console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', 
             headers: {
               'Content-Type': 'application/json',
             },
@@ -334,7 +320,6 @@ function App() {
         return;
       }
 
-      // If login is successful and not an unapproved admin, set user and redirect
       setUser(prevUser => ({
         ...prevUser,
         ...userData,
