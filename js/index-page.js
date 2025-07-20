@@ -2,7 +2,7 @@
 
 function IndexPage() {
   const { user, isAuthReady, isRegistrationOpen, countdown, loading, setLoading, message, error } = useAuth();
-  const [teamCount, setTeamCount] = React.useState(0);
+  // const [teamCount, setTeamCount] = React.useState(0); // Odstránené: stav pre počet tímov
 
   // Volanie updateHeaderLinks po inicializácii Firebase a overení stavu autentifikácie
   React.useEffect(() => {
@@ -15,24 +15,6 @@ function IndexPage() {
       }
     }
   }, [isAuthReady, user]); // Závisí od isAuthReady a user na aktualizáciu odkazov
-
-  React.useEffect(() => {
-    // Db je k dispozícii z useAuth() po inicializácii Firebase
-    if (!db) return;
-    const fetchTeamCount = async () => {
-      setLoading(true);
-      try {
-        // MODIFIKOVANÉ: Prístup k tímom cez cestu artifacts
-        const querySnapshot = await db.collection('teams').get();
-        setTeamCount(querySnapshot.size);
-      } catch (err) {
-        console.error("Chyba pri načítavaní počtu tímov:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTeamCount();
-  }, [db, setLoading]); // Depend on db instance and setLoading
 
   if (!isAuthReady) {
     return React.createElement(
@@ -134,21 +116,6 @@ function IndexPage() {
           ),
           '.'
         )
-    ),
-    React.createElement(
-      'section',
-      { className: 'bg-white p-6 rounded-lg shadow-lg' },
-      React.createElement(
-        'h2',
-        { className: 'text-2xl font-semibold text-blue-700 mb-4' },
-        'Účastníci'
-      ),
-      React.createElement(
-        'p',
-        { className: 'text-gray-700 text-lg text-center' },
-        'Doteraz registrovaných tímov: ',
-        React.createElement('span', { className: 'font-bold text-blue-600' }, teamCount)
-      )
     )
   );
 }
