@@ -55,9 +55,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       },
       showPassword ? EyeOffIcon : EyeIcon
     ),
-    // Changed <p> to <div> to resolve DOM nesting warning
     description && React.createElement(
-      'div', // Changed from 'p' to 'div'
+      'div', // Changed from 'p' to 'div' to resolve DOM nesting warning
       { className: 'text-gray-600 text-sm -mt-2' },
       description
     )
