@@ -136,7 +136,7 @@ function App() {
         return;
       }
 
-      // ZMENA: Získanie predvolenej Firebase aplikácie
+      // Získanie predvolenej Firebase aplikácie
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -178,8 +178,9 @@ function App() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
-  // useEffect for updating header link visibility (simplified for login.html)
+  // useEffect for updating header link visibility
   React.useEffect(() => {
+    console.log(`LoginApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -191,12 +192,14 @@ function App() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden'); // Always hide for logged-in users
+        console.log("LoginApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         // On login page, always show register link if not logged in (regardless of registration open status)
         registerLink && registerLink.classList.remove('hidden'); 
+        console.log("LoginApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
   }, [user]); // Runs on user change
@@ -335,7 +338,7 @@ function App() {
       setLoading(false); 
 
       setTimeout(() => {
-        window.location.href = 'logged-in-my-data.html';
+        window.location.href = 'logged-in.html';
       }, 5000); 
 
     } catch (e) {
@@ -356,7 +359,7 @@ function App() {
   // Ak je user objekt (prihlásený), presmeruj.
   if (user === undefined || loading) {
     if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
-        window.location.href = 'logged-in-my-data.html'; // Presmerovanie ak je používateľ prihlásený
+        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
         return null; // Nič nevykresľuj počas presmerovania
     }
     return React.createElement(
