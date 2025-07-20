@@ -29,21 +29,25 @@ function AuthProvider({ children }) {
   const [userNotifications, setUserNotifications] = React.useState([]);
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  const fetchSettings = async () => {
-    try {
-      // MODIFIKOVANÉ: Prístup k nastaveniam cez cestu artifacts
-      const settingsDoc = await db.collection('settings').doc('registration').get();
-      if (settingsDoc.exists) {
-        const data = settingsDoc.data();
-        setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
-        setRegistrationEndDate(data.endDate ? data.endDate.toDate() : null);
-        setUserDataEditEndDate(data.userDataEditEndDate ? data.userDataEditEndDate.toDate() : null);
-      }
-    } catch (err) {
-      console.error("Chyba pri načítavaní nastavení registrácie:", err);
-      setError("Chyba pri načítavaní nastavení registrácie.");
+const fetchSettings = async () => {
+  console.log("Fetching settings...");
+  try {
+    const settingsDoc = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').get();
+    console.log("Settings document fetched. Exists:", settingsDoc.exists);
+    if (settingsDoc.exists) {
+      const data = settingsDoc.data();
+      console.log("Settings data:", data);
+      setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
+      setRegistrationEndDate(data.endDate ? data.endDate.toDate() : null);
+      setUserDataEditEndDate(data.userDataEditEndDate ? data.userDataEditEndDate.toDate() : null);
+    } else {
+      console.warn("Registration settings document not found at expected path.");
     }
-  };
+  } catch (err) {
+    console.error("Chyba pri načítavaní nastavení registrácie:", err);
+    setError("Chyba pri načítavaní nastavení registrácie.");
+  }
+};
 
   const fetchUserRole = async (uid) => {
     try {
@@ -129,23 +133,27 @@ function AuthProvider({ children }) {
   }, [registrationStartDate, registrationEndDate]);
 
   React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserRole(currentUser.uid);
-        await fetchNotifications(currentUser.uid);
-        const notificationInterval = setInterval(() => fetchNotifications(currentUser.uid), 30000); // Refresh notifications every 30 seconds
-        return () => clearInterval(notificationInterval);
-      } else {
-        setIsAdmin(false);
-        setIsRoleLoaded(true); // Ensure role is loaded even if no user
-        setUserNotifications([]);
-      }
-      setIsAuthReady(true);
-    });
+  const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
+    console.log("Auth state changed. Current user:", currentUser);
+    setUser(currentUser);
+    if (currentUser) {
+      console.log("User is logged in. Fetching role and notifications...");
+      await fetchUserRole(currentUser.uid);
+      await fetchNotifications(currentUser.uid);
+      const notificationInterval = setInterval(() => fetchNotifications(currentUser.uid), 30000);
+      return () => clearInterval(notificationInterval);
+    } else {
+      console.log("No user logged in.");
+      setIsAdmin(false);
+      setIsRoleLoaded(true);
+      setUserNotifications([]);
+    }
+    setIsAuthReady(true);
+    console.log("isAuthReady set to true.");
+  });
 
-    return () => unsubscribeAuth();
-  }, []);
+  return () => unsubscribeAuth();
+}, []);
 
   const value = {
     user,
