@@ -160,7 +160,7 @@ function App() {
           }
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
+          setError(`Skontrlujte svoje prihlasovacie údaje a skúste to znovu.`);
         }
       };
 
@@ -308,7 +308,7 @@ function App() {
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
-        setError(`Chyba pri prihlásení: ${e.message}`);
+        setError(`Skontrlujte svoje prihlasovacie údaje a skúste to znovu.`);
       }
       setLoading(false);
     } 
