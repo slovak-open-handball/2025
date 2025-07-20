@@ -31,7 +31,8 @@ function AuthProvider({ children }) {
 
   const fetchSettings = async () => {
     try {
-      const settingsDoc = await db.collection('settings').doc('registration').get();
+      // MODIFIKOVANÉ: Prístup k nastaveniam cez cestu artifacts
+      const settingsDoc = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('settings').doc('registration').get();
       if (settingsDoc.exists) {
         const data = settingsDoc.data();
         setRegistrationStartDate(data.startDate ? data.startDate.toDate() : null);
@@ -72,7 +73,8 @@ function AuthProvider({ children }) {
       }
 
       // Check for new messages from admin
-      const messagesSnapshot = await db.collection('messages')
+      // MODIFIKOVANÉ: Prístup k správam cez cestu artifacts
+      const messagesSnapshot = await db.collection('artifacts').doc(APP_ID).collection('public').doc('data').collection('messages')
         .where('recipientId', '==', uid)
         .where('read', '==', false)
         .orderBy('timestamp', 'desc')
