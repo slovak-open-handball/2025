@@ -1,30 +1,15 @@
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
+// Global application ID and Firebase configuration (should be consistent across all React apps)
+// Tieto konštanty sú teraz definované v <head> register.html
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-const formatToDatetimeLocal = (date) => {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
+  // SVG ikony pre oko (zobraziť heslo) a oko-preškrtnuté (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -125,16 +110,15 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// Main React component for the registration page
+// Main React component for the register.html page
 function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
   const [loading, setLoading] = React.useState(true);
-  const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -142,9 +126,6 @@ function App() {
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
-
-  const [showPasswordReg, setShowPasswordReg] = React.useState(false);
-  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
 
   // States for date and time settings
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -157,7 +138,6 @@ function App() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   // New state variable for periodic update of isRegistrationOpen
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
-
 
   // Calculate registration status as a memoized value
   const isRegistrationOpen = React.useMemo(() => {
@@ -183,7 +163,7 @@ function App() {
 
     // If startDate is not a valid date, or is already in the past, no countdown is needed
     if (!startDate || isNaN(startDate) || now >= startDate) {
-        return null;
+        return null; 
     }
 
     const difference = startDate.getTime() - now.getTime(); // Difference in milliseconds
@@ -212,8 +192,13 @@ function App() {
         return;
       }
 
-      // Získanie predvolenej Firebase aplikácie
-      const firebaseApp = firebase.app();
+      let firebaseApp;
+      // Skontrolujte, či už existuje predvolená aplikácia Firebase
+      if (firebase.apps.length === 0) {
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+      } else {
+        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
+      }
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
@@ -226,7 +211,7 @@ function App() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            // No anonymous sign-in for register.js, user will explicitly register
+            // No anonymous sign-in for register.js, user will explicitly register or log in
           }
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
@@ -237,10 +222,10 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("RegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
-        setIsAuthReady(true);
-        // If user is already logged in, redirect them to logged-in.html
+        // Ak je používateľ prihlásený, presmerujte ho
         if (currentUser) {
-            window.location.href = 'logged-in.html';
+            window.location.href = 'logged-in-my-data.html';
+            return; // Zastaviť ďalšie vykresľovanie pre tento komponent
         }
         setLoading(false); // Auth state checked, stop loading
       });
@@ -259,11 +244,12 @@ function App() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
+
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
     const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
-        return; // Wait for DB and Auth to be initialized
+      if (!db || user !== null) { // Wait for DB and user to be explicitly null (not logged in)
+        return;
       }
       try {
           const settingsDocRef = db.collection('settings').doc('registration');
@@ -296,7 +282,7 @@ function App() {
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db, user]); // Depend on db and user (to ensure user is null before fetching settings)
 
   // Effect for countdown (runs when registrationStartDate changes)
   React.useEffect(() => {
@@ -331,7 +317,7 @@ function App() {
 
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`RegisterApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`RegisterApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -342,18 +328,22 @@ function App() {
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Always hide for logged-in users
         console.log("RegisterApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        // On registration page, always show register link if not logged in (regardless of registration open status)
-        registerLink && registerLink.classList.remove('hidden');
-        console.log("RegisterApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+        if (isRegistrationOpen) {
+          registerLink && registerLink.classList.remove('hidden');
+          console.log("RegisterApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
+        } else {
+          registerLink && registerLink.classList.add('hidden');
+          console.log("RegisterApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
+        }
       }
     }
-  }, [user]); // Runs on user change
+  }, [user, isRegistrationOpen]);
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
@@ -361,7 +351,7 @@ function App() {
     try {
       setLoading(true);
       await auth.signOut();
-      setMessage("Úspešne odhlásený.");
+      setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
       console.error("Chyba pri odhlásení:", e);
@@ -403,7 +393,7 @@ function App() {
     const errors = [];
 
     if (pwd.length < 10) {
-      errors.push("aspoň 10 znakov");
+      errors.push("minimálne 10 znakov");
     }
     if (pwd.length > 4096) {
       errors.push("maximálne 4096 znakov");
@@ -431,13 +421,12 @@ function App() {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    // Changed condition: contactPhoneNumber is always required
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
-      setError("Vyplňte prosím všetky polia.");
+      setError("Prosím, vyplňte všetky polia.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Heslá sa nezhodujú. Skontrolujte ich prosím.");
+      setError("Heslá sa nezhodujú. Prosím, skontrolujte ich.");
       return;
     }
 
@@ -447,7 +436,7 @@ function App() {
       return;
     }
 
-    // Phone number validation now applies only to regular registration
+    // Phone number validation applies only for regular registration
     if (!isAdminRegistration) {
       const phoneRegex = /^\+\d+$/;
       if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
@@ -456,35 +445,29 @@ function App() {
       }
     }
 
-
     const recaptchaToken = await getRecaptchaToken('register');
     if (!recaptchaToken) {
-      setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
+      setError("Overenie reCAPTCHA zlyhalo. Prosím, skúste to znova.");
       return null;
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    setLoading(true); // Show loading indicator
-    setError(''); // Clear previous errors
+    setLoading(true);
+    setError('');
     
-    // Set the specific message for admin registration immediately
     if (isAdminRegistration) {
-      setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+      setUserNotificationMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
     } else {
-      // For regular users, keep message empty for now, so the generic "Loading..." from the button or general loading screen applies.
-      setMessage(''); 
+      setUserNotificationMessage(''); 
     }
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
-      // Determine initial role and approval status
       let initialUserRole = 'user';
-      let initialIsApproved = true; // Default for normal users, and initial for admins
+      let initialIsApproved = true;
 
-      // If it's an administrator registration, set role to 'user' and approved to 'true'
-      // This will be updated to 'admin' and 'false' later
       if (isAdminRegistration) {
         initialUserRole = 'user'; 
         initialIsApproved = true; 
@@ -495,22 +478,20 @@ function App() {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber, // Save even if empty for admin, to keep consistent schema
+        contactPhoneNumber: contactPhoneNumber,
         displayName: `${firstName} ${lastName}`,
-        role: initialUserRole, // Use initial role
-        approved: initialIsApproved, // Use initial approval status
+        role: initialUserRole,
+        approved: initialIsApproved,
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true
       };
 
-      console.log("Pokus o uloženie používateľa do Firestore s počiatočnými dátami:", userDataToSave); // Detailed log
+      console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
 
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
 
-        // --- Moved email sending logic here ---
-        // Attempt to send email via Apps Script immediately after saving initial data
         try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -521,77 +502,51 @@ function App() {
             lastName: lastName,
             contactPhoneNumber: contactPhoneNumber 
           };
-          console.log("Odosielanie dát do Apps Script (registračný e-mail):", payload); // Log the payload
+          console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Returned: Using no-cors for Apps Script
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
-          console.log("Požiadavka na odoslanie registračného e-mailu odoslaná.");
+          console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
           try {
-            const responseData = await response.text(); // Read as text to avoid JSON parsing errors
-            console.log("Odpoveď z Apps Script (fetch - registračný e-mail) ako text:", responseData); 
+            const responseData = await response.text();
+            console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail) ako text:", responseData); 
           } catch (jsonError) {
-            console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
+            console.warn("Nepodarilo sa parsovať odpoveď z Apps Scriptu (očakávané s 'no-cors' pre JSON):", jsonError);
           }
         } catch (emailError) {
-          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
-        }
-        // --- End of moved logic ---
-
-
-        // Explicitly load and log data after successful write
-        const userDocRef = db.collection('users').doc(userCredential.user.uid);
-        let userDocSnapshot = await userDocRef.get();
-        if (userDocSnapshot.exists) {
-          console.log("Dáta načítané z Firestore ihneď po počiatočnej registrácii:", userDocSnapshot.data());
-        } else {
-          console.log("Dokument používateľa sa nenašiel v Firestore ihneď po počiatočnej registrácii (neočakávané).");
+          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (fetch error):", emailError);
         }
 
-        // --- New logic for admin registration (after email sent) ---
         if (isAdminRegistration) {
-          // Update role to admin and approved to false for admin registrations
           await db.collection('users').doc(userCredential.user.uid).update({
             role: 'admin',
             approved: false
           });
-          console.log(`Firestore: rola používateľa ${email} bola aktualizovaná na 'admin' a schválené na 'false'.`);
-
-          // Re-fetch and log data after the update
-          userDocSnapshot = await userDocRef.get(); // Get updated snapshot
-          if (userDocSnapshot.exists) {
-            console.log("Dáta načítané z Firestore po aktualizácii roly admina:", userDocSnapshot.data());
-          } else {
-            console.log("Dokument používateľa sa nenašiel v Firestore po aktualizácii roly admina (neočakávané).");
-          }
+          console.log(`Firestore: Rola používateľa ${email} bola aktualizovaná na 'admin' a schválenie na 'false'.`);
         }
-        // --- End of new logic ---
 
       } catch (firestoreError) {
-        console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
-        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
+        console.error("Firestore Save/Update Error:", firestoreError);
+        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
-        setMessage(''); // Clear message on error
-        return; // Stop further execution if Firestore save fails
+        setUserNotificationMessage('');
+        return;
       }
 
-      // Set the final success message for regular users
       if (!isAdminRegistration) {
-        setMessage(`Ďakujeme za registráciu vášho klubu na turnaj Slovak Open Handball. Potvrdenie o registrácii sme poslali na ${email}.`);
+        setUserNotificationMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       }
-      // For admin registration, the message is already set at the beginning.
       
-      setLoading(false); // Stop loading so the message is visible on the form
+      setLoading(false);
 
-      // Now sign out and redirect after a delay
       await auth.signOut(); 
-      setUser(null); // Explicitne nastavíme user na null po odhlásení
+      setUser(null);
       
-      // Redirect after 5 seconds
       setTimeout(() => {
         window.location.href = 'login.html'; 
       }, 5000); 
@@ -599,7 +554,7 @@ function App() {
     } catch (e) {
       console.error("Chyba pri registrácii (Auth alebo iné):", e); 
       if (e.code === 'auth/email-already-in-use') {
-        setError("E-mailová adresa už existuje. Vyberte prosím inú.");
+        setError("E-mailová adresa už existuje. Prosím, zvoľte inú.");
       } else if (e.code === 'auth/weak-password') {
         setError("Heslo je príliš slabé. " + validatePassword(password));
       } else if (e.code === 'auth/invalid-email') {
@@ -608,27 +563,16 @@ function App() {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
       setLoading(false); 
-      setMessage(''); // Clear message on error
+      setUserNotificationMessage('');
     } 
   };
 
-  // Display loading state
-  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
-  // Ak je user objekt (prihlásený), presmeruj.
-  if (user === undefined || loading || !isAuthReady) { // Pridaná isAuthReady
-    if (user) {
-        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
-        return null; // Don't render anything while redirecting
-    }
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
-    );
-  }
+  const currentPath = window.location.pathname.split('/').pop();
+  const isRegistrationPage = currentPath === 'register.html' || currentPath === 'admin-register.html';
+  const is_admin_register_page = currentPath === 'admin-register.html';
 
-  // Priority display of successful registration message on registration pages
-  if (message) {
+  // Prioritné zobrazenie správy o úspešnej registrácii na registračných stránkach
+  if (isRegistrationPage && userNotificationMessage) {
     return React.createElement(
       'div',
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
@@ -642,7 +586,7 @@ function App() {
           React.createElement(
             'div',
             { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-            message
+            userNotificationMessage
           ),
           React.createElement('p', { className: 'text-lg text-gray-600' }, 'Presmerovanie na prihlasovaciu stránku...')
         )
@@ -650,14 +594,26 @@ function App() {
     );
   }
 
-  const currentPath = window.location.pathname.split('/').pop();
-  const is_admin_register_page = currentPath === 'admin-register.html';
+  // Ak nie je registrácia s úspešnou správou, potom kontrolujeme ostatné stavy načítania
+  if (loading || user === undefined || !settingsLoaded) {
+    return React.createElement(
+      'div',
+      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+    );
+  }
+
+  // Ak je používateľ už prihlásený, presmerujeme ho
+  if (user) {
+    window.location.href = 'logged-in-my-data.html';
+    return null;
+  }
 
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
   const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
 
-  // If it's not admin registration and registration is not open, display message
+  // Ak nie je admin registrácia a registrácia nie je otvorená, zobrazte správu
   if (!is_admin_register_page && !isRegistrationOpen) {
     return React.createElement(
       'div',
@@ -719,15 +675,11 @@ function App() {
       )
     );
   }
-
-  // Display registration form
+    
+  // Zobrazenie registračného formulára s potenciálnou správou
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
-        message: message, // Use local message state for this modal
-        onClose: () => setMessage('')
-    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-md mt-20 mb-10 p-4' },
@@ -758,9 +710,9 @@ function App() {
               value: firstName,
               onChange: (e) => setFirstName(e.target.value),
               required: true,
-              placeholder: 'Zadajte svoje meno',
-              autoComplete: 'given-name',
-              disabled: loading || !!message,
+              placeholder: "Zadajte svoje meno",
+              autoComplete: "given-name",
+              disabled: loading || !!userNotificationMessage,
             })
           ),
           React.createElement(
@@ -776,9 +728,9 @@ function App() {
               value: lastName,
               onChange: (e) => setLastName(e.target.value),
               required: true,
-              placeholder: 'Zadajte svoje priezvisko',
-              autoComplete: 'family-name',
-              disabled: loading || !!message,
+              placeholder: "Zadajte svoje priezvisko",
+              autoComplete: "family-name",
+              disabled: loading || !!userNotificationMessage,
             })
           ),
           is_admin_register_page ? (
@@ -793,9 +745,9 @@ function App() {
                 value: email,
                 onChange: (e) => setEmail(e.target.value),
                 required: true,
-                placeholder: 'Zadajte svoju e-mailovú adresu',
-                autoComplete: 'email',
-                disabled: loading || !!message,
+                placeholder: "Zadajte svoju e-mailovú adresu",
+                autoComplete: "email",
+                disabled: loading || !!userNotificationMessage,
               })
             )
           ) : (
@@ -824,7 +776,7 @@ function App() {
                       return;
                     }
                     if (value.length > 1 && !/^\+\d*$/.test(value)) {
-                      e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
+                      e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
                       e.target.reportValidity();
                       return;
                     }
@@ -833,26 +785,26 @@ function App() {
                   },
                   onInvalid: (e) => {
                     if (e.target.value.length === 0) {
-                      e.target.setCustomValidity("Vyplňte prosím toto pole.");
+                      e.target.setCustomValidity("Prosím, vyplňte toto pole.");
                     } else if (e.target.value.length === 1 && e.target.value !== '+') {
                       e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                     } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
-                      e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
+                      e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
                     } else {
                       e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
                     }
                   },
                   required: true,
-                  placeholder: '+421901234567',
-                  pattern: '^\\+\\d+$',
-                  title: 'Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).',
-                  disabled: loading || !!message,
+                  placeholder: "+421901234567",
+                  pattern: "^\\+\\d+$",
+                  title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).",
+                  disabled: loading || !!userNotificationMessage,
                 })
               ),
               React.createElement(
                 'p',
                 { className: 'text-gray-600 text-sm -mt-2' },
-                'E-mailová adresa bude použitá pre všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'
+                'E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'
               ),
               React.createElement(
                 'div',
@@ -865,15 +817,15 @@ function App() {
                   value: email,
                   onChange: (e) => setEmail(e.target.value),
                   required: true,
-                  placeholder: 'Zadajte svoju e-mailovú adresu',
-                  autoComplete: 'email',
-                  disabled: loading || !!message,
+                  placeholder: "Zadajte svoju e-mailovú adresu",
+                  autoComplete: "email",
+                  disabled: loading || !!userNotificationMessage,
                 })
               ),
               React.createElement(
                 'p',
                 { className: 'text-gray-600 text-sm' },
-                'Vytvorenie hesla umožní neskorší prístup k registračného formuláru, ak potrebujete upraviť alebo doplniť poskytnuté údaje.'
+                'Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.'
               )
             )
           ),
@@ -885,11 +837,11 @@ function App() {
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
-            placeholder: 'Zvoľte si heslo (min. 10 znakov)',
-            autoComplete: 'new-password',
+            placeholder: "Zvoľte heslo (min. 10 znakov)",
+            autoComplete: "new-password",
             showPassword: showPasswordReg,
             toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-            disabled: loading || !!message,
+            disabled: loading || !!userNotificationMessage,
             description: React.createElement(
               React.Fragment,
               null,
@@ -901,28 +853,28 @@ function App() {
                 React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
                 React.createElement('li', null, 'aspoň jednu číslicu.')
               )
-            ),
+            )
           }),
           React.createElement(PasswordInput, {
             id: 'reg-confirm-password',
-            label: 'Potvrdiť heslo',
+            label: 'Potvrďte heslo',
             value: confirmPassword,
             onChange: (e) => setConfirmPassword(e.target.value),
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
-            placeholder: 'Potvrďte heslo',
-            autoComplete: 'new-password',
+            placeholder: "Potvrďte heslo",
+            autoComplete: "new-password",
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-            disabled: loading || !!message,
+            disabled: loading || !!userNotificationMessage,
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading || !!message,
+              disabled: loading || !!userNotificationMessage,
             },
             loading ? (
               React.createElement(
@@ -934,7 +886,7 @@ function App() {
                 ),
                 'Registrujem...'
               )
-            ) : 'Registrovať'
+            ) : 'Registrovať sa'
           )
         )
       )
