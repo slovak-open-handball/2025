@@ -14,7 +14,7 @@
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
-        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -36,30 +36,48 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             max-width: 500px;
             width: 90%;
-            text-align: left;
         }
     </style>
+</head>
+<body>
+    <!-- Hlavička - bude načítaná dynamicky -->
+    <div id="header-placeholder"></div>
+
+    <!-- Hlavný obsah React aplikácie -->
+    <div id="root"></div>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- React and ReactDOM -->
+
+    <!-- React a ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
-</head>
-<body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
-    <div id="header-placeholder"></div>
 
-    <div id="root">
-        <!-- React aplikácia sa tu vykreslí -->
-    </div>
+    <!-- Globálne premenné pre Firebase config (pre React aplikácie) -->
+    <script type="text/javascript">
+        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const __firebase_config = JSON.stringify({
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        });
+        const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
+    </script>
 
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="register.js"></script>
-    <script>
+    <!-- Vlastné skripty -->
+    <script src="header.js"></script>
+    <script type="text/babel" src="register.js"></script>
+
+    <script type="text/javascript">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
             try {
@@ -75,7 +93,7 @@
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane register.js
+        // Spustí sa po načítaní DOM a všetkých skriptov
         window.onload = function() {
             // Načítať hlavičku ako prvú
             loadHeader().then(() => {
