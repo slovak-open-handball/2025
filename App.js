@@ -3,6 +3,12 @@ import { appId, firebaseConfig, initialAuthToken, GOOGLE_APPS_SCRIPT_URL, RECAPT
 // helpers.js
 import { formatToDatetimeLocal, validatePassword, getRecaptchaToken } from './helpers.js';
 
+// Firebase Modular SDK Imports
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, EmailAuthProvider } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs, serverTimestamp, FieldValue } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+
+
 // components
 import PasswordInput from './PasswordInput.js';
 import NotificationModal from './NotificationModal.js';
@@ -148,24 +154,22 @@ function App() {
     let firestoreInstance;
 
     try {
-      if (typeof firebase === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
-        setLoading(false);
-        return;
-      }
-
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
+      // Initialize Firebase app
+      const firebaseApp = initializeApp(firebaseConfig);
       setApp(firebaseApp);
 
-      const authInstance = firebase.auth(firebaseApp);
+      // Get Auth and Firestore instances
+      const authInstance = getAuth(firebaseApp);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
+      firestoreInstance = getFirestore(firebaseApp);
       setDb(firestoreInstance);
 
       const signIn = async () => {
         try {
           if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+            await signInWithCustomToken(authInstance, initialAuthToken);
+          } else {
+            await signInAnonymously(authInstance); // Sign in anonymously if no custom token
           }
         } catch (e) {
           console.error("Firebase initial sign-in failed:", e);
@@ -173,16 +177,16 @@ function App() {
         }
       };
 
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+      unsubscribeAuth = onAuthStateChanged(authInstance, async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
         setIsRoleLoaded(false);
 
         if (currentUser) {
           if (firestoreInstance) {
-            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
-            const unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-              if (docSnapshot.exists) {
+            const userDocRef = doc(firestoreInstance, 'users', currentUser.uid);
+            const unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
+              if (docSnapshot.exists()) {
                 const userData = docSnapshot.data();
                 if (userData.role === 'admin' && userData.approved === false && window.location.pathname.split('/').pop() === 'logged-in.html') {
                   console.log("Admin s approved: false je prihlásený. Okamžité odhlásenie.");
@@ -252,9 +256,9 @@ function App() {
         return;
       }
       try {
-          const settingsDocRef = db.collection('settings').doc('registration');
-          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
-            if (docSnapshot.exists) {
+          const settingsDocRef = doc(db, 'settings', 'registration');
+          const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
+            if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
@@ -365,8 +369,8 @@ function App() {
   React.useEffect(() => {
     let unsubscribeAllUsers;
     if (db && user && isAdmin) {
-      const usersCollectionRef = db.collection('users');
-      unsubscribeAllUsers = usersCollectionRef.onSnapshot(snapshot => {
+      const usersCollectionRef = collection(db, 'users');
+      unsubscribeAllUsers = onSnapshot(usersCollectionRef, snapshot => {
         const usersList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -391,11 +395,10 @@ function App() {
   React.useEffect(() => {
     let unsubscribeSystemNotifications;
     if (db && user) {
-      const systemNotificationsCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications');
-      unsubscribeSystemNotifications = systemNotificationsCollectionRef
-        .orderBy('timestamp', 'desc')
-        .limit(20)
-        .onSnapshot(snapshot => {
+      const systemNotificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
+      unsubscribeSystemNotifications = onSnapshot(
+        query(systemNotificationsCollectionRef, orderBy('timestamp', 'desc'), limit(20)),
+        snapshot => {
           const alerts = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -408,7 +411,8 @@ function App() {
         }, error => {
           console.error("Chyba pri načítaní systémových upozornení (onSnapshot):", error);
           setError(`Chyba pri načítaní systémových upozornení: ${error.message}`);
-        });
+        }
+      );
     } else {
       setSystemAlerts([]);
     }
@@ -421,11 +425,10 @@ function App() {
   React.useEffect(() => {
     let unsubscribeMessages;
     if (db && user) {
-      const messagesCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages');
-      unsubscribeMessages = messagesCollectionRef
-        .where('recipients', 'array-contains', user.uid)
-        .orderBy('timestamp', 'desc')
-        .onSnapshot(snapshot => {
+      const messagesCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+      unsubscribeMessages = onSnapshot(
+        query(messagesCollectionRef, where('recipients', 'array-contains', user.uid), orderBy('timestamp', 'desc')),
+        snapshot => {
           const messagesList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -439,7 +442,8 @@ function App() {
         }, error => {
           console.error("Chyba pri načítaní prijatých správ (onSnapshot):", error);
           setError(`Chyba pri načítaní správ: ${error.message}`);
-        });
+        }
+      );
     } else {
       setReceivedMessages([]);
     }
@@ -498,16 +502,16 @@ function App() {
 
     const latestUnseenPopup = potentialPopups[0];
 
-    if (latestUnseenPopup && user?.displayNotifications && isAdmin && !userNotificationMessage) { 
+    if (latestUnseenPopup && user?.displayNotifications && !userNotificationMessage) { 
       let messageText = latestUnseenPopup.message;
       if (latestUnseenPopup.type === 'direct_message') {
-        messageText = `Nová správa od ${latestUnseenPopup.senderName || 'Neznámy odosielateľ'}: ${latestUnspokenPopup.subject}`;
+        messageText = `Nová správa od ${latestUnseenPopup.senderName || 'Neznámy odosielateľ'}: ${latestUnseenPopup.subject}`;
       }
       setUserNotificationMessage(messageText);
 
-      const alertRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(latestUnseenPopup.collection).doc(latestUnseenPopup.id);
-      alertRef.update({
-        seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      const alertRef = doc(db, 'artifacts', appId, 'public', 'data', latestUnseenPopup.collection, latestUnseenPopup.id);
+      updateDoc(alertRef, {
+        seenBy: FieldValue.arrayUnion(user.uid)
       }).catch(e => console.error(`Error marking ${latestUnseenPopup.type} as seen:`, e));
     }
 
@@ -566,7 +570,7 @@ function App() {
     }
 
     try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
 
       let initialUserRole = 'user';
@@ -586,12 +590,12 @@ function App() {
         displayName: `${firstName} ${lastName}`,
         role: initialUserRole,
         approved: initialIsApproved,
-        registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+        registeredAt: serverTimestamp(),
         displayNotifications: true
       };
 
       try {
-        await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+        await setDoc(doc(db, 'users', userCredential.user.uid), userDataToSave);
 
         try {
           const payload = {
@@ -621,7 +625,7 @@ function App() {
         }
 
         if (isAdminRegistration) {
-          await db.collection('users').doc(userCredential.user.uid).update({
+          await updateDoc(doc(db, 'users', userCredential.user.uid), {
             role: 'admin',
             approved: false
           });
@@ -684,13 +688,13 @@ function App() {
 
     setLoading(true);
     try {
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
 
-      const userDocRef = db.collection('users').doc(currentUser.uid);
-      const userDoc = await userDocRef.get();
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
 
-      if (!userDoc.exists) {
+      if (!userDoc.exists()) {
         setError("Účet nebol nájdený v databáze. Kontaktujte podporu.");
         await auth.signOut(); 
         setLoading(false);
@@ -811,7 +815,7 @@ function App() {
         return;
       }
 
-      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       await currentUserForReauth.updatePassword(newPassword);
@@ -862,7 +866,7 @@ function App() {
         return;
       }
 
-      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       const oldFirstName = user.firstName;
@@ -874,7 +878,7 @@ function App() {
       
       await currentUserForReauth.updateProfile({ displayName: updatedDisplayName });
       
-      await db.collection('users').doc(user.uid).update({ 
+      await updateDoc(doc(db, 'users', user.uid), { 
         firstName: updatedFirstName, 
         lastName: updatedLastName,   
         displayName: updatedDisplayName
@@ -890,9 +894,9 @@ function App() {
 
       if (changedFields.length > 0) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
-        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
           message: notificationMessage,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          timestamp: serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
           type: 'user_data_change',
@@ -965,20 +969,20 @@ function App() {
         return;
       }
 
-      const credential = firebase.auth.EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
+      const credential = EmailAuthProvider.credential(currentUserForReauth.email, currentPassword);
       await currentUserForReauth.reauthenticateWithCredential(credential);
 
       const oldContactPhoneNumber = user.contactPhoneNumber;
 
-      await db.collection('users').doc(user.uid).update({ 
+      await updateDoc(doc(db, 'users', user.uid), { 
         contactPhoneNumber: newContactPhoneNumber
       });
 
       if (newContactPhoneNumber !== oldContactPhoneNumber) {
         const notificationMessage = `Používateľ ${user.displayName || user.email} zmenil telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${newContactPhoneNumber}' vo svojom registračnom formulári.`;
-        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
           message: notificationMessage,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          timestamp: serverTimestamp(),
           userId: user.uid,
           userName: user.displayName || user.email,
           type: 'user_data_change',
@@ -1039,11 +1043,11 @@ function App() {
     }
 
     try {
-        const settingsDocRef = db.collection('settings').doc('registration');
-        await settingsDocRef.set({
-            registrationStartDate: registrationStartDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationStartDate)) : null,
-            registrationEndDate: registrationEndDate ? firebase.firestore.Timestamp.fromDate(new Date(registrationEndDate)) : null,
-            userDataEditEndDate: userDataEditEndDate ? firebase.firestore.Timestamp.fromDate(new Date(userDataEditEndDate)) : null
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        await setDoc(settingsDocRef, {
+            registrationStartDate: registrationStartDate ? new Date(registrationStartDate) : null,
+            registrationEndDate: registrationEndDate ? new Date(registrationEndDate) : null,
+            userDataEditEndDate: userDataEditEndDate ? new Date(userDataEditEndDate) : null
         });
         setUserNotificationMessage("Nastavenia úspešne uložené!"); 
     } catch (e) {
@@ -1074,7 +1078,7 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('users').doc(userToDelete.uid).delete();
+      await deleteDoc(doc(db, 'users', userToDelete.uid));
       setUserNotificationMessage(`Používateľ ${userToDelete.email} bol úspešne odstránený z databázy Firestore. Pre úplné odstránenie účtu (vrátane prihlasovacích údajov) ho musíte manuálne odstrániť aj v konzole Firebase Authentication.`);
       
       closeDeleteConfirmationModal();
@@ -1118,7 +1122,7 @@ function App() {
           updateData.approved = userToEditRole.approved;
       }
 
-      await db.collection('users').doc(userToEditRole.uid).update(updateData);
+      await updateDoc(doc(db, 'users', userToEditRole.uid), updateData);
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola úspešne zmenená na '${newRole}'.`);
       closeRoleEditModal();
     } catch (e) {
@@ -1138,7 +1142,7 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('users').doc(userToApprove.uid).update({ approved: true });
+      await updateDoc(doc(db, 'users', userToApprove.uid), { approved: true });
       setUserNotificationMessage(`Používateľ ${userToApprove.email} bol úspešne schválený.`);
     } catch (e) {
       console.error("Chyba pri schvaľovaní používateľa:", e);
@@ -1157,10 +1161,10 @@ function App() {
     setError('');
 
     try {
-      const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection(collectionName).doc(notificationId);
-      const docSnapshot = await docRef.get();
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', collectionName, notificationId);
+      const docSnapshot = await getDoc(docRef);
 
-      if (!docSnapshot.exists) {
+      if (!docSnapshot.exists()) {
         setUserNotificationMessage("Upozornenie/Správa už neexistuje.");
         setLoading(false);
         return;
@@ -1191,19 +1195,19 @@ function App() {
         const allAdminsDismissed = activeAdminUids.every(adminUid => dismissedBy.includes(adminUid));
 
         if (allAdminsDismissed) {
-          await docRef.delete();
+          await deleteDoc(docRef);
           setUserNotificationMessage("Systémové upozornenie bolo vymazané pre všetkých administrátorov.");
         } else {
-          await docRef.update({
-            dismissedBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
-            seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+          await updateDoc(docRef, {
+            dismissedBy: FieldValue.arrayUnion(user.uid),
+            seenBy: FieldValue.arrayUnion(user.uid)
           });
           setUserNotificationMessage("Systémové upozornenie bolo vymazané z vášho zoznamu.");
         }
       } else if (notificationType === 'direct_message') {
-        await docRef.update({
-          acknowledgedBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
-          seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+        await updateDoc(docRef, {
+          acknowledgedBy: FieldValue.arrayUnion(user.uid),
+          seenBy: FieldValue.arrayUnion(user.uid)
         });
         setUserNotificationMessage("Správa bola vymazaná z vášho zoznamu.");
       }
@@ -1220,10 +1224,10 @@ function App() {
     if (!db || !user) return;
     setLoading(true);
     try {
-      const messageRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').doc(messageId);
-      await messageRef.update({
-        readBy: firebase.firestore.FieldValue.arrayUnion(user.uid),
-        seenBy: firebase.firestore.FieldValue.arrayUnion(user.uid)
+      const messageRef = doc(db, 'artifacts', appId, 'public', 'data', 'messages', messageId);
+      await updateDoc(messageRef, {
+        readBy: FieldValue.arrayUnion(user.uid),
+        seenBy: FieldValue.arrayUnion(user.uid)
       });
       setUserNotificationMessage("Správa bola označená ako prečítaná.");
     } catch (e) {
@@ -1267,7 +1271,7 @@ function App() {
     setError('');
     const newDisplayValue = e.target.checked;
     try {
-      await db.collection('users').doc(user.uid).update({
+      await updateDoc(doc(db, 'users', user.uid), {
         displayNotifications: newDisplayValue
       });
       setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
@@ -1306,13 +1310,13 @@ function App() {
     setError('');
 
     try {
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('messages').add({
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'messages'), {
         senderId: user.uid,
         senderName: user.displayName || user.email,
         recipients: actualRecipients,
         subject: messageSubject,
         content: messageContent,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        timestamp: serverTimestamp(),
         readBy: [],
         seenBy: [],
         acknowledgedBy: []
@@ -2053,6 +2057,7 @@ function App() {
                 user={user} 
                 isEditAllowed={isEditAllowed} 
                 userDataEditEndDate={userDataEditEndDate} 
+                isAdmin={isAdmin}
               />
             )}
 
