@@ -144,9 +144,9 @@ function MyDataApp() {
                 setPageLoading(false);
             }
         } else {
-            // User is NOT authenticated, pageLoading will be set to false after isAuthReady
-            console.log("MyDataApp: Používateľ nie je prihlásený. PageLoading zostane true, kým sa neskontroluje isAuthReady.");
-            setPageLoading(false); // Set pageLoading to false even if no user, so the redirect can happen
+            // User is NOT authenticated, set pageLoading to false as auth state is now determined
+            console.log("MyDataApp: Používateľ nie je prihlásený. Nastavujem pageLoading na false.");
+            setPageLoading(false); // Auth state determined, even if no user
         }
       });
 
