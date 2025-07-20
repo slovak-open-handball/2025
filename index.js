@@ -168,7 +168,7 @@ function App() {
         setUser(currentUser); // Set user state
         setIsAuthReady(true); // Auth state has been determined
 
-        // No automatic redirection from index.html based on login status.
+        // NO AUTOMATIC REDIRECTION FROM INDEX.HTML BASED ON LOGIN STATUS.
         // The display will be handled by conditional rendering below.
         setPageLoading(false); // Auth state checked, stop page loading
       });
@@ -202,21 +202,16 @@ function App() {
                 const data = docSnapshot.data();
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-                // userDataEditEndDate is not relevant for index.js, but keeping it for consistency if needed elsewhere
-                // setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
             } else {
                 console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
-                // setUserDataEditEndDate('');
             }
             setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
-            // setLoading(false); // This is now handled by auth state check in the main useEffect
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            // setLoading(false); // This is now handled by auth state check in the main useEffect
           });
 
           return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
@@ -224,7 +219,6 @@ function App() {
           console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          // setLoading(false); // This is now handled by auth state check in the main useEffect
       }
     };
 
@@ -266,10 +260,6 @@ function App() {
   }, []); // Spustí sa len raz pri mountovaní komponentu
 
 
-  // Removed useEffect for updating header link visibility, as it will be handled by header.js
-  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
-
-
   // Display loading state
   if (pageLoading || !isAuthReady || !settingsLoaded) {
     return React.createElement(
@@ -305,7 +295,7 @@ function App() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
         React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na stránke turnaja Slovak Open Handball'),
-        user && !user.isAnonymous ? ( // Ak je používateľ prihlásený (a nie je anonymný)
+        user ? ( // Ak je používateľ prihlásený (a nie je anonymný, keďže anonymné prihlásenie je odstránené)
           React.createElement(
             React.Fragment,
             null,
@@ -323,7 +313,7 @@ function App() {
               )
             )
           )
-        ) : ( // Ak používateľ nie je prihlásený alebo je anonymný
+        ) : ( // Ak používateľ nie je prihlásený
           React.createElement(
             React.Fragment,
             null,
