@@ -8,6 +8,7 @@ const firebaseConfig = { // Globálne definované
   appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
 };
 const initialAuthToken = null; // Globálne definované
+firebase.initializeApp(firebaseConfig);
 
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
