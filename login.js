@@ -338,7 +338,7 @@ function App() {
       setLoading(false); 
 
       setTimeout(() => {
-        window.location.href = 'logged-in.html';
+        window.location.href = 'logged-in-my-data.html';
       }, 5000); 
 
     } catch (e) {
@@ -359,7 +359,7 @@ function App() {
   // Ak je user objekt (prihlásený), presmeruj.
   if (user === undefined || loading) {
     if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
-        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
+        window.location.href = 'logged-in-my-data.html'; // Presmerovanie ak je používateľ prihlásený
         return null; // Nič nevykresľuj počas presmerovania
     }
     return React.createElement(
