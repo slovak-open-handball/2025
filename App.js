@@ -148,6 +148,20 @@ function App() {
   const [lastName, setLastName] = React.useState('');
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
 
+  // NOVÉ: Stavy pre fakturačné údaje
+  const [clubName, setClubName] = React.useState('');
+  const [ico, setIco] = React.useState('');
+  const [dic, setDic] = React.useState('');
+  const [icDph, setIcDph] = React.useState('');
+  const [street, setStreet] = React.useState('');
+  const [houseNumber, setHouseNumber] = React.useState('');
+  const [city, setCity] = React.useState('');
+  const [zipCode, setZipCode] = React.useState('');
+  const [country, setCountry] = React.useState('');
+
+  // NOVÉ: Stav pre aktuálny krok formulára
+  const [currentStep, setCurrentStep] = React.useState(1);
+
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setNewConfirmPassword] = React.useState('');
   const [currentPassword, setCurrentPassword] = React.useState('');
@@ -726,37 +740,57 @@ function App() {
     }
   };
 
+  // NOVÉ: Funkcia pre prechod na ďalší krok formulára
+  const handleNextStep = (e) => {
+    e.preventDefault();
+    setError(''); // Clear previous errors
+
+    // Validácia pre Krok 1
+    if (currentStep === 1) {
+      if (!email || !password || !confirmPassword || !firstName || !lastName || !contactPhoneNumber) {
+        setError("Prosím, vyplňte všetky polia na tejto stránke.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Heslá sa nezhodujú. Prosím, skontrolujte ich.");
+        return;
+      }
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        return;
+      }
+      const phoneRegex = /^\+\d+$/;
+      if (!phoneRegex.test(contactPhoneNumber)) {
+          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+          return;
+      }
+      setCurrentStep(2); // Prechod na ďalší krok
+    }
+  };
+
+  // NOVÉ: Funkcia pre návrat na predchádzajúci krok formulára
+  const handlePrevStep = () => {
+    setError(''); // Clear errors when going back
+    setCurrentStep(1);
+  };
+
+
   const handleRegister = async (e, isAdminRegistration = false) => {
     e.preventDefault();
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    // Zmenená podmienka: contactPhoneNumber je vždy vyžadované
-    if (!email || !password || !confirmPassword || !firstName || !lastName) {
-      setError("Prosím, vyplňte všetky polia.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Heslá sa nezhodujú. Prosím, skontrolujte ich.");
-      return;
-    }
 
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-
-    // Validácia telefónneho čísla sa teraz aplikuje iba pre bežnú registráciu
-    if (!isAdminRegistration) {
-      const phoneRegex = /^\+\d+$/;
-      if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
-          setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-          return;
+    // Validácia pre Krok 2 (fakturačné údaje)
+    if (currentStep === 2 && !isAdminRegistration) { // Fakturačné údaje sú len pre bežnú registráciu
+      if (!clubName || !ico || !street || !houseNumber || !city || !zipCode || !country) {
+        setError("Prosím, vyplňte všetky fakturačné údaje.");
+        return;
       }
+      // Voliteľné: Ďalšie validácie pre IČO, DIČ, IČ DPH formáty
     }
-
 
     const recaptchaToken = await getRecaptchaToken('register');
     if (!recaptchaToken) {
@@ -804,6 +838,23 @@ function App() {
         displayNotifications: true
       };
 
+      // NOVÉ: Pridanie fakturačných údajov pre bežnú registráciu
+      if (!isAdminRegistration) {
+        userDataToSave.billing = {
+          clubName: clubName,
+          ico: ico,
+          dic: dic,
+          icDph: icDph,
+          address: {
+            street: street,
+            houseNumber: houseNumber,
+            city: city,
+            zipCode: zipCode,
+            country: country
+          }
+        };
+      }
+
       console.log("Attempting to save user to Firestore with initial data:", userDataToSave); // Detailed log
 
       try {
@@ -820,7 +871,9 @@ function App() {
             isAdmin: isAdminRegistration, 
             firstName: firstName,
             lastName: lastName,
-            contactPhoneNumber: contactPhoneNumber 
+            contactPhoneNumber: contactPhoneNumber,
+            // NOVÉ: Pridanie fakturačných údajov do payloadu pre Apps Script
+            billing: !isAdminRegistration ? { clubName, ico, dic, icDph, street, houseNumber, city, zipCode, country } : undefined
           };
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload); // Log the payload
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -1897,13 +1950,15 @@ function App() {
             )}
             {/* Message je teraz spracovaná v prioritnom bloku vyššie, tu sa už nezobrazuje */}
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
-              {is_admin_register_page ? "Registrácia administrátora" : "Registrácia na turnaj"}
+              {is_admin_register_page ? "Registrácia administrátora" : `Registrácia na turnaj - Krok ${currentStep} z 2`}
             </h1>
-            {/* Formulár je teraz jednotný pre obe stránky */}
-            <form onSubmit={(e) => handleRegister(e, is_admin_register_page)} className="space-y-4">
+
+            {is_admin_register_page ? (
+              // Admin registration (single step)
+              <form onSubmit={(e) => handleRegister(e, true)} className="space-y-4">
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
-                        {is_admin_register_page ? "Meno" : "Meno kontaktnej osoby"}
+                        Meno
                     </label>
                     <input
                         type="text"
@@ -1919,7 +1974,7 @@ function App() {
                 </div>
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
-                        {is_admin_register_page ? "Priezvisko" : "Priezvisko kontaktnej osoby"}
+                        Priezvisko
                     </label>
                     <input
                         type="text"
@@ -1933,99 +1988,20 @@ function App() {
                         disabled={loading || !!message} // Disable if loading or message is shown
                     />
                 </div>
-                {/* Conditional rendering for email and phone number based on registration type */}
-                {is_admin_register_page ? (
-                    // Admin registration: only email
-                    <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
-                        <input
-                            type="email"
-                            id="reg-email"
-                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="Zadajte svoju e-mailovú adresu"
-                            autoComplete="email"
-                            disabled={loading || !!message}
-                        />
-                    </div>
-                ) : (
-                    // Regular registration: phone number then email
-                    <>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
-                            <input
-                                type="tel" // Use type="tel" for phone numbers
-                                id="reg-phone-number"
-                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                value={contactPhoneNumber}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  // Allow empty string for clearing input
-                                  if (value === '') {
-                                    setContactPhoneNumber('');
-                                    e.target.setCustomValidity('');
-                                    return;
-                                  }
-                                  // First character must be '+'
-                                  if (value.length === 1 && value !== '+') {
-                                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'."); // ZMENA: Upravené znenie
-                                    e.target.reportValidity(); // Show message immediately
-                                    return;
-                                  }
-                                  // After '+', only digits are allowed
-                                  if (value.length > 1 && !/^\+\d*$/.test(value)) {
-                                    e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                                    e.target.reportValidity(); // Show message immediately
-                                    return;
-                                  }
-                                  // If valid so far, update state and clear custom validity
-                                  setContactPhoneNumber(value);
-                                  e.target.setCustomValidity('');
-                                }}
-                                onInvalid={(e) => {
-                                    // Set custom validity message when the input is invalid
-                                    if (e.target.value.length === 0) {
-                                      e.target.setCustomValidity("Prosím, vyplňte toto pole.");
-                                    } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                                      e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'."); // ZMENA: Upravené znenie
-                                    } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
-                                      e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                                    } else {
-                                      e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-                                    }
-                                }}
-                                required
-                                placeholder="+421901234567"
-                                pattern="^\+\d+$" // Keep pattern for browser's default validation on submit
-                                title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." 
-                                disabled={loading || !!message}
-                            />
-                        </div>
-                        {/* ZMENA: Presunutý <p> element pod inputbox pre telefónne číslo */}
-                        <p className="text-gray-600 text-sm -mt-2">
-                            E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                        </p>
-                        <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa kontaktnej osoby</label>
-                            <input
-                                type="email"
-                                id="reg-email"
-                                className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                placeholder="Zadajte svoju e-mailovú adresu"
-                                autoComplete="email"
-                                disabled={loading || !!message}
-                            />
-                        </div>
-                        <p className="text-gray-600 text-sm">
-                            Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
-                        </p>
-                    </>
-                )}
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa</label>
+                    <input
+                        type="email"
+                        id="reg-email"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        placeholder="Zadajte svoju e-mailovú adresu"
+                        autoComplete="email"
+                        disabled={loading || !!message}
+                    />
+                </div>
                 <PasswordInput
                     id="reg-password"
                     label="Heslo"
@@ -2079,7 +2055,313 @@ function App() {
                         </div>
                     ) : 'Registrovať sa'}
                 </button>
-            </form>
+              </form>
+            ) : (
+              // Regular registration (multi-step)
+              <>
+                {currentStep === 1 && (
+                  <form onSubmit={handleNextStep} className="space-y-4">
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-first-name">
+                            Meno kontaktnej osoby
+                        </label>
+                        <input
+                            type="text"
+                            id="reg-first-name"
+                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                            placeholder="Zadajte svoje meno"
+                            autoComplete="given-name"
+                            disabled={loading || !!message}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-last-name">
+                            Priezvisko kontaktnej osoby
+                        </label>
+                        <input
+                            type="text"
+                            id="reg-last-name"
+                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                            placeholder="Zadajte svoje priezvisko"
+                            autoComplete="family-name"
+                            disabled={loading || !!message}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-phone-number">Telefónne číslo kontaktnej osoby</label>
+                        <input
+                            type="tel"
+                            id="reg-phone-number"
+                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                            value={contactPhoneNumber}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '') {
+                                setContactPhoneNumber('');
+                                e.target.setCustomValidity('');
+                                return;
+                              }
+                              if (value.length === 1 && value !== '+') {
+                                e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
+                                e.target.reportValidity();
+                                return;
+                              }
+                              if (value.length > 1 && !/^\+\d*$/.test(value)) {
+                                e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                                e.target.reportValidity();
+                                return;
+                              }
+                              setContactPhoneNumber(value);
+                              e.target.setCustomValidity('');
+                            }}
+                            onInvalid={(e) => {
+                                if (e.target.value.length === 0) {
+                                  e.target.setCustomValidity("Prosím, vyplňte toto pole.");
+                                } else if (e.target.value.length === 1 && e.target.value !== '+') {
+                                  e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
+                                } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
+                                  e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
+                                } else {
+                                  e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                                }
+                            }}
+                            required
+                            placeholder="+421901234567"
+                            pattern="^\+\d+$"
+                            title="Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567)." 
+                            disabled={loading || !!message}
+                        />
+                    </div>
+                    <p className="text-gray-600 text-sm -mt-2">
+                        E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
+                    </p>
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reg-email">E-mailová adresa kontaktnej osoby</label>
+                        <input
+                            type="email"
+                            id="reg-email"
+                            className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="Zadajte svoju e-mailovú adresu"
+                            autoComplete="email"
+                            disabled={loading || !!message}
+                        />
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                        Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
+                    </p>
+                    <PasswordInput
+                        id="reg-password"
+                        label="Heslo"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onCopy={(e) => e.preventDefault()}
+                        onPaste={(e) => e.preventDefault()}
+                        onCut={(e) => e.preventDefault()}
+                        placeholder="Zvoľte heslo (min. 10 znakov)"
+                        autoComplete="new-password"
+                        showPassword={showPasswordReg}
+                        toggleShowPassword={() => setShowPasswordReg(!showPasswordReg)}
+                        disabled={loading || !!message}
+                        description={
+                          <>
+                            Heslo musí obsahovať:
+                            <ul className="list-disc list-inside ml-4">
+                                <li>aspoň jedno malé písmeno,</li>
+                                <li>aspoň jedno veľké písmeno,</li>
+                                <li>aspoň jednu číslicu.</li>
+                            </ul>
+                          </>
+                        }
+                    />
+                    <PasswordInput
+                        id="reg-confirm-password"
+                        label="Potvrďte heslo"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onCopy={(e) => e.preventDefault()}
+                        onPaste={(e) => e.preventDefault()}
+                        onCut={(e) => e.preventDefault()}
+                        placeholder="Potvrďte heslo"
+                        autoComplete="new-password"
+                        showPassword={showConfirmPasswordReg}
+                        toggleShowPassword={() => setShowConfirmPasswordReg(!showConfirmPasswordReg)}
+                        disabled={loading || !!message}
+                    />
+                    <button
+                        type="submit"
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200"
+                        disabled={loading || !!message}
+                    >
+                        {loading ? (
+                            <div className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Načítavam...
+                            </div>
+                        ) : 'Ďalej'}
+                    </button>
+                  </form>
+                )}
+
+                {currentStep === 2 && (
+                  <form onSubmit={(e) => handleRegister(e, false)} className="space-y-4">
+                    <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">Fakturačné údaje</h2>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="club-name">Oficiálny názov klubu</label>
+                      <input
+                        type="text"
+                        id="club-name"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={clubName}
+                        onChange={(e) => setClubName(e.target.value)}
+                        required
+                        placeholder="Názov klubu"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="ico">IČO</label>
+                      <input
+                        type="text"
+                        id="ico"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={ico}
+                        onChange={(e) => setIco(e.target.value)}
+                        required
+                        placeholder="IČO"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dic">DIČ</label>
+                      <input
+                        type="text"
+                        id="dic"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={dic}
+                        onChange={(e) => setDic(e.target.value)}
+                        placeholder="DIČ (voliteľné)"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="ic-dph">IČ DPH</label>
+                      <input
+                        type="text"
+                        id="ic-dph"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={icDph}
+                        onChange={(e) => setIcDph(e.target.value)}
+                        placeholder="IČ DPH (voliteľné)"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-2">Adresa</h3>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="street">Ulica</label>
+                      <input
+                        type="text"
+                        id="street"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        required
+                        placeholder="Ulica"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="house-number">Popisné číslo</label>
+                      <input
+                        type="text"
+                        id="house-number"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={houseNumber}
+                        onChange={(e) => setHouseNumber(e.target.value)}
+                        required
+                        placeholder="Popisné číslo"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="city">Mesto</label>
+                      <input
+                        type="text"
+                        id="city"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        required
+                        placeholder="Mesto"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="zip-code">PSČ</label>
+                      <input
+                        type="text"
+                        id="zip-code"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value)}
+                        required
+                        placeholder="PSČ"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="country">Krajina</label>
+                      <input
+                        type="text"
+                        id="country"
+                        className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        required
+                        placeholder="Krajina"
+                        disabled={loading || !!message}
+                      />
+                    </div>
+                    <div className="flex justify-between space-x-4 mt-6">
+                      <button
+                        type="button"
+                        onClick={handlePrevStep}
+                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-1/2 transition-colors duration-200"
+                        disabled={loading || !!message}
+                      >
+                        Späť
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-1/2 transition-colors duration-200"
+                        disabled={loading || !!message}
+                      >
+                          {loading ? (
+                              <div className="flex items-center justify-center">
+                                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Registrujem...
+                              </div>
+                          ) : 'Registrovať sa'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -2377,9 +2659,24 @@ function App() {
                 </p>
                 {/* Telefónne číslo sa zobrazuje len pre bežných používateľov, nie pre administrátorov */}
                 {!isAdmin && (
-                  <p className="text-gray-700">
-                    <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
-                  </p>
+                  <>
+                    <p className="text-gray-700">
+                      <span className="font-semibold">Telefónne číslo: </span>{user.contactPhoneNumber || '-'}
+                    </p>
+                    {user.billing && (
+                      <div className="mt-4 border-t pt-4">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Fakturačné údaje</h3>
+                        <p className="text-gray-700"><span className="font-semibold">Oficiálny názov klubu: </span>{user.billing.clubName || '-'}</p>
+                        <p className="text-gray-700"><span className="font-semibold">IČO: </span>{user.billing.ico || '-'}</p>
+                        <p className="text-gray-700"><span className="font-semibold">DIČ: </span>{user.billing.dic || '-'}</p>
+                        <p className="text-gray-700"><span className="font-semibold">IČ DPH: </span>{user.billing.icDph || '-'}</p>
+                        <h4 className="text-md font-semibold text-gray-700 mt-3 mb-1">Adresa:</h4>
+                        <p className="text-gray-700">{user.billing.address?.street || '-'} {user.billing.address?.houseNumber || '-'}</p>
+                        <p className="text-gray-700">{user.billing.address?.zipCode || '-'} {user.billing.address?.city || '-'}</p>
+                        <p className="text-gray-700">{user.billing.address?.country || '-'}</p>
+                      </div>
+                    )}
+                  </>
                 )}
                 {!isEditAllowed && (
                     <p className="text-red-500 text-sm mt-2">
@@ -2520,14 +2817,14 @@ function App() {
                       }
                       // First character must be '+'
                       if (value.length === 1 && value !== '+') {
-                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'."); // ZMENA: Upravené znenie
-                        e.target.reportValidity(); // Show message immediately
+                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
+                        e.target.reportValidity();
                         return;
                       }
                       // After '+', only digits are allowed
                       if (value.length > 1 && !/^\+\d*$/.test(value)) {
                         e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                        e.target.reportValidity(); // Show message immediately
+                        e.target.reportValidity();
                         return;
                       }
                       // If valid so far, update state and clear custom validity
@@ -2539,7 +2836,7 @@ function App() {
                       if (e.target.value.length === 0) {
                         e.target.setCustomValidity("Prosím, vyplňte toto pole.");
                       } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'."); // ZMENA: Upravené znenie
+                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                       } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
                         e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
                       } else {
@@ -2767,6 +3064,15 @@ function App() {
                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Meno kontaktnej osoby</th>
                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Priezvisko kontaktnej osoby</th>
                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Telefónne číslo</th>
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Oficiálny názov klubu</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">IČO</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">DIČ</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">IČ DPH</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ulica</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Popisné číslo</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mesto</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">PSČ</th> {/* NOVÉ */}
+                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Krajina</th> {/* NOVÉ */}
                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Rola</th>
                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Schválený</th>
                       </tr>
@@ -2778,6 +3084,15 @@ function App() {
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.firstName || '-'}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.lastName || '-'}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.contactPhoneNumber || '-'}</td>
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.clubName || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.ico || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.dic || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.icDph || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.street || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.houseNumber || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.city || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.zipCode || '-'}</td> {/* NOVÉ */}
+                          <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.billing?.address?.country || '-'}</td> {/* NOVÉ */}
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.role || 'user'}</td>
                           <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{u.approved ? 'Áno' : 'Nie'}</td>
                         </tr>
