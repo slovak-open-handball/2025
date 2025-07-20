@@ -23,7 +23,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+// NotificationModal Component for displaying temporary messages
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -75,16 +75,16 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// Main React component for the index.html page (converted to React.createElement)
+// Main React component for the index.html page
 function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false);
-  const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
-  const [message, setMessage] = React.useState('');
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // States for date and time settings
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -146,37 +146,67 @@ function App() {
 
     try {
       if (typeof firebase === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte index.html.");
-        setPageLoading(false);
+        setError("Firebase SDK is not loaded. Check index.html.");
+        setLoading(false);
         return;
       }
 
-      // Initialize Firebase app only once
-      let firebaseAppInstance;
-      try {
-        firebaseAppInstance = firebase.app(); // Try to get default app
-      } catch (e) {
-        firebaseAppInstance = firebase.initializeApp(firebaseConfig); // Initialize if not already
-      }
-      setApp(firebaseAppInstance);
+      const firebaseApp = firebase.initializeApp(firebaseConfig);
+      setApp(firebaseApp);
 
-      const authInstance = firebase.auth(firebaseAppInstance);
+      const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseAppInstance);
+      firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
-      // Listen for auth state changes
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser); // Set user state
-        setIsAuthReady(true); // Auth state has been determined
+      const signIn = async () => {
+        try {
+          if (initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
+          } else {
+            // No anonymous sign-in for index.js, user will explicitly log in
+          }
+        } catch (e) {
+          console.error("Firebase initial sign-in failed:", e);
+          setError(`Login error: ${e.message}`);
+        }
+      };
 
-        // NO AUTOMATIC REDIRECTION FROM INDEX.HTML BASED ON LOGIN STATUS.
-        // The display will be handled by conditional rendering below.
-        setPageLoading(false); // Auth state checked, stop page loading
+      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+        setUser(currentUser);
+        setIsAuthReady(true);
+        if (currentUser && firestoreInstance) {
+          try {
+            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
+            const unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+              if (docSnapshot.exists) {
+                const userData = docSnapshot.data();
+                setUser(prevUser => ({
+                  ...prevUser,
+                  ...userData,
+                  displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
+                  displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
+                }));
+              } else {
+                setUser(prevUser => ({
+                  ...prevUser,
+                  displayNotifications: true
+                }));
+              }
+            }, error => {
+              console.error("Error loading user data from Firestore (onSnapshot):", error);
+            });
+            return () => {
+              if (unsubscribeAuth) unsubscribeAuth();
+              if (unsubscribeUserDoc) unsubscribeUserDoc();
+            };
+          } catch (e) {
+            console.error("Error setting up onSnapshot for user data:", e);
+          }
+        }
       });
 
-      // No explicit signIn() call here, as onAuthStateChanged handles existing sessions.
-      // Removed signInAnonymously() to prevent unwanted user creation.
+      signIn();
 
       return () => {
         if (unsubscribeAuth) {
@@ -184,11 +214,11 @@ function App() {
         }
       };
     } catch (e) {
-      console.error("Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setPageLoading(false);
+      console.error("Failed to initialize Firebase:", e);
+      setError(`Error initializing Firebase: ${e.message}`);
+      setLoading(false);
     }
-  }, []); // Empty dependency array - runs only once on component mount
+  }, []);
 
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
@@ -197,7 +227,6 @@ function App() {
         return; // Wait for DB and Auth to be initialized
       }
       try {
-          // Používame onSnapshot pre real-time aktualizácie nastavení
           const settingsDocRef = db.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
@@ -205,69 +234,126 @@ function App() {
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
             } else {
-                console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+                console.log("Registration settings not found in Firestore. Using default empty values.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
             }
-            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
-          }, error => {
-            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
+            setLoading(false);
+          }, error => {
+            console.error("Error loading registration settings (onSnapshot):", error);
+            setError(`Error loading settings: ${error.message}`);
+            setSettingsLoaded(true);
+            setLoading(false);
           });
 
-          return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
+          return () => unsubscribeSettings();
       } catch (e) {
-          console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
-          setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
+          console.error("Error setting up onSnapshot for registration settings:", e);
+          setError(`Error setting up listener for settings: ${e.message}`);
           setSettingsLoaded(true);
+          setLoading(false);
       }
     };
 
     fetchSettings();
-  }, [db, isAuthReady]); // Načíta nastavenia, keď je DB a Auth pripravené
+  }, [db, isAuthReady]);
 
-
-  // Efekt pre odpočítavanie času (spustí sa pri zmene registrationStartDate)
+  // Effect for countdown (runs when registrationStartDate changes)
   React.useEffect(() => {
     let timer;
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
         setCountdown(timeLeft);
-        // Ak čas vypršal, vynútime prepočítanie isRegistrationOpen
         if (timeLeft === null) {
             clearInterval(timer);
-            setForceRegistrationCheck(prev => prev + 1); // Zmeníme stav, aby sa isRegistrationOpen prepočítalo
+            setForceRegistrationCheck(prev => prev + 1);
         }
     };
 
-    // Spustite odpočítavanie len ak je nastavený dátum začiatku a je v budúcnosti
     if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
-        updateCountdown(); // Počiatočné volanie pre okamžité zobrazenie
+        updateCountdown();
         timer = setInterval(updateCountdown, 1000);
     } else {
-        setCountdown(null); // Vymažte odpočítavanie, ak nie je relevantné
+        setCountdown(null);
     }
 
-    return () => clearInterval(timer); // Vyčistenie intervalu pri unmount alebo zmene registrationStartDate
-  }, [registrationStartDate, calculateTimeLeft]); // Závisí od registrationStartDate a calculateTimeLeft
+    return () => clearInterval(timer);
+  }, [registrationStartDate, calculateTimeLeft]);
 
-  // NOVÝ useEffect pre periodickú aktualizáciu isRegistrationOpen
+  // New useEffect for periodic update of isRegistrationOpen
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); // Aktualizovať každú minútu
+    }, 60 * 1000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []); // Spustí sa len raz pri mountovaní komponentu
+  }, []);
+
+  // useEffect for updating header link visibility (simplified for index.html)
+  React.useEffect(() => {
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+
+    if (authLink) {
+      if (user) { // If user is logged in
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden');
+      } else { // If user is not logged in
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        if (isRegistrationOpen) {
+          registerLink && registerLink.classList.remove('hidden');
+        } else {
+          registerLink && registerLink.classList.add('hidden');
+        }
+      }
+    }
+  }, [user, isRegistrationOpen]);
+
+  // Handle logout (needed for the header logout button)
+  const handleLogout = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      setLoading(true);
+      await auth.signOut();
+      setUserNotificationMessage("Successfully logged out.");
+      window.location.href = 'login.html';
+    } catch (e) {
+      console.error("Logout error:", e);
+      setError(`Logout error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [auth]);
+
+  // Attach logout handler to the button in the header
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]);
 
 
   // Display loading state
-  if (pageLoading || !isAuthReady || !settingsLoaded) {
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+  if (loading || !isAuthReady || !settingsLoaded) {
+    return (
+      React.createElement(
+        'div',
+        { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+        React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+      )
     );
   }
 
@@ -280,8 +366,8 @@ function App() {
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
     // Notification Modal
     React.createElement(NotificationModal, {
-        message: message,
-        onClose: () => setMessage('')
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage('')
     }),
     // Error display
     error && React.createElement(
@@ -297,7 +383,7 @@ function App() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
         React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Vitajte na stránke turnaja Slovak Open Handball'),
-        user ? ( // Ak je používateľ prihlásený (a nie je anonymný, keďže anonymné prihlásenie je odstránené)
+        user ? ( // Ak je používateľ prihlásený
           React.createElement(
             React.Fragment,
             null,
@@ -319,22 +405,29 @@ function App() {
           React.createElement(
             React.Fragment,
             null,
+            // Vždy zobraziť tlačidlo "Prihlásiť sa" pre odhláseného používateľa
+            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Pre pokračovanie sa prihláste.'),
+            React.createElement(
+              'div',
+              { className: 'mt-6 flex justify-center' },
+              React.createElement(
+                'a',
+                {
+                  href: 'login.html',
+                  className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                },
+                'Prihlásiť sa' // ZMENA: Text tlačidla na "Prihlásiť sa"
+              )
+            ),
+            // Informácie o registrácii pod tlačidlom "Prihlásiť sa"
             isRegistrationOpen ? (
               React.createElement(
                 React.Fragment,
                 null,
-                React.createElement('p', { className: 'text-lg text-gray-600' }, 'Pre pokračovanie sa prihláste alebo zaregistrujte.'),
+                React.createElement('p', { className: 'text-lg text-gray-600 mt-4' }, 'Alebo sa zaregistrujte na turnaj:'),
                 React.createElement(
                   'div',
-                  { className: 'mt-6 flex justify-center space-x-4' },
-                  React.createElement(
-                    'a',
-                    {
-                      href: 'login.html',
-                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-                    },
-                    'Prihlásenie'
-                  ),
+                  { className: 'mt-2 flex justify-center' },
                   React.createElement(
                     'a',
                     {
@@ -351,7 +444,7 @@ function App() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-lg text-gray-600' },
+                  { className: 'text-lg text-gray-600 mt-4' },
                   'Registračný formulár nie je prístupný.'
                 ),
                 regStart && !isNaN(regStart) && now < regStart && (
@@ -381,18 +474,6 @@ function App() {
                     React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleDateString('sk-SK') || 'Neznámy dátum'),
                     ' ',
                     React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleTimeString('sk-SK') || 'Neznámy čas')
-                  )
-                ),
-                React.createElement(
-                  'div',
-                  { className: 'mt-6 flex justify-center' },
-                  React.createElement(
-                    'a',
-                    {
-                      href: 'login.html',
-                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-                    },
-                    'Prihlásenie'
                   )
                 )
               )
