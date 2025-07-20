@@ -58,17 +58,23 @@ function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
 // Globálne premenné na uchovávanie stavu pre hlavičku (zjednodušené, nie React stav)
 let currentHeaderUser = null;
 let currentIsRegistrationOpenStatus = false;
+let authStateInitialized = false; // Nová premenná na sledovanie inicializácie stavu autentifikácie
+let settingsStateInitialized = false; // Nová premenná na sledovanie inicializácie stavu nastavení
 
 // Počúvanie zmien stavu autentifikácie
 if (authHeader) {
     authHeader.onAuthStateChanged((user) => {
         currentHeaderUser = user;
-        // Ak je používateľ odhlásený, presmerovať na login.html
+        authStateInitialized = true; // Označiť stav autentifikácie ako inicializovaný
+        // Ak používateľ je odhlásený a nie je na povolených stránkach, presmerovať na login.html
         if (!user && window.location.pathname !== '/login.html' && window.location.pathname !== '/register.html' && window.location.pathname !== '/index.html' && window.location.pathname !== '/admin-register.html') {
             console.log("Používateľ odhlásený, presmerovanie na login.html z header.js");
             window.location.href = 'login.html';
         }
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        // Aktualizovať odkazy len ak sú oba stavy inicializované
+        if (authStateInitialized && settingsStateInitialized) {
+            updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        }
     });
 
     // Počiatočné prihlásenie pre hlavičku (ak existuje vlastný token)
@@ -99,11 +105,18 @@ if (dbHeader) {
         } else {
             currentIsRegistrationOpenStatus = false; // Predvolene zatvorené, ak sa nastavenia nenašli
         }
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        settingsStateInitialized = true; // Označiť stav nastavení ako inicializovaný
+        // Aktualizovať odkazy len ak sú oba stavy inicializované
+        if (authStateInitialized && settingsStateInitialized) {
+            updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        }
     }, error => {
         console.error("Chyba pri načítaní nastavení registrácie pre hlavičku:", error);
         currentIsRegistrationOpenStatus = false;
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        settingsStateInitialized = true; // Označiť stav nastavení ako inicializovaný aj pri chybe
+        if (authStateInitialized && settingsStateInitialized) {
+            updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+        }
     });
 }
 
