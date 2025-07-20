@@ -181,6 +181,23 @@ function MyDataApp() {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  const [isAdmin, setIsAdmin] = React.useState(false); // New state for isAdmin
+  const [userDataEditEndDate, setUserDataEditEndDate] = React.useState(''); // New state for edit end date
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false); // New state for settings loaded
+
+
+  // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
+  const formatToDatetimeLocal = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+
   // Effect for Firebase initialization and Auth Listener setup
   React.useEffect(() => {
     let unsubscribeAuth;
@@ -232,6 +249,7 @@ function MyDataApp() {
                     setLastName(data.lastName || '');
                     setContactPhoneNumber(data.contactPhoneNumber || '');
                     setDisplayNotifications(data.displayNotifications !== undefined ? data.displayNotifications : true);
+                    setIsAdmin(data.role === 'admin'); // Set isAdmin state
                     setPageLoading(false); // Data loaded, stop page loading
                 } else {
                     console.warn("Používateľský dokument sa nenašiel vo Firestore. Vynútené odhlásenie.");
@@ -278,8 +296,43 @@ function MyDataApp() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
+  // Effect for loading settings (runs after DB and Auth are initialized)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        return; // Wait for DB and Auth to be initialized
+      }
+      try {
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                setUserDataEditEndDate(data.userDataEditEndDate ? formatToDatetimeLocal(data.userDataEditEndDate.toDate()) : '');
+            } else {
+                console.log("Nastavenia registrácie neboli nájdené vo Firestore. Používam predvolené prázdne hodnoty.");
+                setUserDataEditEndDate('');
+            }
+            setSettingsLoaded(true); // Nastavenia sú načítané, aj keď prázdne alebo s chybou
+          }, error => {
+            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+          });
+
+          return () => unsubscribeSettings(); // Vyčistenie onSnapshot listenera pri unmount
+      } catch (e) {
+          console.error("Chyba pri nastavení onSnapshot pre nastavenia registrácie:", e);
+          setError(`Chyba pri nastavení listenera pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]);
+
+
   // Display initial page loading state
-  if (pageLoading || !isAuthReady) {
+  if (pageLoading || !isAuthReady || !settingsLoaded) {
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -310,20 +363,81 @@ function MyDataApp() {
     setError('');
     setMessage('');
 
+    const now = new Date();
+    const editEnd = userDataEditEndDate ? new Date(userDataEditEndDate) : null;
+    if (editEnd && now > editEnd) {
+        setError("Úpravy vašich údajov sú už uzavreté. Boli uzavreté dňa: " + (editEnd ? editEnd.toLocaleString('sk-SK') : '-'));
+        setFormSubmitting(false);
+        return;
+    }
+
     try {
       const phoneRegex = /^\+\d+$/;
-      if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
+      if (!isAdmin && (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber))) { // Only validate phone for non-admins
           setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
           setFormSubmitting(false);
           return;
       }
 
+      const oldFirstName = userData.firstName;
+      const oldLastName = userData.lastName;
+      const oldContactPhoneNumber = userData.contactPhoneNumber;
+
+      const updatedFirstName = firstName;
+      const updatedLastName = lastName;
+      const updatedContactPhoneNumber = contactPhoneNumber;
+
+      const updatedDisplayName = `${updatedFirstName} ${updatedLastName}`;
+
+      // Update Firebase Auth profile display name
+      if (user.displayName !== updatedDisplayName) {
+        await user.updateProfile({ displayName: updatedDisplayName });
+      }
+
+      // Update Firestore document
       await db.collection('users').doc(user.uid).update({
-        firstName: firstName,
-        lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber,
-        displayNotifications: displayNotifications
+        firstName: updatedFirstName,
+        lastName: updatedLastName,
+        contactPhoneNumber: updatedContactPhoneNumber,
+        displayNotifications: displayNotifications,
+        displayName: updatedDisplayName // Ensure display name is also updated in Firestore
       });
+
+      // Send notification to admins if data changed (excluding displayNotifications)
+      let changedFields = [];
+      if (updatedFirstName !== oldFirstName) {
+        changedFields.push(`meno z '${oldFirstName || 'nezadané'}' na '${updatedFirstName}'`);
+      }
+      if (updatedLastName !== oldLastName) {
+        changedFields.push(`priezvisko z '${oldLastName || 'nezadané'}' na '${updatedLastName}'`);
+      }
+      if (!isAdmin && updatedContactPhoneNumber !== oldContactPhoneNumber) { // Only notify for phone change if not admin
+        changedFields.push(`telefónne číslo z '${oldContactPhoneNumber || 'nezadané'}' na '${updatedContactPhoneNumber}'`);
+      }
+
+      if (changedFields.length > 0) {
+        const notificationMessage = `Používateľ ${user.email} zmenil ${changedFields.join(' a ')} vo svojom registračnom formulári.`;
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('notifications').add({
+          message: notificationMessage,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          userId: user.uid,
+          userName: user.displayName || user.email,
+          type: 'user_data_change',
+          details: {
+            originalFirstName: oldFirstName,
+            newFirstName: updatedFirstName,
+            originalLastName: oldLastName,
+            newLastName: updatedLastName,
+            originalPhoneNumber: oldContactPhoneNumber,
+            newPhoneNumber: updatedContactPhoneNumber,
+          },
+          dismissedBy: [],
+          seenBy: []
+        });
+        console.log("Admin upozornenie odoslaná pre zmenu používateľských dát.");
+      }
+
+
       setMessage("Profil bol úspešne aktualizovaný!");
     } catch (e) {
       console.error("Chyba pri aktualizácii profilu:", e);
@@ -367,6 +481,8 @@ function MyDataApp() {
         setError("Nesprávne aktuálne heslo. Skúste to prosím znova.");
       } else if (e.code === 'auth/weak-password') {
         setError("Nové heslo je príliš slabé. " + validatePassword(newPassword));
+      } else if (e.code === 'auth/requires-recent-login') {
+        setError("Pre túto akciu sa musíte znova prihlásiť. Prosím, odhláste sa a znova prihláste.");
       } else {
         setError(`Chyba pri zmene hesla: ${e.message}`);
       }
@@ -414,6 +530,31 @@ function MyDataApp() {
     }
   };
 
+  const handleToggleDisplayNotifications = async (e) => {
+    if (!db || !user) {
+      setError("Nie ste prihlásený alebo Firebase nie je inicializovaný.");
+      return;
+    }
+    setFormSubmitting(true); // Use formSubmitting for this action
+    setError('');
+    const newDisplayValue = e.target.checked;
+    try {
+      await db.collection('users').doc(user.uid).update({
+        displayNotifications: newDisplayValue
+      });
+      setUser(prevUser => ({ ...prevUser, displayNotifications: newDisplayValue }));
+      setMessage(`Zobrazovanie upozornení bolo ${newDisplayValue ? 'zapnuté' : 'vypnuté'}.`);
+    } catch (e) {
+      console.error("Chyba pri zmene nastavenia notifikácií:", e);
+      setError(`Chyba pri zmene nastavenia notifikácií: ${e.message}`);
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const now = new Date();
+  const isEditAllowed = !userDataEditEndDate || now <= new Date(userDataEditEndDate);
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -460,7 +601,7 @@ function MyDataApp() {
               value: firstName,
               onChange: (e) => setFirstName(e.target.value),
               required: true,
-              disabled: formSubmitting
+              disabled: formSubmitting || !isEditAllowed
             })
           ),
           React.createElement(
@@ -474,10 +615,11 @@ function MyDataApp() {
               value: lastName,
               onChange: (e) => setLastName(e.target.value),
               required: true,
-              disabled: formSubmitting
+              disabled: formSubmitting || !isEditAllowed
             })
           ),
-          React.createElement(
+          // Conditional rendering for phone number based on isAdmin
+          !isAdmin && React.createElement(
             'div',
             null,
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 'Telefónne číslo'),
@@ -521,7 +663,7 @@ function MyDataApp() {
               placeholder: '+421901234567',
               pattern: '^\\+\\d+$',
               title: 'Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).',
-              disabled: formSubmitting,
+              disabled: formSubmitting || !isEditAllowed,
             })
           ),
           React.createElement(
@@ -544,7 +686,7 @@ function MyDataApp() {
               id: 'displayNotifications',
               className: 'mr-2 leading-tight',
               checked: displayNotifications,
-              onChange: (e) => setDisplayNotifications(e.target.checked),
+              onChange: handleToggleDisplayNotifications, // Use the dedicated handler
               disabled: formSubmitting
             }),
             React.createElement('label', { className: 'text-gray-700 text-sm', htmlFor: 'displayNotifications' }, 'Zobrazovať notifikácie')
@@ -553,10 +695,17 @@ function MyDataApp() {
             'button',
             {
               type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: formSubmitting
+              className: `font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 mt-4 ${
+                isEditAllowed ? 'bg-blue-500 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`,
+              disabled: formSubmitting || !isEditAllowed
             },
-            formSubmitting ? 'Ukladám...' : 'Uložiť zmeny profilu'
+            formSubmitting ? 'Ukladám...' : (isEditAllowed ? 'Uložiť zmeny profilu' : 'Úpravy sú už uzavreté')
+          ),
+          !isEditAllowed && React.createElement(
+            'p',
+            { className: 'text-red-500 text-sm mt-2 text-center' },
+            `Úpravy boli uzavreté dňa: ${new Date(userDataEditEndDate).toLocaleString('sk-SK')}`
           )
         ),
 
