@@ -71,6 +71,7 @@
             appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         });
         const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
+        const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
     </script>
 
     <!-- Vlastné skripty -->
@@ -97,7 +98,14 @@
         window.onload = function() {
             // Načítať hlavičku ako prvú
             loadHeader().then(() => {
-                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                // Po načítaní hlavičky inicializovať jej logiku
+                if (typeof initializeHeaderLogic === 'function') {
+                    initializeHeaderLogic();
+                } else {
+                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
+                }
+
+                // Potom renderujeme React aplikáciu
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
