@@ -21,7 +21,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -54,24 +54,26 @@ function NotificationModal({ message, onClose }) {
 
   if (!show && !message) return null;
 
-  return (
-    <div
-      className={`fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+  return React.createElement(
+    'div',
+    {
+      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
-      }`}
-      style={{ pointerEvents: 'none' }}
-    >
-      <div
-        className="bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center"
-        style={{ pointerEvents: 'auto' }}
-      >
-        <p className="font-semibold">{message}</p>
-      </div>
-    </div>
+      }`,
+      style: { pointerEvents: 'none' }
+    },
+    React.createElement(
+      'div',
+      {
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        style: { pointerEvents: 'auto' }
+      },
+      React.createElement('p', { className: 'font-semibold' }, message)
+    )
   );
 }
 
-// Main React component for the index.html page
+// Main React component for the index.html page (converted to React.createElement)
 function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -344,10 +346,10 @@ function App() {
 
   // Display loading state
   if (loading || !isAuthReady || !settingsLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-xl font-semibold text-gray-700">Loading...</div>
-      </div>
+    return React.createElement(
+      'div',
+      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Loading...')
     );
   }
 
@@ -355,101 +357,131 @@ function App() {
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
   const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
 
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto">
-      {/* Notification Modal */}
-      <NotificationModal
-          message={userNotificationMessage}
-          onClose={() => setUserNotificationMessage('')}
-      />
-      {/* Error display */}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap" role="alert">
-          {error}
-        </div>
-      )}
+  return React.createElement(
+    'div',
+    { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
+    // Notification Modal
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage('')
+    }),
+    // Error display
+    error && React.createElement(
+      'div',
+      { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+      error
+    ),
 
-      <div className="w-full max-w-md mt-20 mb-10 p-4">
-        <div className="bg-white p-8 rounded-lg shadow-xl w-full text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to Slovak Open Handball</h1>
-          {user ? (
-            <>
-              <p className="text-lg text-gray-600">You are logged in. Go to your zone for more options.</p>
-              <div className="mt-6 flex justify-center">
-                <a
-                  href="logged-in.html"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                >
-                  My Zone
-                </a>
-              </div>
-            </>
-          ) : (
-            <>
-              {isRegistrationOpen ? (
-                <>
-                  <p className="text-lg text-gray-600">Please log in or register to continue.</p>
-                  <div className="mt-6 flex justify-center space-x-4">
-                    <a
-                      href="login.html"
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    >
-                      Login
-                    </a>
-                    <a
-                      href="register.html"
-                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    >
-                      Tournament Registration
-                    </a>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-lg text-gray-600">
-                    Registration form is not accessible.
-                  </p>
-                  {regStart && !isNaN(regStart) && now < regStart && (
-                    <>
-                      <p className="text-md text-gray-500 mt-2">
-                        Registration will be possible from:{" "}
-                        <span style={{ whiteSpace: 'nowrap' }}>
-                          {new Date(registrationStartDate).toLocaleDateString('sk-SK')}
-                        </span>{" "}
-                        <span style={{ whiteSpace: 'nowap' }}>
-                          {new Date(registrationStartDate).toLocaleTimeString('sk-SK')}
-                        </span>
-                      </p>
-                      {countdown && (
-                          <p className="text-md text-gray-500 mt-2">Registration will start in: {countdown}</p>
-                      )}
-                    </>
-                  )}
-                  {regEnd && !isNaN(regEnd) && now > regEnd && (
-                    <p className="text-md text-gray-500 mt-2">
-                      Registration ended:{" "}
-                      <span style={{ whiteSpace: 'nowrap' }}>
-                        {new Date(registrationEndDate).toLocaleDateString('sk-SK')}
-                      </span>{" "}
-                      <span style={{ whiteSpace: 'nowrap' }}>
-                        {new Date(registrationEndDate).toLocaleTimeString('sk-SK')}
-                      </span>
-                    </p>
-                  )}
-                  <div className="mt-6 flex justify-center">
-                    <a
-                      href="login.html"
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-                    >
-                      Login
-                    </a>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    React.createElement(
+      'div',
+      { className: 'w-full max-w-md mt-20 mb-10 p-4' },
+      React.createElement(
+        'div',
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
+        React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Welcome to Slovak Open Handball'),
+        user ? (
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement('p', { className: 'text-lg text-gray-600' }, 'You are logged in. Go to your zone for more options.'),
+            React.createElement(
+              'div',
+              { className: 'mt-6 flex justify-center' },
+              React.createElement(
+                'a',
+                {
+                  href: 'logged-in.html',
+                  className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                },
+                'My Zone'
+              )
+            )
+          )
+        ) : (
+          React.createElement(
+            React.Fragment,
+            null,
+            isRegistrationOpen ? (
+              React.createElement(
+                React.Fragment,
+                null,
+                React.createElement('p', { className: 'text-lg text-gray-600' }, 'Please log in or register to continue.'),
+                React.createElement(
+                  'div',
+                  { className: 'mt-6 flex justify-center space-x-4' },
+                  React.createElement(
+                    'a',
+                    {
+                      href: 'login.html',
+                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                    },
+                    'Login'
+                  ),
+                  React.createElement(
+                    'a',
+                    {
+                      href: 'register.html',
+                      className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                    },
+                    'Tournament Registration'
+                  )
+                )
+              )
+            ) : (
+              React.createElement(
+                React.Fragment,
+                null,
+                React.createElement(
+                  'p',
+                  { className: 'text-lg text-gray-600' },
+                  'Registration form is not accessible.'
+                ),
+                regStart && !isNaN(regStart) && now < regStart && (
+                  React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement(
+                      'p',
+                      { className: 'text-md text-gray-500 mt-2' },
+                      'Registration will be possible from:',
+                      ' ',
+                      React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationStartDate).toLocaleDateString('sk-SK')),
+                      ' ',
+                      React.createElement('span', { style: { whiteSpace: 'nowap' } }, new Date(registrationStartDate).toLocaleTimeString('sk-SK'))
+                    ),
+                    countdown && (
+                        React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registration will start in: ${countdown}`)
+                    )
+                  )
+                ),
+                regEnd && !isNaN(regEnd) && now > regEnd && (
+                  React.createElement(
+                    'p',
+                    { className: 'text-md text-gray-500 mt-2' },
+                    'Registration ended:',
+                    ' ',
+                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleDateString('sk-SK')),
+                    ' ',
+                    React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleTimeString('sk-SK'))
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'mt-6 flex justify-center' },
+                  React.createElement(
+                    'a',
+                    {
+                      href: 'login.html',
+                      className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+                    },
+                    'Login'
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   );
 }
