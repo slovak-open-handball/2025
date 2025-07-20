@@ -121,8 +121,7 @@ function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
@@ -143,12 +142,21 @@ function App() {
         return;
       }
 
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
-      setApp(firebaseApp);
+      let firebaseAppInstance;
+      try {
+        // ZMENA: Pokúsime sa získať predvolenú aplikáciu.
+        firebaseAppInstance = firebase.app();
+        console.log("LoginApp: Získaná existujúca predvolená Firebase app inštancia.");
+      } catch (e) {
+        // Ak predvolená aplikácia neexistuje, inicializujeme ju ako predvolenú.
+        console.warn("LoginApp: Predvolená Firebase app nebola nájdená. Inicializujem ju.", e);
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig);
+      }
+      setApp(firebaseAppInstance);
 
-      const authInstance = firebase.auth(firebaseApp);
+      const authInstance = firebase.auth(firebaseAppInstance);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
+      firestoreInstance = firebase.firestore(firebaseAppInstance);
       setDb(firestoreInstance);
 
       const signIn = async () => {
@@ -160,17 +168,13 @@ function App() {
           }
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Skontrlujte svoje prihlasovacie údaje a skúste to znovu.`);
+          setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser);
-        setIsAuthReady(true);
-        // If user is already logged in, redirect them
-        if (currentUser) {
-            window.location.href = 'logged-in-my-data.html';
-        }
+        console.log("LoginApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
+        setUser(currentUser); // Set user state to null or user object
         setLoading(false); // Auth state checked, stop loading
       });
 
@@ -188,9 +192,57 @@ function App() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
-  // Removed useEffect for updating header link visibility, as it will be handled by header.js
+  // useEffect for updating header link visibility (simplified for login.html)
+  React.useEffect(() => {
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
 
-  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
+    if (authLink) {
+      if (user) { // If user is logged in
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden');
+      } else { // If user is not logged in
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        // On login page, always show register link if not logged in (regardless of registration open status)
+        registerLink && registerLink.classList.remove('hidden'); 
+      }
+    }
+  }, [user]); // Runs on user change
+
+  // Handle logout (needed for the header logout button)
+  const handleLogout = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      setLoading(true);
+      await auth.signOut();
+      setUserNotificationMessage("Úspešne odhlásený.");
+      window.location.href = 'login.html';
+    } catch (e) {
+      console.error("Chyba pri odhlásení:", e);
+      setError(`Chyba pri odhlásení: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [auth]);
+
+  // Attach logout handler to the button in the header
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]);
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -298,7 +350,7 @@ function App() {
       setLoading(false); 
 
       setTimeout(() => {
-        window.location.href = 'logged-in-my-data.html';
+        window.location.href = 'logged-in.html';
       }, 5000); 
 
     } catch (e) {
@@ -308,17 +360,19 @@ function App() {
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
-        setError(`Skontrlujte svoje prihlasovacie údaje a skúste to znovu.`);
+        setError(`Chyba pri prihlásení: ${e.message}`);
       }
       setLoading(false);
     } 
   };
 
   // Display loading state
-  if (loading || !isAuthReady || user) { // If user is already logged in, show loading and redirect
-    if (user) {
-        window.location.href = 'logged-in-my-data.html'; // Redirect if already logged in
-        return null; // Don't render anything while redirecting
+  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
+  // Ak je user objekt (prihlásený), presmeruj.
+  if (user === undefined || loading) {
+    if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
+        window.location.href = 'logged-in.html'; // Presmerovanie ak je používateľ prihlásený
+        return null; // Nič nevykresľuj počas presmerovania
     }
     return React.createElement(
       'div',
@@ -327,7 +381,8 @@ function App() {
     );
   }
 
-  // If a success message is present, display it and handle redirection
+  // Ak je user === null (definitívne odhlásený) a loading je false, pokračuj vo vykresľovaní prihlasovacieho formulára.
+  // Ak je prítomná správa o úspešnom prihlásení, zobraz ju a spracuj presmerovanie.
   if (userNotificationMessage) {
     return React.createElement(
       'div',
