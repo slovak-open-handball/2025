@@ -1991,7 +1991,8 @@ function App() {
                         <p className="text-gray-600 text-sm mt-4">
                             E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
                         </p>
-                        <p className="text-gray-600 text-sm mt-4">
+                        {/* ZMENA: Nový <p> element pre text o hesle */}
+                        <p className="text-gray-600 text-sm">
                             Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
                         </p>
                     </>
@@ -2234,8 +2235,8 @@ function App() {
                     </button>
                   </li>
                 )}
-                {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
-                {isAdmin && ( // Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov
+                {/* ZMENA: Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov */}
+                {isAdmin && ( 
                   <li> 
                     <button
                       onClick={() => {
