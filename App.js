@@ -1988,10 +1988,10 @@ function App() {
                                 disabled={loading || !!message}
                             />
                         </div>
+                        {/* ZMENA: Pridanie nového riadku textu */}
                         <p className="text-gray-600 text-sm mt-4">
                             E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.
-                        </p>
-                        <p className="text-gray-600 text-sm mt-4">
+                            <br />
                             Vytvorenie hesla umožní neskorší prístup k registračnému formuláru, v prípade potreby úpravy alebo doplnenia poskytnutých údajov.
                         </p>
                     </>
@@ -2234,8 +2234,8 @@ function App() {
                     </button>
                   </li>
                 )}
-                {/* ZMENA: Upozornenia sú pre všetkých používateľov */}
-                {isAdmin && ( // Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov
+                {/* ZMENA: Podmienka pre zobrazenie "Moje nastavenia" iba pre adminov */}
+                {isAdmin && ( 
                   <li> 
                     <button
                       onClick={() => {
