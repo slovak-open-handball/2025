@@ -127,89 +127,118 @@ function RegisterPage() {
 
   // Zobrazenie načítavacej obrazovky, kým nie je overený stav autentifikácie
   if (!isAuthReady || (user && isAuthReady)) {
-    return (
-        <div className="flex justify-center items-center h-screen-minus-header">
-          <div className="text-center">
-            <p className="text-xl font-semibold text-gray-700">Načítavam aplikáciu...</p>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mt-4"></div>
-          </div>
-        </div>
+    return React.createElement(
+      'div',
+      { className: 'flex justify-center items-center h-screen-minus-header' },
+      React.createElement(
+        'div',
+        { className: 'text-center' },
+        React.createElement(
+          'p',
+          { className: 'text-xl font-semibold text-gray-700' },
+          'Načítavam aplikáciu...'
+        ),
+        React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mt-4' })
+      )
     );
   }
 
-  return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Registrácia</h2>
-        {!isRegistrationOpen && (
-          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-            <p className="font-bold">Registrácia je momentálne zatvorená.</p>
-            {countdown && <p>Registrácia začína za: {countdown}</p>}
-            <p>Môžete sa vrátiť na <a href="index.html" className="text-yellow-800 underline">domovskú stránku</a>.</p>
-          </div>
-        )}
-
-        <form onSubmit={handleRegister}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              className="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500"
-              placeholder="Váš email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              disabled={loading || !isRegistrationOpen}
-            />
-          </div>
-          <PasswordInput
-            id="password"
-            label="Heslo"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Min. 8 znakov, veľké/malé písmeno, číslo, znak"
-            autoComplete="new-password"
-            showPassword={showPassword}
-            toggleShowPassword={() => setShowPassword(!showPassword)}
-            disabled={loading || !isRegistrationOpen}
-            description={passwordError || "Heslo musí mať aspoň 8 znakov, veľké a malé písmeno, číslo a špeciálny znak."}
-          />
-          <PasswordInput
-            id="confirm-password"
-            label="Potvrdiť Heslo"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Zopakujte heslo"
-            autoComplete="new-password"
-            showPassword={showPassword} // Použite rovnaký stav pre potvrdenie
-            toggleShowPassword={() => setShowPassword(!showPassword)}
-            disabled={loading || !isRegistrationOpen}
-          />
-
-          {passwordError && <p className="text-red-500 text-sm mb-4">{passwordError}</p>}
-          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          {message && <p className="text-green-600 text-sm mb-4">{message}</p>}
-
-          <div className="g-recaptcha" data-sitekey={RECAPTCHA_SITE_KEY} data-callback="setRecaptchaToken"></div>
-          {/* Funkcia setRecaptchaToken je teraz definovaná globálne v register.html */}
-
-          <div className="flex items-center justify-between mt-6">
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200"
-              disabled={loading || !isRegistrationOpen || !recaptchaToken}
-            >
-              {loading ? 'Registrujem...' : 'Zaregistrovať sa'}
-            </button>
-            <a href="login.html" className="inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800">
-              Už máte účet? Prihláste sa
-            </a>
-          </div>
-        </form>
-      </div>
-    </div>
+  return React.createElement(
+    'div',
+    { className: 'flex justify-center items-center min-h-screen bg-gray-100 p-4' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-lg w-full max-w-md' },
+      React.createElement(
+        'h2',
+        { className: 'text-2xl font-bold text-center text-gray-800 mb-6' },
+        'Registrácia'
+      ),
+      !isRegistrationOpen &&
+        React.createElement(
+          'div',
+          { className: 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4', role: 'alert' },
+          React.createElement('p', { className: 'font-bold' }, 'Registrácia je momentálne zatvorená.'),
+          countdown && React.createElement('p', null, 'Registrácia začína za: ', countdown),
+          React.createElement(
+            'p',
+            null,
+            'Môžete sa vrátiť na ',
+            React.createElement('a', { href: 'index.html', className: 'text-yellow-800 underline' }, 'domovskú stránku'),
+            '.'
+          )
+        ),
+      React.createElement(
+        'form',
+        { onSubmit: handleRegister },
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
+          React.createElement(
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
+            'Email'
+          ),
+          React.createElement('input', {
+            type: 'email',
+            id: 'email',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+            placeholder: 'Váš email',
+            value: email,
+            onChange: (e) => setEmail(e.target.value),
+            required: true,
+            autoComplete: 'email',
+            disabled: loading || !isRegistrationOpen,
+          })
+        ),
+        React.createElement(PasswordInput, {
+          id: 'password',
+          label: 'Heslo',
+          value: password,
+          onChange: (e) => setPassword(e.target.value),
+          placeholder: 'Min. 8 znakov, veľké/malé písmeno, číslo, znak',
+          autoComplete: 'new-password',
+          showPassword: showPassword,
+          toggleShowPassword: () => setShowPassword(!showPassword),
+          disabled: loading || !isRegistrationOpen,
+          description: passwordError || 'Heslo musí mať aspoň 8 znakov, veľké a malé písmeno, číslo a špeciálny znak.',
+        }),
+        React.createElement(PasswordInput, {
+          id: 'confirm-password',
+          label: 'Potvrdiť Heslo',
+          value: confirmPassword,
+          onChange: (e) => setConfirmPassword(e.target.value),
+          placeholder: 'Zopakujte heslo',
+          autoComplete: 'new-password',
+          showPassword: showPassword, // Použite rovnaký stav pre potvrdenie
+          toggleShowPassword: () => setShowPassword(!showPassword),
+          disabled: loading || !isRegistrationOpen,
+        }),
+        passwordError && React.createElement('p', { className: 'text-red-500 text-sm mb-4' }, passwordError),
+        error && React.createElement('p', { className: 'text-red-500 text-sm mb-4' }, error),
+        message && React.createElement('p', { className: 'text-green-600 text-sm mb-4' }, message),
+        React.createElement('div', { className: 'g-recaptcha', 'data-sitekey': RECAPTCHA_SITE_KEY, 'data-callback': 'setRecaptchaToken' }),
+        /* Funkcia setRecaptchaToken je teraz definovaná globálne v register.html */
+        React.createElement(
+          'div',
+          { className: 'flex items-center justify-between mt-6' },
+          React.createElement(
+            'button',
+            {
+              type: 'submit',
+              className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+              disabled: loading || !isRegistrationOpen || !recaptchaToken,
+            },
+            loading ? 'Registrujem...' : 'Zaregistrovať sa'
+          ),
+          React.createElement(
+            'a',
+            { href: 'login.html', className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800' },
+            'Už máte účet? Prihláste sa'
+          )
+        )
+      )
+    )
   );
 }
 
