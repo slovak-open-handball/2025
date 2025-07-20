@@ -1463,26 +1463,6 @@ export default function App() {
               {(() => {
                 const section = new URLSearchParams(window.location.search).get('section');
                 switch (section) {
-                  case 'profile':
-                  default:
-                    return (
-                      <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Moje údaje</h3>
-                        <p className="mb-2"><span className="font-semibold">E-mail:</span> {user.email}</p>
-                        <p className="mb-2"><span className="font-semibold">Meno:</span> {user.firstName || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Priezvisko:</span> {user.lastName || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Telefón:</span> {user.phone || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Názov klubu:</span> {user.clubName || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">IČO:</span> {user.ico || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">DIČ:</span> {user.dic || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Ulica:</span> {user.street || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">PSČ:</span> {user.zipCode || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Mesto:</span> {user.city || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Krajina:</span> {user.country || 'N/A'}</p>
-                        <p className="mb-2"><span className="font-semibold">Rola:</span> {user.role || 'Používateľ'}</p>
-                        <p className="mb-2"><span className="font-semibold">Schválený:</span> {user.isApproved ? 'Áno' : 'Nie'}</p>
-                      </div>
-                    );
                   case 'change-name':
                     return (
                       <div className="bg-white p-6 rounded-lg shadow-md">
@@ -1883,12 +1863,23 @@ export default function App() {
                         )}
                       </div>
                     );
-                  default:
+                  default: // Toto je teraz jediný default pre sekcie
                     return (
                       <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Vitajte!</h3>
-                        <p className="text-gray-700">Prosím, vyberte sekciu z menu vľavo.</p>
-                        <p className="text-gray-700 mt-2">Váš ID: <span className="font-mono text-sm bg-gray-200 p-1 rounded">{user.uid}</span></p>
+                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Moje údaje</h3>
+                        <p className="mb-2"><span className="font-semibold">E-mail:</span> {user.email}</p>
+                        <p className="mb-2"><span className="font-semibold">Meno:</span> {user.firstName || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Priezvisko:</span> {user.lastName || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Telefón:</span> {user.phone || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Názov klubu:</span> {user.clubName || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">IČO:</span> {user.ico || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">DIČ:</span> {user.dic || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Ulica:</span> {user.street || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">PSČ:</span> {user.zipCode || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Mesto:</span> {user.city || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Krajina:</span> {user.country || 'N/A'}</p>
+                        <p className="mb-2"><span className="font-semibold">Rola:</span> {user.role || 'Používateľ'}</p>
+                        <p className="mb-2"><span className="font-semibold">Schválený:</span> {user.isApproved ? 'Áno' : 'Nie'}</p>
                       </div>
                     );
                 }
