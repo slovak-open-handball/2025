@@ -33,7 +33,10 @@
             margin: auto;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: left;
         }
     </style>
     <!-- Firebase SDKs - Načítané raz v head pre všetky skripty -->
@@ -43,13 +46,21 @@
     <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- reCAPTCHA v3 -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
 </head>
-<body>
+<body class="bg-gray-100">
+    <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
-    <div id="root"></div>
 
+    <div id="root">
+        <!-- React aplikácia sa tu vykreslí -->
+    </div>
+
+    <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script src="index.js"></script>
     <script>
+        // Funkcia na načítanie hlavičky
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -64,7 +75,9 @@
             }
         }
 
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane index.js
         window.onload = function() {
+            // Načítať hlavičku ako prvú
             loadHeader().then(() => {
                 // Po načítaní header.html, načítame header.js
                 const headerScript = document.createElement('script');
