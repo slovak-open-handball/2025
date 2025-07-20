@@ -1,28 +1,27 @@
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Globálne definované
+// Tieto konštanty NEBUDÚ deklarované, pretože sa predpokladá, že sú už globálne definované v index.html / index.js.
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
+// Inicializácia Firebase (ak už nie je inicializovaná iným skriptom)
 let firebaseAppHeader; // Použijeme iný názov pre inštanciu aplikácie hlavičky
 let authHeader;
 let dbHeader;
 
 try {
-    // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom
-    // Používame globálne dostupné firebaseConfig
-    firebaseAppHeader = firebase.apps.find(app => app.name === 'headerApp') || firebase.initializeApp(firebaseConfig, 'headerApp');
-    authHeader = firebase.auth(firebaseAppHeader);
-    dbHeader = firebase.firestore(firebaseAppHeader);
-    console.log("Header.js: Firebase inicializovaný.");
+    // ZMENA: Pokúsime sa získať predvolenú aplikáciu.
+    // Ak predvolená aplikácia už existuje (čo by sa malo stať, ak index.js beží prvý), použijeme ju.
+    // Ak nie, inicializujeme ju ako záložný scenár (čo by sa nemalo stať, ak je poradie načítania správne).
+    firebaseAppHeader = firebase.app();
+    console.log("Header.js: Získaná predvolená Firebase app inštancia.");
 } catch (e) {
-    console.error("Header.js: Chyba pri inicializácii Firebase pre hlavičku:", e);
+    console.warn("Header.js: Predvolená Firebase app nebola nájdená. Inicializujem novú. Toto by sa nemalo diať, ak je index.js načítaný prvý.", e);
+    firebaseAppHeader = firebase.initializeApp(firebaseConfig); // Inicializujeme predvolenú aplikáciu
 }
+
+authHeader = firebase.auth(firebaseAppHeader);
+dbHeader = firebase.firestore(firebaseAppHeader);
+console.log("Header.js: Firebase Auth a Firestore inštancie nastavené.");
 
 // Pomocná funkcia na aktualizáciu viditeľnosti odkazov v hlavičke
 function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
