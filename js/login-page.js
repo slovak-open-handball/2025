@@ -7,6 +7,18 @@ function LoginPage() {
   const [password, setPassword] = React.useState('');
   const [showPassword, setShowPassword] = React.useState(false);
 
+  // Volanie updateHeaderLinks po inicializácii Firebase a overení stavu autentifikácie
+  React.useEffect(() => {
+    if (isAuthReady) {
+      // Funkcia updateHeaderLinks je globálne dostupná
+      if (typeof updateHeaderLinks === 'function') {
+        updateHeaderLinks();
+      } else {
+        console.warn("Global updateHeaderLinks function not found.");
+      }
+    }
+  }, [isAuthReady, user]); // Závisí od isAuthReady a user na aktualizáciu odkazov
+
   // Presmerovanie, ak je používateľ už prihlásený
   React.useEffect(() => {
     if (user && isAuthReady) {
