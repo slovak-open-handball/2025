@@ -73,8 +73,8 @@
 
     <!-- Vlastné skripty -->
     <script src="header.js"></script>
-    <script src="firebase-init.js"></script> <!-- Dôležité: Načítať pred logged-in-my-data-app.js -->
-    <script type="text/babel" src="logged-in-my-data-app.js"></script>
+    <script src="firebase-init.js"></script>
+    <script type="text/babel" src="logged-in-my-data.js"></script>
 
     <script type="text/javascript">
         // Funkcia na načítanie hlavičky
@@ -110,7 +110,7 @@
                 }
                 // Skontrolujte, či je LoggedInApp definovaný
                 if (typeof LoggedInApp === 'undefined') {
-                    console.error("Chyba: Komponent LoggedInApp nie je definovaný. Skontrolujte logged-in-my-data-app.js.");
+                    console.error("Chyba: Komponent LoggedInApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                     return;
                 }
