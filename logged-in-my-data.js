@@ -377,6 +377,12 @@ function MyDataApp() {
               
               setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
+
+              // NOVINKA: Aktualizácia viditeľnosti menu po načítaní roly
+              if (typeof window.updateMenuItemsVisibility === 'function') {
+                  window.updateMenuItemsVisibility(userData.role);
+              }
+
               console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
