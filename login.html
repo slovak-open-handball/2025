@@ -3,107 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prihlásenie</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>SOH 2025 - Prihlásenie</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
-        .login-container {
-            background-color: #ffffff;
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
             width: 100%;
-            max-width: 400px;
-            text-align: center;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            box-sizing: border-box;
-        }
-        .form-button {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #4f46e5;
-            color: white;
-            border-radius: 0.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .form-button:hover {
-            background-color: #4338ca;
-        }
-        .message-box {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
             text-align: left;
-            font-size: 0.875rem;
-        }
-        .message-box.success {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        .message-box.error {
-            background-color: #fee2e2;
-            color: #991b1b;
         }
     </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- reCAPTCHA v3 -->
+    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
+
+    <!-- Kľúčová ZMENA: Inicializácia Firebase aplikácie tu, pred akýmikoľvek inými skriptami, ktoré ju používajú -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = null; // Stále globálne definované
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Stále globálne definované
+
+        try {
+            // Inicializovať predvolenú Firebase aplikáciu len raz
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+                console.log("login.html: Firebase App '[DEFAULT]' inicializovaná v head.");
+            } else {
+                console.log("login.html: Firebase App '[DEFAULT]' už existuje.");
+            }
+        } catch (e) {
+            console.error("login.html: Chyba pri inicializácii Firebase App v head:", e);
+        }
+    </script>
 </head>
-<body>
-    <div id="main-header"></div>
-    <div class="login-container">
-        <h2 class="text-3xl font-bold mb-6 text-gray-800">Prihlásenie</h2>
-        <form id="login-form">
-            <input type="email" id="email" placeholder="Email" class="form-input" required>
-            <input type="password" id="password" placeholder="Heslo" class="form-input" required>
-            <button type="submit" class="form-button">Prihlásiť sa</button>
-        </form>
-        <div id="message-box" class="message-box hidden"></div>
+<body class="bg-gray-100">
+    <!-- Hlavička sa načíta dynamicky -->
+    <div id="header-placeholder"></div>
+
+    <div id="root">
+        <!-- React aplikácia sa tu vykreslí -->
     </div>
 
-    <!-- DÔLEŽITÉ: Definujte globálne premenné PRED načítaním Firebase SDK a vašich JS súborov -->
-    <script>
-        // Tieto premenné sú poskytované prostredím Canvas.
-        // Uistite sa, že sú dostupné. Ak nie sú, nastavte predvolené hodnoty.
-        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        window.firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            // *** NAHRADTE TIETO ZASTUPNE HODNOTY VASIMI SKUTOCNYMI UDAJMI Z KONZOLY FIREBASE ***
-              apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-              authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-              projectId: "prihlasovanie-4f3f3",
-              storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-              messagingSenderId: "26454452024",
-              appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        };
-        window.initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Logovanie pre kontrolu, či sú premenné správne definované
-        console.log("login.html: appId:", window.appId);
-        console.log("login.html: firebaseConfig (len kľúče):", Object.keys(window.firebaseConfig));
-        console.log("login.html: initialAuthToken:", window.initialAuthToken ? "Definovaný" : "Nedefinovaný");
-    </script>
-
-    <!-- Firebase SDK skripty -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
-    <!-- Vlastné skripty -->
-    <script src="header.js"></script> <!-- header.js musí byť načítaný po Firebase SDK -->
+    <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script src="login.js"></script>
+    <script>
+        // Funkcia na načítanie hlavičky a jej JS
+        async function loadHeaderAndScripts() {
+            try {
+                // 1. Načítať HTML hlavičky
+                const headerResponse = await fetch('header.html');
+                if (!headerResponse.ok) {
+                    throw new Error(`HTTP error! status: ${headerResponse.status}`);
+                }
+                const headerHtml = await headerResponse.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+                console.log("login.html: header.html načítaný.");
+
+                // 2. Načítať a spustiť header.js
+                const headerScript = document.createElement('script');
+                headerScript.src = 'header.js';
+                headerScript.onload = () => {
+                    console.log("login.html: header.js načítaný a spustený.");
+                    // 3. Až potom renderovať React aplikáciu
+                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                        return;
+                    }
+                    if (typeof App === 'undefined') {
+                        console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                        return;
+                    }
+
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(App, null));
+                    console.log("login.html: React App vykreslená.");
+                };
+                headerScript.onerror = (e) => {
+                    console.error("login.html: Chyba pri načítaní header.js:", e);
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní skriptu hlavičky.</div>';
+                };
+                document.body.appendChild(headerScript); // Pridáme skript do body
+            } catch (error) {
+                console.error("Chyba pri inicializácii stránky (načítanie hlavičky/skriptov):", error);
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii stránky.</div>';
+            }
+        }
+
+        // Spustíme načítanie hlavičky a skriptov po načítaní DOM
+        window.onload = loadHeaderAndScripts;
+    </script>
 </body>
 </html>
