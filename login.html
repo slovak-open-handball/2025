@@ -164,7 +164,7 @@
                             window.location.href = 'logged-in-my-data.html'; // Presmerovanie po úspešnom prihlásení
                         } catch (error) {
                             console.error("Chyba pri prihlásení:", error);
-                            let message = "Nastala neznáma chyba. Skúste to prosím znova.";
+                            let message = "Skontorlujte zadané prihlasovacie meno a heslo.";
                             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                                 message = "Nesprávne prihlasovacie údaje. Skúste to prosím znova.";
                             } else if (error.code === 'auth/invalid-email') {
