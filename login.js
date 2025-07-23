@@ -110,12 +110,25 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
+// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+
 // Main React component for the login.html page
 function App() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
@@ -123,6 +136,29 @@ function App() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [showPasswordLogin, setShowPasswordLogin] = React.useState(false);
+
+  // States for date and time settings (pridané pre kontrolu registrácie)
+  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
+  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false); // Nový stav pre načítanie nastavení
+
+  // Calculate registration status as a memoized value (pridané pre kontrolu registrácie)
+  const isRegistrationOpen = React.useMemo(() => {
+    if (!settingsLoaded) return false; // Počkáme, kým sa načítajú nastavenia
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
+    // Skontrolujeme, či sú dátumy platné pred porovnaním
+    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
+    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
+
+    return (
+      (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladáme, že registrácia začala
+      (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladáme, že registrácia neskončila
+    );
+  }, [settingsLoaded, registrationStartDate, registrationEndDate]);
+
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -161,6 +197,7 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("LoginApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Set user state to null or user object
+        setIsAuthReady(true); // Mark auth as ready after the first check
         setLoading(false); // Auth state checked, stop loading
       });
 
@@ -178,31 +215,73 @@ function App() {
     }
   }, []); // Empty dependency array - runs only once on component mount
 
+  // Effect for loading settings (pridané pre kontrolu registrácie)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        return; // Počkáme na inicializáciu DB a Auth
+      }
+      try {
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+            } else {
+                console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+                setRegistrationStartDate('');
+                setRegistrationEndDate('');
+            }
+            setSettingsLoaded(true); // Nastavenia sú načítané
+          }, error => {
+            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true); // Nastavenia sú načítané aj v prípade chyby
+          });
+
+          return () => unsubscribeSettings();
+      } catch (e) {
+          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true); // Nastavenia sú načítané aj v prípade chyby
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]); // Závisí od db a isAuthReady
+
+
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`LoginApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`LoginApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
 
     if (authLink) {
-      if (user) { // If user is logged in
+      if (user) { // Ak je používateľ prihlásený
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden'); // Always hide for logged-in users
+        registerLink && registerLink.classList.add('hidden'); // Vždy skryť pre prihlásených používateľov
         console.log("LoginApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else { // If user is not logged in
+      } else { // Ak používateľ nie je prihlásený
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        // On login page, always show register link if not logged in (regardless of registration open status)
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("LoginApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+        // Na prihlasovacej stránke zobraziť odkaz na registráciu len ak je registrácia otvorená
+        if (isRegistrationOpen) {
+          registerLink && registerLink.classList.remove('hidden');
+          console.log("LoginApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
+        } else {
+          registerLink && registerLink.classList.add('hidden');
+          console.log("LoginApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
+        }
       }
     }
-  }, [user]); // Runs on user change
+  }, [user, isRegistrationOpen]); // Spustí sa pri zmene používateľa alebo stavu registrácie
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
@@ -358,8 +437,9 @@ function App() {
   // Display loading state
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
   // Ak je user objekt (prihlásený), presmeruj.
-  if (user === undefined || loading) {
-    if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
+  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { // Čakáme na všetky závislosti
+    if (isAuthReady && user) { // Ak je user objekt a auth je ready, znamená to, že je prihlásený, presmeruj
+        console.log("LoginApp: Auth je ready a používateľ je prihlásený, presmerovávam na logged-in-my-data.html");
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
         return null; // Nič nevykresľuj počas presmerovania
     }
@@ -372,7 +452,7 @@ function App() {
 
   // Ak je user === null (definitívne odhlásený) a loading je false, pokračuj vo vykresľovaní prihlasovacieho formulára.
   // Ak je prítomná správa o úspešnom prihlásení, zobraz ju a spracuj presmerovanie.
-  if (userNotificationMessage) {
+  if (userNotificationMessage && userNotificationMessage.includes("Prihlásenie úspešné!")) {
     return React.createElement(
       'div',
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
