@@ -6,44 +6,65 @@
     <title>Moja Aplikácia</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            flex-direction: column; /* Aby sa hlavička zobrazila hore a obsah pod ňou */
+            min-height: 100vh;
+        }
+        .content-wrapper {
+            flex-grow: 1; /* Aby obsah vyplnil zvyšný priestor */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem; /* Pridajte nejaký padding */
+        }
+        /* Štýly pre globálne správy */
+        .message-box {
+            margin: 1rem auto; /* Vycentrovať a pridať okraje */
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            max-width: 600px; /* Obmedziť šírku správ */
+        }
+        .message-box.success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .message-box.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <!-- Tu by ste vložili obsah header.html -->
-    <!-- Ak používate nejaký server-side include alebo šablónovací systém, vložte ho tu. -->
-    <!-- Ak nie, môžete priamo vložiť obsah header.html sem, alebo ho načítať pomocou JS. -->
-    <!-- Pre jednoduchosť ukážem priame vloženie obsahu header.html -->
+    <!-- Placeholder pre hlavičku. header.js načíta obsah header.html sem. -->
+    <div id="main-header"></div>
 
-    <header class="bg-blue-600 text-white p-4 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="index.html" class="text-2xl font-bold rounded-md px-3 py-1 hover:bg-blue-700 transition-colors duration-300">Moja Aplikácia</a>
-            <nav>
-                <ul class="flex space-x-4">
-                    <li id="login-nav-item" class="hidden">
-                        <a href="login.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Prihlásenie</a>
-                    </li>
-                    <li id="my-zone-nav-item" class="hidden">
-                        <a href="logged-in-my-data.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Moja Zóna</a>
-                    </li>
-                    <li id="logout-nav-item" class="hidden">
-                        <button id="logout-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300 cursor-pointer">
-                            Odhlásenie
-                        </button>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    </header>
+    <!-- Globálny kontajner pre správy (namiesto alert()) -->
+    <div id="global-message-box" class="message-box hidden"></div>
 
-    <main class="container mx-auto p-4">
+    <main class="container mx-auto p-4 content-wrapper">
         <!-- Obsah vašej hlavnej stránky -->
         <h1 class="text-3xl font-bold text-center my-8 text-gray-800">Vitajte na hlavnej stránke!</h1>
         <p class="text-center text-gray-600">Toto je obsah vašej aplikácie.</p>
     </main>
 
     <!-- DÔLEŽITÉ: Deklarácie globálnych premenných musia byť tu, pred načítaním Firebase SDKs a header.js -->
+    <!-- Používame 'window.' prefix, aby boli premenné globálne dostupné pre header.js -->
     <script>
-        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Globálne definované
-        const firebaseConfig = { // Globálne definované
+        // Tieto premenné sú poskytované prostredím Canvas.
+        // Uistite sa, že sú dostupné. Ak nie sú, nastavte predvolené hodnoty.
+        // Používame 'window.' prefix, aby boli premenné globálne dostupné.
+        window.appId = typeof __app_id !== 'undefined' ? __app_id : '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        window.firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
             authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
             projectId: "prihlasovanie-4f3f3",
@@ -51,10 +72,16 @@
             messagingSenderId: "26454452024",
             appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
-        const initialAuthToken = null; // Globálne definované
+        window.initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Logovanie pre kontrolu, či sú premenné správne definované
+        console.log("index.html: appId:", window.appId);
+        console.log("index.html: firebaseConfig (len kľúče):", Object.keys(window.firebaseConfig));
+        console.log("index.html: initialAuthToken:", window.initialAuthToken ? "Definovaný" : "Nedefinovaný");
     </script>
 
     <!-- Firebase SDKs (musia byť načítané po globálnych premenných) -->
+    <!-- Používate 'compat' verzie, takže syntax v header.js (v8) by mala fungovať. -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
