@@ -165,7 +165,7 @@ if (authMenu && dbMenu) {
             loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
         }
     });
-    */
+
 
     // Počiatočné prihlásenie pre menu (ak existuje vlastný token)
     if (initialAuthToken) {
@@ -173,6 +173,7 @@ if (authMenu && dbMenu) {
             console.error("Chyba pri počiatočnom prihlásení Firebase pre ľavé menu:", e);
         });
     }
+    */
 }
 
 // Spracovanie kliknutí na odkazy v menu
