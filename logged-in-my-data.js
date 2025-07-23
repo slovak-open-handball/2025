@@ -625,8 +625,10 @@ function MyDataApp() {
   };
 
   const handleFetchAllUsers = React.useCallback(async () => {
-    if (!db || !user || user.role !== 'admin') {
+    // ZMENA: Kontrola oprávnení teraz používa userProfileData.role
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zobrazenie používateľov.");
+      setLoading(false); // ZMENA: Nastavíme loading na false aj tu
       return;
     }
     setLoading(true);
@@ -641,7 +643,7 @@ function MyDataApp() {
     } finally {
       setLoading(false);
     }
-  }, [db, user]);
+  }, [db, userProfileData]); // ZMENA: Závisí od userProfileData
 
   React.useEffect(() => {
     // ZMENA: Podmienka na spustenie handleFetchAllUsers závisí od userProfileData.role
