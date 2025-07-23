@@ -3,125 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Slovak Open Handball</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>Moja Aplikácia</title>
+    <!-- Načítanie Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-        }
-        /* Štýly pre modálne okná */
-        .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            position: relative;
-        }
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-    </style>
 </head>
-<body class="bg-gray-100">
-    <!-- Miesto pre hlavičku -->
-    <div id="header-placeholder"></div>
+<body>
+    <!-- Tu by ste vložili obsah header.html -->
+    <!-- Ak používate nejaký server-side include alebo šablónovací systém, vložte ho tu. -->
+    <!-- Ak nie, môžete priamo vložiť obsah header.html sem, alebo ho načítať pomocou JS. -->
+    <!-- Pre jednoduchosť ukážem priame vloženie obsahu header.html -->
 
-    <!-- Hlavný kontajner pre React aplikáciu -->
-    <div id="root"></div>
+    <header class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold rounded-md px-3 py-1 hover:bg-blue-700 transition-colors duration-300">Moja Aplikácia</a>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li id="login-nav-item" class="hidden">
+                        <a href="login.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Prihlásenie</a>
+                    </li>
+                    <li id="my-zone-nav-item" class="hidden">
+                        <a href="logged-in-my-data.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Moja Zóna</a>
+                    </li>
+                    <li id="logout-nav-item" class="hidden">
+                        <button id="logout-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300 cursor-pointer">
+                            Odhlásenie
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
 
-    <!-- Firebase SDKs - VŽDY NAČÍTAJTE AKO PRVÉ! -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <main class="container mx-auto p-4">
+        <!-- Obsah vašej hlavnej stránky -->
+        <h1 class="text-3xl font-bold text-center my-8 text-gray-800">Vitajte na hlavnej stránke!</h1>
+        <p class="text-center text-gray-600">Toto je obsah vašej aplikácie.</p>
+    </main>
 
-    <!-- React a ReactDOM CDN -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Naše vlastné skripty - Načítajte AŽ PO Firebase SDKs a React/ReactDOM -->
-    <script src="header.js"></script>
-    <script type="text/babel" src="index.js"></script>
-
-    <script type="text/javascript">
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-                console.log("Hlavička načítaná do DOM.");
-
-                // header.js už má logiku na inicializáciu Firebase a svojich listenerov
-                // Nie je potrebné volať initializeHeaderLogic() priamo odtiaľto.
-                // Funkcia initializeFirebaseForHeader() v header.js sa volá automaticky.
-
-            } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-            }
-        }
-
-        // Spustí sa po načítaní DOM a všetkých skriptov
-        window.onload = function() {
-            // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
-                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                // App je definovaný v index.js
-                if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
-
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
+    <!-- DÔLEŽITÉ: Deklarácie globálnych premenných musia byť tu, pred načítaním Firebase SDKs a header.js -->
+    <script>
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Globálne definované
+        const firebaseConfig = { // Globálne definované
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
+        const initialAuthToken = null; // Globálne definované
     </script>
+
+    <!-- Firebase SDKs (musia byť načítané po globálnych premenných) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
+    <!-- header.js (MUSÍ BYŤ PO Firebase SDKs a po globálnych premenných) -->
+    <script src="header.js"></script>
+
+    <!-- index.js (alebo iné stránkové skripty, ktoré používajú Firebase - MUSIA BYŤ PO header.js) -->
+    <script src="index.js"></script>
 </body>
 </html>
