@@ -1,34 +1,35 @@
 <!-- header.html -->
 <header class="bg-blue-600 text-white p-4 shadow-md">
     <div class="container mx-auto flex justify-between items-center">
-        <a href="index.html" class="text-2xl font-bold rounded-md px-3 py-1 hover:bg-blue-700 transition-colors duration-300">Domov</a>
+        <div class="text-2xl font-bold rounded-md">
+            <a href="index.html" class="hover:text-blue-200">Moja Aplikácia</a>
+        </div>
         <nav>
             <ul class="flex space-x-4">
-                <!-- Položka Prihlásenie: Viditeľná, ak používateľ NIE JE prihlásený -->
-                <li id="login-nav-item" class="hidden">
-                    <a href="login.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Prihlásenie</a>
+                <li><a href="index.html" class="hover:text-blue-200 rounded-md py-1 px-2">Domov</a></li>
+                <!-- Miesto pre "Registrácia na turnaj" -->
+                <li id="tournament-registration-text-item" class="hidden">
+                    <a href="registration.html" class="hover:text-blue-200 rounded-md py-1 px-2">Registrácia na turnaj</a>
                 </li>
-                <!-- Položka Moja Zóna: Viditeľná, ak je používateľ prihlásený -->
+                <!-- Položka "Moja zóna" - viditeľná len pre prihlásených -->
                 <li id="my-zone-nav-item" class="hidden">
-                    <a href="logged-in-my-data.html" class="block py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-300">Moja Zóna</a>
+                    <a href="logged-in-my-data.html" class="hover:text-blue-200 rounded-md py-1 px-2">Moja zóna</a>
                 </li>
-                <!-- Tlačidlo Odhlásenie: Viditeľné, ak je používateľ prihlásený -->
+                <!-- Položka "Prihlásenie" - viditeľná len pre odhlásených -->
+                <li id="login-nav-item" class="hidden">
+                    <a href="login.html" class="hover:text-blue-200 rounded-md py-1 px-2">Prihlásenie</a>
+                </li>
+                <!-- Položka "Registrácia" - viditeľná len ak je otvorená registrácia -->
+                <li id="registration-nav-item" class="hidden">
+                    <a href="registration.html" class="hover:text-blue-200 rounded-md py-1 px-2">Registrácia</a>
+                </li>
+                <!-- Položka "Odhlásenie" - viditeľná len pre prihlásených -->
                 <li id="logout-nav-item" class="hidden">
-                    <button id="logout-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-md transition-colors duration-300 cursor-pointer">
-                        Odhlásenie
+                    <button id="logout-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-1 px-3 rounded-md shadow-sm transition duration-150 ease-in-out">
+                        Odhlásiť sa
                     </button>
                 </li>
             </ul>
         </nav>
     </div>
 </header>
-
-<!-- Načítanie Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Načítanie Firebase SDKs (musia byť načítané pred header.js) -->
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
-
-<!-- Načítanie header.js (MUSÍ BYŤ PO Firebase SDKs) -->
-<script src="header.js"></script>
