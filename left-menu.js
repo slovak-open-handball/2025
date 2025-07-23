@@ -73,9 +73,9 @@ async function loadContent(htmlFilePath) {
 
 
 // Funkcia na aktualizáciu viditeľnosti položiek menu
-// Táto funkcia je ponechaná, ale bez priameho prístupu k Firebase Auth.
-// Ak chcete dynamickú viditeľnosť, bude ju musieť riadiť hlavná aplikácia.
-function updateMenuItemsVisibility(userRole) {
+// Táto funkcia je sprístupnená globálne, aby ju mohla volať hlavná aplikácia
+// po načítaní používateľskej roly.
+window.updateMenuItemsVisibility = function(userRole) { // ZMENA: Sprístupnenie funkcie globálne
     const menuItems = {
         'menu-my-data': ['admin', 'user'],
         'menu-change-name': ['admin', 'user'],
@@ -91,16 +91,14 @@ function updateMenuItemsVisibility(userRole) {
     for (const id in menuItems) {
         const element = document.getElementById(id);
         if (element) {
-            // Predvolene zobrazíme všetky položky, ak sa neriadi rolou z Firebase Auth
-            // Alebo môžete nastaviť pevnú rolu, napr. 'user', ak chcete skryť admin položky
-            if (menuItems[id].includes(userRole || 'user')) { // Predvolená rola 'user'
+            if (menuItems[id].includes(userRole)) { // Používame rolu priamo
                 element.classList.remove('hidden');
             } else {
                 element.classList.add('hidden');
             }
         }
     }
-}
+};
 
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
@@ -122,9 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadContent('logged-in-my-data.html'); // Predvolená stránka
     }
 
-    // Vzhľadom na odstránenie autentifikácie z tohto skriptu,
-    // dynamickú viditeľnosť menu na základe roly bude musieť riadiť
-    // hlavná React aplikácia (napr. MyDataApp) po načítaní používateľských dát.
-    // Tu nastavíme predvolenú viditeľnosť (napr. len pre 'user')
-    updateMenuItemsVisibility('user'); // Zobrazí len položky pre bežného používateľa
+    // ZMENA: Odstránené počiatočné volanie updateMenuItemsVisibility('user');
+    // Teraz sa spoliehame na hlavnú aplikáciu (MyDataApp), že zavolá túto funkciu
+    // s aktuálnou rolou používateľa po načítaní dát.
 });
