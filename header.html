@@ -1,34 +1,13 @@
-<!-- header.html -->
-<header class="bg-blue-600 text-white p-4 shadow-md">
-    <div class="container mx-auto flex justify-between items-center">
-        <div class="text-2xl font-bold rounded-md">
-            <a href="index.html" class="hover:text-blue-200">Domov</a>
-        </div>
-        <nav>
-            <ul class="flex space-x-4">
-                <!-- Miesto pre "Registrácia na turnaj" -->
-                <li id="tournament-registration-text-item" class="hidden">
-                    <a href="register.html" class="hover:text-blue-200 rounded-md py-1 px-2">Registrácia na turnaj</a>
-                </li>
-                <!-- Položka "Moja zóna" - viditeľná len pre prihlásených -->
-                <li id="my-zone-nav-item" class="hidden">
-                    <a href="logged-in-my-data.html" class="hover:text-blue-200 rounded-md py-1 px-2">Moja zóna</a>
-                </li>
-                <!-- Položka "Prihlásenie" - viditeľná len pre odhlásených -->
-                <li id="login-nav-item" class="hidden">
-                    <a href="login.html" class="hover:text-blue-200 rounded-md py-1 px-2">Prihlásenie</a>
-                </li>
-                <!-- Položka "Registrácia" - viditeľná len ak je otvorená registrácia -->
-                <li id="registration-nav-item" class="hidden">
-                    <a href="registration.html" class="hover:text-blue-200 rounded-md py-1 px-2">Registrácia</a>
-                </li>
-                <!-- Položka "Odhlásenie" - viditeľná len pre prihlásených -->
-                <li id="logout-nav-item" class="hidden">
-                    <button id="logout-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-1 px-3 rounded-md shadow-sm transition duration-150 ease-in-out">
-                        Odhlásiť sa
-                    </button>
-                </li>
-            </ul>
-        </nav>
+<!-- Tento súbor obsahuje iba hlavičku, ktorá sa bude dynamicky načítavať do iných stránok. -->
+<header class="w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center">
+    <div class="flex items-center space-x-6">
+        <!-- Odkaz na Domov (index.html) -->
+        <a href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
+        <a id="register-link" href="register.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Registrácia na turnaj</a>
+    </div>
+    <div class="flex items-center space-x-6">
+        <a id="profile-link" href="logged-in-my-data.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Moja zóna</a>
+        <a id="auth-link" href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Prihlásenie</a>
+        <button id="logout-button" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Odhlásenie</button>
     </div>
 </header>
