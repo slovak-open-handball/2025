@@ -3,187 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Prihlásenie</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Prihlásenie</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-        }
-        /* Štýly pre modálne okná */
-        .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
+            background-color: #f0f2f5;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
         }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 90%;
+        .login-container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+        }
+        .form-button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .form-button:hover {
+            background-color: #4338ca;
+        }
+        .message-box {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+        .message-box.success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .message-box.error {
+            background-color: #fee2e2;
+            color: #991b1b;
         }
     </style>
 </head>
 <body>
-    <!-- Hlavička - bude načítaná dynamicky -->
-    <div id="header-placeholder"></div>
-
-    <!-- Hlavný obsah pre prihlasovaciu stránku -->
-    <div id="root" class="flex items-center justify-center min-h-screen bg-gray-100">
-        <div class="w-full max-w-md p-4">
-            <div class="bg-white p-8 rounded-lg shadow-xl w-full">
-                <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Prihlásenie</h1>
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label for="email" class="block text-gray-700 text-sm font-bold mb-2">E-mail</label>
-                        <input type="email" id="email" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="Váš e-mail" required>
-                    </div>
-                    <div>
-                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Heslo</label>
-                        <input type="password" id="password" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500" placeholder="Vaše heslo" required>
-                    </div>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg w-full focus:outline-none focus:shadow-outline transition-colors duration-200">
-                        Prihlásiť sa
-                    </button>
-                </form>
-                <div id="login-error-message" class="text-red-500 text-center mt-4 hidden"></div>
-            </div>
-        </div>
+    <div class="login-container">
+        <h2 class="text-3xl font-bold mb-6 text-gray-800">Prihlásenie</h2>
+        <form id="login-form">
+            <input type="email" id="email" placeholder="Email" class="form-input" required>
+            <input type="password" id="password" placeholder="Heslo" class="form-input" required>
+            <button type="submit" class="form-button">Prihlásiť sa</button>
+        </form>
+        <div id="message-box" class="message-box hidden"></div>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- DÔLEŽITÉ: Definujte globálne premenné PRED načítaním Firebase SDK a vašich JS súborov -->
+    <script>
+        // Tieto premenné sú poskytované prostredím Canvas.
+        // Uistite sa, že sú dostupné. Ak nie sú, nastavte predvolené hodnoty.
+        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        window.firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // *** NAHRADTE TIETO ZASTUPNE HODNOTY VASIMI SKUTOCNYMI UDAJMI Z KONZOLY FIREBASE ***
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        window.initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    <!-- React a ReactDOM (ak ich login.html používa, inak ich môžete odstrániť) -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Globálne premenné pre Firebase config (pre React aplikácie a header) -->
-    <script type="text/javascript">
-        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-            projectId: "prihlasovanie-4f3f3",
-            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-            messagingSenderId: "26454452024",
-            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        });
-        const __initial_auth_token = null; // Pre login stránku môže byť null
-        const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
+        // Logovanie pre kontrolu, či sú premenné správne definované
+        console.log("login.html: appId:", window.appId);
+        console.log("login.html: firebaseConfig (len kľúče):", Object.keys(window.firebaseConfig));
+        console.log("login.html: initialAuthToken:", window.initialAuthToken ? "Definovaný" : "Nedefinovaný");
     </script>
+
+    <!-- Firebase SDK skripty -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <!-- Vlastné skripty -->
-    <script src="header.js"></script> <!-- Načítať header.js -->
-
-    <script type="text/javascript">
-        let firebaseAppMain; // Deklarujeme premennú pre hlavnú Firebase app
-
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-            } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-            }
-        }
-
-        // Spustí sa po načítaní DOM a všetkých skriptov
-        window.onload = function() {
-            loadHeader().then(() => {
-                // Po načítaní hlavičky inicializovať jej logiku
-                if (typeof initializeHeaderLogic === 'function') {
-                    initializeHeaderLogic();
-                } else {
-                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                }
-
-                // *** DÔLEŽITÉ: Inicializácia predvolenej Firebase aplikácie pre login.html ***
-                try {
-                    // Skontrolujeme, či už existuje predvolená aplikácia Firebase
-                    // Ak nie, inicializujeme ju. Ak áno, použijeme ju.
-                    // Hľadáme aplikáciu s názvom '[DEFAULT]'
-                    firebaseAppMain = firebase.apps.find(app => app.name === '[DEFAULT]');
-                    if (!firebaseAppMain) {
-                        firebaseAppMain = firebase.initializeApp(JSON.parse(__firebase_config));
-                        console.log("login.html: Predvolená Firebase aplikácia inicializovaná.");
-                    } else {
-                        console.log("login.html: Používa sa existujúca predvolená Firebase aplikácia.");
-                    }
-                } catch (e) {
-                    console.error("login.html: Chyba pri inicializácii predvolenej Firebase aplikácie:", e);
-                    const errorMessageDiv = document.getElementById('login-error-message');
-                    if (errorMessageDiv) {
-                        errorMessageDiv.textContent = `Chyba pri načítaní aplikácie: ${e.message}`;
-                        errorMessageDiv.classList.remove('hidden');
-                    }
-                    return;
-                }
-
-                const loginForm = document.getElementById('login-form');
-                const emailInput = document.getElementById('email');
-                const passwordInput = document.getElementById('password');
-                const errorMessageDiv = document.getElementById('login-error-message');
-
-                if (loginForm && firebaseAppMain) { // Kontrolujeme, či je hlavná app inicializovaná
-                    loginForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const email = emailInput.value;
-                        const password = passwordInput.value;
-                        errorMessageDiv.classList.add('hidden'); // Skryť predchádzajúce chyby
-
-                        try {
-                            // Použijeme auth inštanciu viazanú na firebaseAppMain
-                            const auth = firebase.auth(firebaseAppMain);
-                            await auth.signInWithEmailAndPassword(email, password);
-                            console.log("Prihlásenie úspešné, presmerovanie...");
-                            window.location.href = 'logged-in-my-data.html'; // Presmerovanie po úspešnom prihlásení
-                        } catch (error) {
-                            console.error("Chyba pri prihlásení:", error);
-                            let message = "Skontorlujte zadané prihlasovacie meno a heslo.";
-                            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                                message = "Nesprávne prihlasovacie údaje. Skúste to prosím znova.";
-                            } else if (error.code === 'auth/invalid-email') {
-                                message = "Neplatný formát e-mailu.";
-                            } else if (error.code === 'auth/network-request-failed') {
-                                message = "Chyba siete. Skontrolujte svoje pripojenie k internetu.";
-                            }
-                            errorMessageDiv.textContent = message;
-                            errorMessageDiv.classList.remove('hidden');
-                        }
-                    });
-                } else {
-                    console.warn("Prihlasovací formulár alebo hlavná Firebase aplikácia nie sú dostupné.");
-                }
-
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
-        };
-    </script>
+    <script src="header.js"></script> <!-- header.js musí byť načítaný po Firebase SDK -->
+    <script src="login.js"></script>
 </body>
 </html>
