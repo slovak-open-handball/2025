@@ -290,12 +290,12 @@ function MyDataApp() {
 
     try {
       if (typeof firebase === 'undefined') {
+        console.error("MyDataApp: Firebase SDK nie je načítané.");
         setError("Firebase SDK nie je načítané. Skontrolujte logged-in-my-data.html.");
         setLoading(false);
         return;
       }
 
-      // Získanie predvolenej Firebase aplikácie
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -312,7 +312,7 @@ function MyDataApp() {
           // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
           // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
         } catch (e) {
-          console.error("Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+          console.error("MyDataApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
@@ -331,7 +331,7 @@ function MyDataApp() {
         }
       };
     } catch (e) {
-      console.error("Nepodarilo sa inicializovať Firebase:", e);
+      console.error("MyDataApp: Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
@@ -340,7 +340,7 @@ function MyDataApp() {
   // NOVÝ EFFECT: Načítanie používateľských dát po inicializácii Auth a DB
   React.useEffect(() => {
     let unsubscribeUserDoc;
-    let loadingTimeout; // ZMENA: Pridaný timeout pre načítavanie
+    // ZMENA: Odstránený loadingTimeout, spoliehame sa na onSnapshot a jeho error callback.
 
     // Čakáme, kým je authReady, db je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
@@ -352,20 +352,17 @@ function MyDataApp() {
 
       // Ak je používateľ prihlásený, načítaj jeho dáta
       if (user) {
-        // ZMENA: Nastavíme timeout pre načítavanie
-        loadingTimeout = setTimeout(() => {
-          console.warn("MyDataApp: Načítanie používateľských dát trvá príliš dlho, nastavujem loading na false.");
-          setLoading(false);
-          // Ak sa tu stále zobrazuje chyba oprávnení, môže to znamenať problém s pravidlami
-          // alebo s pripojením k Firestore.
-        }, 10000); // 10 sekúnd timeout
+        console.log(`MyDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        // ZMENA: Nastavíme loading na true pred pokusom o načítanie dát
+        setLoading(true);
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout po prijatí snapshotu
+            console.log("MyDataApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
+              console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
               setUser(prevUser => ({
                 ...prevUser,
                 ...userData,
@@ -381,24 +378,35 @@ function MyDataApp() {
               setIsApproved(userData.approved || false);
               setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
               setLoading(false); // Stop loading po načítaní používateľských dát
+              setError(''); // Vymazať chyby po úspešnom načítaní
+              console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              // NEPRESmerovávame automaticky, necháme používateľa vidieť chybu.
             }
           }, error => {
-            clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout aj pri chybe
-            console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
-            if (error.code === 'permission-denied' || error.code === 'unavailable' || error.code === 'unauthenticated') {
-                setError(`Chyba oprávnení: ${error.message}. Skúste sa prosím znova prihlásiť.`);
+            console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+            if (error.code === 'permission-denied') {
+                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
+            } else if (error.code === 'unavailable') {
+                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
+            } else if (error.code === 'unauthenticated') {
+                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
+                 // Ak je to unauthenticated, môžeme zvážiť aj automatické odhlásenie
+                 if (auth) {
+                    auth.signOut();
+                    window.location.href = 'login.html';
+                 }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // ZMENA: Opravený typo
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
+            console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
-          clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout aj pri chybe v try bloku
-          console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
+          console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false); // Stop loading aj pri chybe
         }
@@ -406,13 +414,15 @@ function MyDataApp() {
     } else if (isAuthReady && user === undefined) {
         // Ak je authReady, ale user je stále undefined (čo by sa nemalo stať po onAuthStateChanged),
         // môžeme zvážiť nastavenie loading na false, aby sa UI nezaseklo.
+        console.log("MyDataApp: Auth ready, user undefined. Nastavujem loading na false.");
         setLoading(false);
     }
 
 
     return () => {
-      clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout pri unmount
+      // ZMENA: Zrušíme odber onSnapshot pri unmount
       if (unsubscribeUserDoc) {
+        console.log("MyDataApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
@@ -422,30 +432,40 @@ function MyDataApp() {
   React.useEffect(() => {
     const fetchSettings = async () => {
       if (!db || !isAuthReady) {
+        console.log("MyDataApp: Čakám na DB alebo Auth pre načítanie nastavení.");
         return; // Wait for DB and Auth to be initialized
       }
       try {
+          console.log("MyDataApp: Pokúšam sa načítať nastavenia registrácie.");
           const settingsDocRef = db.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("MyDataApp: onSnapshot pre nastavenia registrácie spustený.");
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
+                console.log("MyDataApp: Nastavenia registrácie existujú, dáta:", data);
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
             } else {
-                console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+                console.log("MyDataApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
+            console.log("MyDataApp: Načítanie nastavení dokončené, settingsLoaded: true.");
           }, error => {
-            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            console.error("MyDataApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            setSettingsLoaded(true);
+            setSettingsLoaded(true); // Nastavenia sú načítané aj v prípade chyby
           });
 
-          return () => unsubscribeSettings();
+          return () => {
+            if (unsubscribeSettings) {
+                console.log("MyDataApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                unsubscribeSettings();
+            }
+          };
       } catch (e) {
-          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
+          console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
       }
@@ -524,7 +544,7 @@ function MyDataApp() {
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("Chyba pri odhlásení:", e);
+      console.error("MyDataApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -573,7 +593,7 @@ function MyDataApp() {
       await user.updateProfile({ displayName: `${firstName} ${lastName}` });
       setUserNotificationMessage("Profil úspešne aktualizovaný!");
     } catch (e) {
-      console.error("Chyba pri aktualizácii profilu:", e);
+      console.error("MyDataApp: Chyba pri aktualizácii profilu:", e);
       setError(`Chyba pri aktualizácii profilu: ${e.message}`);
     } finally {
       setLoading(false);
@@ -591,18 +611,18 @@ function MyDataApp() {
     try {
       // 1. Delete user data from Firestore
       await db.collection('users').doc(user.uid).delete();
-      console.log("Používateľské dáta vymazané z Firestore.");
+      console.log("MyDataApp: Používateľské dáta vymazané z Firestore.");
 
       // 2. Delete user from Firebase Authentication
       await user.delete();
-      console.log("Používateľ vymazaný z Firebase Auth.");
+      console.log("MyDataApp: Používateľ vymazaný z Firebase Auth.");
 
       setUserNotificationMessage("Účet bol úspešne zmazaný. Budete presmerovaní na prihlasovaciu stránku.");
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 3000);
     } catch (e) {
-      console.error("Chyba pri mazaní účtu:", e);
+      console.error("MyDataApp: Chyba pri mazaní účtu:", e);
       setError(`Chyba pri mazaní účtu: ${e.message}. Možno sa musíte znova prihlásiť, ak ste sa prihlásili príliš dávno.`);
     } finally {
       setLoading(false);
@@ -622,7 +642,7 @@ function MyDataApp() {
       const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllUsers(usersList);
     } catch (e) {
-      console.error("Chyba pri načítaní všetkých používateľov:", e);
+      console.error("MyDataApp: Chyba pri načítaní všetkých používateľov:", e);
       setError(`Chyba pri načítaní používateľov: ${e.message}`);
     } finally {
       setLoading(false);
@@ -684,7 +704,7 @@ function MyDataApp() {
           newRole: newRole,
           isApproved: newRole === 'admin' ? false : true // Pass the approval status
         };
-        console.log("Odosielanie dát do Apps Script (zmena roly):", payload);
+        console.log("MyDataApp: Odosielanie dát do Apps Script (zmena roly):", payload);
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
@@ -693,19 +713,19 @@ function MyDataApp() {
           },
           body: JSON.stringify(payload)
         });
-        console.log("Požiadavka na odoslanie e-mailu o zmene roly odoslaná.");
+        console.log("MyDataApp: Požiadavka na odoslanie e-mailu o zmene roly odoslaná.");
         try {
           const responseData = await response.text();
-          console.log("Odpoveď z Apps Script (fetch - zmena roly) ako text:", responseData);
+          console.log("MyDataApp: Odpoveď z Apps Script (fetch - zmena roly) ako text:", responseData);
         } catch (jsonError) {
-          console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
+          console.warn("MyDataApp: Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
         }
       } catch (emailError) {
-        console.error("Chyba pri odosielaní e-mailu o zmene roly cez Apps Script (chyba fetch):", emailError);
+        console.error("MyDataApp: Chyba pri odosielaní e-mailu o zmene roly cez Apps Script (chyba fetch):", emailError);
       }
 
     } catch (e) {
-      console.error("Chyba pri aktualizácii roly:", e);
+      console.error("MyDataApp: Chyba pri aktualizácii roly:", e);
       setError(`Chyba pri aktualizácii roly: ${e.message}`);
     } finally {
       setLoading(false);
@@ -736,7 +756,7 @@ function MyDataApp() {
           firstName: targetUser.firstName,
           lastName: targetUser.lastName
         };
-        console.log("Odosielanie dát do Apps Script (schválenie):", payload);
+        console.log("MyDataApp: Odosielanie dát do Apps Script (schválenie):", payload);
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
           method: 'POST',
           mode: 'no-cors',
@@ -745,19 +765,19 @@ function MyDataApp() {
           },
           body: JSON.stringify(payload)
         });
-        console.log("Požiadavka na odoslanie e-mailu o schválení odoslaná.");
+        console.log("MyDataApp: Požiadavka na odoslanie e-mailu o schválení odoslaná.");
         try {
           const responseData = await response.text();
-          console.log("Odpoveď z Apps Script (fetch - schválenie) ako text:", responseData);
+          console.log("MyDataApp: Odpoveď z Apps Script (fetch - schválenie) ako text:", responseData);
         } catch (jsonError) {
-          console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
+          console.warn("MyDataApp: Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
         }
       } catch (emailError) {
-        console.error("Chyba pri odosielaní e-mailu o schválení cez Apps Script (chyba fetch):", emailError);
+        console.error("MyDataApp: Chyba pri odosielaní e-mailu o schválení cez Apps Script (chyba fetch):", emailError);
       }
 
     } catch (e) {
-      console.error("Chyba pri schvaľovaní používateľa:", e);
+      console.error("MyDataApp: Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
@@ -791,7 +811,7 @@ function MyDataApp() {
       });
       setUserNotificationMessage("Nastavenia registrácie úspešne aktualizované!");
     } catch (e) {
-      console.error("Chyba pri aktualizácii nastavení registrácie:", e);
+      console.error("MyDataApp: Chyba pri aktualizácii nastavení registrácie:", e);
       setError(`Chyba pri aktualizácii nastavení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -799,28 +819,27 @@ function MyDataApp() {
   };
 
   // Display loading state
-  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
-  // Ak je user objekt (prihlásený), ale role nie je admin a stránka je admin-panel, presmeruj.
-  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { // Čakáme, kým je authReady a loading je false
+  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia), alebo settingsLoaded je false,
+  // alebo loading je true (čo by malo byť len pri načítaní používateľských dát), zobraz loading.
+  if (!isAuthReady || user === undefined || !settingsLoaded || loading) {
     // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
     if (isAuthReady && user === null) {
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
-    // Ak je užívateľ prihlásený, ale ešte sa načítavajú nastavenia alebo dáta
-    if (user && (!settingsLoaded || user.firstName === undefined)) { // Pridana kontrola na user.firstName pre počiatočné načítanie dát
-        return React.createElement(
-            'div',
-            { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-            React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia a používateľské dáta...')
-        );
+    // Zobrazenie rôznych správ podľa stavu načítavania
+    let loadingMessage = 'Načítavam aplikáciu...';
+    if (isAuthReady && user && !settingsLoaded) {
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (isAuthReady && user && settingsLoaded && loading) {
+        loadingMessage = 'Načítavam používateľské dáta...';
     }
-    // Všetky ostatné prípady načítavania
+
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
     );
   }
 
