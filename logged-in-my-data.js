@@ -286,6 +286,7 @@ function MyDataApp() {
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
+    let unsubscribeUserDoc; // Declare unsubscribe for user doc
     let firestoreInstance;
 
     try {
@@ -320,17 +321,21 @@ function MyDataApp() {
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser);
-        setIsAuthReady(true);
+        setUser(currentUser); // Set user state to null or user object
+        setIsAuthReady(true); // Mark auth as ready after the first check
+
         if (!currentUser) {
           // If not logged in, redirect to login page
+          console.log("MyDataApp: Používateľ nie je prihlásený, presmerovávam na login.html");
           window.location.href = 'login.html';
           return;
         }
+
+        // If user is logged in, fetch user data
         if (currentUser && firestoreInstance) {
           try {
             const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
-            const unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+            unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => { // Assign to unsubscribeUserDoc
               if (docSnapshot.exists) {
                 const userData = docSnapshot.data();
                 setUser(prevUser => ({
@@ -353,20 +358,20 @@ function MyDataApp() {
                 authInstance.signOut();
                 window.location.href = 'login.html';
               }
+              setLoading(false); // Stop loading after user data is fetched or determined not to exist
             }, error => {
               console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
               setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+              setLoading(false); // Stop loading on error
             });
-            // Return cleanup for userDoc snapshot
-            return () => {
-              if (unsubscribeUserDoc) unsubscribeUserDoc();
-            };
           } catch (e) {
             console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
             setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+            setLoading(false); // Stop loading on error
           }
+        } else {
+            setLoading(false); // If no current user or firestore, stop loading
         }
-        setLoading(false); // Auth state checked, stop loading
       });
 
       signIn();
@@ -374,6 +379,9 @@ function MyDataApp() {
       return () => {
         if (unsubscribeAuth) {
           unsubscribeAuth();
+        }
+        if (unsubscribeUserDoc) { // Cleanup for userDoc snapshot
+            unsubscribeUserDoc();
         }
       };
     } catch (e) {
@@ -402,12 +410,10 @@ function MyDataApp() {
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
           });
 
           return () => unsubscribeSettings();
@@ -415,7 +421,6 @@ function MyDataApp() {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          // setLoading(false); // Moved to authStateChanged
       }
     };
 
@@ -769,24 +774,22 @@ function MyDataApp() {
   // Display loading state
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
   // Ak je user objekt (prihlásený), ale role nie je admin a stránka je admin-panel, presmeruj.
-  if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
-    // Check if the current page is admin-panel.html
-    const currentPath = window.location.pathname.split('/').pop();
-    if (currentPath === 'admin-panel.html' && user && user.role !== 'admin') {
-      window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
-      return null;
-    }
-    if (user === null) { // If explicitly not logged in, redirect to login
+  if (!isAuthReady || loading || user === undefined) { // Čakáme, kým je authReady a loading je false
+    // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
+    if (isAuthReady && user === null) {
+        console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
-    if (user && !user.uid) { // If user object exists but no UID, means it's still loading or invalid
+    // Ak je užívateľ prihlásený, ale ešte sa načítavajú nastavenia alebo dáta
+    if (user && !settingsLoaded) {
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-            React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam používateľské dáta...')
+            React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia a používateľské dáta...')
         );
     }
+    // Všetky ostatné prípady načítavania
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -794,17 +797,12 @@ function MyDataApp() {
     );
   }
 
-  // If not loading and user is null, it means they are not logged in, redirect to login
-  if (user === null) {
-    window.location.href = 'login.html';
-    return null;
-  }
-
   const currentPath = window.location.pathname.split('/').pop();
   const is_admin_panel_page = currentPath === 'admin-panel.html';
 
   // If user is not admin and trying to access admin panel, redirect
   if (is_admin_panel_page && user && user.role !== 'admin') {
+    console.log("MyDataApp: Používateľ nie je admin a snaží sa pristupovať k admin panelu, presmerovávam.");
     window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
     return null;
   }
