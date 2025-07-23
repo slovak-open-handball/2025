@@ -45,11 +45,9 @@
 
     <!-- Hlavný obsah pre prihlasovaciu stránku -->
     <div id="root" class="flex items-center justify-center min-h-screen bg-gray-100">
-        <!-- Tu bude obsah prihlasovacieho formulára, napr. z login-app.js -->
         <div class="w-full max-w-md p-4">
             <div class="bg-white p-8 rounded-lg shadow-xl w-full">
                 <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Prihlásenie</h1>
-                <!-- Príklad obsahu, nahraďte skutočným formulárom -->
                 <form id="login-form" class="space-y-4">
                     <div>
                         <label for="email" class="block text-gray-700 text-sm font-bold mb-2">E-mail</label>
@@ -98,10 +96,10 @@
 
     <!-- Vlastné skripty -->
     <script src="header.js"></script> <!-- Načítať header.js -->
-    <!-- Ak máte login.js alebo login-app.js, načítajte ho tu -->
-    <!-- <script type="text/babel" src="login-app.js"></script> -->
 
     <script type="text/javascript">
+        let firebaseAppMain; // Deklarujeme premennú pre hlavnú Firebase app
+
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
             try {
@@ -130,39 +128,31 @@
                 // *** DÔLEŽITÉ: Inicializácia predvolenej Firebase aplikácie pre login.html ***
                 try {
                     // Skontrolujeme, či už existuje predvolená aplikácia Firebase
-                    if (firebase.apps.length === 0) {
-                        firebase.initializeApp(JSON.parse(__firebase_config));
+                    // Ak nie, inicializujeme ju. Ak áno, použijeme ju.
+                    // Hľadáme aplikáciu s názvom '[DEFAULT]'
+                    firebaseAppMain = firebase.apps.find(app => app.name === '[DEFAULT]');
+                    if (!firebaseAppMain) {
+                        firebaseAppMain = firebase.initializeApp(JSON.parse(__firebase_config));
                         console.log("login.html: Predvolená Firebase aplikácia inicializovaná.");
                     } else {
                         console.log("login.html: Používa sa existujúca predvolená Firebase aplikácia.");
                     }
                 } catch (e) {
                     console.error("login.html: Chyba pri inicializácii predvolenej Firebase aplikácie:", e);
-                    // Zobraziť chybu používateľovi, ak inicializácia zlyhá
                     const errorMessageDiv = document.getElementById('login-error-message');
                     if (errorMessageDiv) {
                         errorMessageDiv.textContent = `Chyba pri načítaní aplikácie: ${e.message}`;
                         errorMessageDiv.classList.remove('hidden');
                     }
-                    return; // Zastaviť ďalšie spracovanie, ak Firebase zlyhá
+                    return;
                 }
 
-
-                // Ak máte React aplikáciu pre login, renderujte ju tu
-                // if (typeof LoginApp === 'function') {
-                //     const root = ReactDOM.createRoot(document.getElementById('root'));
-                //     root.render(React.createElement(LoginApp, null));
-                // } else {
-                //     console.warn("Komponent LoginApp nie je definovaný.");
-                // }
-
-                // Príklad základnej prihlasovacej logiky pre login.html (ak nepoužívate React pre formulár)
                 const loginForm = document.getElementById('login-form');
                 const emailInput = document.getElementById('email');
                 const passwordInput = document.getElementById('password');
                 const errorMessageDiv = document.getElementById('login-error-message');
 
-                if (loginForm && firebase.auth) {
+                if (loginForm && firebaseAppMain) { // Kontrolujeme, či je hlavná app inicializovaná
                     loginForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
                         const email = emailInput.value;
@@ -170,7 +160,8 @@
                         errorMessageDiv.classList.add('hidden'); // Skryť predchádzajúce chyby
 
                         try {
-                            const auth = firebase.auth(); // Použijeme predvolenú inštanciu
+                            // Použijeme auth inštanciu viazanú na firebaseAppMain
+                            const auth = firebase.auth(firebaseAppMain);
                             await auth.signInWithEmailAndPassword(email, password);
                             console.log("Prihlásenie úspešné, presmerovanie...");
                             window.location.href = 'logged-in-my-data.html'; // Presmerovanie po úspešnom prihlásení
@@ -178,16 +169,18 @@
                             console.error("Chyba pri prihlásení:", error);
                             let message = "Nastala neznáma chyba. Skúste to prosím znova.";
                             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                                message = "Nepodarilo sa prihlásiť – nesprávne meno alebo heslo.";
+                                message = "Nesprávne prihlasovacie údaje. Skúste to prosím znova.";
                             } else if (error.code === 'auth/invalid-email') {
                                 message = "Neplatný formát e-mailu.";
+                            } else if (error.code === 'auth/network-request-failed') {
+                                message = "Chyba siete. Skontrolujte svoje pripojenie k internetu.";
                             }
                             errorMessageDiv.textContent = message;
                             errorMessageDiv.classList.remove('hidden');
                         }
                     });
                 } else {
-                    console.warn("Prihlasovací formulár alebo Firebase Auth nie sú dostupné.");
+                    console.warn("Prihlasovací formulár alebo hlavná Firebase aplikácia nie sú dostupné.");
                 }
 
             }).catch(error => {
