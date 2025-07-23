@@ -69,6 +69,9 @@
           appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
         const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        
+        // NOVINKA: Inicializácia Firebase aplikácie globálne
+        firebase.initializeApp(firebaseConfig);
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
