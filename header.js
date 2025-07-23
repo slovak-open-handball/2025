@@ -19,6 +19,7 @@ let app;
 let auth;
 let db;
 let userId = null; // ID používateľa
+let isRegistrationOpen = false; // Stav registrácie
 
 // Funkcia na inicializáciu Firebase
 async function initializeFirebase() {
@@ -60,28 +61,77 @@ async function initializeFirebase() {
             }
         });
 
+        // Načítanie stavu registrácie po inicializácii Firebase
+        await fetchRegistrationStatus();
+
     } catch (error) {
         console.error("Chyba pri inicializácii Firebase alebo prihlásení:", error);
         showGlobalMessage(`Chyba pri inicializácii: ${error.message}`, "error");
     }
 }
 
-// Funkcia na aktualizáciu navigačného menu na základe stavu prihlásenia
+// Funkcia na načítanie stavu registrácie z Firestore
+async function fetchRegistrationStatus() {
+    if (!db) {
+        console.error("Firestore nie je inicializovaný.");
+        return;
+    }
+    try {
+        // Cesta k dokumentu s nastaveniami registrácie
+        // Používame __app_id pre dynamickú cestu
+        const docRef = db.collection(`artifacts/${window.appId}/public/data/app_settings`).doc('registration_status');
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+            isRegistrationOpen = docSnap.data().isOpen || false;
+            console.log("Stav registrácie načítaný:", isRegistrationOpen);
+        } else {
+            console.log("Dokument 'registration_status' neexistuje. Predvolený stav: zatvorená.");
+            isRegistrationOpen = false;
+        }
+        // Aktualizovať navigáciu na základe novo načítaného stavu registrácie
+        // Používame auth.currentUser?.uid pre kontrolu, či je používateľ prihlásený
+        updateNavigation(auth.currentUser !== null);
+
+    } catch (error) {
+        console.error("Chyba pri načítaní stavu registrácie z Firestore:", error);
+        showGlobalMessage(`Chyba pri načítaní stavu registrácie: ${error.message}`, "error");
+        isRegistrationOpen = false; // V prípade chyby predpokladáme, že registrácia je zatvorená
+        updateNavigation(auth.currentUser !== null); // Aj tak aktualizovať navigáciu
+    }
+}
+
+
+// Funkcia na aktualizáciu navigačného menu na základe stavu prihlásenia a stavu registrácie
 function updateNavigation(isLoggedIn) {
     const myZoneNavItem = document.getElementById('my-zone-nav-item');
     const loginNavItem = document.getElementById('login-nav-item');
+    const registrationNavItem = document.getElementById('registration-nav-item');
     const logoutNavItem = document.getElementById('logout-nav-item');
     const logoutButton = document.getElementById('logout-button');
+    const tournamentRegistrationTextItem = document.getElementById('tournament-registration-text-item');
 
+    // "Moja zóna" sa zobrazuje len prihláseným používateľom
     if (myZoneNavItem) {
         myZoneNavItem.classList.toggle('hidden', !isLoggedIn);
     }
+    // "Prihlásenie" sa zobrazuje len odhláseným používateľom
     if (loginNavItem) {
         loginNavItem.classList.toggle('hidden', isLoggedIn);
     }
+    // "Registrácia" sa zobrazuje len ak je otvorená a používateľ nie je prihlásený
+    if (registrationNavItem) {
+        registrationNavItem.classList.toggle('hidden', !(isRegistrationOpen && !isLoggedIn));
+    }
+    // "Odhlásenie" sa zobrazuje len prihláseným používateľom
     if (logoutNavItem) {
         logoutNavItem.classList.toggle('hidden', !isLoggedIn);
     }
+    // "Registrácia na turnaj" text sa zobrazuje len ak je otvorená registrácia
+    if (tournamentRegistrationTextItem) {
+        tournamentRegistrationTextItem.classList.toggle('hidden', !isRegistrationOpen);
+    }
+
 
     if (logoutButton) {
         logoutButton.onclick = async () => {
@@ -111,7 +161,7 @@ async function loadHeader() {
             headerContainer.innerHTML = headerHtml;
             console.log("header.html úspešne načítaný.");
             // Po načítaní hlavičky inicializujeme Firebase a nastavíme listenery
-            initializeFirebase();
+            await initializeFirebase(); // Používame await, aby sa zabezpečila inicializácia pred aktualizáciou UI
         } else {
             console.error("Kontajner s ID 'main-header' nebol nájdený.");
             showGlobalMessage("Chyba: Kontajner pre hlavičku chýba.", "error");
@@ -126,10 +176,9 @@ async function loadHeader() {
 document.addEventListener('DOMContentLoaded', loadHeader);
 
 // Exportujte premenné a funkcie, ak ich potrebujete v iných skriptoch
-// Pre jednoduchosť v tomto príklade používame globálne premenné (window.auth, window.db, window.userId)
-// Ak by ste chceli modulárny prístup, použili by ste export/import.
 // Sprístupníme ich globálne pre index.js
 window.auth = auth;
 window.db = db;
 window.getUserId = () => userId; // Funkcia na získanie ID používateľa
 window.showGlobalMessage = showGlobalMessage; // Sprístupní funkciu pre globálne správy
+window.isRegistrationOpen = () => isRegistrationOpen; // Sprístupní stav registrácie
