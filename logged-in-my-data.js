@@ -1025,15 +1025,6 @@ function MyDataApp() {
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
           ),
-          React.createElement(
-            'button',
-            {
-              onClick: () => openConfirmationModal(user),
-              className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full mt-4 transition-colors duration-200',
-              disabled: loading,
-            },
-            'Zmazať účet'
-          )
         ),
 
         // Admin Panel Section
