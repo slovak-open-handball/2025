@@ -954,7 +954,7 @@ function MyDataApp() {
                     return;
                   }
                   if (value.length === 1 && value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom +.");
                     e.target.reportValidity();
                     return;
                   }
@@ -970,17 +970,17 @@ function MyDataApp() {
                   if (e.target.value.length === 0) {
                     e.target.setCustomValidity("Vyplňte prosím toto pole.");
                   } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom +.");
                   } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
                     e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
                   } else {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom + a obsahovať iba číslice (napr. +421901234567).");
                   }
                 },
                 required: true,
                 placeholder: '+421901234567',
                 pattern: '^\\+\\d+$',
-                title: 'Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).',
+                title: 'Telefónne číslo musí začínať znakom + a obsahovať iba číslice (napr. +421901234567).',
                 disabled: loading,
               })
             ),
