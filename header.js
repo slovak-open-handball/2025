@@ -1,55 +1,47 @@
 // header.js
 
-// Tieto premenné sú teraz definované globálne v index.html a mali by byť prístupné.
-// Odstránené duplicitné deklarácie:
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
+// Tieto premenné sú definované globálne v index.html a mali by byť prístupné.
+// const __app_id, __firebase_config, __initial_auth_token, __firebase_app_name
 
-let firebaseAppHeader;
+let firebaseAppHeader; // Toto bude teraz odkazovať na predvolenú aplikáciu
 let authHeader;
 let dbHeader;
 
-// Flag to ensure initializeHeaderLogic runs only once
+// Flag na zabezpečenie, že initializeHeaderLogic sa spustí iba raz
 let headerLogicInitialized = false;
 
-// Funkcia na inicializáciu Firebase a nastavenie poslucháčov pre hlavičku
-function setupFirebaseForHeader() {
-    // Ak už sú inštancie Firebase definované, preskočíme inicializáciu
-    if (firebaseAppHeader && authHeader && dbHeader) {
-        console.log("header.js: Firebase už je inicializovaná pre hlavičku.");
-        return;
-    }
-
+// Funkcia na získanie inštancií Firebase (mala by byť volaná po načítaní Firebase SDK a inicializácii predvolenej aplikácie)
+function getFirebaseInstances() {
     try {
-        // Používame globálne premenné __firebase_config a __firebase_app_name
-        const config = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appName = typeof __firebase_app_name !== 'undefined' ? __firebase_app_name : 'headerApp';
-
-        // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom
-        firebaseAppHeader = firebase.apps.find(app => app.name === appName);
-        if (!firebaseAppHeader) {
-            firebaseAppHeader = firebase.initializeApp(config, appName);
-            console.log(`header.js: Firebase aplikácia '${appName}' inicializovaná.`);
-        } else {
-            console.log(`header.js: Používa sa existujúca Firebase aplikácia '${appName}'.`);
-        }
-
-        authHeader = firebase.auth(firebaseAppHeader); // Explicitne viažeme auth na pomenovanú aplikáciu
-        dbHeader = firebase.firestore(firebaseAppHeader); // Explicitne viažeme firestore na pomenovanú aplikáciu
-
+        // Pokúste sa získať predvolenú inštanciu Firebase aplikácie
+        firebaseAppHeader = firebase.app(); // Získať predvolenú aplikáciu
+        authHeader = firebase.auth(); // Získať auth pre predvolenú aplikáciu
+        dbHeader = firebase.firestore(); // Získať firestore pre predvolenú aplikáciu
+        console.log("header.js: Získané Firebase inštancie (predvolená aplikácia).");
     } catch (e) {
-        console.error("header.js: Chyba pri inicializácii Firebase:", e);
+        console.error("header.js: Chyba pri získavaní Firebase inštancií:", e);
+        // Fallback: ak predvolená aplikácia nie je inicializovaná, skúste ju inicializovať
+        // (toto by sa však ideálne nemalo stať, ak sa index.html načíta správne)
+        if (typeof __firebase_config !== 'undefined') {
+            try {
+                const config = JSON.parse(__firebase_config);
+                firebaseAppHeader = firebase.initializeApp(config, '[DEFAULT]'); // Skúste inicializovať predvolenú, ak nebola nájdená
+                authHeader = firebase.auth(firebaseAppHeader);
+                dbHeader = firebase.firestore(firebaseAppHeader);
+                console.warn("header.js: Predvolená Firebase aplikácia inicializovaná ako fallback.");
+            } catch (initError) {
+                console.error("header.js: Chyba pri inicializácii Firebase ako fallback:", initError);
+            }
+        }
     }
 }
-
 
 let currentHeaderUser = null;
 let currentIsRegistrationOpenStatus = false;
 
 // Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke
 function updateHeaderLinks(user, isRegistrationOpen) {
-    console.log("updateHeaderLinks volaná. User:", user ? user.uid : "null", "isRegistrationOpen:", isRegistrationOpen);
+    console.log("updateHeaderLinks volaná. Používateľ:", user ? user.uid : "null", "Je registrácia otvorená:", isRegistrationOpen);
     const registerLink = document.getElementById('register-link');
     const profileLink = document.getElementById('profile-link');
     const authLink = document.getElementById('auth-link');
@@ -92,8 +84,8 @@ function initializeHeaderLogic() {
     headerLogicInitialized = true;
     console.log("header.js: Spúšťam initializeHeaderLogic.");
 
-    // Setup Firebase for header
-    setupFirebaseForHeader();
+    // Získajte Firebase inštancie
+    getFirebaseInstances(); // Volajte túto funkciu tu, aby ste zabezpečili dostupnosť inštancií
 
     if (authHeader) {
         authHeader.onAuthStateChanged(user => {
