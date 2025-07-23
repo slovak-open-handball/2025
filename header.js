@@ -1,7 +1,7 @@
 // header.js
 
 // Tieto premenné sú definované globálne v index.html a mali by byť prístupné.
-// const __app_id, __firebase_config, __initial_auth_token, __firebase_app_name
+// const __app_id, __firebase_config, __initial_auth_token
 
 let firebaseAppHeader; // Toto bude teraz odkazovať na predvolenú aplikáciu
 let authHeader;
@@ -14,25 +14,16 @@ let headerLogicInitialized = false;
 function getFirebaseInstances() {
     try {
         // Pokúste sa získať predvolenú inštanciu Firebase aplikácie
-        firebaseAppHeader = firebase.app(); // Získať predvolenú aplikáciu
-        authHeader = firebase.auth(); // Získať auth pre predvolenú aplikáciu
-        dbHeader = firebase.firestore(); // Získať firestore pre predvolenú aplikáciu
+        // Predpokladáme, že firebase.app() už bola inicializovaná hlavným skriptom (index.js)
+        firebaseAppHeader = firebase.app();
+        authHeader = firebase.auth();
+        dbHeader = firebase.firestore();
         console.log("header.js: Získané Firebase inštancie (predvolená aplikácia).");
     } catch (e) {
-        console.error("header.js: Chyba pri získavaní Firebase inštancií:", e);
-        // Fallback: ak predvolená aplikácia nie je inicializovaná, skúste ju inicializovať
-        // (toto by sa však ideálne nemalo stať, ak sa index.html načíta správne)
-        if (typeof __firebase_config !== 'undefined') {
-            try {
-                const config = JSON.parse(__firebase_config);
-                firebaseAppHeader = firebase.initializeApp(config, '[DEFAULT]'); // Skúste inicializovať predvolenú, ak nebola nájdená
-                authHeader = firebase.auth(firebaseAppHeader);
-                dbHeader = firebase.firestore(firebaseAppHeader);
-                console.warn("header.js: Predvolená Firebase aplikácia inicializovaná ako fallback.");
-            } catch (initError) {
-                console.error("header.js: Chyba pri inicializácii Firebase ako fallback:", initError);
-            }
-        }
+        console.error("header.js: Chyba pri získavaní Firebase inštancií. Uistite sa, že Firebase je inicializovaná pred volaním initializeHeaderLogic():", e);
+        // Dôležité: Tu už nebudeme skúšať inicializovať Firebase ako fallback,
+        // pretože to vedie k problému s viacerými inštanciami predvolenej aplikácie.
+        // Očakávame, že Firebase je inicializovaná inde (v index.js).
     }
 }
 
@@ -76,6 +67,7 @@ function updateHeaderLinks(user, isRegistrationOpen) {
 }
 
 // Funkcia na inicializáciu poslucháčov a logiky hlavičky
+// Táto funkcia bude volaná z index.js po inicializácii Firebase
 function initializeHeaderLogic() {
     if (headerLogicInitialized) {
         console.log("header.js: initializeHeaderLogic už bola spustená.");
@@ -94,7 +86,7 @@ function initializeHeaderLogic() {
             updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
         });
     } else {
-        console.error("header.js: Auth inštancia nie je definovaná.");
+        console.error("header.js: Auth inštancia nie je definovaná. Hlavička nebude správne reagovať na zmeny prihlásenia.");
     }
 
     if (dbHeader) {
@@ -124,7 +116,7 @@ function initializeHeaderLogic() {
             updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
         });
     } else {
-        console.error("header.js: Firestore inštancia nie je definovaná.");
+        console.error("header.js: Firestore inštancia nie je definovaná. Hlavička nebude správne reagovať na stav registrácie.");
     }
 
     // Spracovanie odhlásenia pre tlačidlo v hlavičke
@@ -144,18 +136,5 @@ function initializeHeaderLogic() {
         console.log("header.js: Tlačidlo pre odhlásenie nebolo nájdené.");
     }
 }
-
-// Spustí initializeHeaderLogic, keď je DOM plne načítaný.
-// Toto zabezpečí, že sa hlavička inicializuje aj na stránkach,
-// kde nie je dynamicky načítaná cez loadHeader().
-document.addEventListener('DOMContentLoaded', () => {
-    // Ak header-placeholder neexistuje, znamená to, že header.html je pravdepodobne priamo vložený.
-    // V takom prípade voláme initializeHeaderLogic priamo.
-    // Ak header-placeholder existuje, očakávame, že initializeHeaderLogic bude volaná z hlavného skriptu (napr. index.html).
-    if (!document.getElementById('header-placeholder')) {
-        console.log("header.js: 'header-placeholder' nenájdený, volám initializeHeaderLogic pri DOMContentLoaded.");
-        initializeHeaderLogic();
-    } else {
-        console.log("header.js: 'header-placeholder' nájdený, očakávam, že initializeHeaderLogic bude volaná z hlavného skriptu (napr. index.html).");
-    }
-});
+// Dôležité: Funkcia initializeHeaderLogic už nie je volaná priamo z DOMContentLoaded v header.js.
+// Bude volaná z index.js po inicializácii Firebase.
