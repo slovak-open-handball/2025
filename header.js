@@ -1,123 +1,135 @@
 // header.js
-// Tento skript dynamicky aktualizuje navigačnú lištu na základe stavu prihlásenia používateľa.
-// Je tiež zodpovedný za JEDINÚ inicializáciu Firebase v aplikácii.
+// Tento skript sa stará o načítanie obsahu header.html a správu prihlásenia/odhlásenia.
 
-// Dôležité: Predpokladá sa, že globálne premenné `appId`, `firebaseConfig` a `initialAuthToken`
-// sú definované v HTML súbore PRED načítaním tohto skriptu.
-
-(function() {
-    // Kontrola, či sú globálne premenné k dispozícii.
-    if (typeof appId === 'undefined' || typeof firebaseConfig === 'undefined' || typeof initialAuthToken === 'undefined') {
-        console.error("Chyba: Globálne premenné appId, firebaseConfig alebo initialAuthToken nie sú definované. Uistite sa, že sú definované v HTML pred načítaním header.js.");
-        // Ak nie sú definované, nastavíme ich na bezpečné, ale nefunkčné predvolené hodnoty
-        window.appId = window.appId || 'default-app-id';
-        window.firebaseConfig = window.firebaseConfig || {};
-        window.initialAuthToken = window.initialAuthToken || null;
+// Funkcia na zobrazenie globálnej správy (namiesto alert())
+function showGlobalMessage(message, type = 'info') {
+    const messageBox = document.getElementById('global-message-box');
+    if (messageBox) {
+        messageBox.textContent = message;
+        messageBox.className = `message-box ${type}`; // Nastaví triedu pre štýl (success, error, info)
+        messageBox.classList.remove('hidden'); // Zobrazí správu
+        setTimeout(() => {
+            messageBox.classList.add('hidden'); // Skryje správu po 5 sekundách
+        }, 5000);
     }
+}
 
-    // Inicializácia Firebase aplikácie
-    let app;
-    let auth;
-    let db;
+// Inicializácia Firebase a Firestore
+let app;
+let auth;
+let db;
+let userId = null; // ID používateľa
 
-    // Kontrola, či už Firebase nie je inicializovaný.
-    if (!firebase.apps.length) {
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth(app);
-            db = firebase.firestore(app);
-            console.log("Firebase inicializovaný v header.js.");
-
-            // Prihlásenie s vlastným tokenom alebo anonymne
-            const signIn = async () => {
-                try {
-                    if (initialAuthToken) {
-                        await auth.signInWithCustomToken(initialAuthToken);
-                        console.log("Používateľ prihlásený s vlastným tokenom v header.js.");
-                    } else {
-                        await auth.signInAnonymously();
-                        console.log("Používateľ prihlásený anonymne v header.js.");
-                    }
-                } catch (error) {
-                    console.error("Chyba pri prihlásení v header.js:", error);
-                }
-            };
-            signIn();
-
-        } catch (error) {
-            console.error("Chyba pri inicializácii Firebase v header.js:", error);
+// Funkcia na inicializáciu Firebase
+async function initializeFirebase() {
+    try {
+        // Kontrola, či sú globálne premenné dostupné
+        if (typeof window.firebaseConfig === 'undefined' || typeof window.appId === 'undefined') {
+            console.error("Firebase config alebo App ID nie sú definované globálne.");
+            showGlobalMessage("Chyba: Konfigurácia aplikácie chýba.", "error");
+            return;
         }
-    } else {
-        // Ak je Firebase už inicializovaný, použijeme existujúcu inštanciu.
-        app = firebase.app();
-        auth = firebase.auth(app);
-        db = firebase.firestore(app);
-        console.log("Firebase už bol inicializovaný, použil sa existujúci v header.js.");
-    }
 
-    // Funkcia na aktualizáciu viditeľnosti navigačných prvkov
-    const updateNavVisibility = (user) => {
-        const loginNavItem = document.getElementById('login-nav-item');
-        const myZoneNavItem = document.getElementById('my-zone-nav-item');
-        const logoutNavItem = document.getElementById('logout-nav-item');
+        app = firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth(); // Používa compat verziu
+        db = firebase.firestore(); // Používa compat verziu
 
-        if (loginNavItem && myZoneNavItem && logoutNavItem) {
-            // Ak používateľ existuje A NIE JE anonymný, zobrazíme "Moja Zóna" a "Odhlásenie"
-            if (user && !user.isAnonymous) {
-                console.log("Navigácia aktualizovaná: Prihlásený používateľ (nie anonymný).");
-                loginNavItem.classList.add('hidden'); // Skryť Prihlásenie
-                myZoneNavItem.classList.remove('hidden'); // Zobraziť Moja Zóna
-                logoutNavItem.classList.remove('hidden'); // Zobraziť Odhlásenie
+        console.log("Firebase inicializovaný.");
+
+        // Prihlásenie používateľa pomocou custom tokenu alebo anonymne
+        if (window.initialAuthToken) {
+            await auth.signInWithCustomToken(window.initialAuthToken);
+            console.log("Prihlásený pomocou custom tokenu.");
+        } else {
+            await auth.signInAnonymously();
+            console.log("Prihlásený anonymne.");
+        }
+
+        // Listener pre zmeny stavu autentifikácie
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userId = user.uid;
+                console.log("Používateľ prihlásený:", userId);
+                updateNavigation(true); // Aktualizovať navigáciu pre prihláseného používateľa
+                showGlobalMessage(`Vitajte, používateľ ${userId}!`, "success");
             } else {
-                // Používateľ NIE JE prihlásený, alebo je prihlásený anonymne
-                console.log("Navigácia aktualizovaná: Používateľ odhlásený alebo anonymný.");
-                loginNavItem.classList.remove('hidden'); // Zobraziť Prihlásenie
-                myZoneNavItem.classList.add('hidden'); // Skryť Moja Zóna
-                logoutNavItem.classList.add('hidden'); // Skryť Odhlásenie
+                userId = null;
+                console.log("Používateľ odhlásený.");
+                updateNavigation(false); // Aktualizovať navigáciu pre odhláseného používateľa
+                showGlobalMessage("Boli ste odhlásení.", "info");
             }
-        } else {
-            console.warn("Chyba: Niektoré navigačné prvky neboli nájdené v DOM. Uistite sa, že header.html je načítaný správne.");
-        }
-    };
-
-    // Poslucháč zmien stavu autentifikácie
-    if (auth) {
-        auth.onAuthStateChanged((user) => {
-            console.log("onAuthStateChanged triggered. Používateľ:", user ? (user.isAnonymous ? "Anonymný" : user.uid) : "null (odhlásený)");
-            updateNavVisibility(user);
         });
-    } else {
-        console.error("Firebase Auth nie je inicializovaný. Nemôžem nastaviť poslucháča stavu autentifikácie.");
+
+    } catch (error) {
+        console.error("Chyba pri inicializácii Firebase alebo prihlásení:", error);
+        showGlobalMessage(`Chyba pri inicializácii: ${error.message}`, "error");
+    }
+}
+
+// Funkcia na aktualizáciu navigačného menu na základe stavu prihlásenia
+function updateNavigation(isLoggedIn) {
+    const myZoneNavItem = document.getElementById('my-zone-nav-item');
+    const loginNavItem = document.getElementById('login-nav-item');
+    const logoutNavItem = document.getElementById('logout-nav-item');
+    const logoutButton = document.getElementById('logout-button');
+
+    if (myZoneNavItem) {
+        myZoneNavItem.classList.toggle('hidden', !isLoggedIn);
+    }
+    if (loginNavItem) {
+        loginNavItem.classList.toggle('hidden', isLoggedIn);
+    }
+    if (logoutNavItem) {
+        logoutNavItem.classList.toggle('hidden', !isLoggedIn);
     }
 
-    // Pridanie poslucháča udalosti pre tlačidlo Odhlásenie
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOMContentLoaded fired. Pokúšam sa pripojiť poslucháča odhlásenia.");
-        const logoutButton = document.getElementById('logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async (event) => {
-                event.preventDefault(); // Zabrániť predvolenému správaniu tlačidla
-                console.log("Tlačidlo odhlásenia kliknuté.");
-                if (auth) {
-                    try {
-                        console.log("Pokúšam sa odhlásiť používateľa...");
-                        await auth.signOut(); // Vykoná odhlásenie
-                        console.log("Používateľ odhlásený úspešne.");
-                        // Po úspešnom odhlásení presmerujeme po malej chvíli,
-                        // aby sa UI stihlo aktualizovať cez onAuthStateChanged.
-                        setTimeout(() => {
-                            window.location.href = 'index.html';
-                        }, 100); // 100ms oneskorenie
-                    } catch (error) {
-                        console.error("Chyba pri odhlasovaní:", error);
-                    }
-                } else {
-                    console.error("Firebase Auth nie je k dispozícii pre odhlásenie.");
-                }
-            });
-        } else {
-            console.warn("Tlačidlo odhlásenia (#logout-button) nebolo nájdené v DOM.");
-        }
-    });
+    if (logoutButton) {
+        logoutButton.onclick = async () => {
+            try {
+                await auth.signOut();
+                console.log("Používateľ sa úspešne odhlásil.");
+                // Presmerovanie na domovskú stránku po odhlásení
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Chyba pri odhlásení:", error);
+                showGlobalMessage(`Chyba pri odhlásení: ${error.message}`, "error");
+            }
+        };
+    }
+}
 
-})(); // Koniec IIFE
+// Funkcia na načítanie obsahu header.html
+async function loadHeader() {
+    try {
+        const response = await fetch('header.html');
+        if (!response.ok) {
+            throw new Error(`HTTP chyba! Status: ${response.status}`);
+        }
+        const headerHtml = await response.text();
+        const headerContainer = document.getElementById('main-header');
+        if (headerContainer) {
+            headerContainer.innerHTML = headerHtml;
+            console.log("header.html úspešne načítaný.");
+            // Po načítaní hlavičky inicializujeme Firebase a nastavíme listenery
+            initializeFirebase();
+        } else {
+            console.error("Kontajner s ID 'main-header' nebol nájdený.");
+            showGlobalMessage("Chyba: Kontajner pre hlavičku chýba.", "error");
+        }
+    } catch (error) {
+        console.error("Chyba pri načítaní header.html:", error);
+        showGlobalMessage(`Chyba pri načítaní hlavičky: ${error.message}`, "error");
+    }
+}
+
+// Spustiť načítanie hlavičky, keď je DOM plne načítaný
+document.addEventListener('DOMContentLoaded', loadHeader);
+
+// Exportujte premenné a funkcie, ak ich potrebujete v iných skriptoch
+// Pre jednoduchosť v tomto príklade používame globálne premenné (window.auth, window.db, window.userId)
+// Ak by ste chceli modulárny prístup, použili by ste export/import.
+// Sprístupníme ich globálne pre index.js
+window.auth = auth;
+window.db = db;
+window.getUserId = () => userId; // Funkcia na získanie ID používateľa
+window.showGlobalMessage = showGlobalMessage; // Sprístupní funkciu pre globálne správy
