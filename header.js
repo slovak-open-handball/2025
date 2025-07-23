@@ -1,29 +1,40 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú duplikované tu, aby bol header.js samostatný.
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
+// header.js
+// Používame globálne premenné poskytované Canvas prostredím, ak sú definované.
+// Ak nie sú definované (napr. pri lokálnom testovaní mimo Canvas), použijeme zástupné hodnoty.
+const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-header-app-id';
+const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Inicializácia Firebase (ak už nie je inicializovaná iným skriptom)
-let firebaseAppHeader; // Použijeme iný názov pre inštanciu aplikácie hlavičky
+let firebaseAppHeader;
 let authHeader;
 let dbHeader;
 
-try {
-    // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom
-    firebaseAppHeader = firebase.apps.find(app => app.name === 'headerApp') || firebase.initializeApp(firebaseConfig, 'headerApp');
-    authHeader = firebase.auth(firebaseAppHeader);
-    dbHeader = firebase.firestore(firebaseAppHeader);
-    console.log("header.js: Firebase aplikácia pre hlavičku inicializovaná.");
-} catch (e) {
-    console.error("header.js: Chyba pri inicializácii Firebase pre hlavičku:", e);
+// Inicializácia Firebase pre hlavičku
+if (canvasFirebaseConfig) {
+    try {
+        // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom ('headerApp')
+        // Ak nie, inicializujeme novú inštanciu s jedinečným názvom.
+        firebaseAppHeader = firebase.apps.find(app => app.name === 'headerApp') || firebase.initializeApp(canvasFirebaseConfig, 'headerApp');
+        authHeader = firebase.auth(firebaseAppHeader);
+        dbHeader = firebase.firestore(firebaseAppHeader);
+        console.log("header.js: Firebase aplikácia pre hlavičku inicializovaná.");
+
+        // Prihlásenie s custom tokenom, ak je k dispozícii, inak anonymne
+        if (canvasInitialAuthToken) {
+            firebase.auth(firebaseAppHeader).signInWithCustomToken(canvasInitialAuthToken)
+                .then(() => console.log("header.js: Prihlásenie custom tokenom pre hlavičku úspešné."))
+                .catch(error => console.error("header.js: Chyba pri prihlásení custom tokenom pre hlavičku:", error));
+        } else {
+            firebase.auth(firebaseAppHeader).signInAnonymously()
+                .then(() => console.log("header.js: Prihlásenie anonymne pre hlavičku úspešné."))
+                .catch(error => console.error("header.js: Chyba pri anonymnom prihlásení pre hlavičku:", error));
+        }
+
+    } catch (e) {
+        console.error("header.js: Chyba pri inicializácii Firebase pre hlavičku:", e);
+    }
+} else {
+    console.error("header.js: Firebase konfigurácia (__firebase_config) nie je dostupná.");
 }
 
 let currentHeaderUser = null;
