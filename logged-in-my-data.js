@@ -208,7 +208,7 @@ function MyDataApp() {
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  // ZMENA: Nový stav pre dáta používateľského profilu z Firestore
+  // Nový stav pre dáta používateľského profilu z Firestore
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
@@ -355,7 +355,7 @@ function MyDataApp() {
       if (user) {
         console.log(`MyDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
         // Nastavíme loading na true, pretože začíname načítavať profilové dáta
-        setLoading(true); // ZMENA: Nastavíme loading na true tu
+        setLoading(true); // Nastavíme loading na true tu
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
@@ -364,7 +364,7 @@ function MyDataApp() {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
-              setUserProfileData(userData); // ZMENA: Aktualizujeme nový stav userProfileData
+              setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
               // Aktualizujeme lokálne stavy z userProfileData
               setFirstName(userData.firstName || '');
@@ -375,7 +375,7 @@ function MyDataApp() {
               setIsApproved(userData.approved || false);
               setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
               
-              setLoading(false); // ZMENA: Stop loading po načítaní používateľských dát
+              setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
               console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
@@ -420,7 +420,7 @@ function MyDataApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]); // ZMENA: Odstránený userProfileData zo závislostí
+  }, [isAuthReady, db, user, auth]); // Odstránený userProfileData zo závislostí
 
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
@@ -625,10 +625,10 @@ function MyDataApp() {
   };
 
   const handleFetchAllUsers = React.useCallback(async () => {
-    // ZMENA: Kontrola oprávnení teraz používa userProfileData.role
+    // Kontrola oprávnení teraz používa userProfileData.role
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zobrazenie používateľov.");
-      setLoading(false); // ZMENA: Nastavíme loading na false aj tu
+      setLoading(false); // Nastavíme loading na false aj tu
       return;
     }
     setLoading(true);
@@ -643,14 +643,14 @@ function MyDataApp() {
     } finally {
       setLoading(false);
     }
-  }, [db, userProfileData]); // ZMENA: Závisí od userProfileData
+  }, [db, userProfileData]); // Závisí od userProfileData
 
   React.useEffect(() => {
-    // ZMENA: Podmienka na spustenie handleFetchAllUsers závisí od userProfileData.role
+    // Podmienka na spustenie handleFetchAllUsers závisí od userProfileData.role
     if (userProfileData && userProfileData.role === 'admin' && db) {
       handleFetchAllUsers();
     }
-  }, [userProfileData, db, handleFetchAllUsers]); // ZMENA: Závisí od userProfileData
+  }, [userProfileData, db, handleFetchAllUsers]); // Závisí od userProfileData
 
   const openConfirmationModal = (user) => {
     setUserToDelete(user);
@@ -674,7 +674,7 @@ function MyDataApp() {
   };
 
   const handleUpdateUserRole = async () => {
-    // ZMENA: Podmienka na kontrolu roly admina závisí od userProfileData.role
+    // Podmienka na kontrolu roly admina závisí od userProfileData.role
     if (!db || !userToEditRole || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu rolí alebo chýbajú dáta.");
       return;
@@ -730,7 +730,7 @@ function MyDataApp() {
   };
 
   const handleApproveUser = async (targetUser) => {
-    // ZMENA: Podmienka na kontrolu roly admina závisí od userProfileData.role
+    // Podmienka na kontrolu roly admina závisí od userProfileData.role
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na schvaľovanie používateľov.");
       return;
@@ -784,7 +784,7 @@ function MyDataApp() {
 
   const handleUpdateRegistrationSettings = async (e) => {
     e.preventDefault();
-    // ZMENA: Podmienka na kontrolu roly admina závisí od userProfileData.role
+    // Podmienka na kontrolu roly admina závisí od userProfileData.role
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu nastavení registrácie.");
       return;
@@ -848,10 +848,10 @@ function MyDataApp() {
   const is_admin_panel_page = currentPath === 'admin-panel.html';
 
   // If user is not admin and trying to access admin panel, redirect
-  // ZMENA: Používame userProfileData.role pre kontrolu oprávnení
+  // Používame userProfileData.role pre kontrolu oprávnení
   if (is_admin_panel_page && userProfileData && userProfileData.role !== 'admin') {
     console.log("MyDataApp: Používateľ nie je admin a snaží sa pristupovať k admin panelu, presmerovávam.");
-    window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
+    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
 
@@ -889,7 +889,7 @@ function MyDataApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           is_admin_panel_page ? 'Administrátorský panel' : 'Moja zóna'
         ),
-        // ZMENA: Používame userProfileData pre zobrazenie mena a roly
+        // Používame userProfileData pre zobrazenie mena a roly
         userProfileData && React.createElement(
           'p',
           { className: 'text-lg text-gray-600 text-center mb-4' },
@@ -954,7 +954,7 @@ function MyDataApp() {
                     return;
                   }
                   if (value.length === 1 && value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom +.");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                     e.target.reportValidity();
                     return;
                   }
@@ -970,17 +970,17 @@ function MyDataApp() {
                   if (e.target.value.length === 0) {
                     e.target.setCustomValidity("Vyplňte prosím toto pole.");
                   } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom +.");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
                   } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
                     e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
                   } else {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom + a obsahovať iba číslice (napr. +421901234567).");
+                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
                   }
                 },
                 required: true,
                 placeholder: '+421901234567',
                 pattern: '^\\+\\d+$',
-                title: 'Telefónne číslo musí začínať znakom + a obsahovať iba číslice (napr. +421901234567).',
+                title: 'Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).',
                 disabled: loading,
               })
             ),
@@ -1031,7 +1031,7 @@ function MyDataApp() {
         ),
 
         // Admin Panel Section
-        // ZMENA: Používame userProfileData.role pre podmienku zobrazenia admin panelu
+        // Používame userProfileData.role pre podmienku zobrazenia admin panelu
         userProfileData && userProfileData.role === 'admin' && React.createElement(
           React.Fragment,
           null,
