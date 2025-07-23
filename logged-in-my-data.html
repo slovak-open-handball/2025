@@ -86,6 +86,9 @@
         </div>
     </div>
 
+    <!-- Načítanie hlavného skriptu pre túto stránku (MyDataApp) -->
+    <script src="logged-in-my-data.js"></script>
+
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
         // Funkcia na načítanie hlavičky
@@ -130,8 +133,7 @@
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // Funkcia loadContent sa volá z left-menu.js po overení autentifikácie
-                        // a načítaní používateľskej roly.
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
@@ -147,12 +149,23 @@
         window.onload = async () => {
             await loadHeader();
             await loadLeftMenu();
-            // Po načítaní hlavičky a menu sa už React aplikácia vykreslí cez loadContent funkciu z left-menu.js
-            // ktorá bude volaná po overení autentifikácie a načítaní používateľskej roly.
-            // Preto už nepotrebujeme priamo volať ReactDOM.createRoot a root.render tu.
+
+            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof MyDataApp === 'undefined') {
+                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(MyDataApp, null));
+            console.log("logged-in-my-data.html: React App vykreslená.");
         };
     </script>
-    <!-- Načítanie hlavného skriptu pre túto stránku (MyDataApp) -->
-    <script src="logged-in-my-data.js"></script>
 </body>
 </html>
