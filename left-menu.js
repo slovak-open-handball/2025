@@ -173,8 +173,10 @@ if (authMenu && dbMenu) {
             console.error("Chyba pri počiatočnom prihlásení Firebase pre ľavé menu:", e);
         });
     }
-    */
+    
 }
+
+*/
 
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
