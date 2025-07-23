@@ -1,4 +1,4 @@
-// logged-in-my-data-app.js
+// logged-in-my-data.js
 
 // Predpokladáme, že tieto funkcie sú definované inde alebo sú súčasťou tohto súboru
 // Komponenta pre vstup hesla s prepínaním viditeľnosti
