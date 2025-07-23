@@ -46,7 +46,7 @@
     <!-- Hlavný obsah React aplikácie -->
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs - VŽDY NAČÍTAJTE AKO PRVÉ! -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -56,7 +56,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Globálne premenné pre Firebase config (pre React aplikácie) -->
+    <!-- Globálne premenné pre Firebase config (pre React aplikácie a header) -->
     <script type="text/javascript">
         const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
         const __firebase_config = JSON.stringify({
@@ -69,12 +69,28 @@
         });
         const __initial_auth_token = null; // Pre túto aplikáciu môže byť null, ak sa spoliehame na perzistenciu
         const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
+
+        // *** DÔLEŽITÉ: Inicializácia predvolenej Firebase aplikácie pre logged-in-my-data.html ***
+        try {
+            // Skontrolujeme, či už existuje predvolená aplikácia Firebase
+            // Ak nie, inicializujeme ju. Ak áno, použijeme ju.
+            let firebaseAppMain = firebase.apps.find(app => app.name === '[DEFAULT]');
+            if (!firebaseAppMain) {
+                firebaseAppMain = firebase.initializeApp(JSON.parse(__firebase_config));
+                console.log("logged-in-my-data.html: Predvolená Firebase aplikácia inicializovaná.");
+            } else {
+                console.log("logged-in-my-data.html: Používa sa existujúca predvolená Firebase aplikácia.");
+            }
+        } catch (e) {
+            console.error("logged-in-my-data.html: Chyba pri inicializácii predvolenej Firebase aplikácie:", e);
+            // Tu by ste mohli zobraziť chybu používateľovi
+        }
     </script>
 
-    <!-- Vlastné skripty -->
-    <script src="header.js"></script>
-    <script src="firebase-init.js"></script>
-    <script type="text/babel" src="logged-in-my-data.js"></script>
+    <!-- Vlastné skripty - Načítajte AŽ PO Firebase SDKs a React/ReactDOM -->
+    <script src="header.js"></script> <!-- Načítať header.js -->
+    <script src="firebase-init.js"></script> <!-- Dôležité: Načítať pred logged-in-my-data-app.js -->
+    <script type="text/babel" src="logged-in-my-data-app.js"></script>
 
     <script type="text/javascript">
         // Funkcia na načítanie hlavičky
@@ -86,6 +102,12 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
+                console.log("Hlavička načítaná do DOM.");
+
+                // header.js už má logiku na inicializáciu Firebase a svojich listenerov
+                // Nie je potrebné volať initializeHeaderLogic() priamo odtiaľto.
+                // Funkcia initializeFirebaseForHeader() v header.js sa volá automaticky.
+
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
@@ -95,14 +117,7 @@
         // Spustí sa po načítaní DOM a všetkých skriptov
         window.onload = function() {
             loadHeader().then(() => {
-                // Po načítaní hlavičky inicializovať jej logiku
-                if (typeof initializeHeaderLogic === 'function') {
-                    initializeHeaderLogic();
-                } else {
-                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                }
-
-                // Potom renderujeme React aplikáciu
+                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
@@ -110,7 +125,7 @@
                 }
                 // Skontrolujte, či je LoggedInApp definovaný
                 if (typeof LoggedInApp === 'undefined') {
-                    console.error("Chyba: Komponent LoggedInApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                    console.error("Chyba: Komponent LoggedInApp nie je definovaný. Skontrolujte logged-in-my-data-app.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                     return;
                 }
