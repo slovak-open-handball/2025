@@ -1,31 +1,5 @@
-/*
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú duplikované tu, aby bol left-menu.js samostatný.
-const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const firebaseConfig = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const initialAuthToken = null; // Global authentication token
-*/
-
-// Inicializácia Firebase (ak už nie je inicializovaná iným skriptom)
-let firebaseAppMenu; // Použijeme iný názov pre inštanciu aplikácie menu
-let authMenu;
-let dbMenu;
-
-try {
-    // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom
-    firebaseAppMenu = firebase.apps.find(app => app.name === 'menuApp') || firebase.initializeApp(firebaseConfig, 'menuApp');
-    authMenu = firebase.auth(firebaseAppMenu);
-    dbMenu = firebase.firestore(firebaseAppMenu);
-} catch (e) {
-    console.error("Chyba pri inicializácii Firebase pre ľavé menu:", e);
-}
+// Tento súbor už nenačítava Firebase ani nevykonáva autentifikáciu.
+// Spolieha sa na to, že Firebase je inicializované a používateľ je prihlásený v hlavnej aplikácii.
 
 // Funkcia na načítanie obsahu do hlavnej oblasti
 async function loadContent(htmlFilePath) {
@@ -99,6 +73,8 @@ async function loadContent(htmlFilePath) {
 
 
 // Funkcia na aktualizáciu viditeľnosti položiek menu
+// Táto funkcia je ponechaná, ale bez priameho prístupu k Firebase Auth.
+// Ak chcete dynamickú viditeľnosť, bude ju musieť riadiť hlavná aplikácia.
 function updateMenuItemsVisibility(userRole) {
     const menuItems = {
         'menu-my-data': ['admin', 'user'],
@@ -115,7 +91,9 @@ function updateMenuItemsVisibility(userRole) {
     for (const id in menuItems) {
         const element = document.getElementById(id);
         if (element) {
-            if (menuItems[id].includes(userRole)) {
+            // Predvolene zobrazíme všetky položky, ak sa neriadi rolou z Firebase Auth
+            // Alebo môžete nastaviť pevnú rolu, napr. 'user', ak chcete skryť admin položky
+            if (menuItems[id].includes(userRole || 'user')) { // Predvolená rola 'user'
                 element.classList.remove('hidden');
             } else {
                 element.classList.add('hidden');
@@ -123,60 +101,6 @@ function updateMenuItemsVisibility(userRole) {
         }
     }
 }
-
-/*
-// Počúvanie zmien stavu autentifikácie
-if (authMenu && dbMenu) {
-    authMenu.onAuthStateChanged(async (user) => {
-        if (!user) {
-            // Ak používateľ nie je prihlásený, presmerovať na prihlasovaciu stránku
-            console.log("Používateľ nie je prihlásený, presmerovanie na login.html z left-menu.js");
-            window.location.href = 'login.html';
-            return;
-        }
-
-        // Používateľ je prihlásený, získať jeho rolu
-        try {
-            const userDoc = await dbMenu.collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                const userRole = userData.role || 'user'; // Predvolená rola je 'user'
-                console.log("Používateľská rola (left-menu):", userRole);
-                updateMenuItemsVisibility(userRole);
-
-                // Načítať počiatočný obsah: buď z URL parametra 'page', alebo predvolene na 'logged-in-my-data.html'
-                const urlParams = new URLSearchParams(window.location.search);
-                const initialPage = urlParams.get('page');
-                if (initialPage) {
-                    loadContent(initialPage);
-                } else {
-                    loadContent('logged-in-my-data.html'); // Predvolená stránka
-                }
-            } else {
-                console.warn("Používateľský dokument nebol nájdený pre ID:", user.uid);
-                // Ak sa nenájde dokument, predpokladáme rolu 'user' alebo odhlásime
-                updateMenuItemsVisibility('user');
-                loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
-            }
-        } catch (error) {
-            console.error("Chyba pri načítaní používateľskej roly z Firestore pre left-menu:", error);
-            // V prípade chyby zobraziť len základné položky menu pre 'user'
-            updateMenuItemsVisibility('user');
-            loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
-        }
-    });
-
-
-    // Počiatočné prihlásenie pre menu (ak existuje vlastný token)
-    if (initialAuthToken) {
-        authMenu.signInWithCustomToken(initialAuthToken).catch(e => {
-            console.error("Chyba pri počiatočnom prihlásení Firebase pre ľavé menu:", e);
-        });
-    }
-    
-}
-
-*/
 
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
@@ -189,6 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Odstránený poslucháč 'hashchange', pretože už nepoužívame hash navigáciu.
-    // Počiatočné načítanie obsahu sa vykonáva v onAuthStateChanged.
+    // Načítanie počiatočného obsahu po načítaní DOM
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialPage = urlParams.get('page');
+    if (initialPage) {
+        loadContent(initialPage);
+    } else {
+        loadContent('logged-in-my-data.html'); // Predvolená stránka
+    }
+
+    // Vzhľadom na odstránenie autentifikácie z tohto skriptu,
+    // dynamickú viditeľnosť menu na základe roly bude musieť riadiť
+    // hlavná React aplikácia (napr. MyDataApp) po načítaní používateľských dát.
+    // Tu nastavíme predvolenú viditeľnosť (napr. len pre 'user')
+    updateMenuItemsVisibility('user'); // Zobrazí len položky pre bežného používateľa
 });
