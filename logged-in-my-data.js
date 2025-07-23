@@ -308,12 +308,12 @@ function MyDataApp() {
         try {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
-          } else {
-            // Anonymous sign-in if no custom token (for development/testing)
-            await authInstance.signInAnonymously();
           }
+          // ZMENA: Odstránené volanie signInAnonymously().
+          // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
+          // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
         } catch (e) {
-          console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
+          console.error("Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
@@ -388,7 +388,7 @@ function MyDataApp() {
             if (error.code === 'permission-denied' || error.code === 'unavailable' || error.code === 'unauthenticated') {
                 setError(`Chyba oprávnení: ${error.message}. Skúste sa prosím znova prihlásiť.`);
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false); // ZMENA: Stop loading aj pri chybe
           });
