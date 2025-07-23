@@ -322,7 +322,6 @@ function MyDataApp() {
         console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Set user state to null or user object
         setIsAuthReady(true); // Mark auth as ready after the first check
-        // setLoading(false); // ZMENA: Loading sa nastaví na false až po načítaní dát alebo presmerovaní
       });
 
       signIn();
@@ -372,18 +371,25 @@ function MyDataApp() {
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
               setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+              setLoading(false); // ZMENA: Stop loading po načítaní používateľských dát
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              // Ak používateľský dokument neexistuje, odhlás a presmeruj
-              if (auth) { // Zabezpečenie, že auth je k dispozícii
-                auth.signOut();
-              }
-              window.location.href = 'login.html';
+              // ZMENA: Namiesto okamžitého odhlásenia a presmerovania, nastavíme chybu
+              // a necháme používateľa v stave "načítavam" s chybovou správou.
+              // Ak sa dokument nenašiel, môže to byť aj kvôli oprávneniam.
+              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              // NEPRESmerovávame automaticky, necháme používateľa vidieť chybu.
+              // Ak je to kritické, môže sa odhlásiť manuálne alebo to bude spracované v inej logike.
             }
-            setLoading(false); // ZMENA: Stop loading po načítaní používateľských dát
           }, error => {
             console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
-            setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+            // ZMENA: Spracovanie chyby oprávnení bez okamžitého odhlásenia
+            if (error.code === 'permission-denied' || error.code === 'unavailable' || error.code === 'unauthenticated') {
+                setError(`Chyba oprávnení: ${error.message}. Skúste sa prosím znova prihlásiť.`);
+            } else {
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+            }
             setLoading(false); // ZMENA: Stop loading aj pri chybe
           });
         } catch (e) {
