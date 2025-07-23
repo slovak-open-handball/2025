@@ -4,21 +4,12 @@
 
 // Dôležité: Predpokladá sa, že globálne premenné `appId`, `firebaseConfig` a `initialAuthToken`
 // sú definované v HTML súbore PRED načítaním tohto skriptu.
-// Príklad:
-// <script>
-//   const appId = '...';
-//   const firebaseConfig = { ... };
-//   const initialAuthToken = null;
-// </script>
-// <script src="header.js"></script>
 
 (function() {
     // Kontrola, či sú globálne premenné k dispozícii.
-    // Ak nie sú, vypíše sa chyba, ale skript sa pokúsi pokračovať s predvolenými hodnotami.
     if (typeof appId === 'undefined' || typeof firebaseConfig === 'undefined' || typeof initialAuthToken === 'undefined') {
-        console.error("Chyba: Globálne premenné appId, firebaseConfig alebo initialAuthToken nie sú definované.");
+        console.error("Chyba: Globálne premenné appId, firebaseConfig alebo initialAuthToken nie sú definované. Uistite sa, že sú definované v HTML pred načítaním header.js.");
         // Ak nie sú definované, nastavíme ich na bezpečné, ale nefunkčné predvolené hodnoty
-        // aby sa predišlo referenčným chybám, ale Firebase inicializácia zlyhá.
         window.appId = window.appId || 'default-app-id';
         window.firebaseConfig = window.firebaseConfig || {};
         window.initialAuthToken = window.initialAuthToken || null;
@@ -30,25 +21,22 @@
     let db;
 
     // Kontrola, či už Firebase nie je inicializovaný.
-    // Toto je kľúčové pre zabránenie chyby 'duplicate-app'.
     if (!firebase.apps.length) {
         try {
-            // Používame globálne definovanú firebaseConfig
             app = firebase.initializeApp(firebaseConfig);
             auth = firebase.auth(app);
             db = firebase.firestore(app);
-            console.log("Firebase inicializovaný v header.js");
+            console.log("Firebase inicializovaný v header.js.");
 
             // Prihlásenie s vlastným tokenom alebo anonymne
             const signIn = async () => {
                 try {
-                    // Používame globálne definovaný initialAuthToken
                     if (initialAuthToken) {
                         await auth.signInWithCustomToken(initialAuthToken);
-                        console.log("Prihlásenie s vlastným tokenom v header.js.");
+                        console.log("Používateľ prihlásený s vlastným tokenom v header.js.");
                     } else {
                         await auth.signInAnonymously();
-                        console.log("Prihlásenie anonymne v header.js.");
+                        console.log("Používateľ prihlásený anonymne v header.js.");
                     }
                 } catch (error) {
                     console.error("Chyba pri prihlásení v header.js:", error);
@@ -58,7 +46,6 @@
 
         } catch (error) {
             console.error("Chyba pri inicializácii Firebase v header.js:", error);
-            // Táto chyba bude pravdepodobne 'auth/invalid-api-key' ak je konfigurácia chybná
         }
     } else {
         // Ak je Firebase už inicializovaný, použijeme existujúcu inštanciu.
@@ -89,13 +76,14 @@
                 console.log("Navigácia aktualizovaná: Odhlásený používateľ.");
             }
         } else {
-            console.warn("Chyba: Niektoré navigačné prvky neboli nájdené v DOM. Uistite sa, že header.html je načítaný.");
+            console.warn("Chyba: Niektoré navigačné prvky neboli nájdené v DOM. Uistite sa, že header.html je načítaný správne.");
         }
     };
 
     // Poslucháč zmien stavu autentifikácie
     if (auth) {
         auth.onAuthStateChanged((user) => {
+            console.log("onAuthStateChanged triggered. Používateľ:", user ? user.uid : "null (odhlásený)");
             updateNavVisibility(user);
         });
     } else {
@@ -104,27 +92,32 @@
 
     // Pridanie poslucháča udalosti pre tlačidlo Odhlásenie
     document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOMContentLoaded fired. Pokúšam sa pripojiť poslucháča odhlásenia.");
         const logoutButton = document.getElementById('logout-button');
-        if (logoutButton && auth) {
-            logoutButton.addEventListener('click', async () => {
-                try {
-                    await auth.signOut();
-                    console.log("Používateľ odhlásený.");
-                    window.location.href = 'index.html';
-                } catch (error) {
-                    console.error("Chyba pri odhlasovaní:", error);
+        if (logoutButton) {
+            logoutButton.addEventListener('click', async (event) => {
+                event.preventDefault(); // Zabrániť predvolenému správaniu tlačidla
+                console.log("Tlačidlo odhlásenia kliknuté.");
+                if (auth) {
+                    try {
+                        console.log("Pokúšam sa odhlásiť používateľa...");
+                        await auth.signOut(); // Vykoná odhlásenie
+                        console.log("Používateľ odhlásený úspešne.");
+                        // Po úspešnom odhlásení presmerujeme po malej chvíli,
+                        // aby sa UI stihlo aktualizovať cez onAuthStateChanged.
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 100); // 100ms oneskorenie
+                    } catch (error) {
+                        console.error("Chyba pri odhlasovaní:", error);
+                    }
+                } else {
+                    console.error("Firebase Auth nie je k dispozícii pre odhlásenie.");
                 }
             });
-        } else if (logoutButton && !auth) {
-            console.warn("Tlačidlo odhlásenia nájdené, ale Firebase Auth nie je inicializovaný. Odhlasovanie nebude fungovať.");
+        } else {
+            console.warn("Tlačidlo odhlásenia (#logout-button) nebolo nájdené v DOM.");
         }
     });
-
-    // Voliteľné: Ak potrebujete prístup k 'auth' a 'db' objektom v iných skriptoch,
-    // môžete ich priradiť ku globálnemu objektu 'window'.
-    // Pre Firebase compat SDKs to však často nie je potrebné, pretože firebase.auth() a firebase.firestore()
-    // automaticky získajú predvolenú aplikáciu po jej inicializácii.
-    // window.firebaseAuth = auth;
-    // window.firebaseDb = db;
 
 })(); // Koniec IIFE
