@@ -309,7 +309,6 @@ function MyDataApp() {
           if (initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           }
-          // ZMENA: Odstránené volanie signInAnonymously().
           // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
           // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
         } catch (e) {
@@ -341,6 +340,7 @@ function MyDataApp() {
   // NOVÝ EFFECT: Načítanie používateľských dát po inicializácii Auth a DB
   React.useEffect(() => {
     let unsubscribeUserDoc;
+    let loadingTimeout; // ZMENA: Pridaný timeout pre načítavanie
 
     // Čakáme, kým je authReady, db je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
@@ -352,9 +352,18 @@ function MyDataApp() {
 
       // Ak je používateľ prihlásený, načítaj jeho dáta
       if (user) {
+        // ZMENA: Nastavíme timeout pre načítavanie
+        loadingTimeout = setTimeout(() => {
+          console.warn("MyDataApp: Načítanie používateľských dát trvá príliš dlho, nastavujem loading na false.");
+          setLoading(false);
+          // Ak sa tu stále zobrazuje chyba oprávnení, môže to znamenať problém s pravidlami
+          // alebo s pripojením k Firestore.
+        }, 10000); // 10 sekúnd timeout
+
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+            clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout po prijatí snapshotu
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               setUser(prevUser => ({
@@ -371,31 +380,27 @@ function MyDataApp() {
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
               setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-              setLoading(false); // ZMENA: Stop loading po načítaní používateľských dát
+              setLoading(false); // Stop loading po načítaní používateľských dát
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              // ZMENA: Namiesto okamžitého odhlásenia a presmerovania, nastavíme chybu
-              // a necháme používateľa v stave "načítavam" s chybovou správou.
-              // Ak sa dokument nenašiel, môže to byť aj kvôli oprávneniam.
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              // NEPRESmerovávame automaticky, necháme používateľa vidieť chybu.
-              // Ak je to kritické, môže sa odhlásiť manuálne alebo to bude spracované v inej logike.
             }
           }, error => {
+            clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout aj pri chybe
             console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
-            // ZMENA: Spracovanie chyby oprávnení bez okamžitého odhlásenia
             if (error.code === 'permission-denied' || error.code === 'unavailable' || error.code === 'unauthenticated') {
                 setError(`Chyba oprávnení: ${error.message}. Skúste sa prosím znova prihlásiť.`);
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // ZMENA: Opravený typo
             }
-            setLoading(false); // ZMENA: Stop loading aj pri chybe
+            setLoading(false); // Stop loading aj pri chybe
           });
         } catch (e) {
+          clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout aj pri chybe v try bloku
           console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // ZMENA: Stop loading aj pri chybe
+          setLoading(false); // Stop loading aj pri chybe
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -406,6 +411,7 @@ function MyDataApp() {
 
 
     return () => {
+      clearTimeout(loadingTimeout); // ZMENA: Zrušíme timeout pri unmount
       if (unsubscribeUserDoc) {
         unsubscribeUserDoc();
       }
