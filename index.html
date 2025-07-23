@@ -63,7 +63,7 @@
     <!-- Hlavný kontajner pre React aplikáciu -->
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs - VŽDY NAČÍTAJTE AKO PRVÉ! -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -73,13 +73,13 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Naše vlastné skripty -->
+    <!-- Naše vlastné skripty - Načítajte AŽ PO Firebase SDKs a React/ReactDOM -->
     <script src="header.js"></script>
     <script type="text/babel" src="index.js"></script>
 
     <script type="text/javascript">
-        // Funkcia na načítanie hlavičky a inicializáciu jej logiky
-        async function loadHeaderAndInitializeLogic() {
+        // Funkcia na načítanie hlavičky
+        async function loadHeader() {
             try {
                 const response = await fetch('header.html');
                 if (!response.ok) {
@@ -87,23 +87,22 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
+                console.log("Hlavička načítaná do DOM.");
 
-                // Uistite sa, že initializeHeaderLogic je definovaná a potom ju zavolajte
-                if (typeof initializeHeaderLogic === 'function') {
-                    initializeHeaderLogic();
-                } else {
-                    console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                }
+                // header.js už má logiku na inicializáciu Firebase a svojich listenerov
+                // Nie je potrebné volať initializeHeaderLogic() priamo odtiaľto.
+                // Funkcia initializeFirebaseForHeader() v header.js sa volá automaticky.
+
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
 
-        // Spustí sa po načítaní DOM a všetkých skriptov, vrátane index.js
+        // Spustí sa po načítaní DOM a všetkých skriptov
         window.onload = function() {
-            // Načítať hlavičku ako prvú a inicializovať jej logiku
-            loadHeaderAndInitializeLogic().then(() => {
+            // Načítať hlavičku ako prvú
+            loadHeader().then(() => {
                 // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                     console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
