@@ -3,9 +3,23 @@
 // Ak nie sú definované (napr. pri lokálnom testovaní mimo Canvas), použijeme zástupné hodnoty.
 // Dôležité: Tieto premenné by mali byť definované globálne v prostredí Canvas alebo v hlavnom skripte.
 // Ak nie sú, inicializácia Firebase zlyhá.
-const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-header-app-id';
-const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Pevne zakódované záložné hodnoty pre Firebase konfiguráciu
+const FALLBACK_APP_ID = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+const FALLBACK_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+  projectId: "prihlasovanie-4f3f3",
+  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+  messagingSenderId: "26454452024",
+  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+};
+const FALLBACK_INITIAL_AUTH_TOKEN = null; // Zvyčajne null pre header
+
+// Používame globálne premenné, ak sú k dispozícii, inak záložné hodnoty
+const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : FALLBACK_APP_ID;
+const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : FALLBACK_FIREBASE_CONFIG;
+const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : FALLBACK_INITIAL_AUTH_TOKEN;
 
 let firebaseAppHeader;
 let authHeader;
@@ -20,9 +34,9 @@ function initializeFirebaseForHeader() {
         return;
     }
 
-    // Kontrola, či je dostupná Firebase konfigurácia
+    // Kontrola, či je dostupná Firebase konfigurácia (už by mala byť vždy, vďaka záložným hodnotám)
     if (!canvasFirebaseConfig) {
-        console.error("header.js: Firebase konfigurácia (__firebase_config) nie je dostupná. Inicializácia zlyhala.");
+        console.error("header.js: Firebase konfigurácia nie je dostupná aj po záložných hodnotách. Inicializácia zlyhala.");
         return;
     }
 
