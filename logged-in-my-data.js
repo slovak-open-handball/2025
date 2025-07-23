@@ -208,7 +208,7 @@ function MyDataApp() {
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // ZMENA: Inicializácia na undefined
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
@@ -286,7 +286,6 @@ function MyDataApp() {
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
-    let unsubscribeUserDoc; // Declare unsubscribe for user doc
     let firestoreInstance;
 
     try {
@@ -323,55 +322,7 @@ function MyDataApp() {
         console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Set user state to null or user object
         setIsAuthReady(true); // Mark auth as ready after the first check
-
-        if (!currentUser) {
-          // If not logged in, redirect to login page
-          console.log("MyDataApp: Používateľ nie je prihlásený, presmerovávam na login.html");
-          window.location.href = 'login.html';
-          return;
-        }
-
-        // If user is logged in, fetch user data
-        if (currentUser && firestoreInstance) {
-          try {
-            const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
-            unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => { // Assign to unsubscribeUserDoc
-              if (docSnapshot.exists) {
-                const userData = docSnapshot.data();
-                setUser(prevUser => ({
-                  ...prevUser,
-                  ...userData,
-                  displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
-                  displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
-                }));
-                // Update local states with user data
-                setFirstName(userData.firstName || '');
-                setLastName(userData.lastName || '');
-                setContactPhoneNumber(userData.contactPhoneNumber || '');
-                setEmail(userData.email || '');
-                setRole(userData.role || 'user');
-                setIsApproved(userData.approved || false);
-                setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-              } else {
-                console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", currentUser.uid);
-                // If user document doesn't exist, sign out and redirect
-                authInstance.signOut();
-                window.location.href = 'login.html';
-              }
-              setLoading(false); // Stop loading after user data is fetched or determined not to exist
-            }, error => {
-              console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
-              setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
-              setLoading(false); // Stop loading on error
-            });
-          } catch (e) {
-            console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
-            setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-            setLoading(false); // Stop loading on error
-          }
-        } else {
-            setLoading(false); // If no current user or firestore, stop loading
-        }
+        // setLoading(false); // ZMENA: Loading sa nastaví na false až po načítaní dát alebo presmerovaní
       });
 
       signIn();
@@ -380,9 +331,6 @@ function MyDataApp() {
         if (unsubscribeAuth) {
           unsubscribeAuth();
         }
-        if (unsubscribeUserDoc) { // Cleanup for userDoc snapshot
-            unsubscribeUserDoc();
-        }
       };
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
@@ -390,6 +338,73 @@ function MyDataApp() {
       setLoading(false);
     }
   }, []);
+
+  // NOVÝ EFFECT: Načítanie používateľských dát po inicializácii Auth a DB
+  React.useEffect(() => {
+    let unsubscribeUserDoc;
+
+    // Čakáme, kým je authReady, db je k dispozícii a user je definovaný (nie undefined)
+    if (isAuthReady && db && user !== undefined) {
+      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
+        console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Ak je používateľ prihlásený, načítaj jeho dáta
+      if (user) {
+        try {
+          const userDocRef = db.collection('users').doc(user.uid);
+          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+              const userData = docSnapshot.data();
+              setUser(prevUser => ({
+                ...prevUser,
+                ...userData,
+                displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
+                displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
+              }));
+              // Update local states with user data
+              setFirstName(userData.firstName || '');
+              setLastName(userData.lastName || '');
+              setContactPhoneNumber(userData.contactPhoneNumber || '');
+              setEmail(userData.email || '');
+              setRole(userData.role || 'user');
+              setIsApproved(userData.approved || false);
+              setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+            } else {
+              console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+              // Ak používateľský dokument neexistuje, odhlás a presmeruj
+              if (auth) { // Zabezpečenie, že auth je k dispozícii
+                auth.signOut();
+              }
+              window.location.href = 'login.html';
+            }
+            setLoading(false); // ZMENA: Stop loading po načítaní používateľských dát
+          }, error => {
+            console.error("Chyba pri načítaní používateľských dát z Firestore (onSnapshot):", error);
+            setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+            setLoading(false); // ZMENA: Stop loading aj pri chybe
+          });
+        } catch (e) {
+          console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
+          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+          setLoading(false); // ZMENA: Stop loading aj pri chybe
+        }
+      }
+    } else if (isAuthReady && user === undefined) {
+        // Ak je authReady, ale user je stále undefined (čo by sa nemalo stať po onAuthStateChanged),
+        // môžeme zvážiť nastavenie loading na false, aby sa UI nezaseklo.
+        setLoading(false);
+    }
+
+
+    return () => {
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+      }
+    };
+  }, [isAuthReady, db, user, auth]); // Závisí od isAuthReady, db, user a auth
 
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
@@ -458,7 +473,7 @@ function MyDataApp() {
     return () => clearInterval(interval);
   }, []);
 
-  // Effect for updating header link visibility
+  // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
     const authLink = document.getElementById('auth-link');
@@ -774,7 +789,7 @@ function MyDataApp() {
   // Display loading state
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
   // Ak je user objekt (prihlásený), ale role nie je admin a stránka je admin-panel, presmeruj.
-  if (!isAuthReady || loading || user === undefined) { // Čakáme, kým je authReady a loading je false
+  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { // Čakáme, kým je authReady a loading je false
     // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
     if (isAuthReady && user === null) {
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -782,7 +797,7 @@ function MyDataApp() {
         return null;
     }
     // Ak je užívateľ prihlásený, ale ešte sa načítavajú nastavenia alebo dáta
-    if (user && !settingsLoaded) {
+    if (user && (!settingsLoaded || user.firstName === undefined)) { // Pridana kontrola na user.firstName pre počiatočné načítanie dát
         return React.createElement(
             'div',
             { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
