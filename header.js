@@ -2,7 +2,6 @@
 // Používame globálne premenné poskytované Canvas prostredím, ak sú definované.
 // Ak nie sú definované (napr. pri lokálnom testovaní mimo Canvas), použijeme zástupné hodnoty.
 // Dôležité: Tieto premenné by mali byť definované globálne v prostredí Canvas alebo v hlavnom skripte.
-// Ak nie sú, inicializácia Firebase zlyhá.
 
 // Pevne zakódované záložné hodnoty pre Firebase konfiguráciu
 const FALLBACK_APP_ID = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
@@ -16,9 +15,27 @@ const FALLBACK_FIREBASE_CONFIG = {
 };
 const FALLBACK_INITIAL_AUTH_TOKEN = null; // Zvyčajne null pre header
 
-// Používame globálne premenné, ak sú k dispozícii, inak záložné hodnoty
+// Používame globálne premenné, ak sú k dispozícii, inak záložné hodnotné
 const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : FALLBACK_APP_ID;
-const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : FALLBACK_FIREBASE_CONFIG;
+
+// Robustná logika pre získanie Firebase konfigurácie
+let parsedFirebaseConfig = FALLBACK_FIREBASE_CONFIG;
+if (typeof __firebase_config !== 'undefined') {
+    if (typeof __firebase_config === 'string') {
+        try {
+            parsedFirebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.warn("header.js: Chyba pri parsovaní __firebase_config (reťazec). Používam záložnú konfiguráciu.", e);
+        }
+    } else if (typeof __firebase_config === 'object' && __firebase_config !== null) {
+        // Ak je __firebase_config už objekt, použijeme ho priamo
+        parsedFirebaseConfig = __firebase_config;
+    } else {
+        console.warn("header.js: __firebase_config je definované, ale nie je reťazec ani objekt. Používam záložnú konfiguráciu.");
+    }
+}
+const canvasFirebaseConfig = parsedFirebaseConfig;
+
 const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : FALLBACK_INITIAL_AUTH_TOKEN;
 
 let firebaseAppHeader;
@@ -34,9 +51,10 @@ function initializeFirebaseForHeader() {
         return;
     }
 
-    // Kontrola, či je dostupná Firebase konfigurácia (už by mala byť vždy, vďaka záložným hodnotám)
-    if (!canvasFirebaseConfig) {
-        console.error("header.js: Firebase konfigurácia nie je dostupná aj po záložných hodnotách. Inicializácia zlyhala.");
+    // Kontrola, či je dostupná Firebase konfigurácia
+    // S vylepšenou logikou priradenia by toto už nemalo byť null/undefined alebo prázdny objekt
+    if (!canvasFirebaseConfig || Object.keys(canvasFirebaseConfig).length === 0) {
+        console.error("header.js: Firebase konfigurácia (canvasFirebaseConfig) je prázdna alebo neplatná. Inicializácia zlyhala.");
         return;
     }
 
