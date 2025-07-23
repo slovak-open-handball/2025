@@ -62,18 +62,18 @@
         const logoutNavItem = document.getElementById('logout-nav-item');
 
         if (loginNavItem && myZoneNavItem && logoutNavItem) {
-            if (user) {
-                // Používateľ je prihlásený
+            // Ak používateľ existuje A NIE JE anonymný, zobrazíme "Moja Zóna" a "Odhlásenie"
+            if (user && !user.isAnonymous) {
+                console.log("Navigácia aktualizovaná: Prihlásený používateľ (nie anonymný).");
                 loginNavItem.classList.add('hidden'); // Skryť Prihlásenie
                 myZoneNavItem.classList.remove('hidden'); // Zobraziť Moja Zóna
                 logoutNavItem.classList.remove('hidden'); // Zobraziť Odhlásenie
-                console.log("Navigácia aktualizovaná: Prihlásený používateľ.");
             } else {
-                // Používateľ NIE JE prihlásený
+                // Používateľ NIE JE prihlásený, alebo je prihlásený anonymne
+                console.log("Navigácia aktualizovaná: Používateľ odhlásený alebo anonymný.");
                 loginNavItem.classList.remove('hidden'); // Zobraziť Prihlásenie
                 myZoneNavItem.classList.add('hidden'); // Skryť Moja Zóna
                 logoutNavItem.classList.add('hidden'); // Skryť Odhlásenie
-                console.log("Navigácia aktualizovaná: Odhlásený používateľ.");
             }
         } else {
             console.warn("Chyba: Niektoré navigačné prvky neboli nájdené v DOM. Uistite sa, že header.html je načítaný správne.");
@@ -83,7 +83,7 @@
     // Poslucháč zmien stavu autentifikácie
     if (auth) {
         auth.onAuthStateChanged((user) => {
-            console.log("onAuthStateChanged triggered. Používateľ:", user ? user.uid : "null (odhlásený)");
+            console.log("onAuthStateChanged triggered. Používateľ:", user ? (user.isAnonymous ? "Anonymný" : user.uid) : "null (odhlásený)");
             updateNavVisibility(user);
         });
     } else {
