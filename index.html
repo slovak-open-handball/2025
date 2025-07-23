@@ -53,11 +53,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    <!-- React a ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
     <!-- Globálne premenné pre Firebase config (pre React aplikácie a header) -->
     <script type="text/javascript">
         // Tieto premenné sú globálne definované pre použitie v React komponentoch a header.js
@@ -74,6 +69,11 @@
         const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
     </script>
 
+    <!-- React a ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <!-- Vlastné skripty -->
     <script src="header.js"></script> <!-- Načítať header.js ako prvý, aby sa inicializovala Firebase pre hlavičku -->
     <script type="text/babel" src="index.js"></script> <!-- Načítať React aplikáciu (používame type="text/babel") -->
@@ -88,6 +88,12 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
+                // Po načítaní hlavičky inicializujeme jej logiku
+                if (typeof initializeHeaderLogic === 'function') {
+                    initializeHeaderLogic();
+                } else {
+                    console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná.");
+                }
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
