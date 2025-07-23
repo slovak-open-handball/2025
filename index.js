@@ -149,7 +149,16 @@ function App() {
         return;
       }
 
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
+      // Skontrolujeme, či už existuje predvolená aplikácia Firebase
+      // Ak nie, inicializujeme ju. Ak áno, použijeme ju.
+      let firebaseApp = firebase.apps.find(app => app.name === '[DEFAULT]');
+      if (!firebaseApp) {
+          firebaseApp = firebase.initializeApp(firebaseConfig);
+          console.log("index.js: Predvolená Firebase aplikácia inicializovaná.");
+      } else {
+          console.log("index.js: Používa sa existujúca predvolená Firebase aplikácia.");
+      }
+
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
@@ -176,8 +185,10 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        // Pôvodné presmerovanie bolo odstránené.
-        // Stránka index.html už nebude automaticky presmerovávať prihlásených používateľov.
+        // DÔLEŽITÉ: Automatické presmerovanie bolo odstránené.
+        if (currentUser) {
+            console.log("Používateľ je prihlásený, ale nebude automaticky presmerovaný z index.html.");
+        }
         setPageLoading(false); // Auth state checked, stop page loading
       });
 
@@ -274,9 +285,8 @@ function App() {
     );
   }
 
-  // Odstránený blok 'if (user) { return null; }'
-  // Stránka sa bude renderovať aj pre prihlásených používateľov.
-
+  // Ak je používateľ prihlásený, ale stránka sa nemá automaticky presmerovať,
+  // jednoducho pokračujeme v renderovaní obsahu index.html.
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
   const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
