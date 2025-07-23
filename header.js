@@ -1,37 +1,39 @@
 // header.js
 // Tento skript dynamicky aktualizuje navigačnú lištu na základe stavu prihlásenia používateľa.
+// Je tiež zodpovedný za JEDINÚ inicializáciu Firebase v aplikácii.
 
-// Používame IIFE (Immediately Invoked Function Expression), aby sme zabránili kolíziám globálnych premenných,
-// ak by sa tento skript neúmyselne načítal viackrát.
+// Dôležité: Predpokladá sa, že globálne premenné `appId`, `firebaseConfig` a `initialAuthToken`
+// sú definované v HTML súbore PRED načítaním tohto skriptu.
+// Príklad:
+// <script>
+//   const appId = '...';
+//   const firebaseConfig = { ... };
+//   const initialAuthToken = null;
+// </script>
+// <script src="header.js"></script>
+
 (function() {
-    // Globálne premenné pre Firebase konfiguráciu a ID aplikácie
-    // Predpokladá sa, že tieto premenné sú definované v prostredí Canvas.
-    // Používame 'let' namiesto 'const' pre prípad, že by boli deklarované inde, hoci ideálne by mali byť len raz.
-    let appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    let firebaseConfig;
-    try {
-        // Pokúsime sa parsovať firebaseConfig. Ak je __firebase_config prázdny alebo neplatný JSON,
-        // nastavíme firebaseConfig na prázdny objekt.
-        firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        // Ak firebaseConfig neobsahuje apiKey, je to problém
-        if (!firebaseConfig.apiKey) {
-            console.error("Firebase konfigurácia neobsahuje apiKey. Skontrolujte __firebase_config.");
-        }
-    } catch (e) {
-        console.error("Chyba pri parsovaní __firebase_config:", e);
-        firebaseConfig = {}; // Nastavíme prázdny objekt, ak je parsovanie neúspešné
+    // Kontrola, či sú globálne premenné k dispozícii.
+    // Ak nie sú, vypíše sa chyba, ale skript sa pokúsi pokračovať s predvolenými hodnotami.
+    if (typeof appId === 'undefined' || typeof firebaseConfig === 'undefined' || typeof initialAuthToken === 'undefined') {
+        console.error("Chyba: Globálne premenné appId, firebaseConfig alebo initialAuthToken nie sú definované.");
+        // Ak nie sú definované, nastavíme ich na bezpečné, ale nefunkčné predvolené hodnoty
+        // aby sa predišlo referenčným chybám, ale Firebase inicializácia zlyhá.
+        window.appId = window.appId || 'default-app-id';
+        window.firebaseConfig = window.firebaseConfig || {};
+        window.initialAuthToken = window.initialAuthToken || null;
     }
-    let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
     // Inicializácia Firebase aplikácie
     let app;
     let auth;
     let db;
 
-    // Kontrola, či už Firebase nie je inicializovaný
-    // Ak firebase.apps.length je 0, znamená to, že žiadna Firebase aplikácia nebola inicializovaná.
+    // Kontrola, či už Firebase nie je inicializovaný.
+    // Toto je kľúčové pre zabránenie chyby 'duplicate-app'.
     if (!firebase.apps.length) {
         try {
+            // Používame globálne definovanú firebaseConfig
             app = firebase.initializeApp(firebaseConfig);
             auth = firebase.auth(app);
             db = firebase.firestore(app);
@@ -40,6 +42,7 @@
             // Prihlásenie s vlastným tokenom alebo anonymne
             const signIn = async () => {
                 try {
+                    // Používame globálne definovaný initialAuthToken
                     if (initialAuthToken) {
                         await auth.signInWithCustomToken(initialAuthToken);
                         console.log("Prihlásenie s vlastným tokenom v header.js.");
@@ -49,17 +52,16 @@
                     }
                 } catch (error) {
                     console.error("Chyba pri prihlásení v header.js:", error);
-                    // Tu by ste mohli zobraziť používateľovi správu o chybe pri prihlásení
                 }
             };
             signIn();
 
         } catch (error) {
             console.error("Chyba pri inicializácii Firebase v header.js:", error);
-            // Táto chyba bude pravdepodobne obsahovať 'auth/invalid-api-key'
+            // Táto chyba bude pravdepodobne 'auth/invalid-api-key' ak je konfigurácia chybná
         }
     } else {
-        // Ak je Firebase už inicializovaný, použijeme existujúcu inštanciu
+        // Ak je Firebase už inicializovaný, použijeme existujúcu inštanciu.
         app = firebase.app();
         auth = firebase.auth(app);
         db = firebase.firestore(app);
@@ -72,7 +74,7 @@
         const myZoneNavItem = document.getElementById('my-zone-nav-item');
         const logoutNavItem = document.getElementById('logout-nav-item');
 
-        if (loginNavItem && myZoneNavItem && logoutNavItem) { // Kontrolujeme len hlavné li elementy
+        if (loginNavItem && myZoneNavItem && logoutNavItem) {
             if (user) {
                 // Používateľ je prihlásený
                 loginNavItem.classList.add('hidden'); // Skryť Prihlásenie
@@ -92,7 +94,6 @@
     };
 
     // Poslucháč zmien stavu autentifikácie
-    // Uistite sa, že auth objekt existuje pred nastavením poslucháča
     if (auth) {
         auth.onAuthStateChanged((user) => {
             updateNavVisibility(user);
@@ -102,24 +103,28 @@
     }
 
     // Pridanie poslucháča udalosti pre tlačidlo Odhlásenie
-    // Používame DOMContentLoaded, aby sme sa uistili, že tlačidlo je k dispozícii
     document.addEventListener('DOMContentLoaded', () => {
         const logoutButton = document.getElementById('logout-button');
-        if (logoutButton && auth) { // Skontrolujeme aj auth, aby sme sa uistili, že je k dispozícii pre signOut
+        if (logoutButton && auth) {
             logoutButton.addEventListener('click', async () => {
                 try {
                     await auth.signOut();
                     console.log("Používateľ odhlásený.");
-                    // Voliteľné: presmerovanie na domovskú stránku alebo prihlasovaciu stránku
                     window.location.href = 'index.html';
                 } catch (error) {
                     console.error("Chyba pri odhlasovaní:", error);
-                    // Tu by ste mohli zobraziť používateľovi správu o chybe
                 }
             });
         } else if (logoutButton && !auth) {
             console.warn("Tlačidlo odhlásenia nájdené, ale Firebase Auth nie je inicializovaný. Odhlasovanie nebude fungovať.");
         }
     });
+
+    // Voliteľné: Ak potrebujete prístup k 'auth' a 'db' objektom v iných skriptoch,
+    // môžete ich priradiť ku globálnemu objektu 'window'.
+    // Pre Firebase compat SDKs to však často nie je potrebné, pretože firebase.auth() a firebase.firestore()
+    // automaticky získajú predvolenú aplikáciu po jej inicializácii.
+    // window.firebaseAuth = auth;
+    // window.firebaseDb = db;
 
 })(); // Koniec IIFE
