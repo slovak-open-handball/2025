@@ -124,6 +124,7 @@ function updateMenuItemsVisibility(userRole) {
     }
 }
 
+/*
 // Počúvanie zmien stavu autentifikácie
 if (authMenu && dbMenu) {
     authMenu.onAuthStateChanged(async (user) => {
@@ -164,6 +165,7 @@ if (authMenu && dbMenu) {
             loadContent('logged-in-my-data.html'); // Načítať predvolenú stránku
         }
     });
+    */
 
     // Počiatočné prihlásenie pre menu (ak existuje vlastný token)
     if (initialAuthToken) {
