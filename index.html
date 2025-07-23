@@ -18,6 +18,7 @@
         .content-wrapper {
             flex-grow: 1; /* Aby obsah vyplnil zvyšný priestor */
             display: flex;
+            flex-direction: column; /* Zmenené na column pre lepšie usporiadanie obsahu */
             justify-content: center;
             align-items: center;
             padding: 1rem; /* Pridajte nejaký padding */
@@ -39,15 +40,16 @@
             background-color: #fee2e2;
             color: #991b1b;
         }
+        .message-box.info {
+            background-color: #bfdbfe; /* Modrá pre info */
+            color: #1e40af;
+        }
         .hidden {
             display: none;
         }
     </style>
 </head>
 <body>
-    <!-- header.js (MUSÍ BYŤ PO Firebase SDKs a po globálnych premenných) -->
-    <script src="header.html"></script>
-    
     <!-- Placeholder pre hlavičku. header.js načíta obsah header.html sem. -->
     <div id="main-header"></div>
 
@@ -89,7 +91,9 @@
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
 
-
+    <!-- header.js (MUSÍ BYŤ PO Firebase SDKs a po globálnych premenných) -->
+    <!-- TENTO RIADOK JE KĽÚČOVÝ: Načítava header.js, NIE header.html -->
+    <script src="header.js"></script>
 
     <!-- index.js (alebo iné stránkové skripty, ktoré používajú Firebase - MUSIA BYŤ PO header.js) -->
     <script src="index.js"></script>
