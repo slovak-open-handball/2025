@@ -1,88 +1,97 @@
 // header.js
-// Tento skript inicializuje Firebase pre hlavičku a spravuje zobrazenie navigačných odkazov
-// na základe stavu prihlásenia používateľa.
+// Tento skript dynamicky aktualizuje navigačnú lištu na základe stavu prihlásenia používateľa.
 
-// Získanie referencií na Firebase SDKs
-// Tieto by mali byť už načítané v HTML súbore pred týmto skriptom
-const firebaseApp = typeof firebase !== 'undefined' ? firebase : null;
-const getAuth = typeof firebase.auth !== 'undefined' ? firebase.auth().getAuth : null;
-const signOut = typeof firebase.auth !== 'undefined' ? firebase.auth().signOut : null;
-const onAuthStateChanged = typeof firebase.auth !== 'undefined' ? firebase.auth().onAuthStateChanged : null;
+// Globálne premenné pre Firebase konfiguráciu a ID aplikácie
+// Predpokladá sa, že tieto premenné sú definované v prostredí Canvas.
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Skontrolujeme, či sú globálne premenné definované
-if (typeof __firebase_config === 'undefined' || typeof __firebase_app_name === 'undefined') {
-    console.error("Chyba: Globálne premenné __firebase_config alebo __firebase_app_name nie sú definované.");
-    // Zobraziť chybu používateľovi alebo zakázať funkčnosť hlavičky
-} else if (!firebaseApp || !getAuth || !signOut || !onAuthStateChanged) {
-    console.error("Chyba: Firebase SDKs nie sú správne načítané v header.js.");
-    // Zobraziť chybu používateľovi
-} else {
-    // Inicializácia Firebase aplikácie pre hlavičku
-    // Používame pomenovanú aplikáciu, aby sa predišlo konfliktom s predvolenou aplikáciou na iných stránkach
-    let headerApp;
-    try {
-        // Skontrolujeme, či už aplikácia s týmto názvom existuje
-        headerApp = firebaseApp.apps.find(app => app.name === __firebase_app_name);
-        if (!headerApp) {
-            headerApp = firebaseApp.initializeApp(JSON.parse(__firebase_config), __firebase_app_name);
-            console.log(`Firebase aplikácia '${__firebase_app_name}' inicializovaná pre hlavičku.`);
-        } else {
-            console.log(`Používa sa existujúca Firebase aplikácia '${__firebase_app_name}' pre hlavičku.`);
-        }
-    } catch (e) {
-        console.error(`Chyba pri inicializácii Firebase aplikácie '${__firebase_app_name}' pre hlavičku:`, e);
-        // Tu by ste mohli zobraziť chybu používateľovi
+// Inicializácia Firebase aplikácie
+let app;
+let auth;
+let db;
+
+try {
+    if (!firebase.apps.length) {
+        app = firebase.initializeApp(firebaseConfig);
+    } else {
+        app = firebase.app(); // Použije existujúcu predvolenú aplikáciu
     }
+    auth = firebase.auth(app);
+    db = firebase.firestore(app);
+    console.log("Firebase inicializovaný v header.js");
 
-    // Získanie inštancie autentifikácie pre hlavičku
-    const auth = getAuth(headerApp);
-
-    // Funkcia na aktualizáciu UI hlavičky
-    function updateHeaderUI(user) {
-        const loginNavItem = document.getElementById('login-nav-item');
-        const myZoneNavItem = document.getElementById('my-zone-nav-item');
-        const logoutNavItem = document.getElementById('logout-nav-item');
-        const logoutButton = document.getElementById('logout-button');
-
-        if (!loginNavItem || !myZoneNavItem || !logoutNavItem || !logoutButton) {
-            console.warn("Chyba: Niektoré navigačné prvky hlavičky neboli nájdené v DOM.");
-            return;
+    // Prihlásenie s vlastným tokenom alebo anonymne
+    const signIn = async () => {
+        try {
+            if (initialAuthToken) {
+                await auth.signInWithCustomToken(initialAuthToken);
+                console.log("Prihlásenie s vlastným tokenom v header.js");
+            } else {
+                await auth.signInAnonymously();
+                console.log("Prihlásenie anonymne v header.js");
+            }
+        } catch (error) {
+            console.error("Chyba pri prihlásení v header.js:", error);
+            // Tu by ste mohli zobraziť používateľovi správu o chybe pri prihlásení
         }
+    };
+    signIn();
 
+} catch (error) {
+    console.error("Chyba pri inicializácii Firebase v header.js:", error);
+}
+
+// Funkcia na aktualizáciu viditeľnosti navigačných prvkov
+const updateNavVisibility = (user) => {
+    const loginNavItem = document.getElementById('login-nav-item');
+    const myZoneNavItem = document.getElementById('my-zone-nav-item');
+    const logoutNavItem = document.getElementById('logout-nav-item');
+    const logoutButton = document.getElementById('logout-button');
+
+    if (loginNavItem && myZoneNavItem && logoutNavItem && logoutButton) {
         if (user) {
             // Používateľ je prihlásený
-            loginNavItem.classList.add('hidden'); // Skryť "Prihlásenie"
-            myZoneNavItem.classList.remove('hidden'); // Zobraziť "Moja Zóna"
-            logoutNavItem.classList.remove('hidden'); // Zobraziť "Odhlásenie"
-            console.log("Hlavička aktualizovaná: Používateľ prihlásený.");
+            loginNavItem.classList.add('hidden'); // Skryť Prihlásenie
+            myZoneNavItem.classList.remove('hidden'); // Zobraziť Moja Zóna
+            logoutNavItem.classList.remove('hidden'); // Zobraziť Odhlásenie
+            console.log("Navigácia aktualizovaná: Prihlásený používateľ.");
         } else {
-            // Používateľ nie je prihlásený
-            loginNavItem.classList.remove('hidden'); // Zobraziť "Prihlásenie"
-            myZoneNavItem.classList.add('hidden'); // Skryť "Moja Zóna"
-            logoutNavItem.classList.add('hidden'); // Skryť "Odhlásenie"
-            console.log("Hlavička aktualizovaná: Používateľ odhlásený.");
+            // Používateľ NIE JE prihlásený
+            loginNavItem.classList.remove('hidden'); // Zobraziť Prihlásenie
+            myZoneNavItem.classList.add('hidden'); // Skryť Moja Zóna
+            logoutNavItem.classList.add('hidden'); // Skryť Odhlásenie
+            console.log("Navigácia aktualizovaná: Odhlásený používateľ.");
         }
+    } else {
+        console.warn("Chyba: Niektoré navigačné prvky neboli nájdené v DOM.");
     }
+};
 
-    // Poslucháč zmien stavu autentifikácie
-    // Táto funkcia sa spustí vždy, keď sa zmení stav prihlásenia (prihlásenie, odhlásenie, inicializácia)
-    onAuthStateChanged(auth, (user) => {
-        updateHeaderUI(user);
+// Poslucháč zmien stavu autentifikácie
+if (auth) {
+    auth.onAuthStateChanged((user) => {
+        updateNavVisibility(user);
     });
-
-    // Pridanie poslucháča udalosti pre tlačidlo odhlásenia
-    document.addEventListener('click', (event) => {
-        if (event.target && event.target.id === 'logout-button') {
-            signOut(auth).then(() => {
-                // Odhlásenie úspešné
-                console.log("Používateľ úspešne odhlásený.");
-                // Presmerovať na domovskú stránku alebo stránku prihlásenia
-                window.location.href = 'index.html';
-            }).catch((error) => {
-                // Chyba pri odhlásení
-                console.error("Chyba pri odhlásení:", error);
-                // Tu by ste mohli zobraziť chybu používateľovi (napr. modálne okno)
-            });
-        }
-    });
+} else {
+    console.error("Firebase Auth nie je inicializovaný. Nemôžem nastaviť poslucháča stavu autentifikácie.");
 }
+
+// Pridanie poslucháča udalosti pre tlačidlo Odhlásenie
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await auth.signOut();
+                console.log("Používateľ odhlásený.");
+                // Voliteľné: presmerovanie na domovskú stránku alebo prihlasovaciu stránku
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Chyba pri odhlasovaní:", error);
+                // Tu by ste mohli zobraziť používateľovi správu o chybe
+            }
+        });
+    }
+});
