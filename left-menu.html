@@ -7,7 +7,7 @@
         <li><a id="menu-change-password" href="logged-in-change-password.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Zmeniť heslo</a></li>
         <li><a id="menu-my-settings" href="logged-in-my-settings.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Moje nastavenia</a></li>
         <li><a id="menu-notifications" href="logged-in-notifications.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Upozornenia</a></li>
-        <!-- Admin položky - predvolene skryté -->
+        <!-- Admin položky - predvolene skryté, ale budú viditeľné, ak sa táto logika neodstráni z left-menu.js -->
         <li><a id="menu-send-message" href="logged-in-send-message.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200 hidden">Poslať správu</a></li>
         <li><a id="menu-users" href="logged-in-users.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200 hidden">Používatelia</a></li>
         <li><a id="menu-all-registrations" href="logged-in-all-registrations.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200 hidden">Všetky registrácie</a></li>
@@ -15,9 +15,9 @@
     </ul>
 </nav>
 
-<!-- Firebase SDKs (ak ešte nie sú načítané na hlavnej stránke) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<!-- Firebase SDKs sú načítané v hlavnej stránke (logged-in-my-data.html), tu ich už nepotrebujeme -->
+<!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script> -->
+<!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> -->
+<!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script> -->
 <!-- Načítanie skriptu pre dynamické ľavé menu -->
 <script src="left-menu.js"></script>
