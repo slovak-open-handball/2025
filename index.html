@@ -32,57 +32,53 @@
             background-color: #fefefe;
             margin: auto;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 90%;
+            border: 1px solid #888;
+            width: 80%;
             max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             position: relative;
         }
         .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
             position: absolute;
             top: 10px;
             right: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #aaa;
         }
         .close-button:hover,
         .close-button:focus {
-            color: #000;
+            color: black;
             text-decoration: none;
             cursor: pointer;
         }
     </style>
 </head>
-<body>
-    <!-- Placeholder pre hlavičku -->
+<body class="bg-gray-100">
+    <!-- Miesto pre hlavičku -->
     <div id="header-placeholder"></div>
 
-    <div id="root">
-        <!-- React aplikácia sa sem načíta -->
-    </div>
+    <!-- Hlavný kontajner pre React aplikáciu -->
+    <div id="root"></div>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
-    <!-- Globálne premenné pre Firebase konfiguráciu -->
-    <script>
-        // Global application ID and Firebase configuration (should be consistent across all React apps)
-        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-            projectId: "prihlasovanie-4f3f3",
-            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-            messagingSenderId: "26454452024",
-            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        });
-        const __initial_auth_token = null; // Global authentication token
+    <!-- React a ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        // Nová globálna funkcia na načítanie hlavičky a inicializáciu jej logiky
+    <!-- Naše vlastné skripty -->
+    <script src="header.js"></script>
+    <script type="text/babel" src="index.js"></script>
+
+    <script type="text/javascript">
+        // Funkcia na načítanie hlavičky a inicializáciu jej logiky
         async function loadHeaderAndInitializeLogic() {
             try {
                 const response = await fetch('header.html');
@@ -92,57 +88,40 @@
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
 
-                // Načítať header.js dynamicky po vložení HTML
-                const script = document.createElement('script');
-                script.src = 'header.js';
-                script.type = 'text/javascript';
-                script.onload = () => {
-                    // Po načítaní header.js zavolajte jeho inicializačnú funkciu
-                    if (typeof initializeHeaderLogic === 'function') {
-                        initializeHeaderLogic();
-                    } else {
-                        console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                    }
-                };
-                script.onerror = () => {
-                    console.error("Chyba pri načítaní header.js.");
-                };
-                document.body.appendChild(script);
-
-                console.log("Hlavička načítaná a header.js spustený.");
+                // Uistite sa, že initializeHeaderLogic je definovaná a potom ju zavolajte
+                if (typeof initializeHeaderLogic === 'function') {
+                    initializeHeaderLogic();
+                } else {
+                    console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná v header.js.");
+                }
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní hlavičky.</div>';
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
-    </script>
 
-    <!-- React SDKs -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Vaše React komponenty a hlavná aplikácia -->
-    <script type="text/babel" src="index.js"></script>
-
-    <script type="text/babel">
-        // Táto časť sa spustí po načítaní DOM a všetkých skriptov, vrátane index.js
+        // Spustí sa po načítaní DOM a všetkých skriptov, vrátane index.js
         window.onload = function() {
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            // loadHeaderAndInitializeLogic() sa teraz volá z index.js po inicializácii Firebase
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            if (typeof App === 'undefined') {
-                console.error("Chyba: Komponent App nie je definovaný. Skontrolujte App.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
+            // Načítať hlavičku ako prvú a inicializovať jej logiku
+            loadHeaderAndInitializeLogic().then(() => {
+                // Potom renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                // App je definovaný v index.js
+                if (typeof App === 'undefined') {
+                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            }).catch(error => {
+                console.error("Chyba pri inicializácii stránky:", error);
+            });
         };
     </script>
 </body>
