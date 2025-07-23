@@ -1,185 +1,88 @@
 // header.js
-// Používame globálne premenné poskytované Canvas prostredím, ak sú definované.
-// Ak nie sú definované (napr. pri lokálnom testovaní mimo Canvas), použijeme zástupné hodnoty.
-// Dôležité: Tieto premenné by mali byť definované globálne v prostredí Canvas alebo v hlavnom skripte.
+// Tento skript inicializuje Firebase pre hlavičku a spravuje zobrazenie navigačných odkazov
+// na základe stavu prihlásenia používateľa.
 
-// Pevne zakódované záložné hodnoty pre Firebase konfiguráciu
-const FALLBACK_APP_ID = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-const FALLBACK_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-  authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-  projectId: "prihlasovanie-4f3f3",
-  storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-  messagingSenderId: "26454452024",
-  appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-};
-const FALLBACK_INITIAL_AUTH_TOKEN = null; // Zvyčajne null pre header
+// Získanie referencií na Firebase SDKs
+// Tieto by mali byť už načítané v HTML súbore pred týmto skriptom
+const firebaseApp = typeof firebase !== 'undefined' ? firebase : null;
+const getAuth = typeof firebase.auth !== 'undefined' ? firebase.auth().getAuth : null;
+const signOut = typeof firebase.auth !== 'undefined' ? firebase.auth().signOut : null;
+const onAuthStateChanged = typeof firebase.auth !== 'undefined' ? firebase.auth().onAuthStateChanged : null;
 
-// Používame globálne premenné, ak sú k dispozícii, inak záložné hodnotné
-const canvasAppId = typeof __app_id !== 'undefined' ? __app_id : FALLBACK_APP_ID;
-
-// Robustná logika pre získanie Firebase konfigurácie
-let parsedFirebaseConfig = FALLBACK_FIREBASE_CONFIG;
-if (typeof __firebase_config !== 'undefined') {
-    if (typeof __firebase_config === 'string') {
-        try {
-            parsedFirebaseConfig = JSON.parse(__firebase_config);
-        } catch (e) {
-            console.warn("header.js: Chyba pri parsovaní __firebase_config (reťazec). Používam záložnú konfiguráciu.", e);
-        }
-    } else if (typeof __firebase_config === 'object' && __firebase_config !== null) {
-        // Ak je __firebase_config už objekt, použijeme ho priamo
-        parsedFirebaseConfig = __firebase_config;
-    } else {
-        console.warn("header.js: __firebase_config je definované, ale nie je reťazec ani objekt. Používam záložnú konfiguráciu.");
-    }
-}
-const canvasFirebaseConfig = parsedFirebaseConfig;
-
-const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : FALLBACK_INITIAL_AUTH_TOKEN;
-
-let firebaseAppHeader;
-let authHeader;
-let dbHeader;
-
-// Funkcia na inicializáciu Firebase pre hlavičku, ktorá čaká na dostupnosť 'firebase' globálneho objektu
-function initializeFirebaseForHeader() {
-    // Kontrola, či je Firebase SDK načítané
-    if (typeof firebase === 'undefined' || !firebase.initializeApp) {
-        console.warn("header.js: Firebase SDK ešte nie je načítaný. Opakujem inicializáciu o 100ms.");
-        setTimeout(initializeFirebaseForHeader, 100); // Skúsiť znova o chvíľu
-        return;
-    }
-
-    // Kontrola, či je dostupná Firebase konfigurácia
-    // S vylepšenou logikou priradenia by toto už nemalo byť null/undefined alebo prázdny objekt
-    if (!canvasFirebaseConfig || Object.keys(canvasFirebaseConfig).length === 0) {
-        console.error("header.js: Firebase konfigurácia (canvasFirebaseConfig) je prázdna alebo neplatná. Inicializácia zlyhala.");
-        return;
-    }
-
+// Skontrolujeme, či sú globálne premenné definované
+if (typeof __firebase_config === 'undefined' || typeof __firebase_app_name === 'undefined') {
+    console.error("Chyba: Globálne premenné __firebase_config alebo __firebase_app_name nie sú definované.");
+    // Zobraziť chybu používateľovi alebo zakázať funkčnosť hlavičky
+} else if (!firebaseApp || !getAuth || !signOut || !onAuthStateChanged) {
+    console.error("Chyba: Firebase SDKs nie sú správne načítané v header.js.");
+    // Zobraziť chybu používateľovi
+} else {
+    // Inicializácia Firebase aplikácie pre hlavičku
+    // Používame pomenovanú aplikáciu, aby sa predišlo konfliktom s predvolenou aplikáciou na iných stránkach
+    let headerApp;
     try {
-        // Skontrolujeme, či už existuje inštancia Firebase s týmto názvom ('headerApp')
-        // Ak nie, inicializujeme novú inštanciu s jedinečným názvom.
-        firebaseAppHeader = firebase.apps.find(app => app.name === 'headerApp') || firebase.initializeApp(canvasFirebaseConfig, 'headerApp');
-        authHeader = firebase.auth(firebaseAppHeader);
-        dbHeader = firebase.firestore(firebaseAppHeader);
-        console.log("header.js: Firebase aplikácia pre hlavičku inicializovaná.");
-
-        // Prihlásenie s custom tokenom, ak je k dispozícii, inak anonymne
-        // Používame authHeader pre prihlásenie
-        if (canvasInitialAuthToken) {
-            authHeader.signInWithCustomToken(canvasInitialAuthToken)
-                .then(() => console.log("header.js: Prihlásenie custom tokenom pre hlavičku úspešné."))
-                .catch(error => console.error("header.js: Chyba pri prihlásení custom tokenom pre hlavičku:", error));
+        // Skontrolujeme, či už aplikácia s týmto názvom existuje
+        headerApp = firebaseApp.apps.find(app => app.name === __firebase_app_name);
+        if (!headerApp) {
+            headerApp = firebaseApp.initializeApp(JSON.parse(__firebase_config), __firebase_app_name);
+            console.log(`Firebase aplikácia '${__firebase_app_name}' inicializovaná pre hlavičku.`);
         } else {
-            authHeader.signInAnonymously()
-                .then(() => console.log("header.js: Prihlásenie anonymne pre hlavičku úspešné."))
-                .catch(error => console.error("header.js: Chyba pri anonymnom prihlásení pre hlavičku:", error));
+            console.log(`Používa sa existujúca Firebase aplikácia '${__firebase_app_name}' pre hlavičku.`);
         }
-
-        // Akonáhle je Firebase inicializované, môžeme spustiť hlavnú logiku hlavičky
-        initializeHeaderLogicInternal();
-
     } catch (e) {
-        console.error("header.js: Chyba pri inicializácii Firebase pre hlavičku:", e);
+        console.error(`Chyba pri inicializácii Firebase aplikácie '${__firebase_app_name}' pre hlavičku:`, e);
+        // Tu by ste mohli zobraziť chybu používateľovi
     }
-}
 
-let currentHeaderUser = null;
-let currentIsRegistrationOpenStatus = false;
+    // Získanie inštancie autentifikácie pre hlavičku
+    const auth = getAuth(headerApp);
 
-// Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke
-function updateHeaderLinks(user, isRegistrationOpen) {
-    const registerLink = document.getElementById('register-link');
-    const profileLink = document.getElementById('profile-link');
-    const authLink = document.getElementById('auth-link');
-    const logoutButton = document.getElementById('logout-button');
+    // Funkcia na aktualizáciu UI hlavičky
+    function updateHeaderUI(user) {
+        const loginNavItem = document.getElementById('login-nav-item');
+        const myZoneNavItem = document.getElementById('my-zone-nav-item');
+        const logoutNavItem = document.getElementById('logout-nav-item');
+        const logoutButton = document.getElementById('logout-button');
 
-    // Viditeľnosť odkazu na registráciu na základe stavu registrácie
-    if (registerLink) {
-        if (isRegistrationOpen) {
-            registerLink.classList.remove('hidden');
+        if (!loginNavItem || !myZoneNavItem || !logoutNavItem || !logoutButton) {
+            console.warn("Chyba: Niektoré navigačné prvky hlavičky neboli nájdené v DOM.");
+            return;
+        }
+
+        if (user) {
+            // Používateľ je prihlásený
+            loginNavItem.classList.add('hidden'); // Skryť "Prihlásenie"
+            myZoneNavItem.classList.remove('hidden'); // Zobraziť "Moja Zóna"
+            logoutNavItem.classList.remove('hidden'); // Zobraziť "Odhlásenie"
+            console.log("Hlavička aktualizovaná: Používateľ prihlásený.");
         } else {
-            registerLink.classList.add('hidden');
+            // Používateľ nie je prihlásený
+            loginNavItem.classList.remove('hidden'); // Zobraziť "Prihlásenie"
+            myZoneNavItem.classList.add('hidden'); // Skryť "Moja Zóna"
+            logoutNavItem.classList.add('hidden'); // Skryť "Odhlásenie"
+            console.log("Hlavička aktualizovaná: Používateľ odhlásený.");
         }
     }
 
-    if (user) {
-        // Používateľ je prihlásený (anonymne alebo s povereniami)
-        if (user.isAnonymous) {
-            // Anonymný používateľ: zobraziť prihlásenie, skryť profil a odhlásenie
-            if (profileLink) profileLink.classList.add('hidden');
-            if (logoutButton) logoutButton.classList.add('hidden');
-            if (authLink) authLink.classList.remove('hidden'); // Zobraziť prihlásenie pre anonymného používateľa
-        } else {
-            // Autentifikovaný používateľ (nie anonymný): zobraziť profil a odhlásenie, skryť prihlásenie
-            if (profileLink) profileLink.classList.remove('hidden');
-            if (logoutButton) logoutButton.classList.remove('hidden');
-            if (authLink) authLink.classList.add('hidden');
-        }
-    } else {
-        // Žiadny používateľ nie je prihlásený: skryť profil a odhlásenie, zobraziť prihlásenie
-        if (profileLink) profileLink.classList.add('hidden');
-        if (logoutButton) logoutButton.classList.add('hidden');
-        if (authLink) authLink.classList.remove('hidden');
-    }
-}
-
-// Interná funkcia pre logiku hlavičky, spúšťa sa po inicializácii Firebase
-function initializeHeaderLogicInternal() {
-    // Listener pre zmeny stavu autentifikácie
-    authHeader.onAuthStateChanged(user => {
-        currentHeaderUser = user;
-        console.log("header.js: onAuthStateChanged - Používateľ:", user ? user.uid : "Žiadny");
-        // Aktualizovať odkazy na základe stavu používateľa a registrácie
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
+    // Poslucháč zmien stavu autentifikácie
+    // Táto funkcia sa spustí vždy, keď sa zmení stav prihlásenia (prihlásenie, odhlásenie, inicializácia)
+    onAuthStateChanged(auth, (user) => {
+        updateHeaderUI(user);
     });
 
-    // Listener pre nastavenia registrácie z Firestore
-    const docRef = dbHeader.collection('settings').doc('registration');
-    docRef.onSnapshot(docSnapshot => {
-        if (docSnapshot.exists) {
-            const data = docSnapshot.data();
-            const regStart = data.registrationStartDate ? data.registrationStartDate.toDate() : null;
-            const regEnd = data.registrationEndDate ? data.registrationEndDate.toDate() : null;
-            const now = new Date();
-
-            const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
-            const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
-
-            currentIsRegistrationOpenStatus = (
-                (isRegStartValid ? now >= regStart : true) &&
-                (isRegEndValid ? now <= regEnd : true)
-            );
-        } else {
-            currentIsRegistrationOpenStatus = false; // Predvolene zatvorené, ak sa nastavenia nenašli
+    // Pridanie poslucháča udalosti pre tlačidlo odhlásenia
+    document.addEventListener('click', (event) => {
+        if (event.target && event.target.id === 'logout-button') {
+            signOut(auth).then(() => {
+                // Odhlásenie úspešné
+                console.log("Používateľ úspešne odhlásený.");
+                // Presmerovať na domovskú stránku alebo stránku prihlásenia
+                window.location.href = 'index.html';
+            }).catch((error) => {
+                // Chyba pri odhlásení
+                console.error("Chyba pri odhlásení:", error);
+                // Tu by ste mohli zobraziť chybu používateľovi (napr. modálne okno)
+            });
         }
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
-    }, error => {
-        console.error("Chyba pri načítaní nastavení registrácie pre hlavičku:", error);
-        currentIsRegistrationOpenStatus = false;
-        updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
     });
 }
-
-// Spracovanie odhlásenia pre tlačidlo v hlavičke
-document.addEventListener('DOMContentLoaded', () => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            if (authHeader) { // Používame authHeader
-                try {
-                    await authHeader.signOut();
-                    window.location.href = 'login.html'; // Presmerovanie po odhlásení
-                } catch (e) {
-                    console.error("Chyba pri odhlásení z hlavičky:", e);
-                }
-            }
-        });
-    }
-});
-
-// Spustiť inicializáciu Firebase hneď po načítaní header.js
-// Toto sa bude opakovať, kým nebude Firebase SDK k dispozícii.
-initializeFirebaseForHeader();
