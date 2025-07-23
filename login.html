@@ -127,6 +127,27 @@
                     console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
                 }
 
+                // *** DÔLEŽITÉ: Inicializácia predvolenej Firebase aplikácie pre login.html ***
+                try {
+                    // Skontrolujeme, či už existuje predvolená aplikácia Firebase
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp(JSON.parse(__firebase_config));
+                        console.log("login.html: Predvolená Firebase aplikácia inicializovaná.");
+                    } else {
+                        console.log("login.html: Používa sa existujúca predvolená Firebase aplikácia.");
+                    }
+                } catch (e) {
+                    console.error("login.html: Chyba pri inicializácii predvolenej Firebase aplikácie:", e);
+                    // Zobraziť chybu používateľovi, ak inicializácia zlyhá
+                    const errorMessageDiv = document.getElementById('login-error-message');
+                    if (errorMessageDiv) {
+                        errorMessageDiv.textContent = `Chyba pri načítaní aplikácie: ${e.message}`;
+                        errorMessageDiv.classList.remove('hidden');
+                    }
+                    return; // Zastaviť ďalšie spracovanie, ak Firebase zlyhá
+                }
+
+
                 // Ak máte React aplikáciu pre login, renderujte ju tu
                 // if (typeof LoginApp === 'function') {
                 //     const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -156,8 +177,8 @@
                         } catch (error) {
                             console.error("Chyba pri prihlásení:", error);
                             let message = "Nastala neznáma chyba. Skúste to prosím znova.";
-                            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                                message = "Nesprávny e-mail alebo heslo.";
+                            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                                message = "Nepodarilo sa prihlásiť – nesprávne meno alebo heslo.";
                             } else if (error.code === 'auth/invalid-email') {
                                 message = "Neplatný formát e-mailu.";
                             }
