@@ -250,11 +250,8 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("RegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
-        // Ak je používateľ prihlásený, presmerujte ho
-        if (currentUser) {
-            window.location.href = 'logged-in-my-data.html';
-            return; // Zastaviť ďalšie vykresľovanie pre tento komponent
-        }
+        // Pôvodné presmerovanie odtiaľto bolo odstránené.
+        // Presmerovanie sa teraz vykonáva až po úspešnom zápise do Firestore v handleRegister.
         setLoading(false); // Auth state checked, stop loading
       });
 
@@ -652,6 +649,8 @@ function App() {
 
   // Ak je používateľ už prihlásený, presmerujeme ho
   if (user) {
+    // Táto časť bola presunutá z onAuthStateChanged, aby sa zabránilo predčasnému presmerovaniu.
+    // Presmerovanie prebieha až po úspešnej registrácii a zápise do Firestore.
     window.location.href = 'logged-in-my-data.html';
     return null;
   }
