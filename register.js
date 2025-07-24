@@ -252,8 +252,7 @@ function App() {
         setUser(currentUser);
         // Pôvodné presmerovanie odtiaľto bolo odstránené.
         // Presmerovanie sa teraz vykonáva až po úspešnom zápise do Firestore v handleRegister.
-        // ODSTRÁNENÝ BLOK, KTORÝ SPÔSOBOVAL PREDČASNÉ PRESMEROVANIE
-        // if (currentUser) {
+        // if (currentUser) { // TENTO BLOK BOL ODSTRÁNENÝ
         //     window.location.href = 'logged-in-my-data.html';
         //     return;
         // }
@@ -653,11 +652,10 @@ function App() {
   }
 
   // Ak je používateľ už prihlásený, presmerujeme ho
+  // TENTO BLOK JE TERAZ ZAKOMENTOVANÝ, ABY SA ZABRÁNILO PREDČASNÉMU PRESMEROVANIU
   // if (user) {
-    // Táto časť bola presunutá z onAuthStateChanged, aby sa zabránilo predčasnému presmerovaniu.
-    // Presmerovanie prebieha až po úspešnej registrácii a zápise do Firestore.
-    // window.location.href = 'logged-in-my-data.html';
-    // return null;
+  //   window.location.href = 'logged-in-my-data.html';
+  //   return null;
   // }
 
   const now = new Date();
