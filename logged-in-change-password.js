@@ -157,6 +157,9 @@ function ChangePasswordApp() {
       }
 
       // Získanie predvolenej Firebase aplikácie
+      // POZNÁMKA: Pre správne fungovanie musí byť predvolená Firebase aplikácia
+      // inicializovaná v logged-in-change-password.html (napr. firebase.initializeApp(firebaseConfig);)
+      // PREDTÝM, ako sa načíta tento skript.
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -285,8 +288,8 @@ function ChangePasswordApp() {
   React.useEffect(() => {
     console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
     // Volanie globálnej funkcie z header.js na aktualizáciu odkazov v hlavičke
-    // Používame window.updateHeaderLinks, pretože to je funkcia definovaná v header.js
-    if (typeof updateHeaderLinks === 'function') { // Používame priame volanie
+    // Používame priame volanie, ako v logged-in-change-name.js
+    if (typeof updateHeaderLinks === 'function') { 
         // updateHeaderLinks očakáva currentUser a isRegistrationOpenStatus
         // isRegistrationOpenStatus je interne riadený v header.js, takže môžeme poslať null alebo false
         updateHeaderLinks(user, null); 
