@@ -248,6 +248,44 @@ function UsersManagementApp() {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
+
+              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                  console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                  console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  return;
+              }
+
+              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+              console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  return;
+              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  return;
+              } else {
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("UsersManagementApp: Timestampy sú rovnaké, aktualizujem localStorage.");
+              }
+              // --- KONIEC LOGIKY ODHLÁSENIA ---
+
               setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
               setLoading(false); // Stop loading po načítaní používateľských dát
@@ -277,7 +315,7 @@ function UsersManagementApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
