@@ -8,7 +8,7 @@ const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) { // Pridaný tabIndex
   // SVG icons for eye (show password) and eye-off (hide password)
   const EyeIcon = React.createElement(
     'svg',
@@ -47,6 +47,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
+        tabIndex: tabIndex, // Pridaný tabIndex pre input
       }),
       React.createElement(
         'span', // Zostáva 'span'
@@ -550,6 +551,7 @@ function App() {
             autoComplete: 'current-password',
             showPassword: showPasswordLogin,
             toggleShowPassword: () => setShowPasswordLogin(!showPasswordLogin),
+            tabIndex: 2, // Nastaví tabIndex pre heslo na 2
           }),
           React.createElement(
             'button',
@@ -557,7 +559,7 @@ function App() {
               type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
               disabled: loading,
-              tabIndex: 2 // Explicitne nastaví tlačidlo do poradia tabulátorov
+              tabIndex: 3 // Nastaví tabIndex pre tlačidlo na 3
             },
             loading ? 'Prihlasujem...' : 'Prihlásiť'
           )
