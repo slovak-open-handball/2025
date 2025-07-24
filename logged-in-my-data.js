@@ -328,26 +328,13 @@ function MyDataApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Moja zóna'
+          'Moje údaje' // Zmenený hlavný nadpis
         ),
-        // Používame userProfileData pre zobrazenie mena a roly
-        // Tento riadok bol odstránený podľa požiadavky:
-        // userProfileData && React.createElement(
-        //   'p',
-        //   { className: 'text-lg text-gray-600 text-center mb-4' },
-        //   `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`,
-        //   userProfileData.role === 'admin' && !userProfileData.approved && React.createElement(
-        //     'span',
-        //     { className: 'text-red-500 font-semibold ml-2' },
-        //     '(Čaká sa na schválenie)'
-        //   )
-        // ),
-
         // My Data Section
         React.createElement(
           React.Fragment,
           null,
-          React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
+          // Odstránený nadpis h2 "Moje údaje"
           React.createElement(
             'div', 
             { className: 'space-y-2' }, 
