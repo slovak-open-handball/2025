@@ -29,35 +29,42 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   return React.createElement(
     'div',
-    { className: 'relative' },
+    null, // Odstránené 'relative' z tohto divu
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
-    React.createElement('input', {
-      type: showPassword ? 'text' : 'password',
-      id: id,
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
-      value: value,
-      onChange: onChange,
-      onCopy: (e) => e.preventDefault(),
-      onPaste: (e) => e.preventDefault(),
-      onCut: (e) => e.preventDefault(),
-      required: true,
-      placeholder: placeholder,
-      autoComplete: autoComplete,
-      disabled: disabled,
-    }),
     React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
+      'div',
+      { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
+      React.createElement('input', {
+        type: showPassword ? 'text' : 'password',
+        id: id,
+        // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
+        value: value,
+        onChange: onChange,
+        onCopy: (e) => e.preventDefault(),
+        onPaste: (e) => e.preventDefault(),
+        onCut: (e) => e.preventDefault(),
+        required: true,
+        placeholder: placeholder,
+        autoComplete: autoComplete,
         disabled: disabled,
-      },
-      showPassword ? EyeOffIcon : EyeIcon
+      }),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: toggleShowPassword,
+          // Upravené triedy pre centrovanie a focus ohraničenie
+          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
+          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          disabled: disabled,
+        },
+        showPassword ? EyeOffIcon : EyeIcon
+      )
     ),
     description && React.createElement(
       'div', // Changed from 'p' to 'div' to resolve DOM nesting warning
-      { className: 'text-gray-600 text-sm -mt-2' },
+      { className: 'text-gray-600 text-sm mt-2' }, // Zmenené z -mt-2 na mt-2 pre väčší odstup
       description
     )
   );
