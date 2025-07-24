@@ -183,7 +183,6 @@ function App() {
         return;
       }
 
-      // Získanie predvolenej Firebase aplikácie
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -413,6 +412,16 @@ function App() {
         return;
       }
 
+      // DÔLEŽITÉ: Aktualizácia timestampu passwordLastChanged pri úspešnom prihlásení
+      await userDocRef.update({
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
+      
+      // Aktualizujeme aj localStorage pre aktuálnu reláciu
+      localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString());
+
+
       setUser(prevUser => ({
         ...prevUser,
         ...userData,
@@ -519,6 +528,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
+              tabIndex: 1 // Explicitne nastaví poradie tabulátorov pre pole e-mailu
             })
           ),
           React.createElement(PasswordInput, {
@@ -540,7 +550,7 @@ function App() {
               type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
               disabled: loading,
-              tabIndex: 0 // Explicitne nastaví tlačidlo do poradia tabulátorov
+              tabIndex: 2 // Explicitne nastaví tlačidlo do poradia tabulátorov
             },
             loading ? 'Prihlasujem...' : 'Prihlásiť'
           )
