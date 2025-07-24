@@ -164,15 +164,18 @@ function ChangeNameApp() {
               console.log("ChangeNameApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+              // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
+              // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                   console.error("ChangeNameApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
                   console.log("ChangeNameApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
+                  auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  return;
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  return; // Zastaviť ďalšie spracovanie
               }
 
+              // Normal processing if passwordLastChanged is valid
               const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
@@ -180,21 +183,26 @@ function ChangeNameApp() {
               console.log(`ChangeNameApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  // First load for this user/browser, initialize localStorage and do NOT logout
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangeNameApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                  // No return here, continue with normal data processing for the first load
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  // Password was changed on another device/session
                   console.log("ChangeNameApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
+                  auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
+                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  // This should ideally not happen if Firestore is the source of truth
                   console.warn("ChangeNameApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
+                  auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
+                  // Times are equal, ensure localStorage is up-to-date
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangeNameApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
@@ -235,7 +243,7 @@ function ChangeNameApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
             }
             setLoading(false);
             console.log("ChangeNameApp: Načítanie používateľských dát zlyhalo, loading: false");
