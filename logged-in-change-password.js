@@ -431,7 +431,7 @@ function ChangePasswordApp() {
       } else if (e.code === 'auth/requires-recent-login') {
         setError("Táto akcia vyžaduje nedávne prihlásenie. Prosím, odhláste sa a znova sa prihláste a skúste to znova.");
       } else {
-        setError(`Chyba pri zmene hesla: ${e.message}`);
+        setError(`Zmena hesla nebola úspešná, skontrolujte zadané údaje.`);
       }
     } finally {
       setLoading(false);
