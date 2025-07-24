@@ -1,21 +1,10 @@
 // Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-my-data.html
+// Tieto konštanty sú teraz definované v <head> hlavného HTML súboru (napr. logged-in-my-data.html)
 // const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
 // const firebaseConfig = { ... };
 // const initialAuthToken = null;
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
-
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-const formatToDatetimeLocal = (date) => {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
@@ -162,22 +151,64 @@ function MyDataApp() {
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("MyDataApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
-              setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
-              
-              // Aktualizujeme lokálne stavy z userProfileData
-              setRole(userData.role || 'user');
-              setIsApproved(userData.approved || false);
-              
+
+              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+              // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
+              // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
+              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                  console.error("MyDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                  console.log("MyDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  return; // Zastaviť ďalšie spracovanie
+              }
+
+              // Normal processing if passwordLastChanged is valid
+              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+              console.log(`MyDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  // First load for this user/browser, initialize localStorage and do NOT logout
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("MyDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                  // No return here, continue with normal data processing for the first load
+              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  // Password was changed on another device/session
+                  console.log("MyDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  return;
+              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  // This should ideally not happen if Firestore is the source of truth
+                  console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  auth.signOut(); // Používame auth z React stavu
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  return;
+              } else {
+                  // Times are equal, ensure localStorage is up-to-date
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("MyDataApp: Timestampy sú rovnaké, aktualizujem localStorage.");
+              }
+
+              // Continue with setting user data if not logged out
+              setUserProfileData(userData); // Aktualizujeme stav userProfileData
               setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
 
-              // NOVINKA: Aktualizácia viditeľnosti menu po načítaní roly
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
+              // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
+              if (typeof updateMenuItemsVisibility === 'function') {
+                  updateMenuItemsVisibility(userData.role);
+              } else {
+                  console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
               }
 
               console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
