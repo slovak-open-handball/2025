@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Nastavenia turnaja</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+        }
+        /* Štýly pre modálne okná */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        #main-content-area {
+            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            padding: 1rem;
+            flex-grow: 1;
+        }
+        @media (max-width: 768px) {
+            #main-content-area {
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+            }
+        }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
+    <script>
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const firebaseConfig = {
+          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+          projectId: "prihlasovanie-4f3f3",
+          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+          messagingSenderId: "26454452024",
+          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        
+        // NOVINKA: Inicializácia Firebase aplikácie globálne
+        firebase.initializeApp(firebaseConfig);
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Hlavička sa načíta dynamicky -->
+    <div id="header-placeholder"></div>
+
+    <div class="flex flex-1">
+        <!-- Ľavé menu sa načíta dynamicky -->
+        <div id="left-menu-placeholder"></div>
+        
+        <!-- Hlavná oblasť pre obsah React aplikácie -->
+        <div id="main-content-area" class="flex-1 p-4">
+            <!-- React aplikácia sa vykreslí sem -->
+            <div id="root"></div>
+        </div>
+    </div>
+
+    <!-- Načítanie hlavného skriptu pre túto stránku (TournamentSettingsApp) -->
+    <script src="logged-in-tournament-settings.js"></script>
+
+    <!-- Načítanie hlavičky a logiky menu -->
+    <script>
+        // Funkcia na načítanie hlavičky
+        async function loadHeader() {
+            const headerPlaceholder = document.getElementById('header-placeholder');
+            if (headerPlaceholder) {
+                try {
+                    const response = await fetch('header.html');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const headerHtml = await response.text();
+                    headerPlaceholder.innerHTML = headerHtml;
+
+                    const headerScript = document.createElement('script');
+                    headerScript.src = 'header.js';
+                    headerScript.onload = () => {
+                        console.log("header.js načítaný a spustený.");
+                        if (typeof initializeHeaderLogic === 'function') {
+                            initializeHeaderLogic();
+                        }
+                    };
+                    headerScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní header.js:", e);
+                    };
+                    document.body.appendChild(headerScript);
+                } catch (error) {
+                    console.error("Chyba pri načítaní hlavičky:", error);
+                }
+            }
+        }
+
+        // Funkcia na načítanie ľavého menu
+        async function loadLeftMenu() {
+            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
+            if (leftMenuPlaceholder) {
+                try {
+                    const response = await fetch('left-menu.html');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const menuHtml = await response.text();
+                    leftMenuPlaceholder.innerHTML = menuHtml;
+
+                    const menuScript = document.createElement('script');
+                    menuScript.src = 'left-menu.js';
+                    menuScript.onload = () => {
+                        console.log("left-menu.js načítaný a spustený.");
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                    };
+                    menuScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní left-menu.js:", e);
+                    };
+                    document.body.appendChild(menuScript);
+                } catch (error) {
+                    console.error("Chyba pri načítaní ľavého menu:", error);
+                }
+            }
+        }
+
+        // Spustíme načítanie hlavičky a menu po načítaní DOM
+        window.onload = async () => {
+            await loadHeader();
+            await loadLeftMenu();
+
+            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof TournamentSettingsApp === 'undefined') {
+                console.error("Chyba: Komponent TournamentSettingsApp nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(TournamentSettingsApp, null));
+            console.log("logged-in-tournament-settings.html: React App vykreslená.");
+        };
+    </script>
+</body>
+</html>
