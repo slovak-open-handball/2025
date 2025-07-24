@@ -1,12 +1,5 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-my-settings.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
-
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -331,20 +324,8 @@ function MySettingsApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Moje Nastavenia'
+          'Moje nastavenia'
         ),
-        userProfileData && React.createElement(
-          'p',
-          { className: 'text-lg text-gray-600 text-center mb-4' },
-          `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`,
-          userProfileData.role === 'admin' && !userProfileData.approved && React.createElement(
-            'span',
-            { className: 'text-red-500 font-semibold ml-2' },
-            '(Čaká sa na schválenie)'
-          )
-        ),
-
-        // My Settings Section
         React.createElement(
           React.Fragment,
           null,
