@@ -435,7 +435,7 @@ function App() {
     if (errors.length === 0) {
       return null;
     } else {
-      return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
+      return "\nHeslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
   };
 
