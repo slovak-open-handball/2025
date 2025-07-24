@@ -156,24 +156,8 @@ function ChangePasswordApp() {
         return;
       }
 
-      // Získanie existujúcej Firebase aplikácie.
-      // Používame globálnu premennú 'headerAppName' z header.js, ktorá by mala byť definovaná.
-      let firebaseApp;
-      if (typeof headerAppName !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === headerAppName)) {
-        firebaseApp = firebase.app(headerAppName);
-        console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${headerAppName}`);
-      } else if (firebase.apps.length > 0) {
-        // Ak existuje predvolená aplikácia (bez názvu), použite ju
-        firebaseApp = firebase.app();
-        console.log("ChangePasswordApp: Používam existujúcu predvolenú Firebase aplikáciu.");
-      } else {
-        // Ak žiadna aplikácia nie je inicializovaná (čo by sa nemalo stať na prihlásenej stránke),
-        // zobrazíme chybu a nenačítame aplikáciu.
-        console.error("ChangePasswordApp: Firebase aplikácia nebola inicializovaná žiadnym skriptom. Skontrolujte header.js a HTML.");
-        setError("Chyba: Firebase aplikácia nie je inicializovaná. Skúste obnoviť stránku alebo kontaktujte podporu.");
-        setLoading(false);
-        return;
-      }
+      // Získanie predvolenej Firebase aplikácie
+      const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
@@ -181,11 +165,29 @@ function ChangePasswordApp() {
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
+      // Funkcia pre počiatočné prihlásenie (ak existuje custom token)
+      const signIn = async () => {
+        try {
+          // initialAuthToken je globálna premenná definovaná v HTML
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
+            console.log("ChangePasswordApp: Počiatočné prihlásenie s custom tokenom úspešné.");
+          } else {
+            console.log("ChangePasswordApp: Žiadny initialAuthToken na počiatočné prihlásenie.");
+          }
+        } catch (e) {
+          console.error("ChangePasswordApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+          setError(`Chyba pri prihlásení: ${e.message}`);
+        }
+      };
+
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("ChangePasswordApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
         setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
       });
+
+      signIn(); // Spustí počiatočné prihlásenie
 
       return () => {
         if (unsubscribeAuth) {
@@ -229,8 +231,10 @@ function ChangePasswordApp() {
               setError(''); // Vymazať chyby po úspešnom načítaní
 
               // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
+              if (typeof updateMenuItemsVisibility === 'function') { // Používame priame volanie
+                  updateMenuItemsVisibility(userData.role);
+              } else {
+                  console.warn("ChangePasswordApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
               }
 
               console.log("ChangePasswordApp: Načítanie používateľských dát dokončené, loading: false");
@@ -282,12 +286,12 @@ function ChangePasswordApp() {
     console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
     // Volanie globálnej funkcie z header.js na aktualizáciu odkazov v hlavičke
     // Používame window.updateHeaderLinks, pretože to je funkcia definovaná v header.js
-    if (typeof window.updateHeaderLinks === 'function') {
+    if (typeof updateHeaderLinks === 'function') { // Používame priame volanie
         // updateHeaderLinks očakáva currentUser a isRegistrationOpenStatus
         // isRegistrationOpenStatus je interne riadený v header.js, takže môžeme poslať null alebo false
-        window.updateHeaderLinks(user, null); 
+        updateHeaderLinks(user, null); 
     } else {
-        console.warn("ChangePasswordApp: Funkcia window.updateHeaderLinks nie je definovaná v header.js.");
+        console.warn("ChangePasswordApp: Funkcia updateHeaderLinks nie je definovaná v header.js.");
         // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
