@@ -360,7 +360,8 @@ function MyDataApp() {
                     ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 )
             ),
-            React.createElement(
+            // Podmienené zobrazenie telefónneho čísla len pre rolu 'user'
+            userProfileData.role === 'user' && React.createElement(
               'div',
               null,
               React.createElement(
