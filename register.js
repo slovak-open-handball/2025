@@ -653,12 +653,12 @@ function App() {
   }
 
   // Ak je používateľ už prihlásený, presmerujeme ho
-  if (user) {
+  // if (user) {
     // Táto časť bola presunutá z onAuthStateChanged, aby sa zabránilo predčasnému presmerovaniu.
     // Presmerovanie prebieha až po úspešnej registrácii a zápise do Firestore.
-    window.location.href = 'logged-in-my-data.html';
-    return null;
-  }
+    // window.location.href = 'logged-in-my-data.html';
+    // return null;
+  // }
 
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
