@@ -86,7 +86,8 @@ function initializeHeaderLogic() {
                 unsubscribePasswordCheck = userDocRef.onSnapshot(async (docSnapshot) => {
                     if (docSnapshot.exists) {
                         const userData = docSnapshot.data();
-                        const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
+                        // Robustnejšia kontrola pre passwordLastChanged
+                        const firestorePasswordChangedTime = (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function') ? userData.passwordLastChanged.toDate().getTime() : 0;
                         const localStorageKey = `passwordLastChanged_${user.uid}`;
                         let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
