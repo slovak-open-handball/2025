@@ -354,8 +354,13 @@ function MyDataApp() {
             React.createElement(
                 'div',
                 null,
-                // Zmenené na jeden label element s vloženým textom
-                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, `Meno a priezvisko: ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`),
+                // Zmenené na samostatný label a p tag pre meno a priezvisko
+                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Meno a priezvisko:'),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
+                )
             ),
             React.createElement(
               'div',
