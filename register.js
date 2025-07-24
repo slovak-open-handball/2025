@@ -49,16 +49,15 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         disabled: disabled,
       }),
       React.createElement(
-        'div', // Zmenené z 'button' na 'div'
+        'span', // Zmenené z 'div' na 'span'
         {
           onClick: toggleShowPassword,
           // Odstránené focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 pre odstránenie modrého orámovania
           // Pridané focus:outline-none pre úplné odstránenie predvoleného obrysu
           className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg cursor-pointer', // Pridaný cursor-pointer pre vizuálnu indikáciu klikateľnosti
-          disabled: disabled, // Stále môžeme použiť disabled pre vizuálnu indikáciu, ak je to potrebné
           role: 'button', // Pre prístupnosť: indikuje, že div funguje ako tlačidlo
           'aria-label': showPassword ? 'Skryť heslo' : 'Zobraziť heslo', // Pre prístupnosť: popisuje funkciu
-          tabIndex: -1 // Zabezpečí, že div nebude v poradí tabulátorov
+          tabIndex: -1 // Zabezpečí, že element nebude v poradí tabulátorov
         },
         showPassword ? EyeOffIcon : EyeIcon
       )
