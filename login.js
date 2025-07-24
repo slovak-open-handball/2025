@@ -21,7 +21,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
     // Opravená cesta pre ikonu preškrtnutého oka - použitá Heroicons v2 outline cesta pre "eye-slash"
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175M12 12a3 3 0 100-6 3 3 0 000 6z' })
+    // Táto cesta zabezpečí, že ikona bude mať aj preškrtnutie
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M3.98 8.618a10.04 10.04 0 001.391 1.674L15 19.397M18.183 5.707A9.965 9.965 0 0012 4c-4.478 0-8.268 2.943-9.543 7.002zM12 12a3 3 0 100-6 3 3 0 000 6z' })
   );
 
   return React.createElement(
@@ -34,9 +35,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        // Zmenené pr-10 na pr-12 pre viac miesta pre ikonu
+        // Zvýšené pr-12 na pr-16 pre ešte viac miesta pre ikonu
         // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-12 mb-0 mt-0',
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16 mb-0 mt-0',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -52,10 +53,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         {
           type: 'button',
           onClick: toggleShowPassword,
-          // Pridané px-3 pre odsadenie vo vnútri tlačidla, namiesto pr-3
-          // Upravené triedy pre centrovanie a focus ohraničenie
+          // Upravené right-0 na right-1 pre jemné posunutie doľava a pridané px-3 pre odsadenie vo vnútri tlačidla
           // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
-          className: 'absolute right-0 px-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          className: 'absolute right-1 px-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
           disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
@@ -470,7 +470,7 @@ function App() {
         { className: 'w-full max-w-md mt-20 mb-10 p-4' },
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-lg w-full text-center' },
           React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Prihlásenie úspešné!'),
           React.createElement(
             'div',
