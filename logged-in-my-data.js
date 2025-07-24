@@ -17,56 +17,6 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
-  const EyeIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM15 12a3 3 0 11-6 0 3 3 0 016 0z' })
-  );
-
-  const EyeOffIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25' })
-  );
-
-  return React.createElement(
-    'div',
-    { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
-    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
-    React.createElement('input', {
-      type: showPassword ? 'text' : 'password',
-      id: id,
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-0 mt-0 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
-      value: value,
-      onChange: onChange,
-      onCopy: (e) => e.preventDefault(),
-      onPaste: (e) => e.preventDefault(),
-      onCut: (e) => e.preventDefault(),
-      required: true,
-      placeholder: placeholder,
-      autoComplete: autoComplete,
-      disabled: disabled,
-    }),
-    React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: toggleShowPassword,
-        className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
-        disabled: disabled,
-      },
-      showPassword ? EyeOffIcon : EyeIcon
-    ),
-    description && React.createElement(
-      'div', // Changed from 'p' to 'div' to resolve DOM nesting warning
-      { className: 'text-gray-600 text-sm mt-2' },
-      description
-    )
-  );
-}
-
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
@@ -119,6 +69,39 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
+// ConfirmationModal Component (converted to React.createElement)
+function ConfirmationModal({ message, onConfirm, onCancel }) {
+  return React.createElement(
+    'div',
+    { className: 'modal' },
+    React.createElement(
+      'div',
+      { className: 'modal-content text-center' },
+      React.createElement('p', { className: 'text-lg font-semibold mb-6' }, message),
+      React.createElement(
+        'div',
+        { className: 'flex justify-center space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onCancel,
+            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            className: 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200',
+          },
+          'Potvrdiť'
+        )
+      )
+    )
+  );
+}
+
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
   const [app, setApp] = React.useState(null);
@@ -141,58 +124,8 @@ function MyDataApp() {
   const [isApproved, setIsApproved] = React.useState(false);
   const [displayNotifications, setDisplayNotifications] = React.useState(true);
 
-  // States for date and time settings
-  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
-  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-
-  // New state for countdown
-  const [countdown, setCountdown] = React.useState(null);
-  // New state variable to force recalculation of isRegistrationOpen
-  const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
-  // New state variable for periodic update of isRegistrationOpen
-  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
-
-  // Calculate registration status as a memoized value
-  const isRegistrationOpen = React.useMemo(() => {
-    if (!settingsLoaded) return false; // Wait until settings are loaded
-    const now = new Date();
-    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-
-    // Check if dates are valid before comparison
-    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
-    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
-
-    return (
-      (isRegStartValid ? now >= regStart : true) && // If regStart is not valid, assume registration has started
-      (isRegEndValid ? now <= regEnd : true)        // If regEnd is not valid, assume registration has not ended
-    );
-  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
-
-  // Function to calculate remaining time for countdown
-  const calculateTimeLeft = React.useCallback(() => {
-    const now = new Date();
-    const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
-
-    // If startDate is not a valid date, or is already in the past, no countdown is needed
-    if (!startDate || isNaN(startDate) || now >= startDate) {
-        return null;
-    }
-
-    const difference = startDate.getTime() - now.getTime(); // Difference in milliseconds
-
-    if (difference <= 0) {
-        return null; // Time has passed
-    }
-
-    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }, [registrationStartDate]);
+  const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
+  const [userToDelete, setUserToDelete] = React.useState(null); // Used for own account deletion
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -311,7 +244,7 @@ function MyDataApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -335,88 +268,12 @@ function MyDataApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]); // Odstránený userProfileData zo závislostí
-
-  // Effect for loading settings (runs after DB and Auth are initialized)
-  React.useEffect(() => {
-    const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
-        console.log("MyDataApp: Čakám na DB alebo Auth pre načítanie nastavení.");
-        return; // Wait for DB and Auth to be initialized
-      }
-      try {
-          console.log("MyDataApp: Pokúšam sa načítať nastavenia registrácie.");
-          const settingsDocRef = db.collection('settings').doc('registration');
-          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
-            console.log("MyDataApp: onSnapshot pre nastavenia registrácie spustený.");
-            if (docSnapshot.exists) {
-                const data = docSnapshot.data();
-                console.log("MyDataApp: Nastavenia registrácie existujú, dáta:", data);
-                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-            } else {
-                console.log("MyDataApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
-                setRegistrationStartDate('');
-                setRegistrationEndDate('');
-            }
-            setSettingsLoaded(true);
-            console.log("MyDataApp: Načítanie nastavení dokončené, settingsLoaded: true.");
-          }, error => {
-            console.error("MyDataApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            setSettingsLoaded(true); // Nastavenia sú načítané aj v prípade chyby
-          });
-
-          return () => {
-            if (unsubscribeSettings) {
-                console.log("MyDataApp: Ruším odber onSnapshot pre nastavenia registrácie.");
-                unsubscribeSettings();
-            }
-          };
-      } catch (e) {
-          console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          setSettingsLoaded(true);
-      }
-    };
-
-    fetchSettings();
-  }, [db, isAuthReady]);
-
-  // Effect for countdown (runs when registrationStartDate changes)
-  React.useEffect(() => {
-    let timer;
-    const updateCountdown = () => {
-        const timeLeft = calculateTimeLeft();
-        setCountdown(timeLeft);
-        if (timeLeft === null) {
-            clearInterval(timer);
-            setForceRegistrationCheck(prev => prev + 1);
-        }
-    };
-
-    if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
-        updateCountdown();
-        timer = setInterval(updateCountdown, 1000);
-    } else {
-        setCountdown(null);
-    }
-
-    return () => clearInterval(timer);
-  }, [registrationStartDate, calculateTimeLeft]);
-
-  // New useEffect for periodic update of isRegistrationOpen
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); // Update every minute
-
-    return () => clearInterval(interval);
-  }, []);
+  }, [isAuthReady, db, user, auth]);
 
   // useEffect for updating header link visibility
+  // Removed isRegistrationOpen dependency as it's no longer in this file
   React.useEffect(() => {
-    console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
+    console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -433,16 +290,13 @@ function MyDataApp() {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        if (isRegistrationOpen) {
-          registerLink && registerLink.classList.remove('hidden');
-          console.log("MyDataApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
-        } else {
-          registerLink && registerLink.classList.add('hidden');
-          console.log("MyDataApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
-        }
+        // Register link visibility will now be handled by register.js based on registration settings
+        // For logged-in-my-data.html, if not logged in, register link should be visible by default
+        registerLink && registerLink.classList.remove('hidden'); 
+        console.log("MyDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
-  }, [user, isRegistrationOpen]);
+  }, [user]);
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
@@ -535,49 +389,24 @@ function MyDataApp() {
       setError(`Chyba pri mazaní účtu: ${e.message}. Možno sa musíte znova prihlásiť, ak ste sa prihlásili príliš dávno.`);
     } finally {
       setLoading(false);
-      // setShowConfirmationModal(false); // No longer needed here
+      setShowConfirmationModal(false); // Close modal even on error
     }
   };
 
-  const handleUpdateRegistrationSettings = async (e) => {
-    e.preventDefault();
-    // Podmienka na kontrolu roly admina závisí od userProfileData.role
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmenu nastavení registrácie.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setUserNotificationMessage('');
+  const openConfirmationModal = () => { // Simplified, no user param needed for own account
+    setUserToDelete(user); // Set current user for deletion
+    setShowConfirmationModal(true);
+  };
 
-    try {
-      const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-      const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
-
-      if (regStart && regEnd && regStart >= regEnd) {
-        setError("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.");
-        setLoading(false);
-        return;
-      }
-
-      const settingsDocRef = db.collection('settings').doc('registration');
-      await settingsDocRef.set({
-        registrationStartDate: regStart ? firebase.firestore.Timestamp.fromDate(regStart) : null,
-        registrationEndDate: regEnd ? firebase.firestore.Timestamp.fromDate(regEnd) : null,
-      });
-      setUserNotificationMessage("Nastavenia registrácie úspešne aktualizované!");
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri aktualizácii nastavení registrácie:", e);
-      setError(`Chyba pri aktualizácii nastavení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const closeConfirmationModal = () => {
+    setUserToDelete(null);
+    setShowConfirmationModal(false);
   };
 
   // Display loading state
-  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia), alebo settingsLoaded je false,
+  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia),
   // alebo userProfileData je null (ešte neboli načítané dáta profilu), alebo loading je true, zobraz loading.
-  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
     if (isAuthReady && user === null) {
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -585,10 +414,8 @@ function MyDataApp() {
         return null;
     }
     // Zobrazenie rôznych správ podľa stavu načítavania
-    let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !settingsLoaded) {
-        loadingMessage = 'Načítavam...';
-    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+    let loadingMessage = 'Načítavam aplikáciu...';
+    if (isAuthReady && user && !userProfileData) {
         loadingMessage = 'Načítavam používateľské dáta...'; // Špecifická správa pre profilové dáta
     } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
         loadingMessage = 'Načítavam...';
@@ -601,17 +428,8 @@ function MyDataApp() {
     );
   }
 
-  const currentPath = window.location.pathname.split('/').pop();
-  // is_admin_panel_page je teraz pre logged-in-users.html
-  const is_admin_panel_page = currentPath === 'logged-in-users.html';
-
-  // If user is not admin and trying to access admin panel, redirect
-  // Používame userProfileData.role pre kontrolu oprávnení
-  if (is_admin_panel_page && userProfileData && userProfileData.role !== 'admin') {
-    console.log("MyDataApp: Používateľ nie je admin a snaží sa pristupovať k admin panelu, presmerovávam.");
-    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
-    return null;
-  }
+  // No admin panel page check here, as this file is only for "My Data"
+  // If user is not admin and trying to access admin panel, redirect is handled in specific admin pages
 
   return React.createElement(
     'div',
@@ -620,7 +438,11 @@ function MyDataApp() {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage('')
     }),
-    // ConfirmationModal a EditRoleModal sú presunuté do logged-in-users.js
+    showConfirmationModal && React.createElement(ConfirmationModal, {
+        message: `Naozaj chcete zmazať svoj účet (${userToDelete?.email})? Túto akciu nie je možné vrátiť späť.`,
+        onConfirm: handleDeleteAccount,
+        onCancel: closeConfirmationModal
+    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -633,7 +455,7 @@ function MyDataApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Moja zóna' // Už len "Moja zóna"
+          'Moja zóna'
         ),
         // Používame userProfileData pre zobrazenie mena a roly
         userProfileData && React.createElement(
@@ -763,54 +585,18 @@ function MyDataApp() {
                 disabled: loading,
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
-            )
-          ),
-        ),
-
-        // Admin Panel Section - Registration Settings (User Management je presunuté)
-        userProfileData && userProfileData.role === 'admin' && React.createElement(
-          React.Fragment,
-          null,
-          React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Nastavenia registrácie'),
-          React.createElement(
-            'form',
-            { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4' },
-            React.createElement(
-              'div',
-              null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-start-date' }, 'Dátum a čas začiatku registrácie'),
-              React.createElement('input', {
-                type: 'datetime-local',
-                id: 'reg-start-date',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                value: registrationStartDate,
-                onChange: (e) => setRegistrationStartDate(e.target.value),
-                disabled: loading,
-              })
-            ),
-            React.createElement(
-              'div',
-              null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-end-date' }, 'Dátum a čas konca registrácie'),
-              React.createElement('input', {
-                type: 'datetime-local',
-                id: 'reg-end-date',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                value: registrationEndDate,
-                onChange: (e) => setRegistrationEndDate(e.target.value),
-                disabled: loading,
-              })
             ),
             React.createElement(
               'button',
               {
-                type: 'submit',
-                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
+                type: 'button',
+                onClick: openConfirmationModal,
+                className: 'mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
                 disabled: loading,
               },
-              loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
+              'Zmazať účet'
             )
-          )
+          ),
         )
       )
     )
