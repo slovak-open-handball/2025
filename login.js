@@ -363,26 +363,8 @@ function App() {
       const currentUser = userCredential.user;
 
       const userDocRef = db.collection('users').doc(currentUser.uid);
-      
-      // Získame aktuálny timestamp z Firestore, aby sme ho mohli použiť pre localStorage
-      // Toto je dôležité pre synchronizáciu, aby sa aktuálna relácia neodhlásila
-      const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
-      
-      await userDocRef.update({
-        passwordLastChanged: serverTimestamp
-      });
-      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
-      
-      // Počkáme, kým sa serverTimestamp vyhodnotí na serveri a potom ho uložíme do localStorage
-      // Pre správne fungovanie potrebujeme skutočnú hodnotu timestampu, nie FieldValue.serverTimestamp()
-      // Preto musíme získať dokument znova alebo sa spoľahnúť na onSnapshot v iných súboroch.
-      // Pre okamžitú synchronizáciu aktuálnej relácie, budeme predpokladať, že serverTimestamp je blízko aktuálnemu času klienta.
-      // Dôležité: Táto hodnota je len pre okamžitú synchronizáciu localStorage. Skutočná hodnota z Firestore
-      // bude správne spracovaná onSnapshot listenerom.
-      localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString());
+      const userDoc = await userDocRef.get();
 
-
-      const userDoc = await userDocRef.get(); // Získame aktualizované dáta po update
       if (!userDoc.exists) {
         setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
         await auth.signOut();
@@ -391,8 +373,7 @@ function App() {
       }
 
       const userData = userDoc.data();
-      console.log("Prihlásenie: Používateľské dáta z Firestore (po aktualizácii timestampu):", userData);
-
+      console.log("Prihlásenie: Používateľské dáta z Firestore:", userData);
 
       if (userData.role === 'admin' && userData.approved === false) {
         setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
@@ -430,6 +411,16 @@ function App() {
         setLoading(false);
         return;
       }
+
+      // DÔLEŽITÉ: Aktualizácia timestampu passwordLastChanged pri úspešnom prihlásení
+      // ODSTRÁNILI SME LOKÁLNU AKTUALIZÁCIU localStorage TU
+      await userDocRef.update({
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
+      
+      // *** ODSTRÁNENÉ: localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString()); ***
+
 
       setUser(prevUser => ({
         ...prevUser,
