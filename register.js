@@ -34,33 +34,36 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   return React.createElement(
     'div',
-    { className: 'relative' },
+    null, // Odstránené 'relative' z tohto divu
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
-    React.createElement('input', {
-      type: showPassword ? 'text' : 'password',
-      id: id,
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
-      value: value,
-      onChange: onChange,
-      onCopy: (e) => e.preventDefault(),
-      onPaste: (e) => e.preventDefault(),
-      onCut: (e) => e.preventDefault(),
-      required: true,
-      placeholder: placeholder,
-      autoComplete: autoComplete,
-      disabled: disabled,
-    }),
     React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: toggleShowPassword,
-        // Upravené triedy pre centrovanie a focus ohraničenie
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
-        style: { height: '100%' }, // Zabezpečí, že tlačidlo zaberá celú výšku inputu
+      'div',
+      { className: 'relative' }, // Nový kontajner pre input a tlačidlo s relatívnou pozíciou
+      React.createElement('input', {
+        type: showPassword ? 'text' : 'password',
+        id: id,
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        value: value,
+        onChange: onChange,
+        onCopy: (e) => e.preventDefault(),
+        onPaste: (e) => e.preventDefault(),
+        onCut: (e) => e.preventDefault(),
+        required: true,
+        placeholder: placeholder,
+        autoComplete: autoComplete,
         disabled: disabled,
-      },
-      showPassword ? EyeOffIcon : EyeIcon
+      }),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: toggleShowPassword,
+          className: 'absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
+          style: { height: '100%' }, // Zabezpečí, že tlačidlo zaberá celú výšku inputu
+          disabled: disabled,
+        },
+        showPassword ? EyeOffIcon : EyeIcon
+      )
     ),
     // Zmena <p> na <div> pre description, aby sa predišlo chybe vnorenia <ul> v <p>
     description && React.createElement(
