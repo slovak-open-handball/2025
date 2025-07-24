@@ -1,9 +1,3 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-change-password.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
-
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
@@ -163,9 +157,8 @@ function ChangePasswordApp() {
       }
 
       // Získanie existujúcej Firebase aplikácie.
-      // Predpokladá sa, že header.js už inicializoval Firebase aplikáciu.
+      // Používame globálnu premennú 'headerAppName' z header.js, ktorá by mala byť definovaná.
       let firebaseApp;
-      // Používame globálnu premennú 'headerAppName' z header.js
       if (typeof headerAppName !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === headerAppName)) {
         firebaseApp = firebase.app(headerAppName);
         console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${headerAppName}`);
@@ -174,9 +167,8 @@ function ChangePasswordApp() {
         firebaseApp = firebase.app();
         console.log("ChangePasswordApp: Používam existujúcu predvolenú Firebase aplikáciu.");
       } else {
-        // Toto by sa nemalo stať na prihlásenej stránke, ak je setup správny.
-        // Ak sa stane, znamená to, že Firebase nebola inicializovaná nikde inde.
-        // Zobrazíme chybu a nenačítame aplikáciu.
+        // Ak žiadna aplikácia nie je inicializovaná (čo by sa nemalo stať na prihlásenej stránke),
+        // zobrazíme chybu a nenačítame aplikáciu.
         console.error("ChangePasswordApp: Firebase aplikácia nebola inicializovaná žiadnym skriptom. Skontrolujte header.js a HTML.");
         setError("Chyba: Firebase aplikácia nie je inicializovaná. Skúste obnoviť stránku alebo kontaktujte podporu.");
         setLoading(false);
@@ -189,9 +181,6 @@ function ChangePasswordApp() {
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
-      // onAuthStateChanged bude reagovať na zmeny stavu prihlásenia používateľa.
-      // Nepokúšame sa tu o žiadne signInWithCustomToken ani signInAnonymously,
-      // pretože očakávame, že používateľ je už prihlásený z predchádzajúcej stránky.
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("ChangePasswordApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
@@ -292,11 +281,14 @@ function ChangePasswordApp() {
   React.useEffect(() => {
     console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
     // Volanie globálnej funkcie z header.js na aktualizáciu odkazov v hlavičke
-    if (typeof window.updateHeaderLinksVisibility === 'function') {
-        window.updateHeaderLinksVisibility(user);
+    // Používame window.updateHeaderLinks, pretože to je funkcia definovaná v header.js
+    if (typeof window.updateHeaderLinks === 'function') {
+        // updateHeaderLinks očakáva currentUser a isRegistrationOpenStatus
+        // isRegistrationOpenStatus je interne riadený v header.js, takže môžeme poslať null alebo false
+        window.updateHeaderLinks(user, null); 
     } else {
-        console.warn("ChangePasswordApp: Funkcia updateHeaderLinksVisibility nie je definovaná v header.js.");
-        // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná (pre prípad, že header.js nebol načítaný)
+        console.warn("ChangePasswordApp: Funkcia window.updateHeaderLinks nie je definovaná v header.js.");
+        // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
         const logoutButton = document.getElementById('logout-button');
@@ -562,7 +554,3 @@ function ChangePasswordApp() {
     )
   );
 }
-
-// Render the React application after the App component is defined
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(ChangePasswordApp, null));
