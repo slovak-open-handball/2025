@@ -90,14 +90,19 @@ function initializeHeaderLogic() {
                         // Pridávame viac logovania pre debugging
                         console.log("Header.js: Surové dáta passwordLastChanged z Firestore:", userData.passwordLastChanged);
                         console.log("Header.js: Typ passwordLastChanged:", typeof userData.passwordLastChanged);
-                        if (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate !== 'function') {
+                        
+                        // OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP
+                        if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                             console.error("Header.js: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                            console.log("Header.js: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                            await authHeader.signOut();
+                            window.location.href = 'login.html';
+                            localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage, pretože je neplatný
+                            return; // Zastaviť ďalšie spracovanie
                         }
 
-                        // Ensure firestorePasswordChangedTime is always a number, even if conversion fails
-                        const firestorePasswordChangedTime = (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function') 
-                            ? userData.passwordLastChanged.toDate().getTime() 
-                            : 0; // Default to 0 if invalid or missing
+                        // Ensure firestorePasswordChangedTime is always a number
+                        const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime(); 
 
                         const localStorageKey = `passwordLastChanged_${user.uid}`;
                         let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
@@ -105,7 +110,7 @@ function initializeHeaderLogic() {
                         console.log(`Header.js: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
                         // --- Core Logic for Logout ---
-                        // Only proceed if both times are valid numbers
+                        // Only proceed if both times are valid numbers (already handled by the explicit check above)
                         if (!isNaN(firestorePasswordChangedTime) && !isNaN(storedPasswordChangedTime)) {
                             if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                                 // First load for this user/browser, initialize localStorage and do NOT logout
@@ -133,7 +138,8 @@ function initializeHeaderLogic() {
                                 console.log("Header.js: Timestampy sú rovnaké, aktualizujem localStorage.");
                             }
                         } else {
-                            // Handle cases where timestamps are invalid (NaN)
+                            // This block should ideally not be reached if the initial check for valid Timestamp is effective.
+                            // But as a final fallback, if any become NaN here, we still want to logout.
                             console.error("Header.js: Neplatné timestampy (NaN) po konverzii. Odhlasujem používateľa pre bezpečnosť.");
                             await authHeader.signOut();
                             window.location.href = 'login.html';
