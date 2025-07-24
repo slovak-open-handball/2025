@@ -13,7 +13,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM15 12a3 3 0 11-6 0 3 3 0 016 0z' })
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM15 12a3 0 11-6 0 3 3 0 016 0z' })
   );
 
   const EyeOffIcon = React.createElement(
@@ -24,35 +24,42 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   return React.createElement(
     'div',
-    { className: 'relative' },
+    null, // Odstránené 'relative' z tohto divu
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
-    React.createElement('input', {
-      type: showPassword ? 'text' : 'password',
-      id: id,
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
-      value: value,
-      onChange: onChange,
-      onCopy: (e) => e.preventDefault(),
-      onPaste: (e) => e.preventDefault(),
-      onCut: (e) => e.preventDefault(),
-      required: true,
-      placeholder: placeholder,
-      autoComplete: autoComplete,
-      disabled: disabled,
-    }),
     React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 h-full', // Added h-full to button
+      'div',
+      { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
+      React.createElement('input', {
+        type: showPassword ? 'text' : 'password',
+        id: id,
+        // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
+        value: value,
+        onChange: onChange,
+        onCopy: (e) => e.preventDefault(),
+        onPaste: (e) => e.preventDefault(),
+        onCut: (e) => e.preventDefault(),
+        required: true,
+        placeholder: placeholder,
+        autoComplete: autoComplete,
         disabled: disabled,
-      },
-      showPassword ? EyeOffIcon : EyeIcon
+      }),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: toggleShowPassword,
+          // Upravené triedy pre centrovanie a focus ohraničenie
+          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
+          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          disabled: disabled,
+        },
+        showPassword ? EyeOffIcon : EyeIcon
+      )
     ),
     description && React.createElement(
       'p',
-      { className: 'text-gray-600 text-sm -mt-2' },
+      { className: 'text-gray-600 text-sm mt-2' }, // Zmenené z -mt-2 na mt-2 pre konzistentnosť s register.js
       description
     )
   );
