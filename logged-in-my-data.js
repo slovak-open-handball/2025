@@ -834,9 +834,9 @@ function MyDataApp() {
         return null;
     }
     // Zobrazenie rôznych správ podľa stavu načítavania
-    let loadingMessage = 'Načítavam aplikáciu...';
+    let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !settingsLoaded) {
-        loadingMessage = 'Načítavam nastavenia...';
+        loadingMessage = 'Načítavam...';
     } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
         loadingMessage = 'Načítavam používateľské dáta...'; // Špecifická správa pre profilové dáta
     } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
