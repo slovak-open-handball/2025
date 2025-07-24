@@ -585,17 +585,8 @@ function MyDataApp() {
                 disabled: loading,
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
-            ),
-            React.createElement(
-              'button',
-              {
-                type: 'button',
-                onClick: openConfirmationModal,
-                className: 'mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading,
-              },
-              'Zmazať účet'
             )
+            // Tlačidlo "Zmazať účet" bolo odstránené
           ),
         )
       )
