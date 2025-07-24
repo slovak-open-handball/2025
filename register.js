@@ -38,11 +38,11 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
-      { className: 'relative' }, // Nový kontajner pre input a tlačidlo s relatívnou pozíciou
+      { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -58,8 +58,10 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         {
           type: 'button',
           onClick: toggleShowPassword,
-          className: 'absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
-          style: { height: '100%' }, // Zabezpečí, že tlačidlo zaberá celú výšku inputu
+          // Upravené triedy pre centrovanie a focus ohraničenie
+          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
+          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          // style: { height: '100%' }, // Toto už nie je potrebné, keďže používame top/transform
           disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
