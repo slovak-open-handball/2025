@@ -86,12 +86,19 @@ function initializeHeaderLogic() {
                 unsubscribePasswordCheck = userDocRef.onSnapshot(async (docSnapshot) => {
                     if (docSnapshot.exists) {
                         const userData = docSnapshot.data();
-                        // Robustnejšia kontrola pre passwordLastChanged
+                        
+                        // Pridávame viac logovania pre debugging
+                        console.log("Header.js: Surové dáta passwordLastChanged z Firestore:", userData.passwordLastChanged);
+                        console.log("Header.js: Typ passwordLastChanged:", typeof userData.passwordLastChanged);
+                        if (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate !== 'function') {
+                            console.error("Header.js: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                        }
+
                         const firestorePasswordChangedTime = (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function') ? userData.passwordLastChanged.toDate().getTime() : 0;
                         const localStorageKey = `passwordLastChanged_${user.uid}`;
                         let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-                        console.log(`Header.js: Firestore passwordLastChanged: ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+                        console.log(`Header.js: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
                         // Ak uložený čas je 0 a čas z Firestore nie je 0, je to prvé načítanie pre tohto používateľa v tejto relácii/prehliadači.
                         // Mali by sme ho inicializovať a nespúšťať odhlásenie.
@@ -101,19 +108,22 @@ function initializeHeaderLogic() {
                             return; // Nepokračovať v logike odhlásenia pri prvom načítaní
                         }
 
+                        // Ak je firestorePasswordChangedTime 0 a storedPasswordChangedTime nie je 0, alebo ak je firestorePasswordChangedTime neplatné (NaN)
+                        if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime !== 0 || isNaN(firestorePasswordChangedTime)) {
+                            console.warn("Header.js: Nesúlad timestampov zmeny hesla alebo neplatný timestamp z Firestore. Odhlasujem používateľa.");
+                            await authHeader.signOut();
+                            window.location.href = 'login.html';
+                            localStorage.removeItem(localStorageKey);
+                            return;
+                        }
+
+
                         if (firestorePasswordChangedTime > storedPasswordChangedTime) {
                             // Heslo bolo zmenené na inom zariadení alebo v inej relácii
                             console.log("Header.js: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                             await authHeader.signOut();
                             window.location.href = 'login.html'; // Presmerovanie po odhlásení
                             localStorage.removeItem(localStorageKey); // Vyčistíme lokálny storage po odhlásení
-                        } else if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime !== 0) {
-                            // Ak vo Firestore nie je timestamp, ale v lokálnom storage je,
-                            // môže to znamenať reset alebo chybu, pre istotu odhlásiť.
-                             console.warn("Header.js: Nesúlad timestampov zmeny hesla. Odhlasujem používateľa.");
-                             await authHeader.signOut();
-                             window.location.href = 'login.html';
-                             localStorage.removeItem(localStorageKey);
                         } else {
                             // Ak sú časy rovnaké alebo Firestore je starší (čo by sa nemalo stať, ak je logika správna),
                             // uistite sa, že localStorage je aktuálny.
