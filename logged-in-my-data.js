@@ -285,37 +285,7 @@ function MyDataApp() {
     };
   }, [handleLogout]);
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    if (!db || !user) {
-      setError("Databáza alebo používateľ nie je k dispozícii.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setUserNotificationMessage('');
-
-    // Phone number validation
-    const phoneRegex = /^\+\d+$/;
-    if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
-        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-        setLoading(false);
-        return;
-    }
-
-    try {
-      const userDocRef = db.collection('users').doc(user.uid);
-      await userDocRef.update({
-        contactPhoneNumber: contactPhoneNumber,
-      });
-      setUserNotificationMessage("Profil úspešne aktualizovaný!");
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri aktualizácii profilu:", e);
-      setError(`Chyba pri aktualizácii profilu: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed handleUpdateProfile as there are no input fields to update directly in this view
 
   // Display loading state
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia),
@@ -381,86 +351,32 @@ function MyDataApp() {
           null,
           React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
           React.createElement(
-            'div', // Zmenené z 'form' na 'div'
+            'div', 
             { className: 'space-y-4' },
             React.createElement(
                 'div',
                 null,
-                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Meno a priezvisko:'),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
-                )
+                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Meno a priezvisko: ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}'),
             ),
             React.createElement(
               'div',
               null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contact-phone' }, 'Telefónne číslo kontaktnej osoby'),
-              React.createElement('input', {
-                type: 'tel',
-                id: 'contact-phone',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                value: contactPhoneNumber,
-                onChange: (e) => {
-                  const value = e.target.value;
-                  if (value === '') {
-                    setContactPhoneNumber('');
-                    e.target.setCustomValidity('');
-                    return;
-                  }
-                  if (value.length === 1 && value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                    e.target.reportValidity();
-                    return;
-                  }
-                  if (value.length > 1 && !/^\+\d*$/.test(value)) {
-                    e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
-                    e.target.reportValidity();
-                    return;
-                  }
-                  setContactPhoneNumber(value);
-                  e.target.setCustomValidity('');
-                },
-                onInvalid: (e) => {
-                  if (e.target.value.length === 0) {
-                    e.target.setCustomValidity("Vyplňte prosím toto pole.");
-                  } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                  } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
-                    e.target.setCustomValidity("Po znaku '+' sú povolené iba číslice.");
-                  } else {
-                    e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-                  }
-                },
-                required: true,
-                placeholder: '+421901234567',
-                pattern: '^\\+\\d+$',
-                title: 'Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).',
-                disabled: loading,
-              })
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Telefónne číslo kontaktnej osoby:'),
+              React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                userProfileData.contactPhoneNumber || ''
+              )
             ),
             React.createElement(
               'div',
               null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email-display' }, 'E-mailová adresa'),
-              React.createElement('input', {
-                type: 'email',
-                id: 'email-display',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                value: email,
-                disabled: true, // Email is read-only
-              })
-            ),
-            React.createElement(
-              'button',
-              {
-                type: 'button', // Changed to button as it's not a form submit
-                onClick: handleUpdateProfile, // Use onClick for button
-                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading,
-              },
-              loading ? 'Ukladám...' : 'Uložiť zmeny'
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'E-mailová adresa:'),
+              React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                userProfileData.email || user.email || ''
+              )
             )
           ),
         )
