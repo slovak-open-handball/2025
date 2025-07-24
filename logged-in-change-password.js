@@ -162,21 +162,24 @@ function ChangePasswordApp() {
         return;
       }
 
-      // Získanie existujúcej Firebase aplikácie namiesto inicializácie novej
+      // Získanie existujúcej Firebase aplikácie.
+      // Predpokladá sa, že header.js alebo iný skript už inicializoval Firebase aplikáciu.
       let firebaseApp;
       if (typeof __firebase_app_name !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === __firebase_app_name)) {
         firebaseApp = firebase.app(__firebase_app_name);
         console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${__firebase_app_name}`);
       } else if (firebase.apps.length > 0) {
-        // Ak existuje predvolená aplikácia, použite ju
+        // Ak existuje predvolená aplikácia (bez názvu), použite ju
         firebaseApp = firebase.app();
         console.log("ChangePasswordApp: Používam existujúcu predvolenú Firebase aplikáciu.");
       } else {
-        // Toto by sa nemalo stať, ak je header.js správne inicializovaný.
+        // Toto by sa nemalo stať na prihlásenej stránke, ak je setup správny.
         // Ak sa stane, znamená to, že Firebase nebola inicializovaná nikde inde.
-        // Pre istotu sa pokúsime inicializovať tu, ale je to fallback.
-        console.warn("ChangePasswordApp: Firebase aplikácia nie je inicializovaná. Pokúšam sa inicializovať ako fallback.");
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config), __firebase_app_name || 'defaultApp');
+        // Zobrazíme chybu a nenačítame aplikáciu.
+        console.error("ChangePasswordApp: Firebase aplikácia nebola inicializovaná žiadnym skriptom. Skontrolujte header.js a HTML.");
+        setError("Chyba: Firebase aplikácia nie je inicializovaná. Skúste obnoviť stránku alebo kontaktujte podporu.");
+        setLoading(false);
+        return;
       }
       setApp(firebaseApp);
 
@@ -185,14 +188,13 @@ function ChangePasswordApp() {
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
-      // Prihlásenie sa už nevykonáva v tomto komponente, spoliehame sa na to,
-      // že používateľ je prihlásený z predchádzajúcej stránky.
-      // Ak __initial_auth_token existuje, použije sa v header.js alebo inej inicializačnej logike.
-
+      // onAuthStateChanged bude reagovať na zmeny stavu prihlásenia používateľa.
+      // Nepokúšame sa tu o žiadne signInWithCustomToken ani signInAnonymously,
+      // pretože očakávame, že používateľ je už prihlásený z predchádzajúcej stránky.
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("ChangePasswordApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
+        setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
       });
 
       return () => {
@@ -205,47 +207,50 @@ function ChangePasswordApp() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
-  }, []);
+  }, []); // Prázdne pole závislostí - spustí sa len raz pri načítaní komponentu
 
   // Effect for loading user profile data from Firestore after Auth and DB are initialized
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
+    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // If user is null (not logged in), redirect
-        console.log("ChangePasswordApp: Auth is ready and user is null, redirecting to login.html");
+      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
+        console.log("ChangePasswordApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
 
+      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
       if (user) {
-        console.log(`ChangePasswordApp: Attempting to load user document for UID: ${user.uid}`);
-        setLoading(true);
+        console.log(`ChangePasswordApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        setLoading(true); // Nastavíme loading na true tu
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangePasswordApp: onSnapshot for user document triggered.");
+            console.log("ChangePasswordApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("ChangePasswordApp: User document exists, data:", userData);
-              setUserProfileData(userData);
-              setLoading(false);
-              setError('');
+              console.log("ChangePasswordApp: Používateľský dokument existuje, dáta:", userData);
+              setUserProfileData(userData); // Aktualizujeme stav userProfileData
+              
+              setLoading(false); // Stop loading po načítaní používateľských dát
+              setError(''); // Vymazať chyby po úspešnom načítaní
 
-              // Aktualizácia viditeľnosti menu po načítaní roly
+              // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
               if (typeof window.updateMenuItemsVisibility === 'function') {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("ChangePasswordApp: User data loaded, loading: false");
+              console.log("ChangePasswordApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
-              console.warn("ChangePasswordApp: User document not found for UID:", user.uid);
+              console.warn("ChangePasswordApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false);
+              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
             }
           }, error => {
-            console.error("ChangePasswordApp: Error loading user data from Firestore (onSnapshot error):", error);
+            console.error("ChangePasswordApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
             if (error.code === 'permission-denied') {
                 setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
             } else if (error.code === 'unavailable') {
@@ -259,13 +264,13 @@ function ChangePasswordApp() {
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
-            setLoading(false);
-            console.log("ChangePasswordApp: User data loading failed, loading: false");
+            setLoading(false); // Stop loading aj pri chybe
+            console.log("ChangePasswordApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
-          console.error("ChangePasswordApp: Error setting up onSnapshot for user data (try-catch):", e);
+          console.error("ChangePasswordApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false);
+          setLoading(false); // Stop loading aj pri chybe
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -274,22 +279,23 @@ function ChangePasswordApp() {
     }
 
     return () => {
+      // Zrušíme odber onSnapshot pri unmount
       if (unsubscribeUserDoc) {
-        console.log("ChangePasswordApp: Unsubscribing from user document onSnapshot.");
+        console.log("ChangePasswordApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [isAuthReady, db, user, auth]); // Závisí od isAuthReady, db, user a auth
 
-  // useEffect for updating header link visibility (remains for consistency)
+  // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
-    // Volanie globálnej funkcie z header.js
+    // Volanie globálnej funkcie z header.js na aktualizáciu odkazov v hlavičke
     if (typeof window.updateHeaderLinksVisibility === 'function') {
         window.updateHeaderLinksVisibility(user);
     } else {
         console.warn("ChangePasswordApp: Funkcia updateHeaderLinksVisibility nie je definovaná v header.js.");
-        // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná
+        // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná (pre prípad, že header.js nebol načítaný)
         const authLink = document.getElementById('auth-link');
         const profileLink = document.getElementById('profile-link');
         const logoutButton = document.getElementById('logout-button');
@@ -309,7 +315,7 @@ function ChangePasswordApp() {
             }
         }
     }
-  }, [user]);
+  }, [user]); // Závisí od objektu používateľa
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
