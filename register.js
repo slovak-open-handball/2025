@@ -2,7 +2,7 @@
 // Tieto konštanty sú teraz definované v <head> register.html a sú prístupné globálne.
 // Odstránené opakované deklarácie.
 
-const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const RECAPTcha_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
@@ -47,7 +47,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         type: showPassword ? 'text' : 'password',
         id: id,
         // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-12 mb-0 mt-0', // Zmenené pr-10 na pr-12
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -57,17 +57,16 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
-        // Nastaví tabIndex na 5 pre heslo a 6 pre potvrdenie hesla
-        tabIndex: id === 'reg-password' ? 5 : 6
       }),
       React.createElement(
-        'span', // Zmenené z 'button' na 'span'
+        'button',
         {
+          type: 'button',
           onClick: toggleShowPassword,
-          // Odstránené focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 pre odstránenie modrého orámovania
-          // Pridané focus:outline-none pre úplné odstránenie predvoleného obrysu
-          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg cursor-pointer', // Pridaný cursor-pointer pre vizuálnu indikáciu klikateľnosti
-          tabIndex: -1 // Zabezpečí, že element nebude v poradí tabulátorov
+          // Upravené triedy pre centrovanie a focus ohraničenie
+          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
+          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
       )
@@ -190,7 +189,7 @@ function App() {
 
     // If startDate is not a valid date, or is already in the past, no countdown is needed
     if (!startDate || isNaN(startDate) || now >= startDate) {
-        return null;
+        return null; 
     }
 
     const difference = startDate.getTime() - now.getTime(); // Difference in milliseconds
@@ -492,7 +491,9 @@ function App() {
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      console.log("Firebase Auth: Používateľ vytvorený:", userCredential.user.uid);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
+      console.log("Firebase Auth: Profil používateľa aktualizovaný.");
 
       let initialUserRole = 'user';
       let initialIsApproved = true;
@@ -521,6 +522,7 @@ function App() {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
 
+        // Odoslanie e-mailu po úspešnom uložení do Firestore
         try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -564,6 +566,8 @@ function App() {
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
         setUserNotificationMessage('');
+        // Dôležité: Ak zlyhá uloženie do Firestore, mali by sme zvážiť aj zmazanie používateľa z Auth
+        // aby sa predišlo "osiřelým" účtom. Pre jednoduchosť to tu zatiaľ nerobím, ale v produkčnom prostredí by to bolo vhodné.
         return;
       }
 
@@ -573,10 +577,13 @@ function App() {
       
       setLoading(false);
 
+      // Až teraz sa odhlásime a presmerujeme, keď sú všetky asynchrónne operácie dokončené
       await auth.signOut(); 
       setUser(null);
+      console.log("Firebase Auth: Používateľ odhlásený po registrácii.");
       
       setTimeout(() => {
+        console.log("Presmerovanie na login.html...");
         window.location.href = 'login.html'; 
       }, 5000); 
 
@@ -730,7 +737,6 @@ function App() {
               placeholder: "Zadajte svoje meno",
               autoComplete: "given-name",
               disabled: loading || !!userNotificationMessage,
-              tabIndex: 1 // Explicitne nastaví poradie tabulátorov
             })
           ),
           React.createElement(
@@ -749,7 +755,6 @@ function App() {
               placeholder: "Zadajte svoje priezvisko",
               autoComplete: "family-name",
               disabled: loading || !!userNotificationMessage,
-              tabIndex: 2 // Explicitne nastaví poradie tabulátorov
             })
           ),
           is_admin_register_page ? (
@@ -767,7 +772,6 @@ function App() {
                 placeholder: "Zadajte svoju e-mailovú adresu",
                 autoComplete: "email",
                 disabled: loading || !!userNotificationMessage,
-                tabIndex: 3 // Explicitne nastaví poradie tabulátorov
               })
             )
           ) : (
@@ -819,7 +823,6 @@ function App() {
                   pattern: "^\\+\\d+$",
                   title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).",
                   disabled: loading || !!userNotificationMessage,
-                  tabIndex: 3 // Explicitne nastaví poradie tabulátorov
                 })
               ),
               React.createElement(
@@ -841,7 +844,6 @@ function App() {
                   placeholder: "Zadajte svoju e-mailovú adresu",
                   autoComplete: "email",
                   disabled: loading || !!userNotificationMessage,
-                  tabIndex: 4 // Explicitne nastaví poradie tabulátorov
                 })
               ),
               React.createElement(
@@ -887,7 +889,7 @@ function App() {
             onCut: (e) => e.preventDefault(),
             placeholder: "Potvrďte heslo",
             autoComplete: "new-password",
-            showPassword: showConfirmPasswordReg,
+            showConfirmPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
             disabled: loading || !!userNotificationMessage,
           }),
@@ -897,7 +899,6 @@ function App() {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
               disabled: loading || !!userNotificationMessage,
-              tabIndex: 7 // Explicitne nastaví poradie tabulátorov pre tlačidlo Registrovať sa
             },
             loading ? (
               React.createElement(
