@@ -61,6 +61,7 @@
 
     <!-- Globálne premenné pre Firebase config (pre React aplikácie) -->
     <script type="text/javascript">
+        // Tieto premenné sú definované globálne a budú použité v header.js a register.js
         const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
         const __firebase_config = JSON.stringify({
             apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -76,6 +77,7 @@
 
     <!-- Vlastné skripty -->
     <script src="header.js"></script>
+    <!-- register.js musí byť typu text/babel, aby sa preložil JSX -->
     <script type="text/babel" src="register.js"></script>
 
     <script type="text/javascript">
@@ -104,21 +106,7 @@
                 } else {
                     console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
                 }
-
-                // Potom renderujeme React aplikáciu
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof App === 'undefined') {
-                    console.error("Chyba: Komponent App nie je definovaný. Skontrolujte register.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
-
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
+                // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
