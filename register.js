@@ -55,7 +55,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       {
         type: 'button',
         onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
+        // Upravené triedy pre centrovanie a focus ohraničenie
+        className: 'absolute inset-y-0 right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
+        style: { height: '100%' }, // Zabezpečí, že tlačidlo zaberá celú výšku inputu
         disabled: disabled,
       },
       showPassword ? EyeOffIcon : EyeIcon
