@@ -33,12 +33,12 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   return React.createElement(
     'div',
-    { className: 'relative' },
+    { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement('input', {
       type: showPassword ? 'text' : 'password',
       id: id,
-      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-0 mt-0 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
       value: value,
       onChange: onChange,
       onCopy: (e) => e.preventDefault(),
@@ -54,14 +54,14 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       {
         type: 'button',
         onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
+        className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
         disabled: disabled,
       },
       showPassword ? EyeOffIcon : EyeIcon
     ),
     description && React.createElement(
-      'p',
-      { className: 'text-gray-600 text-sm -mt-2' },
+      'div', // Changed from 'p' to 'div' to resolve DOM nesting warning
+      { className: 'text-gray-600 text-sm mt-2' },
       description
     )
   );
@@ -119,89 +119,6 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// ConfirmationModal Component (converted to React.createElement)
-function ConfirmationModal({ message, onConfirm, onCancel }) {
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: 'modal-content text-center' },
-      React.createElement('p', { className: 'text-lg font-semibold mb-6' }, message),
-      React.createElement(
-        'div',
-        { className: 'flex justify-center space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onCancel,
-            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: onConfirm,
-            className: 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200',
-          },
-          'Potvrdiť'
-        )
-      )
-    )
-  );
-}
-
-// EditRoleModal Component (converted to React.createElement)
-function EditRoleModal({ userToEditRole, newRole, setNewRole, closeRoleEditModal, handleUpdateUserRole, loading }) {
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: 'modal-content' },
-      React.createElement('h3', { className: 'text-xl font-bold mb-4' }, `Upraviť rolu pre ${userToEditRole?.email}`),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'new-user-role' }, 'Nová rola'),
-        React.createElement(
-          'select',
-          {
-            id: 'new-user-role',
-            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: newRole,
-            onChange: (e) => setNewRole(e.target.value),
-          },
-          React.createElement('option', { value: 'user' }, 'Používateľ'),
-          React.createElement('option', { value: 'admin' }, 'Administrátor')
-        )
-      ),
-      React.createElement(
-        'div',
-        { className: 'flex justify-end space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: closeRoleEditModal,
-            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: handleUpdateUserRole,
-            className: 'px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200',
-            disabled: loading,
-          },
-          loading ? 'Ukladám...' : 'Uložiť'
-        )
-      )
-    )
-  );
-}
-
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
   const [app, setApp] = React.useState(null);
@@ -223,14 +140,6 @@ function MyDataApp() {
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
   const [displayNotifications, setDisplayNotifications] = React.useState(true);
-
-  // Admin Panel States
-  const [allUsers, setAllUsers] = React.useState([]);
-  const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
-  const [userToDelete, setUserToDelete] = React.useState(null);
-  const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
-  const [userToEditRole, setUserToEditRole] = React.useState(null);
-  const [newRole, setNewRole] = React.useState('user');
 
   // States for date and time settings
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -402,7 +311,7 @@ function MyDataApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -626,165 +535,7 @@ function MyDataApp() {
       setError(`Chyba pri mazaní účtu: ${e.message}. Možno sa musíte znova prihlásiť, ak ste sa prihlásili príliš dávno.`);
     } finally {
       setLoading(false);
-      setShowConfirmationModal(false); // Close modal even on error
-    }
-  };
-
-  const handleFetchAllUsers = React.useCallback(async () => {
-    // Kontrola oprávnení teraz používa userProfileData.role
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zobrazenie používateľov.");
-      setLoading(false); // Nastavíme loading na false aj tu
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const usersSnapshot = await db.collection('users').get();
-      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllUsers(usersList);
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri načítaní všetkých používateľov:", e);
-      setError(`Chyba pri načítaní používateľov: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [db, userProfileData]); // Závisí od userProfileData
-
-  React.useEffect(() => {
-    // Podmienka na spustenie handleFetchAllUsers závisí od userProfileData.role
-    if (userProfileData && userProfileData.role === 'admin' && db) {
-      handleFetchAllUsers();
-    }
-  }, [userProfileData, db, handleFetchAllUsers]); // Závisí od userProfileData
-
-  const openConfirmationModal = (user) => {
-    setUserToDelete(user);
-    setShowConfirmationModal(true);
-  };
-
-  const closeConfirmationModal = () => {
-    setUserToDelete(null);
-    setShowConfirmationModal(false);
-  };
-
-  const openRoleEditModal = (user) => {
-    setUserToEditRole(user);
-    setNewRole(user.role); // Set current role as default
-    setShowRoleEditModal(true);
-  };
-
-  const closeRoleEditModal = () => {
-    setUserToEditRole(null);
-    setShowRoleEditModal(false);
-  };
-
-  const handleUpdateUserRole = async () => {
-    // Podmienka na kontrolu roly admina závisí od userProfileData.role
-    if (!db || !userToEditRole || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmenu rolí alebo chýbajú dáta.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setUserNotificationMessage('');
-    try {
-      const userDocRef = db.collection('users').doc(userToEditRole.id);
-      await userDocRef.update({
-        role: newRole,
-        // Ak nastavujeme na admina, nastavíme approved na false, inak na true
-        approved: newRole === 'admin' ? false : true
-      });
-      setUserNotificationMessage(`Rola pre ${userToEditRole.email} bola aktualizovaná na '${newRole}'.`);
-      closeRoleEditModal();
-      handleFetchAllUsers(); // Refresh the user list
-      
-      // Send email notification about role change
-      try {
-        const payload = {
-          action: 'sendRoleChangeNotification',
-          email: userToEditRole.email,
-          newRole: newRole,
-          isApproved: newRole === 'admin' ? false : true // Pass the approval status
-        };
-        console.log("MyDataApp: Odosielanie dát do Apps Script (zmena roly):", payload);
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        console.log("MyDataApp: Požiadavka na odoslanie e-mailu o zmene roly odoslaná.");
-        try {
-          const responseData = await response.text();
-          console.log("MyDataApp: Odpoveď z Apps Script (fetch - zmena roly) ako text:", responseData);
-        } catch (jsonError) {
-          console.warn("MyDataApp: Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
-        }
-      } catch (emailError) {
-        console.error("MyDataApp: Chyba pri odosielaní e-mailu o zmene roly cez Apps Script (chyba fetch):", emailError);
-      }
-
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri aktualizácii roly:", e);
-      setError(`Chyba pri aktualizácii roly: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleApproveUser = async (targetUser) => {
-    // Podmienka na kontrolu roly admina závisí od userProfileData.role
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na schvaľovanie používateľov.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setUserNotificationMessage('');
-    try {
-      const userDocRef = db.collection('users').doc(targetUser.id);
-      await userDocRef.update({
-        approved: true
-      });
-      setUserNotificationMessage(`Používateľ ${targetUser.email} bol schválený.`);
-      handleFetchAllUsers(); // Refresh the user list
-
-      // Send email notification about approval
-      try {
-        const payload = {
-          action: 'sendApprovalNotification',
-          email: targetUser.email,
-          firstName: targetUser.firstName,
-          lastName: targetUser.lastName
-        };
-        console.log("MyDataApp: Odosielanie dát do Apps Script (schválenie):", payload);
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        console.log("MyDataApp: Požiadavka na odoslanie e-mailu o schválení odoslaná.");
-        try {
-          const responseData = await response.text();
-          console.log("MyDataApp: Odpoveď z Apps Script (fetch - schválenie) ako text:", responseData);
-        } catch (jsonError) {
-          console.warn("MyDataApp: Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
-        }
-      } catch (emailError) {
-        console.error("MyDataApp: Chyba pri odosielaní e-mailu o schválení cez Apps Script (chyba fetch):", emailError);
-      }
-
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri schvaľovaní používateľa:", e);
-      setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
-    } finally {
-      setLoading(false);
+      // setShowConfirmationModal(false); // No longer needed here
     }
   };
 
@@ -851,7 +602,8 @@ function MyDataApp() {
   }
 
   const currentPath = window.location.pathname.split('/').pop();
-  const is_admin_panel_page = currentPath === 'admin-panel.html';
+  // is_admin_panel_page je teraz pre logged-in-users.html
+  const is_admin_panel_page = currentPath === 'logged-in-users.html';
 
   // If user is not admin and trying to access admin panel, redirect
   // Používame userProfileData.role pre kontrolu oprávnení
@@ -868,19 +620,7 @@ function MyDataApp() {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage('')
     }),
-    showConfirmationModal && React.createElement(ConfirmationModal, {
-        message: `Naozaj chcete zmazať účet ${userToDelete?.email}? Túto akciu nie je možné vrátiť späť.`,
-        onConfirm: handleDeleteAccount,
-        onCancel: closeConfirmationModal
-    }),
-    showRoleEditModal && React.createElement(EditRoleModal, {
-        userToEditRole: userToEditRole,
-        newRole: newRole,
-        setNewRole: setNewRole,
-        closeRoleEditModal: closeRoleEditModal,
-        handleUpdateUserRole: handleUpdateUserRole,
-        loading: loading
-    }),
+    // ConfirmationModal a EditRoleModal sú presunuté do logged-in-users.js
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -893,7 +633,7 @@ function MyDataApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          is_admin_panel_page ? 'Administrátorský panel' : 'Moja zóna'
+          'Moja zóna' // Už len "Moja zóna"
         ),
         // Používame userProfileData pre zobrazenie mena a roly
         userProfileData && React.createElement(
@@ -908,7 +648,7 @@ function MyDataApp() {
         ),
 
         // My Data Section
-        !is_admin_panel_page && React.createElement(
+        React.createElement(
           React.Fragment,
           null,
           React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
@@ -1027,8 +767,7 @@ function MyDataApp() {
           ),
         ),
 
-        // Admin Panel Section
-        // Používame userProfileData.role pre podmienku zobrazenia admin panelu
+        // Admin Panel Section - Registration Settings (User Management je presunuté)
         userProfileData && userProfileData.role === 'admin' && React.createElement(
           React.Fragment,
           null,
@@ -1070,74 +809,6 @@ function MyDataApp() {
                 disabled: loading,
               },
               loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
-            )
-          ),
-
-          React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Správa používateľov'),
-          React.createElement(
-            'div',
-            { className: 'overflow-x-auto' },
-            React.createElement(
-              'table',
-              { className: 'min-w-full bg-white rounded-lg shadow overflow-hidden' },
-              React.createElement(
-                'thead',
-                { className: 'bg-gray-200 text-gray-700' },
-                React.createElement(
-                  'tr',
-                  null,
-                  React.createElement('th', { className: 'py-3 px-4 text-left' }, 'E-mail'),
-                  React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Meno'),
-                  React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Rola'),
-                  React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Schválený'),
-                  React.createElement('th', { className: 'py-3 px-4 text-left' }, 'Akcie')
-                )
-              ),
-              React.createElement(
-                'tbody',
-                null,
-                allUsers.map((u) => (
-                  React.createElement(
-                    'tr',
-                    { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-50' },
-                    React.createElement('td', { className: 'py-3 px-4' }, u.email),
-                    React.createElement('td', { className: 'py-3 px-4 whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                    React.createElement('td', { className: 'py-3 px-4' }, u.role),
-                    React.createElement('td', { className: 'py-3 px-4' }, u.approved ? 'Áno' : 'Nie'),
-                    React.createElement(
-                      'td',
-                      { className: 'py-3 px-4 flex space-x-2' },
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => openRoleEditModal(u),
-                          className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                          disabled: loading || u.id === user.uid, // Cannot edit own role
-                        },
-                        'Upraviť rolu'
-                      ),
-                      u.role === 'admin' && !u.approved && React.createElement(
-                        'button',
-                        {
-                          onClick: () => handleApproveUser(u),
-                          className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                          disabled: loading,
-                        },
-                        'Schváliť'
-                      ),
-                      React.createElement(
-                        'button',
-                        {
-                          onClick: () => openConfirmationModal(u),
-                          className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                          disabled: loading || u.id === user.uid, // Cannot delete own account here
-                        },
-                        'Zmazať'
-                      )
-                    )
-                  )
-                ))
-              )
             )
           )
         )
