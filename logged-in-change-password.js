@@ -163,11 +163,12 @@ function ChangePasswordApp() {
       }
 
       // Získanie existujúcej Firebase aplikácie.
-      // Predpokladá sa, že header.js alebo iný skript už inicializoval Firebase aplikáciu.
+      // Predpokladá sa, že header.js už inicializoval Firebase aplikáciu.
       let firebaseApp;
-      if (typeof __firebase_app_name !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === __firebase_app_name)) {
-        firebaseApp = firebase.app(__firebase_app_name);
-        console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${__firebase_app_name}`);
+      // Používame globálnu premennú 'headerAppName' z header.js
+      if (typeof headerAppName !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === headerAppName)) {
+        firebaseApp = firebase.app(headerAppName);
+        console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${headerAppName}`);
       } else if (firebase.apps.length > 0) {
         // Ak existuje predvolená aplikácia (bez názvu), použite ju
         firebaseApp = firebase.app();
