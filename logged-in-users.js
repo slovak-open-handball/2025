@@ -17,63 +17,6 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
-  const EyeIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM15 12a3 3 0 11-6 0 3 3 0 016 0z' })
-  );
-
-  const EyeOffIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25' })
-  );
-
-  return React.createElement(
-    'div',
-    null, // Odstránené 'relative' z tohto divu
-    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
-    React.createElement(
-      'div',
-      { className: 'relative flex items-center' }, // Pridané 'flex items-center' pre tento kontajner
-      React.createElement('input', {
-        type: showPassword ? 'text' : 'password',
-        id: id,
-        // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-0 mt-0 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
-        value: value,
-        onChange: onChange,
-        onCopy: (e) => e.preventDefault(),
-        onPaste: (e) => e.preventDefault(),
-        onCut: (e) => e.preventDefault(),
-        required: true,
-        placeholder: placeholder,
-        autoComplete: autoComplete,
-        disabled: disabled,
-      }),
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          onClick: toggleShowPassword,
-          // Upravené triedy pre centrovanie a focus ohraničenie
-          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
-          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
-          disabled: disabled,
-        },
-        showPassword ? EyeOffIcon : EyeIcon
-      )
-    ),
-    description && React.createElement(
-      'div', // Changed from 'p' to 'div' to resolve DOM nesting warning
-      { className: 'text-gray-600 text-sm mt-2' }, // Zmenené z -mt-2 na mt-2 pre väčší odstup
-      description
-    )
-  );
-}
-
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
@@ -415,8 +358,8 @@ function UsersManagementApp() {
     };
   }, [handleLogout]);
 
-  const handleDeleteAccount = async () => {
-    if (!auth || !db || !user) {
+  const handleDeleteAccount = async (targetUser) => { // Modified to accept targetUser
+    if (!auth || !db || !user || !targetUser) {
       setError("Auth, databáza alebo používateľ nie je k dispozícii.");
       return;
     }
@@ -425,17 +368,21 @@ function UsersManagementApp() {
     setUserNotificationMessage('');
     try {
       // 1. Delete user data from Firestore
-      await db.collection('users').doc(user.uid).delete();
+      await db.collection('users').doc(targetUser.id).delete();
       console.log("UsersManagementApp: Používateľské dáta vymazané z Firestore.");
 
-      // 2. Delete user from Firebase Authentication
-      await user.delete();
-      console.log("UsersManagementApp: Používateľ vymazaný z Firebase Auth.");
-
-      setUserNotificationMessage("Účet bol úspešne zmazaný. Budete presmerovaní na prihlasovaciu stránku.");
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 3000);
+      // If deleting own account, also delete from Firebase Auth
+      if (user.uid === targetUser.id) {
+        await user.delete();
+        console.log("UsersManagementApp: Používateľ vymazaný z Firebase Auth.");
+        setUserNotificationMessage("Váš účet bol úspešne zmazaný. Budete presmerovaní na prihlasovaciu stránku.");
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 3000);
+      } else {
+        setUserNotificationMessage(`Účet ${targetUser.email} bol úspešne zmazaný.`);
+        handleFetchAllUsers(); // Refresh the user list for admin
+      }
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní účtu:", e);
       setError(`Chyba pri mazaní účtu: ${e.message}. Možno sa musíte znova prihlásiť, ak ste sa prihlásili príliš dávno.`);
@@ -640,7 +587,7 @@ function UsersManagementApp() {
     }),
     showConfirmationModal && React.createElement(ConfirmationModal, {
         message: `Naozaj chcete zmazať účet ${userToDelete?.email}? Túto akciu nie je možné vrátiť späť.`,
-        onConfirm: handleDeleteAccount,
+        onConfirm: () => handleDeleteAccount(userToDelete), // Pass userToDelete
         onCancel: closeConfirmationModal
     }),
     showRoleEditModal && React.createElement(EditRoleModal, {
@@ -704,32 +651,38 @@ function UsersManagementApp() {
                   React.createElement(
                     'td',
                     { className: 'py-3 px-4 flex space-x-2' },
-                    React.createElement(
-                      'button',
-                      {
-                        onClick: () => openRoleEditModal(u),
-                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                        disabled: loading || u.id === user.uid, // Cannot edit own role
-                      },
-                      'Upraviť rolu'
-                    ),
-                    u.role === 'admin' && !u.approved && React.createElement(
-                      'button',
-                      {
-                        onClick: () => handleApproveUser(u),
-                        className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                        disabled: loading,
-                      },
-                      'Schváliť'
-                    ),
-                    React.createElement(
-                      'button',
-                      {
-                        onClick: () => openConfirmationModal(u),
-                        className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                        disabled: loading || u.id === user.uid, // Cannot delete own account here
-                      },
-                      'Zmazať'
+                    // Podmienka na zobrazenie tlačidiel "Upraviť rolu" a "Zmazať"
+                    // Tlačidlá sa nezobrazia, ak je používateľ aktuálne prihlásený (user.uid === u.id)
+                    user && user.uid !== u.id && React.createElement(
+                      React.Fragment,
+                      null,
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => openRoleEditModal(u),
+                          className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                          disabled: loading,
+                        },
+                        'Upraviť rolu'
+                      ),
+                      u.role === 'admin' && !u.approved && React.createElement(
+                        'button',
+                        {
+                          onClick: () => handleApproveUser(u),
+                          className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                          disabled: loading,
+                        },
+                        'Schváliť'
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => openConfirmationModal(u),
+                          className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                          disabled: loading,
+                        },
+                        'Zmazať'
+                      )
                     )
                   )
                 )
