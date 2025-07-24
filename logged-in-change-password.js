@@ -1,3 +1,9 @@
+// Global application ID and Firebase configuration (should be consistent across all React apps)
+// Tieto konštanty sú teraz definované v <head> logged-in-change-password.html
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
@@ -374,8 +380,8 @@ function ChangePasswordApp() {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!auth || !user) {
-      setError("Autentifikácia nie je k dispozícii. Skúste sa znova prihlásiť.");
+    if (!auth || !user || !db) { // Pridaná kontrola pre db
+      setError("Autentifikácia, používateľ alebo databáza nie je k dispozícii. Skúste sa znova prihlásiť.");
       return;
     }
     if (!currentPassword || !newPassword || !confirmNewPassword) {
@@ -407,6 +413,18 @@ function ChangePasswordApp() {
       await user.updatePassword(newPassword);
       console.log("ChangePasswordApp: Heslo úspešne zmenené.");
 
+      // DÔLEŽITÉ: Aktualizácia timestampu vo Firestore
+      const userDocRef = db.collection('users').doc(user.uid);
+      await userDocRef.update({
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("ChangePasswordApp: Timestamp zmeny hesla aktualizovaný vo Firestore.");
+
+      // Aktualizujeme aj localStorage, aby sa aktuálna relácia okamžite odhlásila
+      // (aj keď by to mal zachytiť Firestore listener v header.js)
+      localStorage.setItem(`passwordLastChanged_${user.uid}`, new Date().getTime().toString());
+
+
       setUserNotificationMessage("Heslo bolo úspešne zmenené. Pre vašu bezpečnosť vás odhlasujeme. Prosím, prihláste sa s novým heslom.");
       
       // Clear password fields
@@ -419,7 +437,7 @@ function ChangePasswordApp() {
       console.log("ChangePasswordApp: Používateľ odhlásený po zmene hesla.");
       
       setTimeout(() => {
-        window.location.href = 'login.html'; // Redirect to login page
+        window.location.href = 'login.html'; // Presmerovanie po odhlásení
       }, 3000);
 
     } catch (e) {
@@ -431,7 +449,7 @@ function ChangePasswordApp() {
       } else if (e.code === 'auth/requires-recent-login') {
         setError("Táto akcia vyžaduje nedávne prihlásenie. Prosím, odhláste sa a znova sa prihláste a skúste to znova.");
       } else {
-        setError(`Zmena hesla nebola úspešná, skontrolujte zadané údaje.`);
+        setError(`Chyba pri zmene hesla: ${e.message}`);
       }
     } finally {
       setLoading(false);
@@ -561,3 +579,8 @@ function ChangePasswordApp() {
     )
   );
 }
+
+// Render the React application after the App component is defined
+// TENTO BLOK JE ODSTRÁNENÝ, PRETOŽE RENDEROVANIE HANDLUJE logged-in-change-password.html
+// const root = ReactDOM.createRoot(document.getElementById('root'));
+// root.render(React.createElement(ChangePasswordApp, null));
