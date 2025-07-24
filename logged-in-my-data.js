@@ -169,7 +169,6 @@ function MyDataApp() {
               setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
               // Aktualizujeme lokálne stavy z userProfileData
-              // Removed setContactPhoneNumber, setEmail as they are no longer editable here
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
               
@@ -350,36 +349,35 @@ function MyDataApp() {
           React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
           React.createElement(
             'div', 
-            { className: 'space-y-4' },
+            { className: 'space-y-2' }, {/* Changed space-y-4 to space-y-2 for tighter spacing if needed */}
             React.createElement(
                 'div',
                 null,
-                // Zmenené na samostatný label a p tag pre meno a priezvisko
-                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Meno a priezvisko:'),
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
-                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                    ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 )
             ),
             React.createElement(
               'div',
               null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Telefónne číslo kontaktnej osoby:'),
               React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                userProfileData.contactPhoneNumber || ''
+                React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
+                ` ${userProfileData.contactPhoneNumber || ''}`
               )
             ),
             React.createElement(
               'div',
               null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'E-mailová adresa:'),
               React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                userProfileData.email || user.email || ''
+                React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                ` ${userProfileData.email || user.email || ''}`
               )
             )
           ),
