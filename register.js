@@ -1,8 +1,6 @@
 // Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> register.html
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// Tieto konštanty sú teraz definované v <head> register.html a sú prístupné globálne.
+// Odstránené opakované deklarácie.
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -151,6 +149,10 @@ function App() {
   // New state variable for periodic update of isRegistrationOpen
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
+  // States for password visibility
+  const [showPasswordReg, setShowPasswordReg] = React.useState(false);
+  const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
+
   // Calculate registration status as a memoized value
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false; // Wait until settings are loaded
@@ -207,7 +209,8 @@ function App() {
       let firebaseApp;
       // Skontrolujte, či už existuje predvolená aplikácia Firebase
       if (firebase.apps.length === 0) {
-        firebaseApp = firebase.initializeApp(firebaseConfig);
+        // Používame globálne __firebase_config
+        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
       } else {
         firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
       }
@@ -220,8 +223,9 @@ function App() {
 
       const signIn = async () => {
         try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+          // Používame globálne __initial_auth_token
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authInstance.signInWithCustomToken(__initial_auth_token);
           } else {
             // No anonymous sign-in for register.js, user will explicitly register or log in
           }
@@ -905,3 +909,8 @@ function App() {
     )
   );
 }
+
+// Render the React application after the App component is defined
+// This ensures that App is available when ReactDOM.createRoot is called.
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App, null));
