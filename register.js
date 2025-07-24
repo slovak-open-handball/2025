@@ -2,7 +2,7 @@
 // Tieto konštanty sú teraz definované v <head> register.html a sú prístupné globálne.
 // Odstránené opakované deklarácie.
 
-const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const RECAPTcha_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
@@ -42,7 +42,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -61,7 +62,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
           // Upravené triedy pre centrovanie a focus ohraničenie
           // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
           className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
-          // style: { height: '100%' }, // Toto už nie je potrebné, keďže používame top/transform
           disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
@@ -70,7 +70,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     // Zmena <p> na <div> pre description, aby sa predišlo chybe vnorenia <ul> v <p>
     description && React.createElement(
       'div', // Zmenené z 'p' na 'div'
-      { className: 'text-gray-600 text-sm mt-1' }, // Zmenené z -mt-2 na mt-1
+      { className: 'text-gray-600 text-sm mt-2' }, // Zmenené z mt-1 na mt-2 pre väčší odstup
       description
     )
   );
@@ -196,7 +196,7 @@ function App() {
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+    const minutes = Math.floor((difference % (1000 * 60)) / (1000 * 60));
     const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
