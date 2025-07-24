@@ -83,8 +83,7 @@ function MyDataApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
-  const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
+  // Removed contactPhoneNumber, email states as they are no longer editable here
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
 
@@ -170,8 +169,7 @@ function MyDataApp() {
               setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
               // Aktualizujeme lokálne stavy z userProfileData
-              setContactPhoneNumber(userData.contactPhoneNumber || '');
-              setEmail(userData.email || user.email || ''); // Použi Firebase user email ako fallback
+              // Removed setContactPhoneNumber, setEmail as they are no longer editable here
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
               
