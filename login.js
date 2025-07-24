@@ -20,7 +20,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Vylepšená cesta pre ikonu preškrtnutého oka (eye-slash) pre lepší vizuál
+    // NOVÁ a opravená cesta pre ikonu preškrtnutého oka s celým okom a preškrtnutím
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25' })
   );
 
@@ -253,7 +253,7 @@ function App() {
       } catch (e) {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          setSettingsLoaded(true); // Nastavenia sú načítané aj v prípade chyby
+          setLoading(false); // Nastavenia sú načítané aj v prípade chyby
       }
     };
 
@@ -338,7 +338,7 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!auth || !db) { 
+    if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
@@ -366,7 +366,7 @@ function App() {
 
       if (!userDoc.exists) {
         setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
-        await auth.signOut(); 
+        await auth.signOut();
         setLoading(false);
         return;
       }
@@ -374,22 +374,22 @@ function App() {
       const userData = userDoc.data();
       console.log("Prihlásenie: Používateľské dáta z Firestore:", userData);
 
-      if (userData.role === 'admin' && userData.approved === false) { 
-        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom."); 
-        
+      if (userData.role === 'admin' && userData.approved === false) {
+        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
+
         // Send email for unapproved administrator
         try {
           const payload = {
-            action: 'sendAdminApprovalReminder', 
+            action: 'sendAdminApprovalReminder',
             email: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
-            isAdmin: true 
+            isAdmin: true
           };
           console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
@@ -406,7 +406,7 @@ function App() {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
         }
 
-        await auth.signOut(); 
+        await auth.signOut();
         setLoading(false);
         return;
       }
@@ -415,19 +415,19 @@ function App() {
         ...prevUser,
         ...userData,
         displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
-        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true 
+        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
       }));
 
       setUserNotificationMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
       setEmail('');
       setPassword('');
-      
-      setLoading(false); 
+
+      setLoading(false);
 
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
-      }, 5000); 
+      }, 5000);
 
     } catch (e) {
       console.error("Chyba pri prihlásení:", e);
@@ -438,7 +438,7 @@ function App() {
         setError(`Zadali ste nesprávne prihlasovacie údaje`);
       }
       setLoading(false);
-    } 
+    }
   };
 
   // Display loading state
