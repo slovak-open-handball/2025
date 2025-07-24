@@ -1,9 +1,3 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-change-password.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
-
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
@@ -579,8 +573,3 @@ function ChangePasswordApp() {
     )
   );
 }
-
-// Render the React application after the App component is defined
-// TENTO BLOK JE ODSTRÁNENÝ, PRETOŽE RENDEROVANIE HANDLUJE logged-in-change-password.html
-// const root = ReactDOM.createRoot(document.getElementById('root'));
-// root.render(React.createElement(ChangePasswordApp, null));
