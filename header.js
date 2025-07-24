@@ -38,6 +38,7 @@ function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
 // Globálne premenné na uchovávanie stavu pre hlavičku (zjednodušené, nie React stav)
 let currentHeaderUser = null;
 let currentIsRegistrationOpenStatus = false;
+let unsubscribePasswordCheck = null; // Pre uloženie unsubscribera pre Firestore listener
 
 // Funkcia na inicializáciu logiky hlavičky závislej od DOM
 function initializeHeaderLogic() {
@@ -66,59 +67,72 @@ function initializeHeaderLogic() {
 
     // Počúvanie zmien stavu autentifikácie
     if (authHeader) {
-        // Používame onIdTokenChanged, ktorý sa spustí pri zmene ID tokenu (vrátane zmeny hesla)
         authHeader.onIdTokenChanged(async (user) => {
             currentHeaderUser = user;
             updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
             console.log("Header.js: onIdTokenChanged - Používateľ:", user ? user.uid : "null");
 
-            if (user) {
-                try {
-                    // Načítanie najnovších údajov používateľa
-                    await user.reload();
-                    const idTokenResult = await user.getIdTokenResult();
-                    const currentAuthTime = idTokenResult.claims.auth_time; // auth_time je v sekundách
+            // Odhlásime predchádzajúci listener pre zmenu hesla, ak existuje
+            if (unsubscribePasswordCheck) {
+                unsubscribePasswordCheck();
+                unsubscribePasswordCheck = null;
+                console.log("Header.js: Odhlásený predchádzajúci listener pre zmenu hesla.");
+            }
 
-                    // Načítať posledný známy auth_time zo sessionStorage
-                    const lastAuthTimeKey = `lastAuthTime_${user.uid}`;
-                    const storedAuthTime = sessionStorage.getItem(lastAuthTimeKey);
+            if (user && dbHeader) {
+                // Ak je používateľ prihlásený, nastavíme listener na jeho dokument pre zmenu hesla
+                const userDocRef = dbHeader.collection('users').doc(user.uid);
+                
+                unsubscribePasswordCheck = userDocRef.onSnapshot(async (docSnapshot) => {
+                    if (docSnapshot.exists) {
+                        const userData = docSnapshot.data();
+                        const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
+                        const localStorageKey = `passwordLastChanged_${user.uid}`;
+                        const storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-                    if (storedAuthTime === null) {
-                        // Prvé prihlásenie alebo prvá návšteva stránky v tejto relácii
-                        sessionStorage.setItem(lastAuthTimeKey, currentAuthTime.toString());
-                        console.log("Header.js: Uložený počiatočný auth_time pre používateľa.");
-                    } else if (currentAuthTime > parseInt(storedAuthTime)) {
-                        // Ak je aktuálny auth_time novší ako uložený, znamená to, že došlo k re-autentifikácii
-                        // (napr. zmena hesla, prihlásenie na inom zariadení, atď.)
-                        console.log("Header.js: Detekovaná zmena auth_time (novšia autentifikácia). Odhlasujem používateľa.");
-                        await authHeader.signOut();
-                        window.location.href = 'login.html'; // Presmerovanie po odhlásení
-                        sessionStorage.removeItem(lastAuthTimeKey); // Vyčistíme uložený čas
-                    } else if (currentAuthTime < parseInt(storedAuthTime)) {
-                        // Toto by sa nemalo stať pri bežnej prevádzke, ak sa auth_time len zvyšuje.
-                        // Mohlo by to naznačovať problém alebo manuálnu zmenu v storage.
-                        // Pre istotu odhlásiť.
-                        console.warn("Header.js: Detekovaný starší auth_time ako uložený. Odhlasujem používateľa.");
-                        await authHeader.signOut();
-                        window.location.href = 'login.html'; // Presmerovanie po odhlásení
-                        sessionStorage.removeItem(lastAuthTimeKey); // Vyčistíme uložený čas
-                    }
-                    // Ak currentAuthTime === storedAuthTime, token sa len obnovil, netreba nič robiť.
+                        console.log(`Header.js: Firestore passwordLastChanged: ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
-                } catch (error) {
-                    console.error("Header.js: Chyba pri kontrole auth_time alebo načítaní používateľa:", error);
-                    // Ak nastane chyba pri reload() alebo getIdTokenResult() (napr. token je neplatný),
-                    // to znamená, že relácia je pravdepodobne invalidovaná.
-                    if (authHeader.currentUser) {
+                        if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                            // Heslo bolo zmenené na inom zariadení alebo v inej relácii
+                            console.log("Header.js: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                            await authHeader.signOut();
+                            window.location.href = 'login.html'; // Presmerovanie po odhlásení
+                            localStorage.removeItem(localStorageKey); // Vyčistíme lokálny storage
+                        } else if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime !== 0) {
+                            // Ak vo Firestore nie je timestamp, ale v lokálnom storage je,
+                            // môže to znamenať reset alebo chybu, pre istotu odhlásiť.
+                             console.warn("Header.js: Nesúlad timestampov zmeny hesla. Odhlasujem používateľa.");
+                             await authHeader.signOut();
+                             window.location.href = 'login.html';
+                             localStorage.removeItem(localStorageKey);
+                        } else {
+                            // Aktualizujeme lokálny storage s najnovším časom z Firestore
+                            localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                            console("Header.js: Aktualizovaný lokálny timestamp zmeny hesla.");
+                        }
+                    } else {
+                        // Ak používateľský dokument neexistuje, alebo bol zmazaný, odhlásiť
+                        console.warn("Header.js: Používateľský dokument sa nenašiel. Odhlasujem používateľa.");
                         await authHeader.signOut();
-                        console.log("Header.js: Používateľ odhlásený kvôli chybe pri overovaní tokenu.");
                         window.location.href = 'login.html';
                     }
-                }
+                }, async (error) => {
+                    console.error("Header.js: Chyba pri počúvaní zmien používateľského dokumentu Firestore:", error);
+                    // Ak nastane chyba pri počúvaní Firestore (napr. povolenia, sieť), odhlásiť
+                    if (authHeader.currentUser) {
+                        await authHeader.signOut();
+                        console.log("Header.js: Používateľ odhlásený kvôli chybe Firestore listenera.");
+                        window.location.href = 'login.html';
+                    }
+                });
             } else {
-                // Používateľ je null (odhlásený)
-                console.log("Header.js: Používateľ je odhlásený, token je invalidný.");
-                sessionStorage.removeItem(`lastAuthTime_${user ? user.uid : 'unknown'}`);
+                // Používateľ je null (odhlásený) alebo dbHeader nie je k dispozícii
+                console.log("Header.js: Používateľ je odhlásený alebo DB nie je k dispozícii.");
+                // Vyčistíme lokálny storage pre zmenu hesla, ak existuje UID
+                if (user && user.uid) {
+                    localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                }
+                
                 if (window.location.pathname !== '/login.html' && window.location.pathname !== '/register.html') {
                     window.location.href = 'login.html';
                 }
