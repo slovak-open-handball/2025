@@ -42,7 +42,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -70,7 +70,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     // Zmena <p> na <div> pre description, aby sa predišlo chybe vnorenia <ul> v <p>
     description && React.createElement(
       'div', // Zmenené z 'p' na 'div'
-      { className: 'text-gray-600 text-sm -mt-2' },
+      { className: 'text-gray-600 text-sm mt-1' }, // Zmenené z -mt-2 na mt-1
       description
     )
   );
@@ -435,7 +435,7 @@ function App() {
     if (errors.length === 0) {
       return null;
     } else {
-      return "\nHeslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
+      return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
   };
 
