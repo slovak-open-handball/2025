@@ -2,7 +2,7 @@
 // Tieto konštanty sú teraz definované v <head> register.html a sú prístupné globálne.
 // Odstránené opakované deklarácie.
 
-const RECAPTcha_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
