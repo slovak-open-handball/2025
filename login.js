@@ -1,6 +1,6 @@
 // Global application ID and Firebase configuration (should be consistent across all React apps)
 // Tieto konštanty sú teraz definované v <head> login.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const appId = '1:26454552024:web:6954b4f90f87a3a1eb43cd';
 // const firebaseConfig = { ... };
 // const initialAuthToken = null;
 
@@ -13,16 +13,15 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Opravená cesta pre ikonu oka - použitá štandardná Heroicons v2 outline cesta
+    // Cesta pre ikonu oka (viditeľné)
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM12 15a3 3 0 100-6 3 3 0 000 6z' })
   );
 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Opravená cesta pre ikonu preškrtnutého oka - použitá Heroicons v2 outline cesta pre "eye-slash"
-    // Táto cesta zabezpečí, že ikona bude mať aj preškrtnutie
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M3.98 8.618a10.04 10.04 0 001.391 1.674L15 19.397M18.183 5.707A9.965 9.965 0 0012 4c-4.478 0-8.268 2.943-9.543 7.002zM12 12a3 3 0 100-6 3 3 0 000 6z' })
+    // NOVÁ a opravená cesta pre ikonu preškrtnutého oka (eye-slash)
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25' })
   );
 
   return React.createElement(
@@ -35,9 +34,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        // Zvýšené pr-12 na pr-16 pre ešte viac miesta pre ikonu
+        // Zmenené pr-20 na pr-10 pre menšie odsadenie, aby sa ikona zmestila
         // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-16 mb-0 mt-0',
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -53,9 +52,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         {
           type: 'button',
           onClick: toggleShowPassword,
-          // Upravené right-0 na right-1 pre jemné posunutie doľava a pridané px-3 pre odsadenie vo vnútri tlačidla
-          // Používame top-1/2 a -translate-y-1/2 pre presné vertikálne centrovanie
-          className: 'absolute right-1 px-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          // Upravené right-2 na right-0 a pridané inset-y-0 a my-auto pre presné centrovanie
+          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
           disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
@@ -470,7 +468,7 @@ function App() {
         { className: 'w-full max-w-md mt-20 mb-10 p-4' },
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-lg w-full text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
           React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Prihlásenie úspešné!'),
           React.createElement(
             'div',
