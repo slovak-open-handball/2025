@@ -162,19 +162,21 @@ function ChangePasswordApp() {
         return;
       }
 
-      // Používame názov aplikácie definovaný v HTML, aby sme sa vyhli inicializácii duplicitnej aplikácie
+      // Získanie existujúcej Firebase aplikácie namiesto inicializácie novej
       let firebaseApp;
       if (typeof __firebase_app_name !== 'undefined' && firebase.apps.some(fbApp => fbApp.name === __firebase_app_name)) {
         firebaseApp = firebase.app(__firebase_app_name);
         console.log(`ChangePasswordApp: Používam existujúcu Firebase aplikáciu: ${__firebase_app_name}`);
-      } else if (firebase.apps.length === 0) {
-        // Ak neexistuje žiadna aplikácia, inicializujte predvolenú
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
-        console.log("ChangePasswordApp: Inicializovaná predvolená Firebase aplikácia.");
-      } else {
+      } else if (firebase.apps.length > 0) {
         // Ak existuje predvolená aplikácia, použite ju
         firebaseApp = firebase.app();
         console.log("ChangePasswordApp: Používam existujúcu predvolenú Firebase aplikáciu.");
+      } else {
+        // Toto by sa nemalo stať, ak je header.js správne inicializovaný.
+        // Ak sa stane, znamená to, že Firebase nebola inicializovaná nikde inde.
+        // Pre istotu sa pokúsime inicializovať tu, ale je to fallback.
+        console.warn("ChangePasswordApp: Firebase aplikácia nie je inicializovaná. Pokúšam sa inicializovať ako fallback.");
+        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config), __firebase_app_name || 'defaultApp');
       }
       setApp(firebaseApp);
 
@@ -183,27 +185,15 @@ function ChangePasswordApp() {
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
-      const signIn = async () => {
-        try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
-          } else {
-            // Ak nie je custom token, pokúste sa prihlásiť anonymne pre prístup k Firestore (ak je povolené)
-            await authInstance.signInAnonymously();
-          }
-        } catch (e) {
-          console.error("ChangePasswordApp: Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
+      // Prihlásenie sa už nevykonáva v tomto komponente, spoliehame sa na to,
+      // že používateľ je prihlásený z predchádzajúcej stránky.
+      // Ak __initial_auth_token existuje, použije sa v header.js alebo inej inicializačnej logike.
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("ChangePasswordApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
         setIsAuthReady(true); // Mark auth as ready after the first check
       });
-
-      signIn();
 
       return () => {
         if (unsubscribeAuth) {
@@ -243,6 +233,7 @@ function ChangePasswordApp() {
               setLoading(false);
               setError('');
 
+              // Aktualizácia viditeľnosti menu po načítaní roly
               if (typeof window.updateMenuItemsVisibility === 'function') {
                   window.updateMenuItemsVisibility(userData.role);
               }
@@ -293,25 +284,30 @@ function ChangePasswordApp() {
   // useEffect for updating header link visibility (remains for consistency)
   React.useEffect(() => {
     console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+    // Volanie globálnej funkcie z header.js
+    if (typeof window.updateHeaderLinksVisibility === 'function') {
+        window.updateHeaderLinksVisibility(user);
+    } else {
+        console.warn("ChangePasswordApp: Funkcia updateHeaderLinksVisibility nie je definovaná v header.js.");
+        // Fallback pre manuálnu aktualizáciu, ak funkcia nie je dostupná
+        const authLink = document.getElementById('auth-link');
+        const profileLink = document.getElementById('profile-link');
+        const logoutButton = document.getElementById('logout-button');
+        const registerLink = document.getElementById('register-link');
 
-    if (authLink) {
-      if (user) { // If user is logged in
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("ChangePasswordApp: User logged in. Hidden: Login, Register. Visible: My Zone, Logout.");
-      } else { // If user is not logged in
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden');
-        console.log("ChangePasswordApp: User logged out. Visible: Login, Register. Hidden: My Zone, Logout.");
-      }
+        if (authLink) {
+            if (user) {
+                authLink.classList.add('hidden');
+                profileLink && profileLink.classList.remove('hidden');
+                logoutButton && logoutButton.classList.remove('hidden');
+                registerLink && registerLink.classList.add('hidden');
+            } else {
+                authLink.classList.remove('hidden');
+                profileLink && profileLink.classList.add('hidden');
+                logoutButton && logoutButton.classList.add('hidden');
+                registerLink && registerLink.classList.remove('hidden');
+            }
+        }
     }
   }, [user]);
 
@@ -331,7 +327,7 @@ function ChangePasswordApp() {
     }
   }, [auth]);
 
-  // Attach logout handler to the button in the header
+  // Attach logout handler to the button in the header (via event listener, not direct onClick)
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
