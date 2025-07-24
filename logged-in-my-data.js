@@ -349,7 +349,7 @@ function MyDataApp() {
           React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
           React.createElement(
             'div', 
-            { className: 'space-y-2' }, {/* Changed space-y-4 to space-y-2 for tighter spacing if needed */}
+            { className: 'space-y-2' }, 
             React.createElement(
                 'div',
                 null,
