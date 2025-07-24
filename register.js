@@ -60,8 +60,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       },
       showPassword ? EyeOffIcon : EyeIcon
     ),
+    // Zmena <p> na <div> pre description, aby sa predišlo chybe vnorenia <ul> v <p>
     description && React.createElement(
-      'p',
+      'div', // Zmenené z 'p' na 'div'
       { className: 'text-gray-600 text-sm -mt-2' },
       description
     )
@@ -673,18 +674,6 @@ function App() {
               React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleDateString('sk-SK')),
               ' ',
               React.createElement('span', { style: { whiteSpace: 'nowrap' } }, new Date(registrationEndDate).toLocaleTimeString('sk-SK'))
-            )
-          ),
-          React.createElement(
-            'div',
-            { className: 'mt-6 flex justify-center' },
-            React.createElement(
-              'a',
-              {
-                href: 'index.html',
-                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
-              },
-              'Späť na úvod'
             )
           )
         )
