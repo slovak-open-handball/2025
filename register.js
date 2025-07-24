@@ -22,8 +22,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
     // Cesta pre ikonu celého oka
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM12 15a3 3 0 100-6 3 3 0 000 6z' }),
-    // Cesta pre diagonálnu čiaru preškrtnutia
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M4 20 L20 4' }) // Diagonálna čiara
+    // Cesta pre diagonálnu čiaru preškrtnutia (pridaná pre štýl "celé oko s preškrtnutím")
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M4 20 L20 4' })
   );
 
   return React.createElement(
@@ -49,16 +49,16 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         disabled: disabled,
       }),
       React.createElement(
-        'button',
+        'div', // Zmenené z 'button' na 'div'
         {
-          type: 'button',
           onClick: toggleShowPassword,
           // Odstránené focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 pre odstránenie modrého orámovania
           // Pridané focus:outline-none pre úplné odstránenie predvoleného obrysu
-          // Pridané tabIndex="-1" pre odstránenie z poradia tabulátorov
-          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg',
-          disabled: disabled,
-          tabIndex: -1 // Odstráni tlačidlo z poradia tabulátorov
+          // Atribút tabIndex je odstránený, pretože div nie je prirodzene tabulátorovateľný
+          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg cursor-pointer', // Pridaný cursor-pointer pre vizuálnu indikáciu klikateľnosti
+          disabled: disabled, // Stále môžeme použiť disabled pre vizuálnu indikáciu, ak je to potrebné
+          role: 'button', // Pre prístupnosť: indikuje, že div funguje ako tlačidlo
+          'aria-label': showPassword ? 'Skryť heslo' : 'Zobraziť heslo', // Pre prístupnosť: popisuje funkciu
         },
         showPassword ? EyeOffIcon : EyeIcon
       )
