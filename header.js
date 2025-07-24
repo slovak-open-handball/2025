@@ -74,35 +74,51 @@ function initializeHeaderLogic() {
 
             if (user) {
                 try {
-                    // Pokúsime sa znova načítať údaje používateľa.
-                    // Ak bolo heslo zmenené na inom zariadení, existujúci refresh token
-                    // sa stane neplatným. `reload()` sa pokúsi obnoviť token a ak zlyhá
-                    // kvôli neplatnému refresh tokenu, vyhodí chybu.
-                    await user.reload(); 
-                    console.log("Header.js: Používateľské údaje úspešne prečítané.");
+                    // Načítanie najnovších údajov používateľa
+                    await user.reload();
+                    const idTokenResult = await user.getIdTokenResult();
+                    const currentAuthTime = idTokenResult.claims.auth_time; // auth_time je v sekundách
 
-                    // Ak sa sem dostaneme, token je stále platný alebo bol úspešne obnovený.
-                    // To znamená, že heslo nebolo zmenené spôsobom, ktorý by invalidoval aktuálnu reláciu.
-                    // Ak by bolo, `reload()` by zlyhal alebo `onIdTokenChanged` by sa spustil s `user=null`.
+                    // Načítať posledný známy auth_time zo sessionStorage
+                    const lastAuthTimeKey = `lastAuthTime_${user.uid}`;
+                    const storedAuthTime = sessionStorage.getItem(lastAuthTimeKey);
 
-                } catch (reloadError) {
-                    console.error("Header.js: Chyba pri načítaní používateľa po zmene ID tokenu (možno zmena hesla na inom zariadení):", reloadError);
-                    // Ak sa `reload()` nepodarí (napr. kvôli invalidnému refresh tokenu po zmene hesla),
-                    // odhlásime používateľa.
-                    if (authHeader.currentUser) { // Skontrolujeme, či je používateľ stále prihlásený, aby sa predišlo chybám
+                    if (storedAuthTime === null) {
+                        // Prvé prihlásenie alebo prvá návšteva stránky v tejto relácii
+                        sessionStorage.setItem(lastAuthTimeKey, currentAuthTime.toString());
+                        console.log("Header.js: Uložený počiatočný auth_time pre používateľa.");
+                    } else if (currentAuthTime > parseInt(storedAuthTime)) {
+                        // Ak je aktuálny auth_time novší ako uložený, znamená to, že došlo k re-autentifikácii
+                        // (napr. zmena hesla, prihlásenie na inom zariadení, atď.)
+                        console.log("Header.js: Detekovaná zmena auth_time (novšia autentifikácia). Odhlasujem používateľa.");
                         await authHeader.signOut();
-                        console.log("Header.js: Používateľ odhlásený kvôli potenciálnej zmene hesla na inom zariadení.");
                         window.location.href = 'login.html'; // Presmerovanie po odhlásení
+                        sessionStorage.removeItem(lastAuthTimeKey); // Vyčistíme uložený čas
+                    } else if (currentAuthTime < parseInt(storedAuthTime)) {
+                        // Toto by sa nemalo stať pri bežnej prevádzke, ak sa auth_time len zvyšuje.
+                        // Mohlo by to naznačovať problém alebo manuálnu zmenu v storage.
+                        // Pre istotu odhlásiť.
+                        console.warn("Header.js: Detekovaný starší auth_time ako uložený. Odhlasujem používateľa.");
+                        await authHeader.signOut();
+                        window.location.href = 'login.html'; // Presmerovanie po odhlásení
+                        sessionStorage.removeItem(lastAuthTimeKey); // Vyčistíme uložený čas
+                    }
+                    // Ak currentAuthTime === storedAuthTime, token sa len obnovil, netreba nič robiť.
+
+                } catch (error) {
+                    console.error("Header.js: Chyba pri kontrole auth_time alebo načítaní používateľa:", error);
+                    // Ak nastane chyba pri reload() alebo getIdTokenResult() (napr. token je neplatný),
+                    // to znamená, že relácia je pravdepodobne invalidovaná.
+                    if (authHeader.currentUser) {
+                        await authHeader.signOut();
+                        console.log("Header.js: Používateľ odhlásený kvôli chybe pri overovaní tokenu.");
+                        window.location.href = 'login.html';
                     }
                 }
             } else {
-                // Používateľ je null, čo znamená, že je odhlásený.
-                // Toto sa stane, ak je token invalidovaný (vrátane zmeny hesla na inom zariadení).
+                // Používateľ je null (odhlásený)
                 console.log("Header.js: Používateľ je odhlásený, token je invalidný.");
-                // Nie je potrebné explicitne volať signOut(), ak je user už null.
-                // Presmerovanie na login.html by sa malo stať už v rámci onAuthStateChanged
-                // v iných komponentoch alebo pri pokuse o prístup k chráneným zdrojom.
-                // Ak však chceme zabezpečiť okamžité presmerovanie z hlavičky, môžeme to urobiť:
+                sessionStorage.removeItem(`lastAuthTime_${user ? user.uid : 'unknown'}`);
                 if (window.location.pathname !== '/login.html' && window.location.pathname !== '/register.html') {
                     window.location.href = 'login.html';
                 }
