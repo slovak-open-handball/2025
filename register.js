@@ -516,11 +516,22 @@ function App() {
         displayNotifications: true
       };
 
-      console.log("Attempting to save user to Firestore with initial data:", userDataToSave);
+      // Logovanie údajov, ktoré sa majú zapísať
+      console.log("Údaje, ktoré sa majú zapísať do Firestore:", userDataToSave);
 
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
+
+        // Načítanie údajov z databázy po zápise
+        const docRef = db.collection('users').doc(userCredential.user.uid);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+          console.log("Údaje načítané z Firestore po zápise:", docSnap.data());
+        } else {
+          console.warn("Firestore: Dokument používateľa sa nenašiel po zápise.");
+        }
 
         // Odoslanie e-mailu po úspešnom uložení do Firestore
         try {
