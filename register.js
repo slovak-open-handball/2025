@@ -54,11 +54,11 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
           onClick: toggleShowPassword,
           // Odstránené focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 pre odstránenie modrého orámovania
           // Pridané focus:outline-none pre úplné odstránenie predvoleného obrysu
-          // Atribút tabIndex je odstránený, pretože div nie je prirodzene tabulátorovateľný
           className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg cursor-pointer', // Pridaný cursor-pointer pre vizuálnu indikáciu klikateľnosti
           disabled: disabled, // Stále môžeme použiť disabled pre vizuálnu indikáciu, ak je to potrebné
           role: 'button', // Pre prístupnosť: indikuje, že div funguje ako tlačidlo
           'aria-label': showPassword ? 'Skryť heslo' : 'Zobraziť heslo', // Pre prístupnosť: popisuje funkciu
+          tabIndex: -1 // Zabezpečí, že div nebude v poradí tabulátorov
         },
         showPassword ? EyeOffIcon : EyeIcon
       )
@@ -542,6 +542,7 @@ function App() {
               type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
               disabled: loading,
+              tabIndex: 0 // Explicitne nastaví tlačidlo do poradia tabulátorov
             },
             loading ? 'Prihlasujem...' : 'Prihlásiť'
           )
