@@ -20,7 +20,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // NOVÁ a opravená cesta pre ikonu preškrtnutého oka (eye-slash)
+    // Vylepšená cesta pre ikonu preškrtnutého oka (eye-slash) pre lepší vizuál
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7a9.95 9.95 0 011.875.175m.001 0V5m0 14v-2.175m0-10.65L12 12m-6.25 6.25L12 12m0 0l6.25-6.25M12 12l-6.25-6.25' })
   );
 
@@ -34,9 +34,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        // Zmenené pr-20 na pr-10 pre menšie odsadenie, aby sa ikona zmestila
-        // Zmenené mb-3 na mb-0 a pridaný mt-0 pre input, aby sme lepšie kontrolovali medzery
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
+        // Zmenené pr-10 na pr-12 pre viac miesta pre ikonu
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-12 mb-0 mt-0',
         value: value,
         onChange: onChange,
         onCopy: (e) => e.preventDefault(),
@@ -52,8 +51,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         {
           type: 'button',
           onClick: toggleShowPassword,
-          // Upravené right-2 na right-0 a pridané inset-y-0 a my-auto pre presné centrovanie
-          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg',
+          // Odstránené focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 pre odstránenie modrého orámovania
+          // Pridané focus:outline-none pre úplné odstránenie predvoleného obrysu
+          className: 'absolute right-0 inset-y-0 my-auto px-3 flex items-center focus:outline-none rounded-lg',
           disabled: disabled,
         },
         showPassword ? EyeOffIcon : EyeIcon
