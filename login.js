@@ -413,13 +413,13 @@ function App() {
       }
 
       // DÔLEŽITÉ: Aktualizácia timestampu passwordLastChanged pri úspešnom prihlásení
+      // ODSTRÁNILI SME LOKÁLNU AKTUALIZÁCIU localStorage TU
       await userDocRef.update({
         passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
       
-      // Aktualizujeme aj localStorage pre aktuálnu reláciu
-      localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString());
+      // *** ODSTRÁNENÉ: localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString()); ***
 
 
       setUser(prevUser => ({
