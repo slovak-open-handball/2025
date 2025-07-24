@@ -122,7 +122,7 @@ function MyDataApp() {
   const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
-  const [displayNotifications, setDisplayNotifications] = React.useState(true);
+  // Removed displayNotifications state from here
 
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null); // Used for own account deletion
@@ -215,7 +215,7 @@ function MyDataApp() {
               setEmail(userData.email || user.email || ''); // Použi Firebase user email ako fallback
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
-              setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+              // Removed setDisplayNotifications from here
               
               setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
@@ -351,7 +351,7 @@ function MyDataApp() {
         firstName: firstName,
         lastName: lastName,
         contactPhoneNumber: contactPhoneNumber,
-        displayNotifications: displayNotifications
+        // Removed displayNotifications from here
       });
       await user.updateProfile({ displayName: `${firstName} ${lastName}` });
       setUserNotificationMessage("Profil úspešne aktualizovaný!");
@@ -564,19 +564,7 @@ function MyDataApp() {
                 disabled: true, // Email is read-only
               })
             ),
-            React.createElement(
-              'div',
-              { className: 'flex items-center mt-4' },
-              React.createElement('input', {
-                type: 'checkbox',
-                id: 'display-notifications',
-                className: 'mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded',
-                checked: displayNotifications,
-                onChange: (e) => setDisplayNotifications(e.target.checked),
-                disabled: loading,
-              }),
-              React.createElement('label', { className: 'text-gray-700 text-sm', htmlFor: 'display-notifications' }, 'Zobrazovať notifikácie a oznámenia')
-            ),
+            // Removed the display notifications checkbox from here
             React.createElement(
               'button',
               {
@@ -586,7 +574,7 @@ function MyDataApp() {
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
-            // Tlačidlo "Zmazať účet" bolo odstránené
+            // The "Zmazať účet" button was already removed
           ),
         )
       )
