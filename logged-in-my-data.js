@@ -69,39 +69,6 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// ConfirmationModal Component (converted to React.createElement)
-function ConfirmationModal({ message, onConfirm, onCancel }) {
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: 'modal-content text-center' },
-      React.createElement('p', { className: 'text-lg font-semibold mb-6' }, message),
-      React.createElement(
-        'div',
-        { className: 'flex justify-center space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onCancel,
-            className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200',
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: onConfirm,
-            className: 'px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200',
-          },
-          'Potvrdiť'
-        )
-      )
-    )
-  );
-}
-
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
   const [app, setApp] = React.useState(null);
@@ -116,16 +83,10 @@ function MyDataApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [firstName, setFirstName] = React.useState('');
-  const [lastName, setLastName] = React.useState('');
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
   const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
-  // Removed displayNotifications state from here
-
-  const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
-  const [userToDelete, setUserToDelete] = React.useState(null); // Used for own account deletion
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -209,13 +170,10 @@ function MyDataApp() {
               setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
               // Aktualizujeme lokálne stavy z userProfileData
-              setFirstName(userData.firstName || '');
-              setLastName(userData.lastName || '');
               setContactPhoneNumber(userData.contactPhoneNumber || '');
               setEmail(userData.email || user.email || ''); // Použi Firebase user email ako fallback
               setRole(userData.role || 'user');
               setIsApproved(userData.approved || false);
-              // Removed setDisplayNotifications from here
               
               setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
@@ -348,12 +306,8 @@ function MyDataApp() {
     try {
       const userDocRef = db.collection('users').doc(user.uid);
       await userDocRef.update({
-        firstName: firstName,
-        lastName: lastName,
         contactPhoneNumber: contactPhoneNumber,
-        // Removed displayNotifications from here
       });
-      await user.updateProfile({ displayName: `${firstName} ${lastName}` });
       setUserNotificationMessage("Profil úspešne aktualizovaný!");
     } catch (e) {
       console.error("MyDataApp: Chyba pri aktualizácii profilu:", e);
@@ -361,46 +315,6 @@ function MyDataApp() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!auth || !db || !user) {
-      setError("Auth, databáza alebo používateľ nie je k dispozícii.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    setUserNotificationMessage('');
-    try {
-      // 1. Delete user data from Firestore
-      await db.collection('users').doc(user.uid).delete();
-      console.log("MyDataApp: Používateľské dáta vymazané z Firestore.");
-
-      // 2. Delete user from Firebase Authentication
-      await user.delete();
-      console.log("MyDataApp: Používateľ vymazaný z Firebase Auth.");
-
-      setUserNotificationMessage("Účet bol úspešne zmazaný. Budete presmerovaní na prihlasovaciu stránku.");
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 3000);
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri mazaní účtu:", e);
-      setError(`Chyba pri mazaní účtu: ${e.message}. Možno sa musíte znova prihlásiť, ak ste sa prihlásili príliš dávno.`);
-    } finally {
-      setLoading(false);
-      setShowConfirmationModal(false); // Close modal even on error
-    }
-  };
-
-  const openConfirmationModal = () => { // Simplified, no user param needed for own account
-    setUserToDelete(user); // Set current user for deletion
-    setShowConfirmationModal(true);
-  };
-
-  const closeConfirmationModal = () => {
-    setUserToDelete(null);
-    setShowConfirmationModal(false);
   };
 
   // Display loading state
@@ -428,20 +342,12 @@ function MyDataApp() {
     );
   }
 
-  // No admin panel page check here, as this file is only for "My Data"
-  // If user is not admin and trying to access admin panel, redirect is handled in specific admin pages
-
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage('')
-    }),
-    showConfirmationModal && React.createElement(ConfirmationModal, {
-        message: `Naozaj chcete zmazať svoj účet (${userToDelete?.email})? Túto akciu nie je možné vrátiť späť.`,
-        onConfirm: handleDeleteAccount,
-        onCancel: closeConfirmationModal
     }),
     React.createElement(
       'div',
@@ -475,35 +381,17 @@ function MyDataApp() {
           null,
           React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje údaje'),
           React.createElement(
-            'form',
-            { onSubmit: handleUpdateProfile, className: 'space-y-4' },
+            'div', // Zmenené z 'form' na 'div'
+            { className: 'space-y-4' },
             React.createElement(
-              'div',
-              null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'first-name' }, 'Meno'),
-              React.createElement('input', {
-                type: 'text',
-                id: 'first-name',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                value: firstName,
-                onChange: (e) => setFirstName(e.target.value),
-                required: true,
-                disabled: loading,
-              })
-            ),
-            React.createElement(
-              'div',
-              null,
-              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'last-name' }, 'Priezvisko'),
-              React.createElement('input', {
-                type: 'text',
-                id: 'last-name',
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                value: lastName,
-                onChange: (e) => setLastName(e.target.value),
-                required: true,
-                disabled: loading,
-              })
+                'div',
+                null,
+                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Meno a priezvisko:'),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
+                )
             ),
             React.createElement(
               'div',
@@ -564,17 +452,16 @@ function MyDataApp() {
                 disabled: true, // Email is read-only
               })
             ),
-            // Removed the display notifications checkbox from here
             React.createElement(
               'button',
               {
-                type: 'submit',
+                type: 'button', // Changed to button as it's not a form submit
+                onClick: handleUpdateProfile, // Use onClick for button
                 className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
                 disabled: loading,
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
-            // The "Zmazať účet" button was already removed
           ),
         )
       )
