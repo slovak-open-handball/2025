@@ -45,7 +45,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       {
         type: 'button',
         onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
+        className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 h-full', // Added h-full to button
         disabled: disabled,
       },
       showPassword ? EyeOffIcon : EyeIcon
@@ -425,8 +425,6 @@ function App() {
       // ZMENA: Upravená chybová správa pre nesprávne prihlasovacie údaje
       if (e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials') {
         setError("Nepodarilo sa prihlásiť – nesprávne meno alebo heslo.");
-      } else if (e.code === 'auth/invalid-email') {
-        setError("Neplatný formát e-mailovej adresy.");
       } else {
         setError(`Zadali ste nesprávne prihlasovacie údaje`);
       }
