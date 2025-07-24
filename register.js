@@ -252,6 +252,11 @@ function App() {
         setUser(currentUser);
         // Pôvodné presmerovanie odtiaľto bolo odstránené.
         // Presmerovanie sa teraz vykonáva až po úspešnom zápise do Firestore v handleRegister.
+        // ODSTRÁNENÝ BLOK, KTORÝ SPÔSOBOVAL PREDČASNÉ PRESMEROVANIE
+        // if (currentUser) {
+        //     window.location.href = 'logged-in-my-data.html';
+        //     return;
+        // }
         setLoading(false); // Auth state checked, stop loading
       });
 
