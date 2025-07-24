@@ -363,28 +363,45 @@ function App() {
       const currentUser = userCredential.user;
 
       const userDocRef = db.collection('users').doc(currentUser.uid);
-      const userDoc = await userDocRef.get();
-
-      if (!userDoc.exists) {
-        setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
+      
+      // DÔLEŽITÉ: Aktualizácia timestampu passwordLastChanged pri úspešnom prihlásení
+      await userDocRef.update({
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
+      
+      // Získame aktualizované dáta po update, aby sme získali vyhodnotený serverTimestamp
+      const updatedUserDoc = await userDocRef.get(); 
+      if (!updatedUserDoc.exists) {
+        setError("Účet sa nenašiel v databáze po aktualizácii timestampu. Kontaktujte podporu.");
         await auth.signOut();
         setLoading(false);
         return;
       }
+      const updatedUserData = updatedUserDoc.data();
 
-      const userData = userDoc.data();
-      console.log("Prihlásenie: Používateľské dáta z Firestore:", userData);
+      // Uložíme presný serverTimestamp do localStorage
+      if (updatedUserData.passwordLastChanged && typeof updatedUserData.passwordLastChanged.toDate === 'function') {
+        localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, updatedUserData.passwordLastChanged.toDate().getTime().toString());
+        console.log("Prihlásenie: localStorage passwordLastChanged aktualizovaný s presným Firestore timestampom.");
+      } else {
+        console.error("Prihlásenie: Nepodarilo sa získať platný passwordLastChanged z Firestore po aktualizácii.");
+        // Ak sa nepodarí získať platný timestamp, pre istotu odhlásiť
+        await auth.signOut();
+        window.location.href = 'login.html';
+        return;
+      }
 
-      if (userData.role === 'admin' && userData.approved === false) {
+      if (updatedUserData.role === 'admin' && updatedUserData.approved === false) {
         setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
 
         // Send email for unapproved administrator
         try {
           const payload = {
             action: 'sendAdminApprovalReminder',
-            email: userData.email,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
+            email: updatedUserData.email,
+            firstName: updatedUserData.firstName,
+            lastName: updatedUserData.lastName,
             isAdmin: true
           };
           console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
@@ -412,21 +429,11 @@ function App() {
         return;
       }
 
-      // DÔLEŽITÉ: Aktualizácia timestampu passwordLastChanged pri úspešnom prihlásení
-      // ODSTRÁNILI SME LOKÁLNU AKTUALIZÁCIU localStorage TU
-      await userDocRef.update({
-        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
-      
-      // *** ODSTRÁNENÉ: localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, new Date().getTime().toString()); ***
-
-
       setUser(prevUser => ({
         ...prevUser,
-        ...userData,
-        displayName: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : userData.email,
-        displayNotifications: userData.displayNotifications !== undefined ? userData.displayNotifications : true
+        ...updatedUserData, // Používame updatedUserData, nie pôvodné userData
+        displayName: updatedUserData.firstName && updatedUserData.lastName ? `${updatedUserData.firstName} ${updatedUserData.lastName}` : updatedUserData.email,
+        displayNotifications: updatedUserData.displayNotifications !== undefined ? updatedUserData.displayNotifications : true
       }));
 
       setUserNotificationMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
