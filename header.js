@@ -88,16 +88,24 @@ function initializeHeaderLogic() {
                         const userData = docSnapshot.data();
                         const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
                         const localStorageKey = `passwordLastChanged_${user.uid}`;
-                        const storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+                        let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
                         console.log(`Header.js: Firestore passwordLastChanged: ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+                        // Ak uložený čas je 0 a čas z Firestore nie je 0, je to prvé načítanie pre tohto používateľa v tejto relácii/prehliadači.
+                        // Mali by sme ho inicializovať a nespúšťať odhlásenie.
+                        if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                            localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                            console.log("Header.js: Inicializujem passwordLastChanged v localStorage.");
+                            return; // Nepokračovať v logike odhlásenia pri prvom načítaní
+                        }
 
                         if (firestorePasswordChangedTime > storedPasswordChangedTime) {
                             // Heslo bolo zmenené na inom zariadení alebo v inej relácii
                             console.log("Header.js: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                             await authHeader.signOut();
                             window.location.href = 'login.html'; // Presmerovanie po odhlásení
-                            localStorage.removeItem(localStorageKey); // Vyčistíme lokálny storage
+                            localStorage.removeItem(localStorageKey); // Vyčistíme lokálny storage po odhlásení
                         } else if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime !== 0) {
                             // Ak vo Firestore nie je timestamp, ale v lokálnom storage je,
                             // môže to znamenať reset alebo chybu, pre istotu odhlásiť.
@@ -106,9 +114,10 @@ function initializeHeaderLogic() {
                              window.location.href = 'login.html';
                              localStorage.removeItem(localStorageKey);
                         } else {
-                            // Aktualizujeme lokálny storage s najnovším časom z Firestore
+                            // Ak sú časy rovnaké alebo Firestore je starší (čo by sa nemalo stať, ak je logika správna),
+                            // uistite sa, že localStorage je aktuálny.
                             localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                            console("Header.js: Aktualizovaný lokálny timestamp zmeny hesla.");
+                            console.log("Header.js: Aktualizovaný lokálny timestamp zmeny hesla.");
                         }
                     } else {
                         // Ak používateľský dokument neexistuje, alebo bol zmazaný, odhlásiť
