@@ -228,6 +228,7 @@ function UsersManagementApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
+    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
       if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -301,6 +302,54 @@ function UsersManagementApp() {
       }
     };
   }, [isAuthReady, db, user, auth]);
+
+  // NOVÝ EFFECT: Reálne časové načítanie všetkých používateľov pre administrátora
+  React.useEffect(() => {
+    let unsubscribeAllUsers;
+    if (db && userProfileData && userProfileData.role === 'admin') {
+      console.log("UsersManagementApp: Nastavujem onSnapshot pre celú kolekciu používateľov.");
+      setLoading(true); // Nastavíme loading na true pri načítaní používateľov
+      try {
+        unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
+          const usersList = [];
+          snapshot.forEach(doc => {
+            usersList.push({ id: doc.id, ...doc.data() });
+          });
+          // Sort users by registeredAt timestamp (newest first)
+          usersList.sort((a, b) => {
+            if (a.registeredAt && b.registeredAt) {
+              return b.registeredAt.toDate().getTime() - a.registeredAt.toDate().getTime();
+            }
+            return 0; // Keep original order if timestamps are missing
+          });
+          setAllUsers(usersList);
+          setLoading(false); // Vypneme loading po načítaní
+          setError(''); // Vymazať chyby po úspešnom načítaní
+          console.log("UsersManagementApp: Zoznam používateľov aktualizovaný z onSnapshot.");
+        }, error => {
+          console.error("UsersManagementApp: Chyba pri načítaní všetkých používateľov z Firestore (onSnapshot error):", error);
+          setError(`Chyba pri načítaní používateľov: ${error.message}`);
+          setLoading(false); // Vypneme loading aj pri chybe
+        });
+      } catch (e) {
+        console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
+        setError(`Chyba pri nastavovaní poslucháča pre všetkých používateľov: ${e.message}`);
+        setLoading(false); // Vypneme loading aj pri chybe
+      }
+    } else {
+      // Ak nie je admin, alebo db nie je k dispozícii, zrušíme zoznam používateľov
+      setAllUsers([]);
+      // setLoading(false); // Loading by mal byť už nastavený z predchádzajúceho useEffectu
+    }
+
+    return () => {
+      if (unsubscribeAllUsers) {
+        console.log("UsersManagementApp: Ruším odber onSnapshot pre celú kolekciu používateľov.");
+        unsubscribeAllUsers();
+      }
+    };
+  }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
+
 
   // useEffect for updating header link visibility (remains for consistency)
   React.useEffect(() => {
@@ -380,7 +429,7 @@ function UsersManagementApp() {
         }, 3000);
       } else {
         setUserNotificationMessage(`Účet ${targetUser.email} bol úspešne zmazaný.`);
-        handleFetchAllUsers(); // Refresh the user list for admin
+        // handleFetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
       }
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní účtu:", e);
@@ -391,33 +440,12 @@ function UsersManagementApp() {
     }
   };
 
-  const handleFetchAllUsers = React.useCallback(async () => {
-    // Kontrola oprávnení teraz používa userProfileData.role
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zobrazenie používateľov.");
-      setLoading(false); // Nastavíme loading na false aj tu
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const usersSnapshot = await db.collection('users').get();
-      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllUsers(usersList);
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri načítaní všetkých používateľov:", e);
-      setError(`Chyba pri načítaní používateľov: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [db, userProfileData]); // Závisí od userProfileData
-
-  React.useEffect(() => {
-    // Podmienka na spustenie handleFetchAllUsers závisí od userProfileData.role
-    if (userProfileData && userProfileData.role === 'admin' && db) {
-      handleFetchAllUsers();
-    }
-  }, [userProfileData, db, handleFetchAllUsers]); // Závisí od userProfileData
+  // Pôvodná handleFetchAllUsers bola odstránená
+  // React.useEffect(() => {
+  //   if (userProfileData && userProfileData.role === 'admin' && db) {
+  //     handleFetchAllUsers();
+  //   }
+  // }, [userProfileData, db, handleFetchAllUsers]);
 
   const openConfirmationModal = (user) => {
     setUserToDelete(user);
@@ -458,7 +486,7 @@ function UsersManagementApp() {
       });
       setUserNotificationMessage(`Rola pre ${userToEditRole.email} bola aktualizovaná na '${newRole}'.`);
       closeRoleEditModal();
-      handleFetchAllUsers(); // Refresh the user list
+      // handleFetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
       
       // Send email notification about role change
       try {
@@ -511,7 +539,7 @@ function UsersManagementApp() {
         approved: true
       });
       setUserNotificationMessage(`Používateľ ${targetUser.email} bol schválený.`);
-      handleFetchAllUsers(); // Refresh the user list
+      // handleFetchAllUsers(); // Už nie je potrebné volať, onSnapshot sa postará o aktualizáciu
 
       // Send email notification about approval
       try {
@@ -611,12 +639,11 @@ function UsersManagementApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
-        // Tento riadok bol odstránený podľa požiadavky:
-        // userProfileData && React.createElement(
-        //   'p',
-        //   { className: 'text-lg text-gray-600 text-center mb-4' },
-        //   `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`
-        // ),
+        userProfileData && React.createElement(
+          'p',
+          { className: 'text-lg text-gray-600 text-center mb-4' },
+          `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`
+        ),
         React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Zoznam používateľov'),
         React.createElement(
           'div',
