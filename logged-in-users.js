@@ -228,7 +228,6 @@ function UsersManagementApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
       if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -612,11 +611,12 @@ function UsersManagementApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
-        userProfileData && React.createElement(
-          'p',
-          { className: 'text-lg text-gray-600 text-center mb-4' },
-          `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`
-        ),
+        // Tento riadok bol odstránený podľa požiadavky:
+        // userProfileData && React.createElement(
+        //   'p',
+        //   { className: 'text-lg text-gray-600 text-center mb-4' },
+        //   `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`
+        // ),
         React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Zoznam používateľov'),
         React.createElement(
           'div',
