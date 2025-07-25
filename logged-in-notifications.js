@@ -389,7 +389,7 @@ function NotificationsApp() {
     try {
       // Bezpečný prístup k __app_id
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
+      await db.collection('artifacts').doc('default-app-id').collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
       setUserNotificationMessage("Notifikácia zmazaná.");
     } catch (e) {
       console.error("NotificationsApp: Chyba pri mazaní notifikácie:", e);
