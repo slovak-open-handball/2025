@@ -119,10 +119,10 @@ window.updateMenuItemsVisibility = function(userRole) {
     const menuItems = {
         'menu-my-data': ['admin', 'user'],
         'menu-change-name': ['admin', 'user'],
-        'menu-change-phone': ['user'], // NOVÁ POLOŽKA: Iba pre rolu 'user'
+        'menu-change-phone': ['user'],
         'menu-change-password': ['admin', 'user'],
         'menu-my-settings': ['admin', 'user'],
-        'menu-notifications': ['admin', 'user'],
+        'menu-notifications': ['admin'],
         'menu-soh-chat': ['admin'],
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
