@@ -464,6 +464,7 @@ function App() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // NOVÝ stav pre úspešnú registráciu
 
   // Page 1 states
   const [email, setEmail] = React.useState('');
@@ -837,7 +838,7 @@ function App() {
     if (icDph) {
       const icDphRegex = /^[A-Z]{2}\d+$/;
       if (!icDphRegex.test(icDph)) {
-        setError("IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).");
+        setError("IČ DPH musí začať dvoma veľkými písmenami a nasledovať číslice (napr. SK1234567890).");
         return false;
       }
     }
@@ -898,13 +899,8 @@ function App() {
 
     setLoading(true);
     setError('');
+    setRegistrationSuccess(false); // Reset success state at the start of submission
     
-    if (isAdminRegistration) {
-      setUserNotificationMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
-    } else {
-      setUserNotificationMessage(''); 
-    }
-
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       console.log("Firebase Auth: Používateľ vytvorený:", userCredential.user.uid);
@@ -953,114 +949,109 @@ function App() {
       // Logovanie údajov, ktoré sa majú zapísať
       console.log("Údaje, ktoré sa majú zapísať do Firestore:", userDataToSave);
 
-      try {
-        await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
-        console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
+      // Await the main user document save to Firestore
+      await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
+      console.log(`Firestore: Používateľ ${email} s počiatočnou rolou '${initialUserRole}' a schválením '${initialIsApproved}' bol uložený.`);
 
-        // Načítanie údajov z databázy po zápise
-        const docRef = db.collection('users').doc(userCredential.user.uid);
-        const docSnap = await docRef.get();
-
-        if (docSnap.exists) {
-          console.log("Údaje načítané z Firestore po zápise:", docSnap.data());
-        } else {
-          console.warn("Firestore: Dokument používateľa sa nenašiel po zápise.");
-        }
-
-        // --- Logika pre ukladanie notifikácie pre administrátorov ---
-        try {
-            const appId = 'default-app-id';
-            let notificationMessage = '';
-            const notificationRecipientId = 'all_admins'; 
-
-            if (isAdminRegistration) {
-                notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
-            } else {
-                notificationMessage = `Nový používateľ ${email} sa zaregistroval.`;
-            }
-
-            if (notificationMessage) {
-                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                    message: notificationMessage,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    recipientId: notificationRecipientId,
-                    read: false
-                });
-                console.log("Notifikácia o novej registrácii úspešne uložená do Firestore.");
-            }
-        } catch (e) {
-            console.error("App: Chyba pri ukladaní notifikácie o registrácii:", e);
-        }
-        // --- Koniec logiky pre ukladanie notifikácie ---
-
-        // Odoslanie e-mailu po úspešnom uložení do Firestore
-        try {
-          const payload = {
-            action: 'sendRegistrationEmail',
-            email: email,
-            password: password, 
-            isAdmin: isAdminRegistration, 
-            firstName: firstName,
-            lastName: lastName,
-            contactPhoneNumber: fullContactPhoneNumber, // Pošleme celé číslo
-            billing: { 
-                clubName: clubName,
-                ico: ico,
-                dic: dic,
-                icDph: icDph,
-                address: {
-                    street: street,
-                    houseNumber: houseNumber,
-                    zipCode: zipCode,
-                    city: city,
-                    country: country,
-                }
-            }
-          };
-          console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload);
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Dôležité pre obídenie CORS politiky, ak Apps Script nemá správne hlavičky
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-          });
-          console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
-          // Pri 'no-cors' mode nemôžeme čítať odpoveď, takže logovanie responseData je len pre debug.
-          try {
-            const responseData = await response.text();
-            console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail) ako text:", responseData); 
-          } catch (jsonError) {
-            console.warn("Nepodarilo sa parsovať odpoveď z Apps Scriptu (očakávané s 'no-cors' pre JSON):", jsonError);
-          }
-        } catch (emailError) {
-          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (fetch error):", emailError);
-        }
-
-      } catch (firestoreError) {
-        console.error("Firestore Save/Update Error:", firestoreError);
-        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
-        setLoading(false);
-        setUserNotificationMessage('');
-        return;
+      // Optional: Verify data immediately after saving (for debugging, can be removed in production)
+      const docRef = db.collection('users').doc(userCredential.user.uid);
+      const docSnap = await docRef.get();
+      if (docSnap.exists) {
+        console.log("Údaje načítané z Firestore po zápise (overenie):", docSnap.data());
+      } else {
+        console.warn("Firestore: Dokument používateľa sa nenašiel po zápise (overenie).");
       }
 
-      if (!isAdminRegistration) {
+      // --- Logika pre ukladanie notifikácie pre administrátorov (tiež awaited) ---
+      try {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Používame globálne appId
+          let notificationMessage = '';
+          const notificationRecipientId = 'all_admins'; 
+
+          if (isAdminRegistration) {
+              notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+          } else {
+              notificationMessage = `Nový používateľ ${email} sa zaregistroval.`;
+          }
+
+          if (notificationMessage) {
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                  message: notificationMessage,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  recipientId: notificationRecipientId,
+                  read: false
+              });
+              console.log("Notifikácia o novej registrácii úspešne uložená do Firestore.");
+          }
+      } catch (e) {
+          console.error("App: Chyba pri ukladaní notifikácie o registrácii:", e);
+          // Do not re-throw, allow main registration to proceed even if notification fails
+      }
+      // --- Koniec logiky pre ukladanie notifikácie ---
+
+      // Odoslanie e-mailu po úspešnom uložení do Firestore
+      // Táto operácia nie je awaited, aby neblokovala UI a presmerovanie.
+      // Chyby pri odosielaní e-mailu nebudú brániť úspešnej registrácii.
+      try {
+        const payload = {
+          action: 'sendRegistrationEmail',
+          email: email,
+          password: password, 
+          isAdmin: isAdminRegistration, 
+          firstName: firstName,
+          lastName: lastName,
+          contactPhoneNumber: fullContactPhoneNumber, // Pošleme celé číslo
+          billing: { 
+              clubName: clubName,
+              ico: ico,
+              dic: dic,
+              icDph: icDph,
+              address: {
+                  street: street,
+                  houseNumber: houseNumber,
+                  zipCode: zipCode,
+                  city: city,
+                  country: country,
+              }
+          }
+        };
+        console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload);
+        fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', // Dôležité pre obídenie CORS politiky, ak Apps Script nemá správne hlavičky
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }).then(response => {
+            console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
+        }).catch(emailError => {
+            console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (fetch error):", emailError);
+        });
+
+      } catch (emailError) {
+        console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (synchronná chyba):", emailError);
+      }
+
+      // Všetky kritické operácie zápisu dát sú dokončené a overené.
+      // Teraz nastavíme správu o úspechu a príznak, potom prejdeme k odhláseniu/presmerovaniu.
+      if (isAdminRegistration) {
+        setUserNotificationMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
+      } else {
         setUserNotificationMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       }
-      
+      setRegistrationSuccess(true); // Označenie úspešnej registrácie
       setLoading(false);
 
-      // Až teraz sa odhlásime a presmerujeme, keď sú všetky asynchrónne operácie dokončené
+      // Až teraz, a len teraz, vykonáme odhlásenie a presmerovanie
       await auth.signOut(); 
-      setUser(null);
+      setUser(null); // Vyčistíme lokálny stav používateľa
       console.log("Firebase Auth: Používateľ odhlásený po registrácii.");
       
       setTimeout(() => {
         console.log("Presmerovanie na login.html...");
         window.location.href = 'login.html'; 
-      }, 5000); 
+      }, 5000); // Dáme používateľovi čas prečítať si správu o úspechu
 
     } catch (e) {
       console.error("Chyba pri registrácii (Auth alebo iné):", e); 
@@ -1074,7 +1065,8 @@ function App() {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
       setLoading(false); 
-      setUserNotificationMessage('');
+      setUserNotificationMessage(''); // Vyčistíme akúkoľvek čakajúcu správu o úspechu
+      setRegistrationSuccess(false); // Zabezpečíme, že príznak úspechu je pri chybe false
     } 
   };
 
@@ -1083,7 +1075,7 @@ function App() {
   const is_admin_register_page = currentPath === 'admin-register.html';
 
   // Prioritné zobrazenie správy o úspešnej registrácii na registračných stránkach
-  if (isRegistrationPage && userNotificationMessage) {
+  if (isRegistrationPage && registrationSuccess) { // Používame nový príznak registrationSuccess
     return React.createElement(
       'div',
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
