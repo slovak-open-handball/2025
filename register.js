@@ -1125,7 +1125,7 @@ function App() {
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam aplikáciu...')
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
   }
 
