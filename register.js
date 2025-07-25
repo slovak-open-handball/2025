@@ -153,8 +153,8 @@ function App() {
             await firebaseAuth.signInAnonymously();
           } catch (anonError) {
             console.error("Chyba pri anonymnom prihlásení:", anonError);
+            }
           }
-        }
         setIsAuthReady(true); // Stav autentifikácie je teraz známy
       });
 
