@@ -503,9 +503,9 @@ function ChangePasswordApp() {
         window.location.href = 'login.html';
         return null;
     }
-    let loadingMessage = 'Načítavam aplikáciu...';
+    let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam používateľské dáta...';
+        loadingMessage = 'Načítavam...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
