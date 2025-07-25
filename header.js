@@ -167,6 +167,15 @@ async function initializeHeaderLogic() {
                         const userRole = userData.role;
                         const userApproved = userData.approved;
 
+                        // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
+                        if (userRole === 'admin' && userApproved === false) {
+                            console.warn("Header.js: Neschválený administrátor sa pokúsil o prístup. Odhlasujem.");
+                            showPushNotification("Váš administrátorský účet ešte nebol schválený. Pre prístup kontaktujte administrátora.", "unapprovedAdminLogout");
+                            await authHeader.signOut();
+                            window.location.href = 'login.html';
+                            return; // Zastav ďalšie spracovanie pre tohto používateľa
+                        }
+
                         if (userRole === 'admin' && userApproved === true) {
                             console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
                             // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
