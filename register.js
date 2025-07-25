@@ -440,7 +440,17 @@ function App() {
       // 1. Vytvorenie používateľa vo Firebase Authentication
       const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
       const user = userCredential.user;
-      console.log("Používateľ vytvorený v Auth:", user.uid);
+
+      if (!user || !user.uid) {
+        console.error("register.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
+        setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
+        setShowNotification(true);
+        setLoading(false);
+        setIsRegistering(false);
+        isRegisteringRef.current = false;
+        return;
+      }
+      console.log("Používateľ vytvorený v Auth s UID:", user.uid);
 
 
       // 2. Uloženie používateľských údajov do Firestore
@@ -448,6 +458,7 @@ function App() {
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       const userDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid);
 
+      console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       await userDocRef.set({
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -507,8 +518,7 @@ function App() {
       setShowNotification(true);
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
-      // ODSTRÁNENÉ: await auth.signOut();
-      // console.log("Používateľ úspešne odhlásený po registrácii.");
+      // Riadok 'await auth.signOut();' bol odstránený, aby sa predišlo predčasnému odhláseniu.
 
 
       // Vyčistiť formulár
@@ -526,22 +536,29 @@ function App() {
       }, 5000);
 
     } catch (error) {
-      console.error('Chyba pri registrácii do Firebase:', error);
+      console.error('Chyba počas registrácie alebo zápisu do Firestore:', error);
       let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
 
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'Zadaná e-mailová adresa je už používaná.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Neplatný formát e-mailovej adresy.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
-          break;
-        default:
+      if (error.code) {
+          switch (error.code) {
+              case 'auth/email-already-in-use':
+                  errorMessage = 'Zadaná e-mailová adresa je už používaná.';
+                  break;
+              case 'auth/invalid-email':
+                  errorMessage = 'Neplatný formát e-mailovej adresy.';
+                  break;
+              case 'auth/weak-password':
+                  errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
+                  break;
+              case 'permission-denied': // Špecifická chyba povolenia Firestore
+                  errorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
+                  break;
+              default:
+                  errorMessage = error.message || errorMessage;
+                  break;
+          }
+      } else {
           errorMessage = error.message || errorMessage;
-          break;
       }
       setNotificationMessage(errorMessage);
       setShowNotification(true);
