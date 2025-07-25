@@ -6,11 +6,6 @@
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// ODSTRÁNENÉ: Firebase SDKs importy, pretože sa teraz načítavajú globálne cez script tagy v HTML
-// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
@@ -115,15 +110,16 @@ function App() {
       }
 
       let firebaseAppInstance;
-      try {
-        // Pokúste sa získať predvolenú aplikáciu, ak už existuje
-        firebaseAppInstance = firebase.app();
-        console.log("register.js: Používam existujúcu Firebase App inštanciu.");
-      } catch (e) {
-        // Ak predvolená aplikácia neexistuje, inicializujte ju
-        console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        firebaseAppInstance = firebase.initializeApp(firebaseConfig);
+      if (firebase.apps.length === 0) {
+          // Ak žiadna Firebase aplikácia nebola inicializovaná, inicializujte ju.
+          // Toto by malo pokryť prípady, keď header.js z nejakého dôvodu neinicializoval app.
+          console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
+          const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+          firebaseAppInstance = firebase.initializeApp(firebaseConfig);
+      } else {
+          // Ak už existuje aspoň jedna Firebase aplikácia, použite predvolenú.
+          firebaseAppInstance = firebase.app();
+          console.log("register.js: Používam existujúcu Firebase App inštanciu.");
       }
       
       const firestoreDb = firebase.firestore(firebaseAppInstance); 
@@ -134,24 +130,30 @@ function App() {
 
       // Používame firebaseAuth.onAuthStateChanged
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        if (!currentUser && typeof __initial_auth_token !== 'undefined') {
-          try {
-            await firebaseAuth.signInWithCustomToken(__initial_auth_token);
-          } catch (error) {
-            console.error("Chyba pri prihlásení s vlastným tokenom:", error);
+        if (!currentUser) { // Len ak nie je prihlásený žiadny používateľ
+          if (typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) { // Ak je k dispozícii platný token
+            try {
+              await firebaseAuth.signInWithCustomToken(__initial_auth_token);
+              console.log("register.js: Úspešné prihlásenie s vlastným tokenom.");
+            } catch (error) {
+              console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
+              // Ak prihlásenie s vlastným tokenom zlyhá, skúste anonymné prihlásenie
+              try {
+                await firebaseAuth.signInAnonymously();
+                console.log("register.js: Anonymné prihlásenie po zlyhaní vlastného tokenu.");
+              } catch (anonError) {
+                console.error("register.js: Chyba pri anonymnom prihlásení po zlyhaní vlastného tokenu:", anonError);
+              }
+            }
+          } else { // Ak nie je k dispozícii žiadny platný vlastný token, prihláste sa anonymne
             try {
               await firebaseAuth.signInAnonymously();
+              console.log("register.js: Anonymné prihlásenie (žiaden vlastný token k dispozícii).");
             } catch (anonError) {
-              console.error("Chyba pri anonymnom prihlásení:", anonError);
+              console.error("register.js: Chyba pri anonymnom prihlásení (žiaden vlastný token):", anonError);
             }
           }
-        } else if (!currentUser) {
-          try {
-            await firebaseAuth.signInAnonymously();
-          } catch (anonError) {
-            console.error("Chyba pri anonymnom prihlásení:", anonError);
-            }
-          }
+        }
         setIsAuthReady(true); // Stav autentifikácie je teraz známy
       });
 
