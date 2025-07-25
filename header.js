@@ -6,9 +6,9 @@
 let firebaseAppHeader;
 let authHeader;
 let dbHeader;
-let unsubscribeUsersListener = null; // Pre uloženie funkcie na zrušenie odberu
-let initialUsersLoadComplete = false; // Flag pre odlíšenie počiatočného načítania dát
-let usersCache = {}; // Cache na ukladanie stavu používateľov pre detekciu zmien
+let unsubscribeAdminNotificationsListener = null; // Pre uloženie funkcie na zrušenie odberu notifikácií
+let initialNotificationsLoadComplete = false; // Flag pre odlíšenie počiatočného načítania notifikácií
+let notificationsCache = {}; // Cache na ukladanie stavu notifikácií pre detekciu zmien
 
 // Pomocná funkcia na generovanie hashu zo stringu
 function stringToHash(str) {
@@ -22,14 +22,14 @@ function stringToHash(str) {
 }
 
 // Funkcia na zobrazenie push-up notifikácie
-function showPushNotification(message, notificationId) { // Pridaný notificationId pre sledovanie
+function showPushNotification(message, notificationId) {
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
         console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
         return;
     }
 
-    // Skontrolujeme, či táto notifikácia už bola zobrazená v tejto relácii
+    // Skontrolujeme, či táto notifikácia už bola zobrazená v tejto relácii (používame localStorage)
     const lastShownTime = localStorage.getItem(`notification_shown_${notificationId}`);
     const now = new Date().getTime();
 
@@ -146,13 +146,13 @@ async function initializeHeaderLogic() {
             console.log("Header.js: onAuthStateChanged - Používateľ:", currentHeaderUser ? currentHeaderUser.uid : "null");
             updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
 
-            // Zrušenie predchádzajúceho listenera na zmeny používateľov
-            if (unsubscribeUsersListener) {
-                unsubscribeUsersListener();
-                unsubscribeUsersListener = null;
-                initialUsersLoadComplete = false; // Reset flag pri zmene používateľa/odhlásení
-                usersCache = {}; // Vyčisti cache
-                console.log("Header.js: Zrušený listener pre zmeny používateľov.");
+            // Zrušenie predchádzajúceho listenera na notifikácie
+            if (unsubscribeAdminNotificationsListener) {
+                unsubscribeAdminNotificationsListener();
+                unsubscribeAdminNotificationsListener = null;
+                initialNotificationsLoadComplete = false; // Reset flag pri zmene používateľa/odhlásení
+                notificationsCache = {}; // Vyčisti cache
+                console.log("Header.js: Zrušený listener pre notifikácie admina.");
             }
 
             if (currentHeaderUser) {
@@ -165,80 +165,50 @@ async function initializeHeaderLogic() {
                         const userApproved = userData.approved;
 
                         if (userRole === 'admin' && userApproved === true) {
-                            console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na zmeny používateľov.");
-                            // Nastavenie listenera na zmeny v kolekcii 'users'
-                            unsubscribeUsersListener = dbHeader.collection('users').onSnapshot(snapshot => {
-                                if (!initialUsersLoadComplete) {
-                                    // Pri prvom načítaní len naplníme cache a nastavíme flag
-                                    snapshot.docs.forEach(doc => {
-                                        usersCache[doc.id] = doc.data();
-                                    });
-                                    initialUsersLoadComplete = true;
-                                    console.log("Header.js: Počiatočné načítanie používateľov pre notifikácie dokončené.");
-                                    return;
-                                }
+                            console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
+                            // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
+                            unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications')
+                                .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
+                                .where('read', '==', false) // Len neprečítané notifikácie
+                                .onSnapshot(snapshot => {
+                                    if (!initialNotificationsLoadComplete) {
+                                        // Pri prvom načítaní len naplníme cache a nastavíme flag
+                                        snapshot.docs.forEach(doc => {
+                                            notificationsCache[doc.id] = doc.data();
+                                        });
+                                        initialNotificationsLoadComplete = true;
+                                        console.log("Header.js: Počiatočné načítanie neprečítaných notifikácií pre push-up dokončené.");
+                                        return;
+                                    }
 
-                                snapshot.docChanges().forEach(async change => { // Zmenené na async
-                                    let message = '';
-                                    const changedUserData = change.doc.data();
-                                    const userId = change.doc.id;
-                                    const userEmail = changedUserData.email || userId; // Použijeme email alebo UID
-
-                                    console.log(`Header.js: Detekovaná zmena pre používateľa ${userEmail} (ID: ${userId}). Typ zmeny: ${change.type}`);
-                                    console.log("Header.js: Nové dáta:", changedUserData);
-
-                                    if (change.type === 'modified') {
-                                        // Detekujeme konkrétne zmeny
-                                        const oldData = usersCache[userId];
-                                        console.log("Header.js: Staré dáta z cache:", oldData);
-
-                                        if (oldData) {
-                                            const changedFields = Object.keys(changedUserData).filter(key => {
-                                                const oldValue = oldData[key];
-                                                const newValue = changedUserData[key];
-
-                                                // Špeciálne ošetrenie pre Timestamp objekty
-                                                if (oldValue && typeof oldValue.toDate === 'function' && newValue && typeof newValue.toDate === 'function') {
-                                                    return oldValue.toDate().getTime() !== newValue.toDate().getTime();
-                                                }
-                                                // Pre ostatné typy porovnávame stringifikované hodnoty
-                                                return JSON.stringify(newValue) !== JSON.stringify(oldValue);
-                                            });
+                                    snapshot.docChanges().forEach(async change => {
+                                        if (change.type === 'added') { // Zaujímajú nás len novo pridané neprečítané notifikácie
+                                            const notificationData = change.doc.data();
+                                            const notificationId = change.doc.id;
                                             
-                                            console.log("Header.js: Zmenené polia:", changedFields);
+                                            console.log(`Header.js: Detekovaná nová neprečítaná notifikácia (ID: ${notificationId}).`);
+                                            console.log("Header.js: Dáta notifikácie:", notificationData);
 
-                                            if (changedFields.length > 0) {
-                                                message = `Používateľ ${userEmail} aktualizoval svoje údaje: ${changedFields.join(', ')}.`;
+                                            const message = notificationData.message;
+                                            if (message) {
+                                                showPushNotification(message, notificationId);
+                                                // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
+                                                try {
+                                                    await dbHeader.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+                                                        read: true
+                                                    });
+                                                    console.log(`Header.js: Notifikácia ${notificationId} označená ako prečítaná vo Firestore.`);
+                                                } catch (updateError) {
+                                                    console.error(`Header.js: Chyba pri označovaní notifikácie ${notificationId} ako prečítanej:`, updateError);
+                                                }
                                             }
-                                        } else {
-                                            // Ak staré dáta nie sú v cache (napr. nový používateľ bol pridaný a hneď upravený)
-                                            message = `Používateľ ${userEmail} bol aktualizovaný.`;
                                         }
-                                        
-                                    } else if (change.type === 'added') {
-                                        // Ak je to nový používateľ a nie je to počiatočné načítanie
-                                        message = `Nový používateľ ${userEmail} bol zaregistrovaný.`;
-                                    } else if (change.type === 'removed') {
-                                        message = `Používateľ ${userEmail} bol odstránený.`;
-                                    }
-
-                                    console.log("Header.js: Generovaná správa notifikácie:", message);
-
-                                    if (message) {
-                                        // Používame kombináciu userId, typu zmeny a hashu správy ako unikátny ID pre notifikáciu
-                                        const notificationId = `${userId}_${change.type}_${stringToHash(message)}`;
-                                        showPushNotification(message, notificationId);
-                                        // *** ODSTRÁNENÉ UKLADANIE NOTIFIKÁCIE DO FIRESTORE Z TOHTO MIESTA ***
-                                        // Ukladanie notifikácií bude prebiehať na stránkach, kde sa zmeny vykonávajú.
-                                    }
-                                    // Aktualizujeme cache po spracovaní zmeny
-                                    usersCache[userId] = changedUserData;
+                                    });
+                                }, error => {
+                                    console.error("Header.js: Chyba pri počúvaní notifikácií admina:", error);
                                 });
-                            }, error => {
-                                console.error("Header.js: Chyba pri počúvaní zmien používateľov:", error);
-                            });
                         } else {
-                            console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na zmeny používateľov nebol nastavený.");
+                            console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na notifikácie admina nebol nastavený.");
                         }
                     } else {
                         console.warn("Header.js: Používateľský dokument sa nenašiel pre UID:", currentHeaderUser.uid);
@@ -261,12 +231,12 @@ async function initializeHeaderLogic() {
                 try {
                     await authHeader.signOut();
                     // Po odhlásení zrušíme listener
-                    if (unsubscribeUsersListener) {
-                        unsubscribeUsersListener();
-                        unsubscribeUsersListener = null;
-                        initialUsersLoadComplete = false;
-                        usersCache = {};
-                        console.log("Header.js: Zrušený listener pre zmeny používateľov po odhlásení.");
+                    if (unsubscribeAdminNotificationsListener) {
+                        unsubscribeAdminNotificationsListener();
+                        unsubscribeAdminNotificationsListener = null;
+                        initialNotificationsLoadComplete = false;
+                        notificationsCache = {};
+                        console.log("Header.js: Zrušený listener pre notifikácie admina po odhlásení.");
                     }
                     window.location.href = 'login.html'; // Presmerovanie po odhlásení
                 } catch (e) {
