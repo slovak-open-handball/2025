@@ -141,7 +141,7 @@ function App() {
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Tento stav bude riadiť zobrazenie "Načítavam..."
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
@@ -201,7 +201,8 @@ function App() {
           }
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Zadali ste nesprávne prihlasovacie údaje`);
+          // Nechceme nastaviť error hneď pri počiatočnom prihlásení, ak len nie je token
+          // setError(`Zadali ste nesprávne prihlasovacie údaje`);
         }
       };
 
@@ -349,16 +350,19 @@ function App() {
       return;
     }
 
+    // Okamžité nastavenie loading na true, aby sa formulár schoval
+    setLoading(true); 
+    setError(''); // Clear previous errors
+    setUserNotificationMessage(''); // Clear previous messages
+
     const recaptchaToken = await getRecaptchaToken('login');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
+      setLoading(false); // Reset loading na false, ak recaptcha zlyhá
       return null;
     }
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
 
-    setLoading(true);
-    setError(''); // Clear previous errors
-    setUserNotificationMessage(''); // Clear previous messages
     try {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const currentUser = userCredential.user;
@@ -442,7 +446,7 @@ function App() {
       setEmail('');
       setPassword('');
 
-      setLoading(false);
+      // setLoading(false); // Toto odstránime, aby sa loading stav udržal až do presmerovania
 
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
@@ -456,15 +460,18 @@ function App() {
       } else {
         setError(`Zadali ste nesprávne prihlasovacie údaje`);
       }
-      setLoading(false);
+      setLoading(false); // Reset loading na false, ak prihlásenie zlyhá
     }
   };
 
-  // Display loading state
-  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
-  // Ak je user objekt (prihlásený), presmeruj.
-  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { // Čakáme na všetky závislosti
-    if (isAuthReady && user) { // Ak je user objekt a auth je ready, znamená to, že je prihlásený, presmeruj
+  // Display loading state (pre celú stránku)
+  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia)
+  // ALEBO loading je true (formulár sa odosiela),
+  // ALEBO !settingsLoaded (nastavenia sa ešte načítavajú),
+  // zobraz loading.
+  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { 
+    // Ak je user objekt (prihlásený) a auth je ready, znamená to, že je prihlásený, presmeruj
+    if (isAuthReady && user) { 
         console.log("LoginApp: Auth je ready a používateľ je prihlásený, presmerovávam na logged-in-my-data.html");
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
         return null; // Nič nevykresľuj počas presmerovania
@@ -500,6 +507,7 @@ function App() {
     );
   }
 
+  // Vykreslenie prihlasovacieho formulára
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -558,9 +566,10 @@ function App() {
             {
               type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading,
+              disabled: loading, // Tlačidlo je disabled, ak sa načítava
               tabIndex: 3 // Nastaví tabIndex pre tlačidlo na 3
             },
+            // Text tlačidla sa zmení na "Prihlasujem..." iba ak je loading true
             loading ? 'Prihlasujem...' : 'Prihlásiť'
           )
         )
