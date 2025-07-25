@@ -500,8 +500,8 @@ function App() {
       let initialIsApproved = true;
 
       if (isAdminRegistration) {
-        initialUserRole = 'user'; 
-        initialIsApproved = true; 
+        initialUserRole = 'admin'; // Zmena: pre admin registráciu nastavíme rolu na 'admin'
+        initialIsApproved = false; // Zmena: admini musia byť schválení
       }
 
       const userDataToSave = {
@@ -514,7 +514,8 @@ function App() {
         role: initialUserRole,
         approved: initialIsApproved,
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
-        displayNotifications: true
+        displayNotifications: true,
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Pridané pre sledovanie zmeny hesla
       };
 
       // Logovanie údajov, ktoré sa majú zapísať
@@ -533,6 +534,32 @@ function App() {
         } else {
           console.warn("Firestore: Dokument používateľa sa nenašiel po zápise.");
         }
+
+        // --- Logika pre ukladanie notifikácie pre administrátorov ---
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            let notificationMessage = '';
+            const notificationRecipientId = 'all_admins'; 
+
+            if (isAdminRegistration) {
+                notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+            } else {
+                notificationMessage = `Nový používateľ ${email} sa zaregistroval.`;
+            }
+
+            if (notificationMessage) {
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                    message: notificationMessage,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    recipientId: notificationRecipientId,
+                    read: false
+                });
+                console.log("Notifikácia o novej registrácii úspešne uložená do Firestore.");
+            }
+        } catch (e) {
+            console.error("App: Chyba pri ukladaní notifikácie o registrácii:", e);
+        }
+        // --- Koniec logiky pre ukladanie notifikácie ---
 
         // Odoslanie e-mailu po úspešnom uložení do Firestore
         try {
@@ -565,13 +592,15 @@ function App() {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (fetch error):", emailError);
         }
 
-        if (isAdminRegistration) {
-          await db.collection('users').doc(userCredential.user.uid).update({
-            role: 'admin',
-            approved: false
-          });
-          console.log(`Firestore: Rola používateľa ${email} bola aktualizovaná na 'admin' a schválenie na 'false'.`);
-        }
+        // Pôvodná logika pre aktualizáciu roly admina bola presunutá do initialUserRole a initialIsApproved
+        // ak isAdminRegistration
+        // if (isAdminRegistration) {
+        //   await db.collection('users').doc(userCredential.user.uid).update({
+        //     role: 'admin',
+        //     approved: false
+        //   });
+        //   console.log(`Firestore: Rola používateľa ${email} bola aktualizovaná na 'admin' a schválenie na 'false'.`);
+        // }
 
       } catch (firestoreError) {
         console.error("Firestore Save/Update Error:", firestoreError);
