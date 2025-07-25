@@ -467,6 +467,7 @@ function App() {
           NotificationModal: NotificationModal,
           isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
           countdownMessage: countdown, // Odovzdanie správy odpočtu
+          registrationStartDate: registrationStartDate, // Odovzdanie registrationStartDate
         }) :
         React.createElement(Page2Form, {
           formData: formData,
