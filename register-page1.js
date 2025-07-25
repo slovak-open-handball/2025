@@ -10,7 +10,7 @@ const countryCodes = [
   { code: 'AX', dialCode: '+358' }, { code: 'AZ', dialCode: '+994' }, { code: 'BA', dialCode: '+387' },
   { code: 'BB', dialCode: '+1‑246' }, { code: 'BD', dialCode: '+880' }, { code: 'BE', dialCode: '+32' },
   { code: 'BF', dialCode: '+226' }, { code: 'BG', dialCode: '+359' }, { code: 'BH', dialCode: '+973' },
-  { code: 'BI', dialCode: '+257' }, { code: 'BJ', dialCode: '+229' }, { code: 'BL', dialCode: '+590' },
+  { code: 'BI', dialCode: '+257' }, { code: 'BJ', dialCode: '+229' }, { code: 'BL', dialleCode: '+590' },
   { code: 'BM', dialCode: '+1‑441' }, { code: 'BN', dialCode: '+673' }, { code: 'BO', dialCode: '+591' },
   { code: 'BQ', dialCode: '+599' }, { code: 'BR', dialCode: '+55' }, { code: 'BS', dialCode: '+1‑242' },
   { code: 'BT', dialCode: '+975' }, { code: 'BW', dialCode: '+267' }, { code: 'BY', dialCode: '+375' },
@@ -397,12 +397,12 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 'Telefónne číslo kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'flex' },
+              { className: 'flex border rounded-lg shadow focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Spoločný kontajner s orámovaním
               React.createElement(
                 'button',
                 {
                   type: 'button',
-                  className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:shadow-outline transition-colors duration-200 flex-shrink-0 flex items-center',
+                  className: 'bg-white text-gray-800 font-bold py-2 px-3 rounded-l-lg focus:outline-none flex-shrink-0 flex items-center', // Biele pozadie, bez pravého orámovania
                   onClick: () => setIsCountryCodeModalOpen(true),
                   tabIndex: 4,
                   disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
@@ -413,7 +413,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               React.createElement('input', {
                 type: 'tel',
                 id: 'contactPhoneNumber',
-                className: 'shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                className: 'appearance-none w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg', // Bez orámovania, biele pozadie
                 value: formData.contactPhoneNumber,
                 onChange: (e) => {
                   // Filtrujeme iba číslice
