@@ -18,12 +18,14 @@ const formatToDatetimeLocal = (date) => {
 };
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose }) {
+// ZMENA: Pridaný prop 'displayNotificationsEnabled'
+function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (message) {
+    // ZMENA: Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií
+    if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -46,9 +48,10 @@ function NotificationModal({ message, onClose }) {
         timerRef.current = null;
       }
     };
-  }, [message, onClose]);
+  }, [message, onClose, displayNotificationsEnabled]); // ZÁVISLOSŤ: Pridaný displayNotificationsEnabled
 
-  if (!show && !message) return null;
+  // ZMENA: Nevykresľuje sa, ak nie je zobrazené alebo ak sú notifikácie vypnuté
+  if (!show && !message || !displayNotificationsEnabled) return null;
 
   return React.createElement(
     'div',
@@ -618,9 +621,11 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('')
+        onClose: () => setUserNotificationMessage(''),
+        displayNotificationsEnabled: userProfileData.displayNotifications // Pridaný prop
     }),
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
