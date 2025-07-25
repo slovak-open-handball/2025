@@ -179,13 +179,8 @@ function App() {
       setAuth(firebaseAuth);
 
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        // Iba presmerovať, ak je používateľ už prihlásený a NIE JE v procese registrácie
-        // Používame isRegisteringRef.current pre okamžitý prístup k stavu
-        if (currentUser && !isRegisteringRef.current) {
-            console.log("register.js: Používateľ už prihlásený pri načítaní stránky, presmerovávam na logged-in-my-data.html");
-            window.location.href = 'login.html'; // Presmerovanie na login.html, nie logged-in-my-data.html
-            return;
-        }
+        // Táto funkcia by mala len reagovať na zmeny stavu autentifikácie, nie riadiť presmerovanie počas registrácie.
+        // Presmerovanie sa riadi v handleSubmit funkcii.
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
       });
 
@@ -503,6 +498,9 @@ function App() {
       } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
       }
+
+      // Pridanie krátkeho oneskorenia, aby sa zabezpečilo spracovanie sieťových požiadaviek
+      await new Promise(resolve => setTimeout(resolve, 200)); // Oneskorenie 200ms
 
       setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
       setShowNotification(true);
