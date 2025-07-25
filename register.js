@@ -8,7 +8,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
-import { Page2Form } = './register-page2.js';
+import { Page2Form } from './register-page2.js';
 
 // Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
