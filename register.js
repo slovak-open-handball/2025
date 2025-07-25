@@ -199,12 +199,12 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
   );
 
+  // Updated EyeOffIcon with a more reliable path
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Cesta pre ikonu preškrtnutého oka (skryté)
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 .91-2.924 2.45-5.337 4.383-7.182M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c.783 0 1.537.108 2.25.315M17.5 12c.783 0 1.537-.108 2.25-.315M21.542 12C20.268 16.057 16.477 19 12 19c-.783 0-1.537-.108-2.25-.315M4.458 12C5.732 7.943 9.523 5 14 5c.783 0 1.537.108 2.25.315M17.5 12c.783 0 1.537-.108 2.25-.315' })
+    // Path for the eye with a slash (more robust version)
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22' })
   );
 
   return React.createElement(
