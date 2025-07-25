@@ -101,7 +101,14 @@ function ChangeNameApp() {
         return;
       }
 
-      const firebaseApp = firebase.app();
+      let firebaseApp;
+      // Skontrolujte, či už existuje predvolená aplikácia Firebase
+      if (firebase.apps.length === 0) {
+        // Používame globálne __firebase_config
+        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
+      } else {
+        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
+      }
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
@@ -111,8 +118,8 @@ function ChangeNameApp() {
 
       const signIn = async () => {
         try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authInstance.signInWithCustomToken(__initial_auth_token);
           }
         } catch (e) {
           console.error("ChangeNameApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
@@ -164,18 +171,15 @@ function ChangeNameApp() {
               console.log("ChangeNameApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
-              // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                   console.error("ChangeNameApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
                   console.log("ChangeNameApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut(); // Používame auth z React stavu
+                  auth.signOut();
                   window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
-                  return; // Zastaviť ďalšie spracovanie
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  return;
               }
 
-              // Normal processing if passwordLastChanged is valid
               const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
@@ -183,26 +187,21 @@ function ChangeNameApp() {
               console.log(`ChangeNameApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  // First load for this user/browser, initialize localStorage and do NOT logout
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangeNameApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-                  // No return here, continue with normal data processing for the first load
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  // Password was changed on another device/session
                   console.log("ChangeNameApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut(); // Používame auth z React stavu
+                  auth.signOut();
                   window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  localStorage.removeItem(localStorageKey);
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  // This should ideally not happen if Firestore is the source of truth
                   console.warn("ChangeNameApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut(); // Používame auth z React stavu
+                  auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
-                  // Times are equal, ensure localStorage is up-to-date
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangeNameApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
@@ -243,7 +242,7 @@ function ChangeNameApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("ChangeNameApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -324,7 +323,7 @@ function ChangeNameApp() {
 
   const handleUpdateName = async (e) => {
     e.preventDefault();
-    if (!db || !user) {
+    if (!db || !user || !userProfileData) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
     }
@@ -340,6 +339,37 @@ function ChangeNameApp() {
       });
       await user.updateProfile({ displayName: `${firstName} ${lastName}` });
       setUserNotificationMessage("Meno a priezvisko úspešne aktualizované!");
+
+      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      // Notifikáciu uložíme pre všetkých adminov, ak zmenu vykonal bežný používateľ.
+      // Ak zmenu vykonal admin, notifikácia je pre neho.
+      try {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          let notificationMessage = '';
+          let notificationRecipientId = '';
+
+          if (userProfileData.role === 'user') {
+              notificationMessage = `Používateľ ${userProfileData.email} si zmenil meno na ${firstName} a priezvisko na ${lastName}.`;
+              notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
+          } else if (userProfileData.role === 'admin') {
+              notificationMessage = `Administrátor ${userProfileData.email} si zmenil meno na ${firstName} a priezvisko na ${lastName}.`;
+              notificationRecipientId = user.uid; // Notifikácia pre tohto konkrétneho administrátora
+          }
+
+          if (notificationMessage) {
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                  message: notificationMessage,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  recipientId: notificationRecipientId,
+                  read: false
+              });
+              console.log("Notifikácia o zmene mena/priezviska úspešne uložená do Firestore.");
+          }
+      } catch (e) {
+          console.error("ChangeNameApp: Chyba pri ukladaní notifikácie o zmene mena/priezviska:", e);
+      }
+      // --- Koniec logiky pre ukladanie notifikácie ---
+
     } catch (e) {
       console.error("ChangeNameApp: Chyba pri aktualizácii mena a priezviska:", e);
       setError(`Chyba pri aktualizácii mena a priezviska: ${e.message}`);
