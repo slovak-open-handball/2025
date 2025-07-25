@@ -407,6 +407,8 @@ function MyDataApp() {
             userProfileData.role === 'user' && userProfileData.billing && React.createElement(
               React.Fragment,
               null,
+              // Horizontálna čiara nad nadpisom "Fakturačné údaje"
+              React.createElement('hr', { className: 'my-6 border-gray-300' }), 
               React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Fakturačné údaje'),
               React.createElement(
                 'div',
