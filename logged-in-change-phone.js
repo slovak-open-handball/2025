@@ -317,12 +317,21 @@ const countryCodes = [
 // CountryCodeModal Component
 function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled }) { // Pridaný disabled prop
   const [searchTerm, setSearchTerm] = React.useState('');
+  // Nový stav pre dočasne vybranú predvoľbu
+  const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
   const modalRef = React.useRef(null);
+
+  React.useEffect(() => {
+    // Inicializujeme tempSelectedCode s aktuálnou vybranou predvoľbou, keď sa modal otvorí
+    if (isOpen) {
+      setTempSelectedCode(selectedCode);
+    }
+  }, [isOpen, selectedCode]);
 
   React.useEffect(() => {
     const handleOutsideClick = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose();
+        onClose(); // Zavrieť bez uloženia, ak sa klikne mimo
       }
     };
 
@@ -344,9 +353,10 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
     country.dialCode.includes(searchTerm)
   );
 
-  // Funkcia pre tlačidlo OK - zatvorí modálne okno
+  // Funkcia pre tlačidlo OK - aplikuje dočasne vybranú predvoľbu a zatvorí modálne okno
   const handleConfirm = () => {
-    onClose();
+    onSelect(tempSelectedCode); // Aplikuje dočasnú predvoľbu
+    onClose(); // Zavrie modálne okno
   };
 
   return React.createElement(
@@ -378,11 +388,11 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
             'button', 
             {
               key: country.code,
+              // Porovnávame s tempSelectedCode pre vizuálnu indikáciu výberu
               className: `p-2 text-sm rounded-lg border transition-colors duration-200 
-                          ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, 
+                          ${tempSelectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, 
               onClick: () => {
-                onSelect(country.dialCode);
-                // Nechceme zatvárať hneď po výbere, ale až po OK/Zavrieť
+                setTempSelectedCode(country.dialCode); // Nastaví dočasnú predvoľbu
               },
               disabled: disabled, // Tlačidlá sú disabled, ak je modálne okno disabled
             },
@@ -396,7 +406,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
         React.createElement(
           'button',
           {
-            onClick: onClose, // Používame priamo onClose prop
+            onClick: onClose, // Používame priamo onClose prop, zahodí zmeny
             className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
@@ -405,7 +415,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
         React.createElement(
           'button',
           {
-            onClick: handleConfirm, // Voláme novú handleConfirm funkciu
+            onClick: handleConfirm, // Voláme handleConfirm, ktorá aplikuje zmeny a zatvorí
             className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
