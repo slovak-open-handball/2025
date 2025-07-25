@@ -97,9 +97,11 @@ function App() {
   const [auth, setAuth] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Zabezpečenie, že autentifikácia je pripravená pred operáciami Firestore
   const [isRegistrationOpen, setIsRegistrationOpen] = React.useState(null); // null pre načítavanie, true/false po kontrole
+  const [countdownMessage, setCountdownMessage] = React.useState(''); // Nový stav pre správu odpočtu
 
   // Recaptcha ref
   const recaptchaRef = React.useRef(null);
+  const countdownIntervalRef = React.useRef(null); // Ref pre uloženie ID intervalu odpočtu
 
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
@@ -159,6 +161,13 @@ function App() {
       let isOpen = true;
       let msg = '';
 
+      // Vždy vyčistite existujúci interval pri každej zmene stavu registrácie
+      if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+      }
+      setCountdownMessage(''); // Reset správy odpočtu
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
@@ -172,13 +181,39 @@ function App() {
         if (isRegStartValid && nowUtcMs < registrationStartDateMs) {
           isOpen = false;
           msg = 'Registrácia ešte nezačala.';
+          
+          // Spustenie odpočtu
+          const updateCountdown = () => {
+              const remainingMs = registrationStartDateMs - Date.now();
+              if (remainingMs <= 0) {
+                  clearInterval(countdownIntervalRef.current);
+                  countdownIntervalRef.current = null;
+                  setCountdownMessage('');
+                  // Ak odpočet skončil, znovu vyhodnoťte stav registrácie (spustí sa onSnapshot)
+                  // Toto zabezpečí automatické sprístupnenie formulára
+              } else {
+                  const seconds = Math.floor((remainingMs / 1000) % 60);
+                  const minutes = Math.floor((remainingMs / (1000 * 60)) % 60);
+                  const hours = Math.floor((remainingMs / (1000 * 60 * 60)) % 24);
+                  const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+                  setCountdownMessage(`Otvorenie o: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+              }
+          };
+
+          updateCountdown(); // Prvé volanie pre okamžité zobrazenie
+          countdownIntervalRef.current = setInterval(updateCountdown, 1000); // Aktualizácia každú sekundu
+
         } else if (isRegEndValid && nowUtcMs > registrationEndDateMs) {
           isOpen = false;
-          msg = 'Registrácia je momentálne uzavretá.';
+          const endDate = new Date(registrationEndDateMs);
+          // Formátovanie dátumu a času pre zobrazenie
+          const formattedEndDate = `${endDate.toLocaleDateString('sk-SK')} ${endDate.toLocaleTimeString('sk-SK')}`;
+          msg = `Registrácia je momentálne uzavretá. Ukončená: ${formattedEndDate}.`;
         } else if (!isRegStartValid && !isRegEndValid) {
           // Ak nie sú definované ani začiatok ani koniec, registrácia je otvorená
           isOpen = true;
-          msg = ''; // Žiadna správa, ak je predvolene otvorená
+          msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
+          console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
         } else if (!isRegStartValid && isRegEndValid && nowUtcMs <= registrationEndDateMs) {
           // Ak je definovaný len koniec a aktuálny čas je pred ním
           isOpen = true;
@@ -208,7 +243,12 @@ function App() {
       setIsRegistrationOpen(true); // Núdzové riešenie na otvorenie v prípade chyby
     });
 
-    return () => unsubscribe(); // Vyčistiť poslucháča pri odpojení komponentu
+    return () => {
+        unsubscribe(); // Vyčistiť poslucháča pri odpojení komponentu
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current); // Vyčistiť aj interval odpočtu
+        }
+    };
   }, [db, isAuthReady]); // Závisí od db a isAuthReady
 
   const closeNotification = () => {
@@ -393,6 +433,7 @@ function App() {
         selectedCountryDialCode: selectedCountryDialCode,
         NotificationModal: NotificationModal,
         isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
+        countdownMessage: countdownMessage, // Odovzdanie správy odpočtu
       }) :
       React.createElement(Page2Form, {
         formData: formData,
