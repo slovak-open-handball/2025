@@ -91,12 +91,62 @@ function App() {
   const [db, setDb] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Zabezpečenie, že autentifikácia je pripravená pred operáciami Firestore
-  const [isRegistrationOpen, setIsRegistrationOpen] = React.useState(null); // null pre načítavanie, true/false po kontrole
-  const [countdownMessage, setCountdownMessage] = React.useState(''); // Nový stav pre správu odpočtu
+  // Nové stavy pre dáta registrácie z Firestore
+  const [registrationStartDate, setRegistrationStartDate] = React.useState('');
+  const [registrationEndDate, setRegistrationEndDate] = React.useState('');
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // Nové stavy pre odpočet a vynútenie prepočtu
+  const [countdown, setCountdown] = React.useState(null);
+  const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
+  const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
   // Recaptcha ref
   const recaptchaRef = React.useRef(null);
   const countdownIntervalRef = React.useRef(null); // Ref pre uloženie ID intervalu odpočtu
+
+  // Výpočet stavu registrácie ako memoizovaná hodnota (rovnako ako v index.js)
+  const isRegistrationOpen = React.useMemo(() => {
+    if (!settingsLoaded) return false; // Čakajte, kým sa načítajú nastavenia
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
+    // Kontrola, či sú dátumy platné pred porovnaním
+    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
+    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
+
+    return (
+      (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladajte, že registrácia začala
+      (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladajte, že registrácia neskončila
+    );
+  }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
+
+
+  // Funkcia na výpočet zostávajúceho času pre odpočet (rovnako ako v index.js)
+  const calculateTimeLeft = React.useCallback(() => {
+    const now = new Date();
+    const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
+
+    // Ak startDate nie je platný dátum, alebo je už v minulosti, odpočet nie je potrebný
+    if (!startDate || isNaN(startDate) || now >= startDate) {
+        return null; 
+    }
+
+    const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekundách
+
+    if (difference <= 0) {
+        return null; // Čas uplynul
+    }
+
+    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }, [registrationStartDate]);
+
 
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
@@ -130,9 +180,7 @@ function App() {
       // Používame firebaseAuth.onAuthStateChanged na sledovanie stavu autentifikácie.
       // NEPOKÚŠAME sa o signInAnonymously() tu, ak je to obmedzené pravidlami.
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        // console.log("register.js: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         // Ak je __initial_auth_token k dispozícii a nie je prihlásený žiadny používateľ, pokúsime sa prihlásiť.
-        // Inak sa iba nastaví isAuthReady.
         if (!currentUser && typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) {
           try {
             await firebaseAuth.signInWithCustomToken(__initial_auth_token);
@@ -154,129 +202,75 @@ function App() {
     }
   }, []); // Spustí sa raz pri pripojení komponentu
 
-  // Načítanie a počúvanie stavu registrácie z Firestore
+  // Načítanie a počúvanie stavu registrácie z Firestore (rovnako ako v index.js)
   React.useEffect(() => {
-    if (!db || !isAuthReady) {
-      return; // Čakajte, kým sa Firebase inicializuje a stav autentifikácie bude pripravený
-    }
-
-    // Cesta k dokumentu nastavení registrácie, zosúladená s header.js a screenshotom
-    // Dokument je v kolekcii 'settings' s ID 'registration'
-    const docRef = db.collection('settings').doc('registration');
-
-    // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
-    const unsubscribe = docRef.onSnapshot((docSnap) => {
-      // --- DEBUGGING LOGS ---
-      console.log("register.js: Inside onSnapshot callback. Received docSnap:", docSnap);
-      console.log("register.js: Type of docSnap:", typeof docSnap);
-      if (docSnap) {
-        console.log("register.js: docSnap.exists property type:", typeof docSnap.exists);
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        return; // Čakajte, kým sa DB a autentifikácia inicializujú
       }
-      // --- END DEBUGGING LOGS ---
+      try {
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+            } else {
+                console.log("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+                setRegistrationStartDate('');
+                setRegistrationEndDate('');
+            }
+            setSettingsLoaded(true);
+          }, error => {
+            console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
+            setShowNotification(true);
+            setSettingsLoaded(true);
+          });
 
-      // Získanie aktuálneho času v UTC milisekundách pre presné porovnanie
-      const nowUtcMs = Date.now(); 
-      let isOpen = true;
-      let msg = '';
-
-      // Vždy vyčistite existujúci interval pri každej zmene stavu registrácie
-      if (countdownIntervalRef.current) {
-          clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = null;
+          return () => unsubscribeSettings();
+      } catch (e) {
+          console.error("register.js: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
+          setNotificationMessage(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setShowNotification(true);
+          setSettingsLoaded(true);
       }
-      setCountdownMessage(''); // Reset správy odpočtu
+    };
 
-      // Robustnejšia kontrola, či je docSnap platný DocumentSnapshot
-      if (docSnap && typeof docSnap.exists === 'function') {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
-          const registrationStartDateMs = data.registrationStartDate ? data.registrationStartDate.toMillis() : null;
-          const registrationEndDateMs = data.registrationEndDate ? data.registrationEndDate.toMillis() : null;
+    fetchSettings();
+  }, [db, isAuthReady]);
 
-          // Kontrola platnosti dátumov a stavu registrácie
-          const isRegStartValid = registrationStartDateMs !== null && !isNaN(registrationStartDateMs);
-          const isRegEndValid = registrationEndDateMs !== null && !isNaN(registrationEndDateMs);
-
-          if (isRegStartValid && nowUtcMs < registrationStartDateMs) {
-            isOpen = false;
-            msg = 'Registrácia ešte nezačala.';
-            
-            // Spustenie odpočtu
-            const updateCountdown = () => {
-                const remainingMs = registrationStartDateMs - Date.now();
-                if (remainingMs <= 0) {
-                    clearInterval(countdownIntervalRef.current);
-                    countdownIntervalRef.current = null;
-                    setCountdownMessage('');
-                    // Ak odpočet skončil, znovu vyhodnoťte stav registrácie (spustí sa onSnapshot)
-                    // Toto zabezpečí automatické sprístupnenie formulára
-                } else {
-                    const seconds = Math.floor((remainingMs / 1000) % 60);
-                    const minutes = Math.floor((remainingMs / (1000 * 60)) % 60);
-                    const hours = Math.floor((remainingMs / (1000 * 60 * 60)) % 24);
-                    const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
-                    setCountdownMessage(`Otvorenie o: ${days}d ${hours}h ${minutes}m ${seconds}s`);
-                }
-            };
-
-            updateCountdown(); // Prvé volanie pre okamžité zobrazenie
-            countdownIntervalRef.current = setInterval(updateCountdown, 1000); // Aktualizácia každú sekundu
-
-          } else if (isRegEndValid && nowUtcMs > registrationEndDateMs) {
-            isOpen = false;
-            const endDate = new Date(registrationEndDateMs);
-            // Formátovanie dátumu a času pre zobrazenie
-            const formattedEndDate = `${endDate.toLocaleDateString('sk-SK')} ${endDate.toLocaleTimeString('sk-SK')}`;
-            msg = `Registrácia je momentálne uzavretá. Ukončená: ${formattedEndDate}.`;
-          } else if (!isRegStartValid && !isRegEndValid) {
-            // Ak nie sú definované ani začiatok ani koniec, registrácia je otvorená
-            isOpen = true;
-            msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
-            console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
-          } else if (!isRegStartValid && isRegEndValid && nowUtcMs <= registrationEndDateMs) {
-            // Ak je definovaný len koniec a aktuálny čas je pred ním
-            isOpen = true;
-            msg = '';
-          } else if (isRegStartValid && !isRegEndValid && nowUtcMs >= registrationStartDateMs) {
-            // Ak je definovaný len začiatok a aktuálny čas je po ňom
-            isOpen = true;
-            msg = '';
-          }
-          // Ak sú oba definované a aktuálny čas je medzi nimi, isOpen zostáva true
-          // Ak sú oba definované a aktuálny čas je mimo, už to bolo spracované vyššie
-          
-        } else { // docSnap exists() is false, meaning the document does not exist
-          // Ak dokument nastavení neexistuje, predpokladajte, že registrácia je predvolene otvorená
-          isOpen = true;
-          msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
-          console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
-        }
-      } else { // docSnap is not a valid DocumentSnapshot or is null/undefined
-        console.error("register.js: Invalid docSnap received by onSnapshot:", docSnap);
-        // Fallback to open registration in case of unexpected snapshot format
-        isOpen = true;
-        msg = 'Chyba pri načítaní nastavení registrácie. Registrácia je predvolene otvorená.';
-        setShowNotification(true); // Zobraziť upozornenie
-      }
-
-      setIsRegistrationOpen(isOpen);
-      setNotificationMessage(msg);
-      setShowNotification(msg !== ''); // Zobraziť upozornenie iba ak existuje správa
-    }, (error) => {
-      console.error("Chyba pri počúvaní zmien stavu registrácie:", error);
-      setNotificationMessage('Chyba pri aktualizácii stavu registrácie v reálnom čase.');
-      setShowNotification(true);
-      setIsRegistrationOpen(true); // Núdzové riešenie na otvorenie v prípade chyby
-    });
-
-    return () => {
-        unsubscribe(); // Vyčistiť poslucháča pri odpojení komponentu
-        if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current); // Vyčistiť aj interval odpočtu
+  // Effect pre odpočet (rovnako ako v index.js)
+  React.useEffect(() => {
+    let timer;
+    const updateCountdown = () => {
+        const timeLeft = calculateTimeLeft();
+        setCountdown(timeLeft);
+        if (timeLeft === null) {
+            clearInterval(timer);
+            setForceRegistrationCheck(prev => prev + 1); // Vynúti prepočet isRegistrationOpen
         }
     };
-  }, [db, isAuthReady]); // Závisí od db a isAuthReady
+
+    if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
+        updateCountdown();
+        timer = setInterval(updateCountdown, 1000);
+    } else {
+        setCountdown(null);
+    }
+
+    return () => clearInterval(timer);
+  }, [registrationStartDate, calculateTimeLeft]);
+
+  // Nový useEffect pre periodickú aktualizáciu isRegistrationOpen (rovnako ako v index.js)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setPeriodicRefreshKey(prev => prev + 1);
+    }, 60 * 1000); // Aktualizácia každú minútu
+
+    return () => clearInterval(interval);
+  }, []);
+
 
   const closeNotification = () => {
     setShowNotification(false);
@@ -446,34 +440,47 @@ function App() {
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
-    page === 1 ?
-      React.createElement(Page1Form, {
-        formData: formData,
-        handleChange: handleChange,
-        handleNext: handleNext,
-        loading: loading,
-        notificationMessage: notificationMessage,
-        closeNotification: closeNotification,
-        isCountryCodeModalOpen: isCountryCodeModalOpen,
-        setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
-        setSelectedCountryDialCode: setSelectedCountryDialCode,
-        selectedCountryDialCode: selectedCountryDialCode,
-        NotificationModal: NotificationModal,
-        isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
-        countdownMessage: countdownMessage, // Odovzdanie správy odpočtu
-      }) :
-      React.createElement(Page2Form, {
-        formData: formData,
-        handleChange: handleChange,
-        handlePrev: handlePrev,
-        handleSubmit: handleSubmit,
-        loading: loading,
-        notificationMessage: notificationMessage,
-        closeNotification: closeNotification,
-        userRole: userRole,
-        handleRoleChange: handleRoleChange,
-        NotificationModal: NotificationModal,
-      }),
+    // Zobraz loading, ak sa nastavenia ešte nenačítali alebo autentifikácia nie je pripravená
+    !settingsLoaded || !isAuthReady ? (
+      React.createElement(
+        'div',
+        { className: 'flex items-center justify-center py-8' },
+        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+          React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+          React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+        ),
+        'Načítavam stav registrácie...'
+      )
+    ) : (
+      page === 1 ?
+        React.createElement(Page1Form, {
+          formData: formData,
+          handleChange: handleChange,
+          handleNext: handleNext,
+          loading: loading,
+          notificationMessage: notificationMessage,
+          closeNotification: closeNotification,
+          isCountryCodeModalOpen: isCountryCodeModalOpen,
+          setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
+          setSelectedCountryDialCode: setSelectedCountryDialCode,
+          selectedCountryDialCode: selectedCountryDialCode,
+          NotificationModal: NotificationModal,
+          isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
+          countdownMessage: countdown, // Odovzdanie správy odpočtu
+        }) :
+        React.createElement(Page2Form, {
+          formData: formData,
+          handleChange: handleChange,
+          handlePrev: handlePrev,
+          handleSubmit: handleSubmit,
+          loading: loading,
+          notificationMessage: notificationMessage,
+          closeNotification: closeNotification,
+          userRole: userRole,
+          handleRoleChange: handleRoleChange,
+          NotificationModal: NotificationModal,
+        })
+    ),
     // reCAPTCHA skript - zabezpečte, aby bol načítaný raz a bol globálne dostupný
     React.createElement('script', { src: `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`, async: true, defer: true }),
     React.createElement('div', { id: 'recaptcha-badge', className: 'g-recaptcha', 'data-sitekey': RECAPTCHA_SITE_KEY, 'data-size': 'invisible', 'data-callback': 'onRecaptchaSuccess', 'data-badge': 'bottomleft' })
