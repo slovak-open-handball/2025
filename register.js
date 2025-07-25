@@ -358,9 +358,11 @@ function App() {
       }
 
       // Odoslanie tokenu na Apps Script pre overenie (v no-cors režime)
+      // V režime no-cors nemôžeme priamo čítať odpoveď, takže predpokladáme úspech pre prechod
+      // Skutočné overenie sa vykoná pri finálnom handleSubmit
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'no-cors', // Používame 'no-cors' pre prechod, aby sa predišlo blokovaniu
         headers: {
           'Content-Type': 'application/json',
         },
@@ -370,7 +372,6 @@ function App() {
         }),
       });
       console.log("Požiadavka na overenie reCAPTCHA pre prechod stránky odoslaná (no-cors režim).");
-      // V režime no-cors nemôžeme priamo čítať odpoveď, takže predpokladáme úspech pre prechod
       setPage(2);
 
     } catch (error) {
@@ -447,9 +448,10 @@ function App() {
       }
 
       // Overenie reCAPTCHA tokenu na serveri (Google Apps Script)
+      // Používame 'cors' na čítanie odpovede zo servera
       const recaptchaVerifyResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'cors', // Používame 'cors' na čítanie odpovede zo servera
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -474,7 +476,9 @@ function App() {
       const user = userCredential.user;
 
       // 2. Uloženie používateľských údajov do Firestore
-      await db.collection('users').doc(user.uid).set({
+      // Používame __app_id pre štruktúru kolekcie
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).set({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
