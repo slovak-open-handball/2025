@@ -432,7 +432,9 @@ function App() {
       // 2. Uloženie používateľských údajov do Firestore
       // Používame __app_id pre štruktúru kolekcie
       const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      await db.collection('artifacts').doc(appId).collection('users').doc(user.uid).set({
+      const userDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid);
+
+      await userDocRef.set({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -447,8 +449,18 @@ function App() {
         approved: true,
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
       });
+      console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
-      // 3. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
+      // 3. Načítanie údajov z databázy (po zápise)
+      const doc = await userDocRef.get();
+      if (doc.exists) {
+        console.log("Údaje používateľa úspešne načítané z Firestore:", doc.data());
+        // Tu môžete použiť načítané dáta, ak je to potrebné pre ďalšie operácie
+      } else {
+        console.warn("Načítanie údajov používateľa z Firestore zlyhalo po zápise.");
+      }
+
+      // 4. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
       try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -476,7 +488,7 @@ function App() {
       setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
       setShowNotification(true);
 
-      // Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
+      // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
       // To je dôležité, aby sa predišlo automatickému prihláseniu na novovytvorený účet
       // a aby sa zabezpečilo, že používateľ bude musieť prejsť cez prihlasovaciu stránku.
       try {
