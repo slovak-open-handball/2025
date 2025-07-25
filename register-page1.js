@@ -249,7 +249,7 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 }
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen }) {
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage }) {
   // ChevronDown ikona (ekvivalent Lucide React - inline SVG)
   const ChevronDown = React.createElement(
     'svg',
@@ -283,7 +283,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       React.createElement(
         'div',
         { className: 'text-center text-red-600 font-semibold text-lg py-8' },
-        notificationMessage || 'Registrácia je momentálne uzavretá.'
+        countdownMessage || notificationMessage || 'Registrácia je momentálne uzavretá.'
       )
     ) : isRegistrationOpen === null ? ( // Stav načítavania
       React.createElement(
