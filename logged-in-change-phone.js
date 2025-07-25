@@ -704,7 +704,7 @@ function ChangePhoneApp() {
     }
     let loadingMessage = 'Načítavam aplikáciu...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam používateľské dáta...';
+        loadingMessage = 'Načítavam...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
