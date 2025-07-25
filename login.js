@@ -210,7 +210,7 @@ function App() {
         console.log("LoginApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Set user state to null or user object
         setIsAuthReady(true); // Mark auth as ready after the first check
-        setLoading(false); // Auth state checked, stop loading
+        setLoading(false); // Auth state checked, stop loading for initial page load
       });
 
       signIn();
@@ -445,8 +445,8 @@ function App() {
       setError('');
       setEmail('');
       setPassword('');
-
-      // setLoading(false); // Toto odstránime, aby sa loading stav udržal až do presmerovania
+      
+      setLoading(false); // ZMENA: Nastavíme loading na false hneď po úspešnom prihlásení
 
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
@@ -466,10 +466,9 @@ function App() {
 
   // Display loading state (pre celú stránku)
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia)
-  // ALEBO loading je true (formulár sa odosiela),
   // ALEBO !settingsLoaded (nastavenia sa ešte načítavajú),
   // zobraz loading.
-  if (!isAuthReady || loading || user === undefined || !settingsLoaded) { 
+  if (!isAuthReady || user === undefined || !settingsLoaded) { 
     // Ak je user objekt (prihlásený) a auth je ready, znamená to, že je prihlásený, presmeruj
     if (isAuthReady && user) { 
         console.log("LoginApp: Auth je ready a používateľ je prihlásený, presmerovávam na logged-in-my-data.html");
@@ -483,7 +482,6 @@ function App() {
     );
   }
 
-  // Ak je user === null (definitívne odhlásený) a loading je false, pokračuj vo vykresľovaní prihlasovacieho formulára.
   // Ak je prítomná správa o úspešnom prihlásení, zobraz ju a spracuj presmerovanie.
   if (userNotificationMessage && userNotificationMessage.includes("Prihlásenie úspešné!")) {
     return React.createElement(
@@ -507,7 +505,7 @@ function App() {
     );
   }
 
-  // Vykreslenie prihlasovacieho formulára
+  // Vykreslenie prihlasovacieho formulára (iba ak nie je prihlásený a nie je zobrazená úspešná správa)
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
