@@ -250,7 +250,7 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 }
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage }) {
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate }) { // <--- PRIDANÝ registrationStartDate
   // ChevronDown ikona (ekvivalent Lucide React - inline SVG)
   const ChevronDown = React.createElement(
     'svg',
@@ -271,7 +271,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
 
   // Získanie aktuálneho času pre zobrazenie dátumu
   const now = new Date();
-  const registrationStartDateObj = formData.registrationStartDate ? new Date(formData.registrationStartDate) : null;
+  // Používame prop registrationStartDate, nie formData.registrationStartDate
+  const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null; 
 
   return React.createElement(
     'div',
