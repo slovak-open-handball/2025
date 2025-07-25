@@ -201,7 +201,7 @@ function App() {
 
   const closeNotification = () => setNotificationMessage('');
 
-  // Načítanie stavu registrácie z Firestore
+  // Načítanie stavu registrácie z Firestore na základe dátumu a času
   React.useEffect(() => {
     const fetchRegistrationStatus = async () => {
       if (!db || !__app_id) {
@@ -209,14 +209,32 @@ function App() {
         return;
       }
       try {
-        // Cesta k dokumentu, kde je uložený stav registrácie
         const registrationDocRef = db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('tournamentSettings').doc('registration');
         const docSnap = await registrationDocRef.get();
 
         if (docSnap.exists) {
           const data = docSnap.data();
-          setIsRegistrationOpen(data.isOpen === true); // Predpokladáme pole 'isOpen' typu boolean
-          console.log("Stav registrácie načítaný:", data.isOpen);
+          const startDate = data.registrationStartDate ? new Date(data.registrationStartDate.toDate()) : null; // Konvertovať Timestamp na Date
+          const endDate = data.registrationEndDate ? new Date(data.registrationEndDate.toDate()) : null; // Konvertovať Timestamp na Date
+          const now = new Date();
+
+          let open = false;
+          if (startDate && endDate) {
+            open = now >= startDate && now <= endDate;
+          } else if (startDate && !endDate) {
+            open = now >= startDate;
+          } else if (!startDate && endDate) {
+            open = now <= endDate;
+          } else {
+            // Ak nie sú definované ani startDate ani endDate, predpokladáme, že je otvorená
+            open = true;
+          }
+
+          setIsRegistrationOpen(open);
+          console.log("Stav registrácie načítaný na základe dátumov:", open);
+          if (!open) {
+            setNotificationMessage('Registrácia je momentálne uzavretá.');
+          }
         } else {
           // Ak dokument neexistuje, predpokladáme, že registrácia je otvorená (alebo predvolený stav)
           setIsRegistrationOpen(true);
