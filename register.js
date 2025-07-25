@@ -2,9 +2,8 @@
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
-// GOOGLE_APPS_SCRIPT_URL a RECAPTCHA_SITE_KEY už nie sú priamo používané pre registráciu/reCAPTCHA overenie v tomto súbore.
-// reCAPTCHA_SITE_KEY zostáva, ak by sa reCAPTCHA token generoval na kliente, ale overenie sa už nedeje cez Apps Script.
-const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Zostáva, ak by sa reCAPTCHA token generoval na kliente
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Predpokladáme, že táto URL je správna pre overenie reCAPTCHA
 
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
@@ -105,7 +104,7 @@ function App() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
-  // Nový stav pre reCAPTCHA pripravenosť (reCAPTCHA ostáva na kliente, ale overenie sa už nedeje cez Apps Script)
+  // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
   const countdownIntervalRef = React.useRef(null);
@@ -264,7 +263,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Effect pre kontrolu pripravenosti reCAPTCHA (už sa nevyužíva pre server-side overenie)
+  // Effect pre kontrolu pripravenosti reCAPTCHA
   React.useEffect(() => {
     const checkRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.ready) {
@@ -304,13 +303,30 @@ function App() {
     setUserRole(e.target.value);
   };
 
+  // Pomocná funkcia pre získanie reCAPTCHA tokenu (prevzatá z admin-register.js)
+  const getRecaptchaToken = async (action) => {
+    if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
+      setNotificationMessage("reCAPTCHA API nie je načítané alebo pripravené.");
+      setShowNotification(true);
+      return null;
+    }
+    try {
+      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
+      return token;
+    } catch (e) {
+      console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
+      setNotificationMessage(`Chyba reCAPTCHA: ${e.message}`);
+      setShowNotification(true);
+      return null;
+    }
+  };
+
   const handleNext = async (e) => {
     e.preventDefault();
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
 
-    // reCAPTCHA už nie je overované na serveri cez Apps Script, len sa kontroluje pripravenosť klienta
     if (!isRecaptchaReady) {
       setNotificationMessage('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.');
       setShowNotification(true);
@@ -333,9 +349,37 @@ function App() {
       return;
     }
 
-    // Ak prejdú validácie na strane klienta, prejdeme na ďalšiu stránku
-    setPage(2);
-    setLoading(false);
+    // Prechod na ďalšiu stránku po overení reCAPTCHA (v no-cors režime, len pre prechod)
+    try {
+      const recaptchaToken = await getRecaptchaToken('page_transition'); // Akcia pre prechod stránky
+      if (!recaptchaToken) {
+        setLoading(false);
+        return; // Zastav, ak token nebol získaný
+      }
+
+      // Odoslanie tokenu na Apps Script pre overenie (v no-cors režime)
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'verifyRecaptcha', // Akcia pre Apps Script
+          recaptchaToken: recaptchaToken,
+        }),
+      });
+      console.log("Požiadavka na overenie reCAPTCHA pre prechod stránky odoslaná (no-cors režim).");
+      // V režime no-cors nemôžeme priamo čítať odpoveď, takže predpokladáme úspech pre prechod
+      setPage(2);
+
+    } catch (error) {
+      console.error('Chyba pri overovaní reCAPTCHA pre prechod stránky:', error);
+      setNotificationMessage('Chyba pri overovaní reCAPTCHA. Skúste to prosím neskôr.');
+      setShowNotification(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrev = () => {
@@ -394,6 +438,36 @@ function App() {
         setLoading(false);
         return;
       }
+
+      // Získanie reCAPTCHA tokenu pre finálnu registráciu
+      const recaptchaToken = await getRecaptchaToken('register_user'); // Akcia pre registráciu používateľa
+      if (!recaptchaToken) {
+        setLoading(false);
+        return; // Zastav, ak token nebol získaný
+      }
+
+      // Overenie reCAPTCHA tokenu na serveri (Google Apps Script)
+      const recaptchaVerifyResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors', // Používame 'cors' na čítanie odpovede zo servera
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'verifyRecaptcha', // Akcia pre Apps Script
+          recaptchaToken: recaptchaToken,
+        }),
+      });
+
+      const recaptchaVerifyResult = await recaptchaVerifyResponse.json();
+
+      if (!recaptchaVerifyResult.success) {
+        setNotificationMessage(recaptchaVerifyResult.message || 'Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.');
+        setShowNotification(true);
+        setLoading(false);
+        return;
+      }
+      console.log("reCAPTCHA overenie úspešné.");
 
       // 1. Vytvorenie používateľa vo Firebase Authentication
       const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
