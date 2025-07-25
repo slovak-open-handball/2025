@@ -288,11 +288,9 @@ function App() {
       // Pridáme passwordLastChanged k updateProfile, aby sa zaznamenal čas zmeny hesla
       await userCredential.user.updateProfile({ 
           displayName: `${firstName} ${lastName}`,
-          // passwordLastChanged sa nastaví vo Firestore dokumente, nie tu.
-          // Ak by sme ho sem dali, museli by sme ho konvertovať na string alebo použiť špeciálny typ.
-          // Pre konzistentnosť s Firestore Timestamp ho nastavíme len tam.
       });
 
+      // ZMENA: Nastavenie role na 'admin' a approved na 'false' priamo pri prvom zápise
       const userDataToSave = {
         uid: userCredential.user.uid,
         email: email,
@@ -300,8 +298,8 @@ function App() {
         lastName: lastName,
         contactPhoneNumber: contactPhoneNumber, // Will be empty for admin register, but kept for schema consistency
         displayName: `${firstName} ${lastName}`,
-        role: 'user', // Initially set as user, then updated to admin:false
-        approved: true, // Initially true, then updated to false for admin
+        role: 'admin', // Priamo nastavené ako admin
+        approved: false, // Priamo nastavené ako neschválený admin
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true,
         passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Pridané pre sledovanie zmeny hesla
@@ -311,7 +309,15 @@ function App() {
 
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
-        console.log(`Firestore: Používateľ ${email} s počiatočnou rolou 'user' a schválením 'true' bol uložený.`);
+        console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
+
+        // ZMENA: Odstránená redundantná update operácia, pretože rola a schválenie sú nastavené priamo v 'set'
+        // await db.collection('users').doc(userCredential.user.uid).update({
+        //   role: 'admin',
+        //   approved: false
+        // });
+        // console.log(`Firestore: rola používateľa ${email} bola aktualizovaná na 'admin' a schválené na 'false'.`);
+
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -343,15 +349,6 @@ function App() {
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu admina cez Apps Script (chyba fetch):", emailError);
         }
-
-        // Update role to admin and approved to false for admin registrations
-        // Toto by sa malo vykonať AŽ PO úspešnom odoslaní všetkých dát a e-mailu, ak je to možné.
-        // Ak sa e-mail neodosiela, môže to byť problém s oprávneniami Apps Scriptu.
-        await db.collection('users').doc(userCredential.user.uid).update({
-          role: 'admin',
-          approved: false
-        });
-        console.log(`Firestore: rola používateľa ${email} bola aktualizovaná na 'admin' a schválené na 'false'.`);
 
         // --- Logika pre ukladanie notifikácie pre administrátorov ---
         try {
