@@ -308,12 +308,15 @@ function NotificationsApp() {
   React.useEffect(() => {
     let unsubscribeNotifications;
 
+    // Bezpečný prístup k __app_id
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
       console.log("NotificationsApp: Prihlásený používateľ je schválený administrátor. Načítavam notifikácie.");
       setLoading(true);
       try {
         // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
-        unsubscribeNotifications = db.collection('artifacts').doc('default-app-id').collection('public').doc('data').collection('adminNotifications')
+        unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
           .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
           // ODSTRÁNENÁ podmienka .where('read', '==', false)
           .onSnapshot(snapshot => {
