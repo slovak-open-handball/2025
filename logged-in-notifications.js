@@ -312,7 +312,7 @@ function NotificationsApp() {
       setLoading(true);
       try {
         // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
-        unsubscribeNotifications = db.collection('artifacts').doc('default-app-id').collection('public').doc('data').collection('adminNotifications')
+        unsubscribeNotifications = db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications')
           .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
           .onSnapshot(snapshot => {
             const fetchedNotifications = [];
