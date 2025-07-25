@@ -1,10 +1,10 @@
 // register.js
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
 
-// Global application ID a Firebase konfigurácia (mali by byť konzistentné naprieč všetkými React aplikáciami)
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
-const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4t0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Updated URL for consistency, assuming this is the latest.
+// GOOGLE_APPS_SCRIPT_URL a RECAPTCHA_SITE_KEY už nie sú priamo používané pre registráciu/reCAPTCHA overenie v tomto súbore.
+// reCAPTCHA_SITE_KEY zostáva, ak by sa reCAPTCHA token generoval na kliente, ale overenie sa už nedeje cez Apps Script.
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Zostáva, ak by sa reCAPTCHA token generoval na kliente
 
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
@@ -85,7 +85,7 @@ function App() {
       icDph: '',
     }
   });
-  const [userRole, setUserRole] = React.useState('user');
+  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola, ale už nie je voliteľná vo formulári
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
@@ -105,7 +105,7 @@ function App() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
-  // Nový stav pre reCAPTCHA pripravenosť
+  // Nový stav pre reCAPTCHA pripravenosť (reCAPTCHA ostáva na kliente, ale overenie sa už nedeje cez Apps Script)
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
   const countdownIntervalRef = React.useRef(null);
@@ -149,6 +149,7 @@ function App() {
   }, [registrationStartDate]);
 
 
+  // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
     try {
       if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.auth === 'undefined') {
@@ -194,6 +195,7 @@ function App() {
     }
   }, []);
 
+  // Načítanie a počúvanie stavu registrácie z Firestore
   React.useEffect(() => {
     const fetchSettings = async () => {
       if (!db || !isAuthReady) {
@@ -231,6 +233,7 @@ function App() {
     fetchSettings();
   }, [db, isAuthReady]);
 
+  // Effect pre odpočet
   React.useEffect(() => {
     let timer;
     const updateCountdown = () => {
@@ -252,6 +255,7 @@ function App() {
     return () => clearInterval(timer);
   }, [registrationStartDate, calculateTimeLeft]);
 
+  // Nový useEffect pre periodickú aktualizáciu isRegistrationOpen
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
@@ -260,6 +264,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Effect pre kontrolu pripravenosti reCAPTCHA (už sa nevyužíva pre server-side overenie)
   React.useEffect(() => {
     const checkRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.ready) {
@@ -305,6 +310,7 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
 
+    // reCAPTCHA už nie je overované na serveri cez Apps Script, len sa kontroluje pripravenosť klienta
     if (!isRecaptchaReady) {
       setNotificationMessage('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.');
       setShowNotification(true);
@@ -327,32 +333,9 @@ function App() {
       return;
     }
 
-    try {
-      const recaptchaToken = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit' });
-
-      // Pre reCAPTCHA overenie ponechávame no-cors, aby sme predišli blokovaniu požiadavky
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'verifyRecaptcha',
-          recaptchaToken: recaptchaToken,
-        }),
-      });
-
-      console.log("Požiadavka na overenie reCAPTCHA odoslaná (no-cors režim).");
-      setPage(2);
-
-    } catch (error) {
-      console.error('Chyba pri overovaní reCAPTCHA (fetch zlyhal):', error);
-      setNotificationMessage('Chyba pri overovaní reCAPTCHA. Skúste to prosím neskôr.');
-      setShowNotification(true);
-    } finally {
-      setLoading(false);
-    }
+    // Ak prejdú validácie na strane klienta, prejdeme na ďalšiu stránku
+    setPage(2);
+    setLoading(false);
   };
 
   const handlePrev = () => {
@@ -367,6 +350,7 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
 
+    // Validácia fakturačných údajov
     const { clubName, ico, dic, icDph } = formData.billing;
 
     if (!clubName.trim()) {
@@ -404,55 +388,75 @@ function App() {
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
     try {
-      // *** ZMENA TU: Používame mode: 'cors' pre hlavné odoslanie formulára pre ladenie ***
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'cors', // Zmenené na 'cors' pre získanie chybových správ z Apps Scriptu
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'registerUser',
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          contactPhoneNumber: fullPhoneNumber,
-          password: formData.password,
-          country: formData.country,
-          city: formData.city,
-          postalCode: formData.postalCode,
-          street: formData.street,
-          houseNumber: formData.houseNumber,
-          billing: formData.billing,
-          registrationDate: formatToDatetimeLocal(new Date()),
-        }),
+      if (!auth || !db) {
+        setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
+        setShowNotification(true);
+        setLoading(false);
+        return;
+      }
+
+      // 1. Vytvorenie používateľa vo Firebase Authentication
+      const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
+      const user = userCredential.user;
+
+      // 2. Uloženie používateľských údajov do Firestore
+      await db.collection('users').doc(user.uid).set({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        contactPhoneNumber: fullPhoneNumber,
+        country: formData.country,
+        city: formData.city,
+        postalCode: formData.postalCode,
+        street: formData.street,
+        houseNumber: formData.houseNumber,
+        billing: formData.billing,
+        role: userRole, // Predvolená rola 'user'
+        registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
       });
 
-      const result = await response.json(); // Pokúsime sa prečítať odpoveď
+      // Ak je potrebné odoslať overovací e-mail (voliteľné, ale odporúčané pre bezpečnosť)
+      // await user.sendEmailVerification();
+      // console.log("Overovací e-mail odoslaný.");
 
-      console.log('Odpoveď z Apps Scriptu:', result); // Logujeme odpoveď pre ladenie
+      setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
+      setShowNotification(true);
 
-      if (result.success) {
-        setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
-        setShowNotification(true);
-        setFormData({
-          firstName: '', lastName: '', email: '', contactPhoneNumber: '',
-          password: '', confirmPassword: '', houseNumber: '', country: '',
-          city: '', postalCode: '', street: '',
-          billing: { clubName: '', ico: '', dic: '', icDph: '' }
-        });
-        setUserRole('user');
-        setPage(1);
-        setTimeout(() => {
-          window.location.href = 'login.html';
-        }, 3000);
-      } else {
-        setNotificationMessage(result.message || 'Registrácia zlyhala. Skúste to prosím znova.');
-        setShowNotification(true);
-      }
+      // Vyčistiť formulár
+      setFormData({
+        firstName: '', lastName: '', email: '', contactPhoneNumber: '',
+        password: '', confirmPassword: '', houseNumber: '', country: '',
+        city: '', postalCode: '', street: '',
+        billing: { clubName: '', ico: '', dic: '', icDph: '' }
+      });
+      setPage(1); // Návrat na stránku 1
+
+      // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 3000);
+
     } catch (error) {
-      console.error('Chyba pri registrácii (fetch zlyhal alebo JSON chyba):', error);
-      setNotificationMessage('Chyba pri registrácii. Skúste to prosím neskôr.');
+      console.error('Chyba pri registrácii do Firebase:', error);
+      let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
+
+      // Konkrétnejšie chybové správy z Firebase Auth
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'Zadaná e-mailová adresa je už používaná.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Neplatný formát e-mailovej adresy.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
+          break;
+        default:
+          // Pre ostatné chyby zobrazíme všeobecnú správu
+          errorMessage = error.message || errorMessage;
+          break;
+      }
+      setNotificationMessage(errorMessage);
       setShowNotification(true);
     } finally {
       setLoading(false);
