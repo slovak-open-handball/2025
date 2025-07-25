@@ -34,8 +34,28 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px;
+            animation: fadeIn 0.3s ease-out;
+            max-width: 500px; /* Pôvodná hodnota, ponechaná pre konzistenciu s vaším CSS */
             width: 90%;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Štýly pre scrollbar v CountryCodeModal */
+        .max-h-80::-webkit-scrollbar {
+            width: 8px;
+        }
+        .max-h-80::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .max-h-80::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .max-h-80::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
@@ -52,8 +72,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- React a ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- reCAPTCHA v3 -->
@@ -77,9 +97,7 @@
 
     <!-- Vlastné skripty -->
     <script src="header.js"></script>
-    <!-- register.js musí byť typu text/babel, aby sa preložil JSX -->
-    <script type="text/babel" src="register.js"></script>
-
+    <!-- Načítanie externých JS súborov dynamicky -->
     <script type="text/javascript">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -96,20 +114,45 @@
             }
         }
 
+        // Funkcia na načítanie externých JS súborov dynamicky
+        async function loadScript(src, type = 'text/javascript') {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.type = type; // Nastaví typ skriptu (napr. text/babel)
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        }
+
         // Spustí sa po načítaní DOM a všetkých skriptov
-        window.onload = function() {
+        window.onload = async function() {
             // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
+            await loadHeader().then(() => {
                 // Po načítaní hlavičky inicializovať jej logiku
                 if (typeof initializeHeaderLogic === 'function') {
                     initializeHeaderLogic();
                 } else {
                     console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
                 }
-                // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
             }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
+                console.error("Chyba pri inicializácii stránky (načítanie hlavičky):", error);
             });
+
+            try {
+                // Načítať komponenty stránok formulára (musia byť načítané pred hlavným register.js)
+                await loadScript('register-page1.js', 'text/babel');
+                await loadScript('register-page2.js', 'text/babel');
+                // Načítať hlavný register.js, ktorý závisí od Page1Form a Page2Form
+                await loadScript('register.js', 'text/babel');
+
+                // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
+                // root.render(React.createElement(App, null)); - Toto sa už volá v register.js
+            } catch (error) {
+                console.error("Chyba pri načítaní skriptov registračného formulára:", error);
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie.</div>';
+            }
         };
     </script>
 </body>
