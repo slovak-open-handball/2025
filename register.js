@@ -507,12 +507,9 @@ function App() {
       setShowNotification(true);
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
-      try {
-        await auth.signOut();
-        console.log("Používateľ úspešne odhlásený po registrácii.");
-      } catch (signOutError) {
-        console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
-      }
+      // ODSTRÁNENÉ: await auth.signOut();
+      // console.log("Používateľ úspešne odhlásený po registrácii.");
+
 
       // Vyčistiť formulár
       setFormData({
