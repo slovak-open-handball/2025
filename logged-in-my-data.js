@@ -399,6 +399,66 @@ function MyDataApp() {
                 React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                 ` ${userProfileData.email || user.email || ''}`
               )
+            ),
+            // NOVINKA: Podmienené zobrazenie fakturačnej adresy len pre rolu 'user'
+            userProfileData.role === 'user' && userProfileData.billing && React.createElement(
+              React.Fragment,
+              null,
+              React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Fakturačné údaje'),
+              React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                userProfileData.billing.companyName && React.createElement(
+                  'div',
+                  null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
+                    ` ${userProfileData.billing.companyName}`
+                  )
+                ),
+                (userProfileData.billing.street || userProfileData.billing.city || userProfileData.billing.zipCode || userProfileData.billing.country) && React.createElement(
+                  'div',
+                  null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                    ` ${userProfileData.billing.street || ''}, ${userProfileData.billing.zipCode || ''} ${userProfileData.billing.city || ''}, ${userProfileData.billing.country || ''}`
+                  )
+                ),
+                userProfileData.billing.ico && React.createElement(
+                  'div',
+                  null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'IČO:'),
+                    ` ${userProfileData.billing.ico}`
+                  )
+                ),
+                userProfileData.billing.dic && React.createElement(
+                  'div',
+                  null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
+                    ` ${userProfileData.billing.dic}`
+                  )
+                ),
+                userProfileData.billing.icDph && React.createElement(
+                  'div',
+                  null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
+                    ` ${userProfileData.billing.icDph}`
+                  )
+                )
+              )
             )
           ),
         )
