@@ -73,32 +73,29 @@ function App() {
     contactPhoneNumber: '',
     password: '',
     confirmPassword: '',
-    // Removed birthDate, gender, role from top-level formData
-    // Added new fields for billing and address
-    houseNumber: '', // New field for address
-    country: '', // Moved to top-level for address, but also used in billing address
-    city: '', // Moved to top-level for address, but also used in billing address
-    postalCode: '', // Moved to top-level for address, but also used in billing address
-    street: '', // Moved to top-level for address, but also used in billing address
-    billing: { // New nested object for billing details
+    houseNumber: '',
+    country: '',
+    city: '',
+    postalCode: '',
+    street: '',
+    billing: {
       clubName: '',
       ico: '',
       dic: '',
       icDph: '',
     }
   });
-  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola (removed from form, but kept for data structure if needed elsewhere)
+  const [userRole, setUserRole] = React.useState('user');
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
-  const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Predvolené pre Slovensko
+  const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
 
   // Firebase stav
   const [db, setDb] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Zabezpečenie, že autentifikácia je pripravená pred operáciami Firestore
-  // Nové stavy pre dáta registrácie z Firestore
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
@@ -111,40 +108,36 @@ function App() {
   // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
-  const countdownIntervalRef = React.useRef(null); // Ref pre uloženie ID intervalu odpočtu
+  const countdownIntervalRef = React.useRef(null);
 
-  // Výpočet stavu registrácie ako memoizovaná hodnota (rovnako ako v index.js)
   const isRegistrationOpen = React.useMemo(() => {
-    if (!settingsLoaded) return false; // Čakajte, kým sa načítajú nastavenia
+    if (!settingsLoaded) return false;
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
 
-    // Kontrola, či sú dátumy platné pred porovnaním
     const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
     const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
 
     return (
-      (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladajte, že registrácia začala
-      (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladajte, že registrácia neskončila
+      (isRegStartValid ? now >= regStart : true) &&
+      (isRegEndValid ? now <= regEnd : true)
     );
   }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
 
 
-  // Funkcia na výpočet zostávajúceho času pre odpočet (rovnako ako v index.js)
   const calculateTimeLeft = React.useCallback(() => {
     const now = new Date();
     const startDate = registrationStartDate ? new Date(registrationStartDate) : null;
 
-    // Ak startDate nie je platný dátum, alebo je už v minulosti, odpočet nie je potrebný
     if (!startDate || isNaN(startDate) || now >= startDate) {
-        return null; 
+        return null;
     }
 
-    const difference = startDate.getTime() - now.getTime(); // Rozdiel v milisekundách
+    const difference = startDate.getTime() - now.getTime();
 
     if (difference <= 0) {
-        return null; // Čas uplynul
+        return null;
     }
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
@@ -156,10 +149,8 @@ function App() {
   }, [registrationStartDate]);
 
 
-  // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
     try {
-      // Skontrolujte, či je Firebase SDK načítané a dostupné
       if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.auth === 'undefined') {
         console.error("register.js: Firebase SDK nie je načítané alebo nie sú dostupné všetky moduly. Uistite sa, že sú script tagy Firebase v HTML.");
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
@@ -169,37 +160,30 @@ function App() {
 
       let firebaseAppInstance;
       if (firebase.apps.length === 0) {
-          // Ak žiadna Firebase aplikácia nebola inicializovaná, inicializujte ju.
           console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
           const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
           firebaseAppInstance = firebase.initializeApp(firebaseConfig);
       } else {
-          // Ak už existuje aspoň jedna Firebase aplikácia, použite predvolenú.
           firebaseAppInstance = firebase.app();
           console.log("register.js: Používam existujúcu Firebase App inštanciu.");
       }
-      
-      const firestoreDb = firebase.firestore(firebaseAppInstance); 
-      const firebaseAuth = firebase.auth(firebaseAppInstance);     
+
+      const firestoreDb = firebase.firestore(firebaseAppInstance);
+      const firebaseAuth = firebase.auth(firebaseAppInstance);
 
       setDb(firestoreDb);
       setAuth(firebaseAuth);
 
-      // Používame firebaseAuth.onAuthStateChanged na sledovanie stavu autentifikácie.
-      // NEPOKÚŠAME sa o signInAnonymously() tu, ak je to obmedzené pravidlami.
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        // Ak je __initial_auth_token k dispozícii a nie je prihlásený žiadny používateľ, pokúsime sa prihlásiť.
         if (!currentUser && typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) {
           try {
             await firebaseAuth.signInWithCustomToken(__initial_auth_token);
             console.log("register.js: Úspešné prihlásenie s vlastným tokenom.");
           } catch (error) {
             console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
-            // Ak prihlásenie s vlastným tokenom zlyhá, nebudeme sa pokúšať o anonymné prihlásenie,
-            // pretože to môže byť obmedzené pravidlami.
           }
         }
-        setIsAuthReady(true); // Stav autentifikácie je teraz známy (buď prihlásený, alebo null)
+        setIsAuthReady(true);
       });
 
       return () => unsubscribe();
@@ -208,13 +192,12 @@ function App() {
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
     }
-  }, []); // Spustí sa raz pri pripojení komponentu
+  }, []);
 
-  // Načítanie a počúvanie stavu registrácie z Firestore (rovnako ako v index.js)
   React.useEffect(() => {
     const fetchSettings = async () => {
       if (!db || !isAuthReady) {
-        return; // Čakajte, kým sa DB a autentifikácia inicializujú
+        return;
       }
       try {
           const settingsDocRef = db.collection('settings').doc('registration');
@@ -248,7 +231,6 @@ function App() {
     fetchSettings();
   }, [db, isAuthReady]);
 
-  // Effect pre odpočet (rovnako ako v index.js)
   React.useEffect(() => {
     let timer;
     const updateCountdown = () => {
@@ -256,7 +238,7 @@ function App() {
         setCountdown(timeLeft);
         if (timeLeft === null) {
             clearInterval(timer);
-            setForceRegistrationCheck(prev => prev + 1); // Vynúti prepočet isRegistrationOpen
+            setForceRegistrationCheck(prev => prev + 1);
         }
     };
 
@@ -270,16 +252,14 @@ function App() {
     return () => clearInterval(timer);
   }, [registrationStartDate, calculateTimeLeft]);
 
-  // Nový useEffect pre periodickú aktualizáciu isRegistrationOpen (rovnako ako v index.js)
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); // Aktualizácia každú minútu
+    }, 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Effect pre kontrolu pripravenosti reCAPTCHA
   React.useEffect(() => {
     const checkRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.ready) {
@@ -288,7 +268,6 @@ function App() {
           console.log("register.js: reCAPTCHA je pripravená.");
         });
       } else {
-        // Ak grecaptcha ešte nie je k dispozícii, skúste to znova po krátkej pauze
         setTimeout(checkRecaptcha, 100);
       }
     };
@@ -303,7 +282,6 @@ function App() {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    // Special handling for nested billing object
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
       setFormData(prev => ({
         ...prev,
@@ -334,7 +312,6 @@ function App() {
       return;
     }
 
-    // Validácia na strane klienta pre stránku 1
     if (formData.password !== formData.confirmPassword) {
       setNotificationMessage('Heslá sa nezhodujú.');
       setShowNotification(true);
@@ -350,15 +327,13 @@ function App() {
       return;
     }
 
-    // Overenie reCAPTCHA
     try {
       const recaptchaToken = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit' });
-      // Pre reCAPTCHA v3 nie je potrebné volať grecaptcha.reset()
 
-      // *** ZMENA TU: Používame mode: 'no-cors' pre reCAPTCHA overenie ***
+      // Pre reCAPTCHA overenie ponechávame no-cors, aby sme predišli blokovaniu požiadavky
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // <--- KĽÚČOVÁ ZMENA
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -368,13 +343,8 @@ function App() {
         }),
       });
 
-      // Keďže používame 'no-cors', nemôžeme priamo čítať odpoveď (response.json()).
-      // Musíme sa spoľahnúť na to, že Apps Script spracuje overenie.
-      // Pre účely testovania a prechodu na ďalšiu stránku budeme predpokladať úspech,
-      // ak nedošlo k chybe fetch. V produkčnom prostredí by ste potrebovali iný mechanizmus
-      // na potvrdenie overenia (napr. kontrola na serveri pri finálnej registrácii).
       console.log("Požiadavka na overenie reCAPTCHA odoslaná (no-cors režim).");
-      setPage(2); // Predpokladáme úspech a prejdeme na ďalšiu stránku
+      setPage(2);
 
     } catch (error) {
       console.error('Chyba pri overovaní reCAPTCHA (fetch zlyhal):', error);
@@ -397,10 +367,8 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
 
-    // Validácia fakturačných údajov
     const { clubName, ico, dic, icDph } = formData.billing;
 
-    // Oficiálny názov klubu je povinný
     if (!clubName.trim()) {
         setNotificationMessage('Oficiálny názov klubu je povinný.');
         setShowNotification(true);
@@ -408,7 +376,6 @@ function App() {
         return;
     }
 
-    // Povinné aspoň jedno z IČO, DIČ, IČ DPH
     if (!ico && !dic && !icDph) {
       setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
@@ -416,7 +383,6 @@ function App() {
       return;
     }
 
-    // Validácia formátu IČ DPH
     if (icDph) {
       const icDphRegex = /^[A-Z]{2}[0-9]+$/;
       if (!icDphRegex.test(icDph)) {
@@ -427,8 +393,7 @@ function App() {
       }
     }
 
-    // Validácia PSČ
-    const postalCodeClean = formData.postalCode.replace(/\s/g, ''); // Odstráň medzery pre validáciu
+    const postalCodeClean = formData.postalCode.replace(/\s/g, '');
     if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
       setNotificationMessage('PSČ musí mať presne 5 číslic.');
       setShowNotification(true);
@@ -436,14 +401,13 @@ function App() {
       return;
     }
 
-
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
     try {
-      // *** ZMENA TU: Používame mode: 'no-cors' pre hlavné odoslanie formulára ***
+      // *** ZMENA TU: Používame mode: 'cors' pre hlavné odoslanie formulára pre ladenie ***
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // <--- KĽÚČOVÁ ZMENA
+        mode: 'cors', // Zmenené na 'cors' pre získanie chybových správ z Apps Scriptu
         headers: {
           'Content-Type': 'application/json',
         },
@@ -454,52 +418,40 @@ function App() {
           email: formData.email,
           contactPhoneNumber: fullPhoneNumber,
           password: formData.password,
-          // Removed birthDate, gender, role from here as they are no longer in form
           country: formData.country,
           city: formData.city,
           postalCode: formData.postalCode,
           street: formData.street,
-          houseNumber: formData.houseNumber, // New field
-          billing: formData.billing, // Pass the entire billing object
+          houseNumber: formData.houseNumber,
+          billing: formData.billing,
           registrationDate: formatToDatetimeLocal(new Date()),
         }),
       });
 
-      // Keďže používame 'no-cors', nemôžeme priamo čítať odpoveď (response.json()).
-      // Musíme sa spoľahnúť na to, že Apps Script spracuje registráciu.
-      console.log("Požiadavka na registráciu používateľa odoslaná (no-cors režim).");
-      setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
-      setShowNotification(true);
+      const result = await response.json(); // Pokúsime sa prečítať odpoveď
 
-      // Vyčistiť formulár
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        contactPhoneNumber: '',
-        password: '',
-        confirmPassword: '',
-        houseNumber: '', 
-        country: '', 
-        city: '', 
-        postalCode: '', 
-        street: '', 
-        billing: { 
-          clubName: '',
-          ico: '',
-          dic: '',
-          icDph: '',
-        }
-      });
-      setUserRole('user'); // Keep default role, not from form
-      setPage(1); // Návrat na stránku 1
-      // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 3000);
-      
+      console.log('Odpoveď z Apps Scriptu:', result); // Logujeme odpoveď pre ladenie
+
+      if (result.success) {
+        setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
+        setShowNotification(true);
+        setFormData({
+          firstName: '', lastName: '', email: '', contactPhoneNumber: '',
+          password: '', confirmPassword: '', houseNumber: '', country: '',
+          city: '', postalCode: '', street: '',
+          billing: { clubName: '', ico: '', dic: '', icDph: '' }
+        });
+        setUserRole('user');
+        setPage(1);
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 3000);
+      } else {
+        setNotificationMessage(result.message || 'Registrácia zlyhala. Skúste to prosím znova.');
+        setShowNotification(true);
+      }
     } catch (error) {
-      console.error('Chyba pri registrácii (fetch zlyhal):', error);
+      console.error('Chyba pri registrácii (fetch zlyhal alebo JSON chyba):', error);
       setNotificationMessage('Chyba pri registrácii. Skúste to prosím neskôr.');
       setShowNotification(true);
     } finally {
@@ -511,7 +463,6 @@ function App() {
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
-    // Zobraz loading, ak sa nastavenia ešte nenačítali alebo autentifikácia nie je pripravená
     !settingsLoaded || !isAuthReady ? (
       React.createElement(
         'div',
@@ -536,10 +487,10 @@ function App() {
           setSelectedCountryDialCode: setSelectedCountryDialCode,
           selectedCountryDialCode: selectedCountryDialCode,
           NotificationModal: NotificationModal,
-          isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
-          countdownMessage: countdown, // Odovzdanie správy odpočtu
-          registrationStartDate: registrationStartDate, // Odovzdanie registrationStartDate
-          isRecaptchaReady: isRecaptchaReady, // Odovzdanie stavu pripravenosti reCAPTCHA
+          isRegistrationOpen: isRegistrationOpen,
+          countdownMessage: countdown,
+          registrationStartDate: registrationStartDate,
+          isRecaptchaReady: isRecaptchaReady,
         }) :
         React.createElement(Page2Form, {
           formData: formData,
@@ -549,15 +500,13 @@ function App() {
           loading: loading,
           notificationMessage: notificationMessage,
           closeNotification: closeNotification,
-          userRole: userRole, // Still passed, but not used in Page2Form for selection
-          handleRoleChange: handleRoleChange, // Still passed, but not used in Page2Form for selection
+          userRole: userRole,
+          handleRoleChange: handleRoleChange,
           NotificationModal: NotificationModal,
         })
     )
   );
 }
 
-// Zabezpečenie vykreslenia komponentu App
-// Používame ReactDOM.createRoot pre React 18
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App, null));
