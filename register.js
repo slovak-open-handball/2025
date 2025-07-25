@@ -356,11 +356,13 @@ function NotificationModal({ message, onClose }) {
 // CountryCodeModal Component for selecting phone dial code
 function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCodes, disabled }) {
   const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
+  const [searchTerm, setSearchTerm] = React.useState(''); // Nový stav pre vyhľadávací termín
 
   React.useEffect(() => {
     // Reset tempSelectedCode when modal opens or selectedCode changes externally
     if (isOpen) {
       setTempSelectedCode(selectedCode);
+      setSearchTerm(''); // Reset search term when modal opens
     }
   }, [isOpen, selectedCode]);
 
@@ -377,6 +379,12 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCode
     onClose();
   };
 
+  // Filtrovanie zoznamu krajín na základe vyhľadávacieho termínu
+  const filteredCountryCodes = countryCodes.filter(country =>
+    country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    country.dialCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return React.createElement(
     'div',
     { 
@@ -391,9 +399,20 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCode
       }, 
       React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, 'Vyberte predvoľbu krajiny'),
       React.createElement(
+        'input',
+        {
+          type: 'text',
+          placeholder: 'Vyhľadať podľa kódu alebo predvoľby...',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+          value: searchTerm,
+          onChange: (e) => setSearchTerm(e.target.value),
+          disabled: disabled,
+        }
+      ),
+      React.createElement(
         'div',
         { className: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-2' }, // Mriežka pre tlačidlá, s max výškou a scrollom
-        countryCodes.map((country) =>
+        filteredCountryCodes.map((country) =>
           React.createElement(
             'button',
             {
