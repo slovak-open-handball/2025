@@ -9,6 +9,7 @@ let dbHeader;
 let unsubscribeAdminNotificationsListener = null; // Pre uloženie funkcie na zrušenie odberu notifikácií
 let initialNotificationsLoadComplete = false; // Flag pre odlíšenie počiatočného načítania notifikácií
 let notificationsCache = {}; // Cache na ukladanie stavu notifikácií pre detekciu zmien
+let currentUserProfileData = null; // NOVINKA: Uloží profilové dáta aktuálneho používateľa
 
 // Pomocná funkcia na generovanie hashu zo stringu
 function stringToHash(str) {
@@ -23,6 +24,12 @@ function stringToHash(str) {
 
 // Funkcia na zobrazenie push-up notifikácie
 function showPushNotification(message, notificationId) {
+    // ZMENA: Skontrolujeme nastavenie používateľa pred zobrazením notifikácie
+    if (currentUserProfileData && currentUserProfileData.displayNotifications === false) {
+        console.log("Header.js: Notifikácie sú vypnuté v nastaveniach používateľa. Nezobrazujem push-up.");
+        return;
+    }
+
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
         console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
@@ -157,65 +164,108 @@ async function initializeHeaderLogic() {
                 notificationsCache = {}; // Vyčisti cache
                 console.log("Header.js: Zrušený listener pre notifikácie admina.");
             }
+            
+            // NOVINKA: Resetovanie currentUserProfileData pri zmene používateľa
+            currentUserProfileData = null;
 
             if (currentHeaderUser) {
                 try {
-                    // Načítanie roly prihláseného používateľa
-                    const userDoc = await dbHeader.collection('users').doc(currentHeaderUser.uid).get();
-                    if (userDoc.exists) {
-                        const userData = userDoc.data();
-                        const userRole = userData.role;
-                        const userApproved = userData.approved;
+                    // Načítanie profilových dát používateľa z Firestore
+                    const userDocRef = dbHeader.collection('users').doc(currentHeaderUser.uid);
+                    userDocRef.onSnapshot(docSnapshot => { // Používame onSnapshot pre real-time aktualizácie
+                        if (docSnapshot.exists) {
+                            const userData = docSnapshot.data();
+                            currentUserProfileData = userData; // Uložíme dáta do globálnej premennej
+                            console.log("Header.js: Načítané profilové dáta používateľa:", userData);
 
-                        if (userRole === 'admin' && userApproved === true) {
-                            console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
-                            // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
-                            unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
-                                .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
-                                .where('read', '==', false) // Len neprečítané notifikácie
-                                .onSnapshot(snapshot => {
-                                    if (!initialNotificationsLoadComplete) {
-                                        // Pri prvom načítaní len naplníme cache a nastavíme flag
-                                        snapshot.docs.forEach(doc => {
-                                            notificationsCache[doc.id] = doc.data();
-                                        });
-                                        initialNotificationsLoadComplete = true;
-                                        console.log("Header.js: Počiatočné načítanie neprečítaných notifikácií pre push-up dokončené.");
-                                        return;
-                                    }
+                            // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+                            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                                console.error("Header.js: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                                console.log("Header.js: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                                authHeader.signOut();
+                                window.location.href = 'login.html';
+                                localStorage.removeItem(`passwordLastChanged_${currentHeaderUser.uid}`);
+                                return;
+                            }
 
-                                    snapshot.docChanges().forEach(async change => {
-                                        if (change.type === 'added') { // Zaujímajú nás len novo pridané neprečítané notifikácie
-                                            const notificationData = change.doc.data();
-                                            const notificationId = change.doc.id;
-                                            
-                                            console.log(`Header.js: Detekovaná nová neprečítaná notifikácia (ID: ${notificationId}).`);
-                                            console.log("Header.js: Dáta notifikácie:", notificationData);
+                            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+                            const localStorageKey = `passwordLastChanged_${currentHeaderUser.uid}`;
+                            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-                                            const message = notificationData.message;
-                                            if (message) {
-                                                showPushNotification(message, notificationId);
-                                                // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
-                                                try {
-                                                    await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
-                                                        read: true
-                                                    });
-                                                    console.log(`Header.js: Notifikácia ${notificationId} označená ako prečítaná vo Firestore.`);
-                                                } catch (updateError) {
-                                                    console.error(`Header.js: Chyba pri označovaní notifikácie ${notificationId} ako prečítanej:`, updateError);
+                            console.log(`Header.js: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+                            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                                console.log("Header.js: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                                console.log("Header.js: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                                authHeader.signOut();
+                                window.location.href = 'login.html';
+                                localStorage.removeItem(localStorageKey);
+                                return;
+                            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                                console.warn("Header.js: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                                authHeader.signOut();
+                                window.location.href = 'login.html';
+                                localStorage.removeItem(localStorageKey);
+                                return;
+                            } else {
+                                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                                console.log("Header.js: Timestampy sú rovnaké, aktualizujem localStorage.");
+                            }
+                            // --- KONIEC LOGIKY ODHLÁSENIA ---
+
+                            // Ak je používateľ admin a schválený, nastavíme listener na notifikácie
+                            if (userData.role === 'admin' && userData.approved === true) {
+                                console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
+                                // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
+                                unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
+                                    .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
+                                    .where('read', '==', false) // Len neprečítané notifikácie
+                                    .onSnapshot(snapshot => {
+                                        if (!initialNotificationsLoadComplete) {
+                                            // Pri prvom načítaní len naplníme cache a nastavíme flag
+                                            snapshot.docs.forEach(doc => {
+                                                notificationsCache[doc.id] = doc.data();
+                                            });
+                                            initialNotificationsLoadComplete = true;
+                                            console.log("Header.js: Počiatočné načítanie neprečítaných notifikácií pre push-up dokončené.");
+                                            return;
+                                        }
+
+                                        snapshot.docChanges().forEach(async change => {
+                                            if (change.type === 'added') { // Zaujímajú nás len novo pridané neprečítané notifikácie
+                                                const notificationData = change.doc.data();
+                                                const notificationId = change.doc.id;
+                                                
+                                                console.log(`Header.js: Detekovaná nová neprečítaná notifikácia (ID: ${notificationId}).`);
+                                                console.log("Header.js: Dáta notifikácie:", notificationData);
+
+                                                const message = notificationData.message;
+                                                if (message) {
+                                                    showPushNotification(message, notificationId);
+                                                    // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
+                                                    try {
+                                                        await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+                                                            read: true
+                                                        });
+                                                        console.log(`Header.js: Notifikácia ${notificationId} označená ako prečítaná vo Firestore.`);
+                                                    } catch (updateError) {
+                                                        console.error(`Header.js: Chyba pri označovaní notifikácie ${notificationId} ako prečítanej:`, updateError);
+                                                    }
                                                 }
                                             }
-                                        }
+                                        });
+                                    }, error => {
+                                        console.error("Header.js: Chyba pri počúvaní notifikácií admina:", error);
                                     });
-                                }, error => {
-                                    console.error("Header.js: Chyba pri počúvaní notifikácií admina:", error);
-                                });
+                            } else {
+                                console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na notifikácie admina nebol nastavený.");
+                            }
                         } else {
-                            console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na notifikácie admina nebol nastavený.");
+                            console.warn("Header.js: Používateľský dokument sa nenašiel pre UID:", currentHeaderUser.uid);
                         }
-                    } else {
-                        console.warn("Header.js: Používateľský dokument sa nenašiel pre UID:", currentHeaderUser.uid);
-                    }
+                    });
                 } catch (e) {
                     console.error("Header.js: Chyba pri načítaní roly používateľa alebo nastavení listenera:", e);
                 }
@@ -241,6 +291,7 @@ async function initializeHeaderLogic() {
                         notificationsCache = {};
                         console.log("Header.js: Zrušený listener pre notifikácie admina po odhlásení.");
                     }
+                    currentUserProfileData = null; // Vyčistíme profilové dáta
                     window.location.href = 'login.html'; // Presmerovanie po odhlásení
                 } catch (e) {
                     console.error("Header.js: Chyba pri odhlásení z hlavičky:", e);
