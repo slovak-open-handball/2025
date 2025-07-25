@@ -13,7 +13,7 @@ const formatToDatetimeLocal = (date) => {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -402,7 +402,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
       ),
       React.createElement(
         'div',
-        { className: 'flex justify-end space-x-4 mt-6' }, // Tlačidlá OK a Zavrieť, s mt-6
+        { className: 'flex justify-end space-x-4 mt-6' }, // Tlačidlá OK a Zatvoriť, s mt-6
         React.createElement(
           'button',
           {
@@ -410,7 +410,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
             className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
-          'Zatvoriť'
+          'Zatvoriť' // Zmenený text tlačidla
         ),
         React.createElement(
           'button',
@@ -675,7 +675,7 @@ function ChangePhoneApp() {
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("ChangePhoneApp: Chyba pri odhlásení:", e);
+      console.error("Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -781,6 +781,24 @@ function ChangePhoneApp() {
     return null;
   }
 
+  // ChevronDown icon (Lucide React equivalent - inline SVG)
+  const ChevronDown = React.createElement(
+    'svg',
+    {
+      xmlns: 'http://www.w3.org/24/04/svg',
+      width: '24',
+      height: '24',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: '2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className: 'lucide lucide-chevron-down h-5 w-5 ml-2'
+    },
+    React.createElement('path', { d: 'm6 9 6 6 6-6' })
+  );
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -821,10 +839,11 @@ function ChangePhoneApp() {
                   {
                     type: 'button',
                     onClick: () => setIsCountryCodeModalOpen(true),
-                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex-shrink-0',
+                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex-shrink-0 flex items-center', // Pridané flex items-center
                     disabled: loading,
                   },
-                  selectedCountryDialCode // Zobrazí vybranú predvoľbu
+                  selectedCountryDialCode, // Zobrazí vybranú predvoľbu
+                  ChevronDown // Pridanie ikony šípky
                 ),
                 React.createElement('input', {
                   type: 'tel', // Používame type="tel" pre telefónne čísla
