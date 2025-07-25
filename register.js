@@ -438,6 +438,7 @@ function App() {
     }
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
+    console.log("Konštruované telefónne číslo pre odoslanie:", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
       if (!auth || !db) {
@@ -522,7 +523,7 @@ function App() {
               }
             }
           };
-          console.log("Odosielanie dát do Apps Script (registračný e-mail):", payload);
+          console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -533,6 +534,8 @@ function App() {
           });
           console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
           try {
+            // V režime 'no-cors' je odpoveď 'opaque', takže text() alebo json() zlyhá.
+            // Táto časť je tu len pre konzistentnosť s admin-register.js, ale nefunguje.
             const responseData = await response.text();
             console.log("Odpoveď z Apps Script (fetch - registračný e-mail) ako text:", responseData);
           } catch (jsonError) {
