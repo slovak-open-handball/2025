@@ -434,7 +434,7 @@ function NotificationsApp() {
           'Upozornenia'
         ),
         notifications.length === 0 && !loading ? (
-            React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne nové notifikácie.')
+            React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne upozornenia.')
         ) : (
             React.createElement(
                 'div',
