@@ -11,10 +11,20 @@ let initialUsersLoadComplete = false; // Flag pre odlíšenie počiatočného na
 let usersCache = {}; // Cache na ukladanie stavu používateľov pre detekciu zmien
 
 // Funkcia na zobrazenie push-up notifikácie
-function showPushNotification(message) {
+function showPushNotification(message, notificationId) { // Pridaný notificationId pre sledovanie
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
         console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
+        return;
+    }
+
+    // Skontrolujeme, či táto notifikácia už bola zobrazená v tejto relácii
+    const lastShownTime = localStorage.getItem(`notification_shown_${notificationId}`);
+    const now = new Date().getTime();
+
+    // Ak už bola zobrazená v poslednej minúte, nezobrazuj ju znova
+    if (lastShownTime && (now - parseInt(lastShownTime, 10) < 60 * 1000)) { // 60 sekúnd
+        console.log(`Header.js: Notifikácia s ID ${notificationId} už bola nedávno zobrazená, preskakujem.`);
         return;
     }
 
@@ -24,6 +34,9 @@ function showPushNotification(message) {
     
     // Pridáme notifikáciu na začiatok oblasti (najnovšie hore)
     notificationArea.prepend(notificationDiv);
+
+    // Uložíme čas zobrazenia do lokálneho úložiska
+    localStorage.setItem(`notification_shown_${notificationId}`, now.toString());
 
     // Animácia zobrazenia
     setTimeout(() => {
@@ -201,7 +214,9 @@ async function initializeHeaderLogic() {
                                     console.log("Header.js: Generovaná správa notifikácie:", message);
 
                                     if (message) {
-                                        showPushNotification(message);
+                                        // Používame kombináciu userId a timestampu ako unikátny ID pre notifikáciu
+                                        const notificationId = `${userId}_${change.type}_${new Date().getTime()}`;
+                                        showPushNotification(message, notificationId);
                                         // *** ODSTRÁNENÉ UKLADANIE NOTIFIKÁCIE DO FIRESTORE Z TOHTO MIESTA ***
                                         // Ukladanie notifikácií bude prebiehať na stránkach, kde sa zmeny vykonávajú.
                                     }
