@@ -112,7 +112,6 @@ function App() {
       let firebaseAppInstance;
       if (firebase.apps.length === 0) {
           // Ak žiadna Firebase aplikácia nebola inicializovaná, inicializujte ju.
-          // Toto by malo pokryť prípady, keď header.js z nejakého dôvodu neinicializoval app.
           console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
           const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
           firebaseAppInstance = firebase.initializeApp(firebaseConfig);
@@ -128,33 +127,23 @@ function App() {
       setDb(firestoreDb);
       setAuth(firebaseAuth);
 
-      // Používame firebaseAuth.onAuthStateChanged
+      // Používame firebaseAuth.onAuthStateChanged na sledovanie stavu autentifikácie.
+      // NEPOKÚŠAME sa o signInAnonymously() tu, ak je to obmedzené pravidlami.
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        if (!currentUser) { // Len ak nie je prihlásený žiadny používateľ
-          if (typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) { // Ak je k dispozícii platný token
-            try {
-              await firebaseAuth.signInWithCustomToken(__initial_auth_token);
-              console.log("register.js: Úspešné prihlásenie s vlastným tokenom.");
-            } catch (error) {
-              console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
-              // Ak prihlásenie s vlastným tokenom zlyhá, skúste anonymné prihlásenie
-              try {
-                await firebaseAuth.signInAnonymously();
-                console.log("register.js: Anonymné prihlásenie po zlyhaní vlastného tokenu.");
-              } catch (anonError) {
-                console.error("register.js: Chyba pri anonymnom prihlásení po zlyhaní vlastného tokenu:", anonError);
-              }
-            }
-          } else { // Ak nie je k dispozícii žiadny platný vlastný token, prihláste sa anonymne
-            try {
-              await firebaseAuth.signInAnonymously();
-              console.log("register.js: Anonymné prihlásenie (žiaden vlastný token k dispozícii).");
-            } catch (anonError) {
-              console.error("register.js: Chyba pri anonymnom prihlásení (žiaden vlastný token):", anonError);
-            }
+        // console.log("register.js: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+        // Ak je __initial_auth_token k dispozícii a nie je prihlásený žiadny používateľ, pokúsime sa prihlásiť.
+        // Inak sa iba nastaví isAuthReady.
+        if (!currentUser && typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) {
+          try {
+            await firebaseAuth.signInWithCustomToken(__initial_auth_token);
+            console.log("register.js: Úspešné prihlásenie s vlastným tokenom.");
+          } catch (error) {
+            console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
+            // Ak prihlásenie s vlastným tokenom zlyhá, nebudeme sa pokúšať o anonymné prihlásenie,
+            // pretože to môže byť obmedzené pravidlami.
           }
         }
-        setIsAuthReady(true); // Stav autentifikácie je teraz známy
+        setIsAuthReady(true); // Stav autentifikácie je teraz známy (buď prihlásený, alebo null)
       });
 
       return () => unsubscribe();
@@ -182,9 +171,6 @@ function App() {
       console.log("register.js: Type of docSnap:", typeof docSnap);
       if (docSnap) {
         console.log("register.js: docSnap.exists property type:", typeof docSnap.exists);
-        // Poznámka: V niektorých prostrediach môže byť instanceof kontrola problematická.
-        // Pre robustnosť ju dočasne odstránime, ak sa objavujú chyby.
-        // console.log("register.js: docSnap instanceof firebase.firestore.DocumentSnapshot:", docSnap instanceof firebase.firestore.DocumentSnapshot);
       }
       // --- END DEBUGGING LOGS ---
 
@@ -201,8 +187,6 @@ function App() {
       setCountdownMessage(''); // Reset správy odpočtu
 
       // Robustnejšia kontrola, či je docSnap platný DocumentSnapshot
-      // Zjednodušené: Vynechávame kontrolu 'instanceof firebase.firestore.DocumentSnapshot'
-      // ak sa objavujú chyby, pretože to môže byť spôsobené prostredím.
       if (docSnap && typeof docSnap.exists === 'function') {
         if (docSnap.exists()) {
           const data = docSnap.data();
