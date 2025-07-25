@@ -350,47 +350,59 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
     React.createElement(
       'div',
       { 
-        className: 'modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md mx-auto', // Upravené pre šírku a centrovanie
+        className: 'modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md mx-auto', 
         ref: modalRef 
       },
       React.createElement(
         'h3',
-        { className: 'text-xl font-bold mb-4 text-center' }, // Centrovaný nadpis
+        { className: 'text-xl font-bold mb-4 text-center' }, 
         'Vyberte predvoľbu krajiny'
       ),
       React.createElement('input', {
         type: 'text',
-        placeholder: 'Hľadať podľa kódu alebo predvoľby...', // Upravený placeholder
+        placeholder: 'Hľadať podľa kódu alebo predvoľby...', 
         className: 'w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
         value: searchTerm,
         onChange: (e) => setSearchTerm(e.target.value),
       }),
       React.createElement(
         'div',
-        { className: 'grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-200 rounded-lg' }, // 3 stĺpce, gap-2
+        { className: 'grid grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2' }, // Zmenené na grid-cols-4 a odstránené border
         filteredCountries.map((country) =>
           React.createElement(
-            'button', // Changed to button
+            'button', 
             {
               key: country.code,
               className: `p-2 text-sm rounded-lg border transition-colors duration-200 
-                          ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, // Hover efekt
+                          ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, 
               onClick: () => {
                 onSelect(country.dialCode);
-                onClose();
+                // onClose(); // Nechceme zatvárať hneď po výbere, ale až po OK/Zavrieť
               },
             },
-            `${country.code} ${country.dialCode}` // Zobrazenie kódu krajiny a predvoľby bez zátvoriek
+            `${country.code} ${country.dialCode}` 
           )
         )
       ),
       React.createElement(
-        'button',
-        {
-          onClick: onClose,
-          className: 'mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full transition-colors duration-200',
-        },
-        'Zavrieť'
+        'div',
+        { className: 'flex justify-end space-x-4 mt-4' }, // Tlačidlá OK a Zavrieť
+        React.createElement(
+          'button',
+          {
+            onClick: onClose, // Obe tlačidlá zavrú modálne okno
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+          },
+          'Zavrieť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onClose, // Obe tlačidlá zavrú modálne okno
+            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+          },
+          'OK'
+        )
       )
     )
   );
