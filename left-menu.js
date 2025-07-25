@@ -22,7 +22,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
     if (rootElement._reactRootContainer) { // Kontrola existencie React 18 root kontajnera
         rootElement._reactRootContainer.unmount();
     }
-    rootElement.innerHTML = '<div class="flex items-center justify-center h-full text-xl text-gray-700">Načítavam obsah...</div>';
+    rootElement.innerHTML = '<div class="flex items-center justify-center h-full text-xl text-gray-700">Načítavam...</div>';
 
     try {
         // Dynamicky načítať JS súbor s React komponentom
