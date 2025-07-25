@@ -602,8 +602,8 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
-    // Notifikačné okno sa vždy zobrazuje, ale je podmienečne skryté CSS triedami
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+    // Notifikačné okno sa zobrazí LEN pre chyby alebo informačné správy, NIE pre úspešnú registráciu
+    !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     // Podmienečné renderovanie formulára alebo správy o úspechu
     !settingsLoaded || !isAuthReady ? (
@@ -620,20 +620,20 @@ function App() {
       // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+        { className: 'bg-green-500 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na zelené
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-4 text-green-600' },
+          { className: 'text-2xl font-bold mb-4 text-black' }, // Zmenená farba textu nadpisu na čiernu
           'Registrácia úspešná!'
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-700' },
+          { className: 'text-white' }, // Text zostáva biely pre kontrast
           notificationMessage // Zobrazí detailnú správu z notifikácie
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-500 text-sm mt-4' },
+          { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na zelenom pozadí
           'Budete automaticky presmerovaní na prihlasovaciu stránku.'
         )
       )
