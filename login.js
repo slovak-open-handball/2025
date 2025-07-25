@@ -129,7 +129,7 @@ const formatToDatetimeLocal = (date) => {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -446,7 +446,8 @@ function App() {
       setEmail('');
       setPassword('');
       
-      setLoading(false); // ZMENA: Nastavíme loading na false hneď po úspešnom prihlásení
+      // ZMENA: Odstránené setLoading(false) odtiaľto.
+      // Loading zostane true, kým sa nespustí presmerovanie.
 
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
@@ -512,7 +513,7 @@ function App() {
     // Notification Modal (for success messages after login)
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('') // Clear message when modal closes
+        onClose: () => setUserNotificationMessage('')
     }),
     React.createElement(
       'div',
