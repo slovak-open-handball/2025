@@ -55,7 +55,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Fakturačné údaje'),
         React.createElement(
           'div',
-          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
+          { className: 'mb-4' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'clubName' }, 'Oficiálny názov klubu'),
           React.createElement('input', {
             type: 'text',
