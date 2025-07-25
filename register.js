@@ -537,7 +537,7 @@ function App() {
 
         // --- Logika pre ukladanie notifikácie pre administrátorov ---
         try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const appId = 'default-app-id';
             let notificationMessage = '';
             const notificationRecipientId = 'all_admins'; 
 
