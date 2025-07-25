@@ -40,6 +40,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MyDataApp;
             } else if (jsFileName === 'logged-in-change-name' && typeof ChangeNameApp !== 'undefined') {
                 rootComponent = ChangeNameApp;
+            } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') { // NOVÁ PODMIENKA
+                rootComponent = ChangePhoneApp; // NOVÝ KOMPONENT
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
             } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
@@ -47,7 +49,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
             } else if (jsFileName === 'logged-in-soh-chat' && typeof SohChatApp !== 'undefined') { // ZMENA: Preimenované
-                rootComponent = SohChatApp; // ZMENA: Preimenované
+                rootComponent = SohChatApp;
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
             } else if (jsFileName === 'logged-in-all-registrations' && typeof AllRegistrationsApp !== 'undefined') {
@@ -78,14 +80,16 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MyDataApp;
             } else if (jsFileName === 'logged-in-change-name' && typeof ChangeNameApp !== 'undefined') {
                 rootComponent = ChangeNameApp;
+            } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') { // NOVÁ PODMIENKA
+                rootComponent = ChangePhoneApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
             } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
-            } else if (jsFileName === 'logged-in-soh-chat' && typeof SohChatApp !== 'undefined') { // ZMENA: Preimenované
-                rootComponent = SohChatApp; // ZMENA: Preimenované
+            } else if (jsFileName === 'logged-in-soh-chat' && typeof SohChatApp !== 'undefined') {
+                rootComponent = SohChatApp;
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
             } else if (jsFileName === 'logged-in-all-registrations' && typeof AllRegistrationsApp !== 'undefined') {
@@ -115,10 +119,11 @@ window.updateMenuItemsVisibility = function(userRole) {
     const menuItems = {
         'menu-my-data': ['admin', 'user'],
         'menu-change-name': ['admin', 'user'],
+        'menu-change-phone': ['user'], // NOVÁ POLOŽKA: Iba pre rolu 'user'
         'menu-change-password': ['admin', 'user'],
         'menu-my-settings': ['admin', 'user'],
         'menu-notifications': ['admin', 'user'],
-        'menu-soh-chat': ['admin'], // ZMENA: Preimenované ID
+        'menu-soh-chat': ['admin'],
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
         'menu-tournament-settings': ['admin']
