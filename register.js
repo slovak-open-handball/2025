@@ -371,6 +371,12 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCode
     e.stopPropagation();
   };
 
+  // Funkcia pre tlačidlo "OK"
+  const handleConfirm = () => {
+    onSelect(tempSelectedCode);
+    onClose();
+  };
+
   return React.createElement(
     'div',
     { 
@@ -409,7 +415,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCode
         React.createElement(
           'button',
           {
-            onClick: handleClose,
+            onClick: onClose, // Používame priamo onClose prop
             className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
@@ -418,7 +424,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCode
         React.createElement(
           'button',
           {
-            onClick: handleConfirm,
+            onClick: handleConfirm, // Voláme novú handleConfirm funkciu
             className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
