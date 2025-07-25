@@ -202,19 +202,8 @@ async function initializeHeaderLogic() {
 
                                     if (message) {
                                         showPushNotification(message);
-                                        // Uloženie notifikácie do Firestore
-                                        try {
-                                            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                                            await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                                                message: message,
-                                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                                                recipientId: currentHeaderUser.uid, // Notifikácia je pre tohto admina
-                                                read: false
-                                            });
-                                            console.log("Header.js: Notifikácia úspešne uložená do Firestore.");
-                                        } catch (e) {
-                                            console.error("Header.js: Chyba pri ukladaní notifikácie do Firestore:", e);
-                                        }
+                                        // *** ODSTRÁNENÉ UKLADANIE NOTIFIKÁCIE DO FIRESTORE Z TOHTO MIESTA ***
+                                        // Ukladanie notifikácií bude prebiehať na stránkach, kde sa zmeny vykonávajú.
                                     }
                                     // Aktualizujeme cache po spracovaní zmeny
                                     usersCache[userId] = changedUserData;
