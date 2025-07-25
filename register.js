@@ -490,6 +490,7 @@ function App() {
         houseNumber: formData.houseNumber,
         billing: formData.billing,
         role: userRole, // Predvolená rola 'user'
+        approved: true, // <--- TOTO BOLO PRIDANÉ
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
       });
 
