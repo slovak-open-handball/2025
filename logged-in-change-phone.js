@@ -81,7 +81,11 @@ function ChangePhoneApp() {
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
+  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
+  const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
+  const [role, setRole] = React.useState('');
+  const [isApproved, setIsApproved] = React.useState(false);
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -102,9 +106,7 @@ function ChangePhoneApp() {
         // Používame globálne __firebase_config
         firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
       } else {
-        // Ak už predvolená aplikácia existuje, použite ju
-        firebaseApp = firebase.app();
-        console.warn("ChangePhoneApp: Firebase App named '[DEFAULT]' already exists. Using existing app instance.");
+        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
       }
       setApp(firebaseApp);
 
@@ -115,7 +117,6 @@ function ChangePhoneApp() {
 
       const signIn = async () => {
         try {
-          // Používame globálne __initial_auth_token
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await authInstance.signInWithCustomToken(__initial_auth_token);
           }
@@ -149,18 +150,16 @@ function ChangePhoneApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
+      if (user === null) {
         console.log("ChangePhoneApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
 
-      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
       if (user) {
         console.log(`ChangePhoneApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true); // Nastavíme loading na true tu
+        setLoading(true);
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
@@ -207,13 +206,17 @@ function ChangePhoneApp() {
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
-              setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
-              setContactPhoneNumber(userData.contactPhoneNumber || ''); // Nastavíme aktuálne telefónne číslo
+              setUserProfileData(userData);
+              
+              // Aktualizujeme lokálne stavy z userProfileData
+              setContactPhoneNumber(userData.contactPhoneNumber || ''); // Nastavíme telefónne číslo
+              setEmail(userData.email || user.email || '');
+              setRole(userData.role || 'user');
+              setIsApproved(userData.approved || false);
+              
+              setLoading(false);
+              setError('');
 
-              setLoading(false); // Stop loading po načítaní používateľských dát
-              setError(''); // Vymazať chyby po úspešnom načítaní
-
-              // NOVINKA: Aktualizácia viditeľnosti menu po načítaní roly
               if (typeof window.updateMenuItemsVisibility === 'function') {
                   window.updateMenuItemsVisibility(userData.role);
               }
@@ -222,7 +225,7 @@ function ChangePhoneApp() {
             } else {
               console.warn("ChangePhoneApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setLoading(false);
             }
           }, error => {
             console.error("ChangePhoneApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -237,15 +240,15 @@ function ChangePhoneApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
-            setLoading(false); // Stop loading aj pri chybe
+            setLoading(false);
             console.log("ChangePhoneApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
           console.error("ChangePhoneApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // Stop loading aj pri chybe
+          setLoading(false);
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -255,7 +258,6 @@ function ChangePhoneApp() {
 
 
     return () => {
-      // Zrušíme odber onSnapshot pri unmount
       if (unsubscribeUserDoc) {
         console.log("ChangePhoneApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
@@ -263,7 +265,7 @@ function ChangePhoneApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Effect for updating header link visibility (remains for consistency)
+  // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`ChangePhoneApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
@@ -272,17 +274,17 @@ function ChangePhoneApp() {
     const registerLink = document.getElementById('register-link');
 
     if (authLink) {
-      if (user) { // Ak je používateľ prihlásený
+      if (user) {
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
         console.log("ChangePhoneApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else { // Ak používateľ nie je prihlásený
+      } else {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); // Zobraziť registračný odkaz, ak nie je prihlásený
+        registerLink && registerLink.classList.remove('hidden'); 
         console.log("ChangePhoneApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
@@ -323,17 +325,6 @@ function ChangePhoneApp() {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
     }
-    if (userProfileData.role !== 'user') {
-        setError("Nemáte oprávnenie na zmenu telefónneho čísla. Táto funkcia je dostupná len pre bežných používateľov.");
-        return;
-    }
-
-    const phoneRegex = /^\+\d+$/;
-    if (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber)) {
-        setError("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-        return;
-    }
-
     setLoading(true);
     setError('');
     setUserNotificationMessage('');
@@ -343,15 +334,23 @@ function ChangePhoneApp() {
       await userDocRef.update({
         contactPhoneNumber: contactPhoneNumber,
       });
-      setUserNotificationMessage("Telefónne číslo bolo úspešne aktualizované!");
+      setUserNotificationMessage("Telefónne číslo úspešne aktualizované!");
 
       // --- Logika pre ukladanie notifikácie pre administrátorov ---
       try {
-          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+          const appId = 'default-app-id'; 
           let notificationMessage = '';
-          // Notifikácia pre všetkých administrátorov, ak zmenu vykonal bežný používateľ
-          notificationMessage = `Používateľ ${userProfileData.email} si zmenil telefónne číslo na ${contactPhoneNumber}.`;
-          const notificationRecipientId = 'all_admins'; 
+          let notificationRecipientId = '';
+
+          // Konkrétna správa o zmene telefónneho čísla
+          if (userProfileData.role === 'user') {
+              notificationMessage = `Používateľ ${userProfileData.email} si zmenil telefónne číslo na ${contactPhoneNumber}.`;
+              notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
+          } else if (userProfileData.role === 'admin') {
+              notificationMessage = `Administrátor ${userProfileData.email} si zmenil telefónne číslo na ${contactPhoneNumber}.`;
+              notificationRecipientId = user.uid; // Notifikácia pre tohto konkrétneho administrátora
+          }
 
           if (notificationMessage) {
               await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -365,7 +364,7 @@ function ChangePhoneApp() {
       } catch (e) {
           console.error("ChangePhoneApp: Chyba pri ukladaní notifikácie o zmene telefónneho čísla:", e);
       }
-      // --- Koniec logiky pre ukladanie notifikácie ---
+      // --- Koniec logiky pre ukladania notifikácie ---
 
     } catch (e) {
       console.error("ChangePhoneApp: Chyba pri aktualizácii telefónneho čísla:", e);
@@ -384,8 +383,8 @@ function ChangePhoneApp() {
     }
     let loadingMessage = 'Načítavam aplikáciu...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam používateľské dáta...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
+        loadingMessage = 'Načítavam používateľské dáta...';
+    } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
 
@@ -396,10 +395,10 @@ function ChangePhoneApp() {
     );
   }
 
-  // If user is not 'user' role, redirect to my data page
-  if (userProfileData && userProfileData.role !== 'user') {
-    console.log("ChangePhoneApp: Používateľ nie je typu 'user', presmerovávam na moje údaje.");
-    window.location.href = 'logged-in-my-data.html';
+  // Pre používateľov s rolou 'admin' alebo neschválených používateľov, presmerovať na 'logged-in-my-data.html'
+  if (userProfileData && (userProfileData.role !== 'user' || userProfileData.approved !== true)) {
+    console.log("ChangePhoneApp: Používateľ nie je schválený používateľ, presmerovávam.");
+    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
 
@@ -422,66 +421,39 @@ function ChangePhoneApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Zmeniť telefónne číslo'
+          'Zmeniť telefónne číslo' // Hlavný nadpis
         ),
+        // Change Phone Number Section
         React.createElement(
-          'form',
-          { onSubmit: handleUpdatePhoneNumber, className: 'space-y-4' },
+          React.Fragment,
+          null,
           React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'phone-number' }, 'Telefónne číslo kontaktnej osoby'),
-            React.createElement('input', {
-              type: 'tel',
-              id: 'phone-number',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: contactPhoneNumber,
-              onChange: (e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  setContactPhoneNumber('');
-                  e.target.setCustomValidity('');
-                  return;
-                }
-                if (value.length === 1 && value !== '+') {
-                  e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                  e.target.reportValidity();
-                  return;
-                }
-                if (value.length > 1 && !/^\+\d*$/.test(value)) {
-                  e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                  e.target.reportValidity();
-                  return;
-                }
-                setContactPhoneNumber(value);
-                e.target.setCustomValidity('');
+            'form',
+            { onSubmit: handleUpdatePhoneNumber, className: 'space-y-4' },
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contact-phone-number' }, 'Telefónne číslo kontaktnej osoby'),
+              React.createElement('input', {
+                type: 'tel', // Používame type="tel" pre telefónne čísla
+                id: 'contact-phone-number',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                value: contactPhoneNumber,
+                onChange: (e) => setContactPhoneNumber(e.target.value),
+                required: true,
+                disabled: loading,
+                placeholder: 'Zadajte telefónne číslo'
+              })
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'submit',
+                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
+                disabled: loading,
               },
-              onInvalid: (e) => {
-                if (e.target.value.length === 0) {
-                  e.target.setCustomValidity("Prosím, vyplňte toto pole.");
-                } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                  e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
-                  e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                } else {
-                  e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-                }
-              },
-              required: true,
-              placeholder: "+421901234567",
-              pattern: "^\\+\\d+$",
-              title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).",
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'button',
-            {
-              type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading,
-            },
-            loading ? 'Ukladám...' : 'Uložiť zmeny'
+              loading ? 'Ukladám...' : 'Uložiť zmeny'
+            )
           )
         )
       )
