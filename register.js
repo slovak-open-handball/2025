@@ -17,6 +17,22 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+// Zoznam krajín a ich predvolieb pre telefónne číslo
+const countryCodes = [
+  { code: 'SK', dialCode: '+421' },
+  { code: 'CZ', dialCode: '+420' },
+  { code: 'AT', dialCode: '+43' },
+  { code: 'DE', dialCode: '+49' },
+  { code: 'HU', dialCode: '+36' },
+  { code: 'PL', dialCode: '+48' },
+  { code: 'IT', dialCode: '+39' },
+  { code: 'HR', dialCode: '+385' },
+  { code: 'SI', dialCode: '+386' },
+  { code: 'DK', dialCode: '+45' },
+  { code: 'UA', dialCode: '+380' },
+  // Môžete pridať ďalšie krajiny podľa potreby
+];
+
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
   // SVG ikony pre oko (zobraziť heslo) a oko-preškrtnuté (skryť heslo)
@@ -148,7 +164,8 @@ function App() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
+  const [contactPhoneNumberLocal, setContactPhoneNumberLocal] = React.useState(''); // Len samotné číslo
+  const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Predvolená predvoľba pre SK
 
   // Page 2 states (NEW)
   const [clubName, setClubName] = React.useState('');
@@ -265,12 +282,6 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("RegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
-        // Pôvodné presmerovanie odtiaľto bolo odstránené.
-        // Presmerovanie sa teraz vykonáva až po úspešnom zápise do Firestore v handleRegister.
-        // if (currentUser) { // TENTO BLOK BOL ODSTRÁNENÝ
-        //     window.location.href = 'logged-in-my-data.html';
-        //     return;
-        // }
         setLoading(false); // Auth state checked, stop loading
       });
 
@@ -308,12 +319,10 @@ function App() {
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
           });
 
           return () => unsubscribeSettings();
@@ -321,7 +330,6 @@ function App() {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          // setLoading(false); // Moved to authStateChanged
       }
     };
 
@@ -459,7 +467,7 @@ function App() {
     }
   };
 
-  // NEW: Validation for Page 1 fields
+  // Validation for Page 1 fields
   const validatePage1 = () => {
     setError('');
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
@@ -476,15 +484,22 @@ function App() {
       return false;
     }
 
-    const phoneRegex = /^\+\d+$/;
-    if (!is_admin_register_page && (!contactPhoneNumber || !phoneRegex.test(contactPhoneNumber))) {
-        setError("Telefónne číslo kontaktnej osoby musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-        return false;
+    // Telefónne číslo validácia len pre bežnú registráciu
+    if (!is_admin_register_page) {
+      if (!contactPhoneNumberLocal) {
+          setError("Prosím, zadajte telefónne číslo kontaktnej osoby.");
+          return false;
+      }
+      // Kontrola, či lokálne číslo obsahuje iba číslice
+      if (!/^\d+$/.test(contactPhoneNumberLocal)) {
+          setError("Telefónne číslo môže obsahovať iba číslice (bez predvoľby).");
+          return false;
+      }
     }
     return true;
   };
 
-  // NEW: Validation for Page 2 fields
+  // Validation for Page 2 fields
   const validatePage2 = () => {
     setError('');
     if (!clubName) {
@@ -596,19 +611,22 @@ function App() {
         initialIsApproved = false; // Zmena: admini musia byť schválení
       }
 
+      // Zostavenie celého telefónneho čísla
+      const fullContactPhoneNumber = is_admin_register_page ? '' : `${selectedCountryDialCode}${contactPhoneNumberLocal}`;
+
       const userDataToSave = {
         uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber,
+        contactPhoneNumber: fullContactPhoneNumber, // Uložíme celé číslo
         displayName: `${firstName} ${lastName}`,
         role: initialUserRole,
         approved: initialIsApproved,
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true,
         passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp(), // Pridané pre sledovanie zmeny hesla
-        // NEW: Billing details
+        // Billing details
         billing: {
           clubName: clubName,
           ico: ico,
@@ -676,8 +694,8 @@ function App() {
             isAdmin: isAdminRegistration, 
             firstName: firstName,
             lastName: lastName,
-            contactPhoneNumber: contactPhoneNumber,
-            billing: { // NEW: Pass billing details to Apps Script
+            contactPhoneNumber: fullContactPhoneNumber, // Pošleme celé číslo
+            billing: { 
                 clubName: clubName,
                 ico: ico,
                 dic: dic,
@@ -716,8 +734,6 @@ function App() {
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte Firebase Security Rules.`);
         setLoading(false);
         setUserNotificationMessage('');
-        // Dôležité: Ak zlyhá uloženie do Firestore, mali by sme zvážiť aj zmazanie používateľa z Auth
-        // aby sa predišlo "osiřelým" účtom. Pre jednoduchosť to tu zatiaľ nerobím, ale v produkčnom prostredí by to bolo vhodné.
         return;
       }
 
@@ -788,13 +804,6 @@ function App() {
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
   }
-
-  // Ak je používateľ už prihlásený, presmerujeme ho
-  // TENTO BLOK JE TERAZ ZAKOMENTOVANÝ, ABY SA ZABRÁNILO PREDČASNÉMU PRESMEROVANIU
-  // if (user) {
-  //   window.location.href = 'logged-in-my-data.html';
-  //   return null;
-  // }
 
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -939,48 +948,36 @@ function App() {
                   'div',
                   null,
                   React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-phone-number' }, 'Telefónne číslo kontaktnej osoby'),
-                  React.createElement('input', {
-                    type: 'tel',
-                    id: 'reg-phone-number',
-                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                    value: contactPhoneNumber,
-                    onChange: (e) => {
-                      const value = e.target.value;
-                      if (value === '') {
-                        setContactPhoneNumber('');
-                        e.target.setCustomValidity('');
-                        return;
-                      }
-                      if (value.length === 1 && value !== '+') {
-                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                        e.target.reportValidity();
-                        return;
-                      }
-                      if (value.length > 1 && !/^\+\d*$/.test(value)) {
-                        e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                        e.target.reportValidity();
-                        return;
-                      }
-                      setContactPhoneNumber(value);
-                      e.target.setCustomValidity('');
-                    },
-                    onInvalid: (e) => {
-                      if (e.target.value.length === 0) {
-                        e.target.setCustomValidity("Prosím, vyplňte toto pole.");
-                      } else if (e.target.value.length === 1 && e.target.value !== '+') {
-                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+'.");
-                      } else if (e.target.value.length > 1 && !/^\+\d*$/.test(e.target.value)) {
-                        e.target.setCustomValidity("Za znakom '+' sú povolené iba číslice.");
-                      } else {
-                        e.target.setCustomValidity("Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).");
-                      }
-                    },
-                    required: true,
-                    placeholder: "+421901234567",
-                    pattern: "^\\+\\d+$",
-                    title: "Telefónne číslo musí začínať znakom '+' a obsahovať iba číslice (napr. +421901234567).",
-                    disabled: loading || !!userNotificationMessage,
-                  })
+                  React.createElement(
+                    'div',
+                    { className: 'flex space-x-2' }, // Používame flexbox pre usporiadanie select a input vedľa seba
+                    React.createElement(
+                      'select',
+                      {
+                        id: 'reg-country-code',
+                        className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                        value: selectedCountryDialCode,
+                        onChange: (e) => setSelectedCountryDialCode(e.target.value),
+                        disabled: loading || !!userNotificationMessage,
+                      },
+                      countryCodes.map((country) =>
+                        React.createElement('option', { key: country.code, value: country.dialCode }, `${country.code} ${country.dialCode}`)
+                      )
+                    ),
+                    React.createElement('input', {
+                      type: 'tel',
+                      id: 'reg-phone-number',
+                      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                      value: contactPhoneNumberLocal,
+                      onChange: (e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Povoliť iba číslice
+                        setContactPhoneNumberLocal(value);
+                      },
+                      required: true,
+                      placeholder: "Zadajte číslo",
+                      disabled: loading || !!userNotificationMessage,
+                    })
+                  )
                 ),
                 React.createElement(
                   'p',
