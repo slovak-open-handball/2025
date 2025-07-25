@@ -10,6 +10,17 @@ let unsubscribeUsersListener = null; // Pre uloženie funkcie na zrušenie odber
 let initialUsersLoadComplete = false; // Flag pre odlíšenie počiatočného načítania dát
 let usersCache = {}; // Cache na ukladanie stavu používateľov pre detekciu zmien
 
+// Pomocná funkcia na generovanie hashu zo stringu
+function stringToHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return hash.toString();
+}
+
 // Funkcia na zobrazenie push-up notifikácie
 function showPushNotification(message, notificationId) { // Pridaný notificationId pre sledovanie
     const notificationArea = document.getElementById('header-notification-area');
@@ -214,8 +225,8 @@ async function initializeHeaderLogic() {
                                     console.log("Header.js: Generovaná správa notifikácie:", message);
 
                                     if (message) {
-                                        // Používame kombináciu userId a timestampu ako unikátny ID pre notifikáciu
-                                        const notificationId = `${userId}_${change.type}_${new Date().getTime()}`;
+                                        // Používame kombináciu userId, typu zmeny a hashu správy ako unikátny ID pre notifikáciu
+                                        const notificationId = `${userId}_${change.type}_${stringToHash(message)}`;
                                         showPushNotification(message, notificationId);
                                         // *** ODSTRÁNENÉ UKLADANIE NOTIFIKÁCIE DO FIRESTORE Z TOHTO MIESTA ***
                                         // Ukladanie notifikácií bude prebiehať na stránkach, kde sa zmeny vykonávajú.
