@@ -10,6 +10,10 @@ let unsubscribeAdminNotificationsListener = null; // Pre uloženie funkcie na zr
 let initialNotificationsLoadComplete = false; // Flag pre odlíšenie počiatočného načítania notifikácií
 let notificationsCache = {}; // Cache na ukladanie stavu notifikácií pre detekciu zmien
 
+// URL pre Google Apps Script na odosielanie e-mailov
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
+
 // Pomocná funkcia na generovanie hashu zo stringu
 function stringToHash(str) {
     let hash = 0;
