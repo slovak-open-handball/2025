@@ -393,7 +393,18 @@ function Page1Form({ formData, handleChange, handleNext, loading, notificationMe
         onCut: (e) => e.preventDefault(),
         placeholder: 'Zadajte heslo',
         autoComplete: 'new-password',
-        description: 'Heslo musí mať aspoň 6 znakov.',
+        description: React.createElement(
+          React.Fragment,
+          null,
+          'Heslo musí obsahovať:',
+          React.createElement(
+            'ul',
+            { className: 'list-disc list-inside ml-4' },
+            React.createElement('li', null, 'aspoň jedno malé písmeno,'),
+            React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
+            React.createElement('li', null, 'aspoň jednu číslicu.')
+          )
+        ),
         tabIndex: 6
       }),
       React.createElement(PasswordInput, {
@@ -608,14 +619,29 @@ function App() {
 
   const handleNext = (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
+    const { password, confirmPassword } = formData;
+
+    if (password !== confirmPassword) {
       setNotificationMessage('Heslá sa nezhodujú!');
       return;
     }
-    if (formData.password.length < 6) {
+    if (password.length < 6) {
       setNotificationMessage('Heslo musí mať aspoň 6 znakov!');
       return;
     }
+    if (!/[a-z]/.test(password)) {
+      setNotificationMessage('Heslo musí obsahovať aspoň jedno malé písmeno!');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setNotificationMessage('Heslo musí obsahovať aspoň jedno veľké písmeno!');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setNotificationMessage('Heslo musí obsahovať aspoň jednu číslicu!');
+      return;
+    }
+
     setStep(2);
   };
 
