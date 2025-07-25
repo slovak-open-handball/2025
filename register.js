@@ -153,20 +153,21 @@ function App() {
 
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      const now = new Date(); // Aktuálny lokálny čas
+      // Získanie aktuálneho času v UTC milisekundách pre presné porovnanie
+      const nowUtcMs = Date.now(); 
       let isOpen = true;
       let msg = '';
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // Zabezpečenie, že dátumy sú konvertované z Firestore Timestamp na JavaScript Date objekty
-        const registrationStartDate = data.registrationStartDate ? data.registrationStartDate.toDate() : null;
-        const registrationEndDate = data.registrationEndDate ? data.registrationEndDate.toDate() : null;
+        // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
+        const registrationStartDateMs = data.registrationStartDate ? data.registrationStartDate.toMillis() : null;
+        const registrationEndDateMs = data.registrationEndDate ? data.registrationEndDate.toMillis() : null;
 
-        if (registrationStartDate && now < registrationStartDate) {
+        if (registrationStartDateMs && nowUtcMs < registrationStartDateMs) {
           isOpen = false;
           msg = 'Registrácia ešte nezačala.';
-        } else if (registrationEndDate && now > registrationEndDate) {
+        } else if (registrationEndDateMs && nowUtcMs > registrationEndDateMs) {
           isOpen = false;
           msg = 'Registrácia je momentálne uzavretá.';
         }
