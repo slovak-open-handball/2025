@@ -462,7 +462,8 @@ function App() {
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
-  const [loading, setLoading] = React.useState(false); // Inicializácia na false
+  const [loading, setLoading] = React.useState(true); // Inicializácia na true pre počiatočné načítanie
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // NOVÝ stav pre odosielanie formulára
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // NOVÝ stav pre úspešnú registráciu
@@ -557,7 +558,7 @@ function App() {
     try {
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte register.html.");
-        setLoading(false);
+        setLoading(false); // Ensure loading is false if Firebase is missing
         return;
       }
 
@@ -607,7 +608,7 @@ function App() {
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
+      setLoading(false); // Ensure loading is false on Firebase init error
     }
   }, []); // Empty dependency array - runs only once on component mount
 
@@ -715,7 +716,7 @@ function App() {
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
-      setLoading(true);
+      setLoading(true); // Set loading to true during logout
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
@@ -723,7 +724,7 @@ function App() {
       console.error("Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoading(false);
+      setLoading(false); // Ensure loading is false after logout attempt
     }
   }, [auth]);
 
@@ -902,7 +903,7 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    setLoading(true); // Nastavíme loading na true na začiatku odosielania
+    setIsSubmitting(true); // NOVINKA: Nastavíme isSubmitting na true
     setError('');
     setUserNotificationMessage(''); // Vyčistíme notifikácie
     setRegistrationSuccess(false); // Reset success state at the start of submission
@@ -1047,8 +1048,8 @@ function App() {
         setUserNotificationMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       }
       setRegistrationSuccess(true); // Označenie úspešnej registrácie
-      // ZMENA: setLoading(false) je ODSTRÁNENÉ odtiaľto. Loading zostane true, kým sa nezobrazí success message.
-
+      setIsSubmitting(false); // NOVINKA: Nastavíme isSubmitting na false po úspešnej registrácii
+      
       // Až teraz, a len teraz, vykonáme odhlásenie a presmerovanie
       await auth.signOut(); 
       setUser(null); // Vyčistíme lokálny stav používateľa
@@ -1070,7 +1071,7 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
-      setLoading(false); // Nastavíme loading na false IBA pri chybe
+      setIsSubmitting(false); // NOVINKA: Nastavíme isSubmitting na false IBA pri chybe
       setUserNotificationMessage(''); // Vyčistíme akúkoľvek čakajúcu správu o úspechu
       setRegistrationSuccess(false); // Zabezpečíme, že príznak úspechu je pri chybe false
     } 
@@ -1081,7 +1082,6 @@ function App() {
   const is_admin_register_page = currentPath === 'admin-register.html';
 
   // 1. Prioritné zobrazenie správy o úspešnej registrácii na registračných stránkach
-  // Ak je registrationSuccess true, zobrazí sa táto správa a nič iné.
   if (isRegistrationPage && registrationSuccess) { 
     return React.createElement(
       'div',
@@ -1104,9 +1104,8 @@ function App() {
     );
   }
 
-  // 2. Zobrazenie správy "Prebieha registrácia klubu..." počas načítania/odosielania
-  // Ak je loading true a registrationSuccess je false (alebo sa ešte len spracováva), zobrazí sa spinner.
-  if (loading) { 
+  // 2. Zobrazenie správy "Prebieha registrácia klubu..." počas odosielania formulára
+  if (isSubmitting) { 
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -1123,8 +1122,7 @@ function App() {
   }
 
   // 3. Počiatočné načítanie aplikácie (pred zobrazením formulára alebo iných správ)
-  // Toto sa zobrazí len na začiatku, kým sa nenačítajú základné Firebase a nastavenia.
-  if (user === undefined || !isAuthReady || !settingsLoaded) { 
+  if (loading || user === undefined || !isAuthReady || !settingsLoaded) { 
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -1133,7 +1131,6 @@ function App() {
   }
 
   // 4. Registrácia je zatvorená (ak nie je admin stránka)
-  // Zobrazí sa, ak nie je admin stránka a registrácia nie je otvorená.
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
   const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
@@ -1189,7 +1186,6 @@ function App() {
   }
     
   // 5. Zobrazenie registračného formulára (predvolené)
-  // Toto je fallback, ak žiadna z vyššie uvedených podmienok nie je splnená.
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -1235,7 +1231,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoje meno",
                 autoComplete: "given-name",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1253,7 +1249,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoje priezvisko",
                 autoComplete: "family-name",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             is_admin_register_page ? (
@@ -1270,7 +1266,7 @@ function App() {
                   required: true,
                   placeholder: "Zadajte svoju e-mailovú adresu",
                   autoComplete: "email",
-                  disabled: loading || !!userNotificationMessage, 
+                  disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
                 })
               )
             ) : (
@@ -1290,7 +1286,7 @@ function App() {
                         type: 'button',
                         onClick: () => setIsCountryCodeModalOpen(true),
                         className: 'flex-shrink-0 py-2 px-3 text-gray-700 leading-tight focus:outline-none rounded-l-lg hover:bg-gray-100 transition-colors duration-200 flex items-center', // Bez orámovania, pridané flex items-center
-                        disabled: loading || !!userNotificationMessage, 
+                        disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
                       },
                       React.createElement('span', null, selectedCountryDialCode),
                       React.createElement('svg', { className: 'ml-2 h-4 w-4 text-gray-600 inline-block', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, // Pridané inline-block
@@ -1308,7 +1304,7 @@ function App() {
                       },
                       required: true,
                       placeholder: "Zadajte číslo",
-                      disabled: loading || !!userNotificationMessage, 
+                      disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
                     })
                   )
                 ),
@@ -1332,7 +1328,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoju e-mailovú adresu",
                 autoComplete: "email",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1352,7 +1348,7 @@ function App() {
               autoComplete: "new-password",
               showPassword: showPasswordReg,
               toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-              disabled: loading || !!userNotificationMessage, 
+              disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               description: React.createElement(
                 React.Fragment,
                 null,
@@ -1378,7 +1374,7 @@ function App() {
               autoComplete: "new-password",
               showPassword: showConfirmPasswordReg,
               toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-              disabled: loading || !!userNotificationMessage, 
+              disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
             }),
             React.createElement(
               'button',
@@ -1386,7 +1382,7 @@ function App() {
                 type: 'button', // Changed to button type
                 onClick: handleNextPage,
                 className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               },
               'Ďalej'
             )
@@ -1413,7 +1409,7 @@ function App() {
                 onChange: (e) => setClubName(e.target.value),
                 required: true,
                 placeholder: "Názov klubu",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1430,7 +1426,7 @@ function App() {
                   setIco(value);
                 },
                 placeholder: "Zadajte IČO (iba čísla)",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1447,7 +1443,7 @@ function App() {
                   setDic(value);
                 },
                 placeholder: "Zadajte DIČ (iba čísla)",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1470,7 +1466,7 @@ function App() {
                   setIcDph(value);
                 },
                 placeholder: "Zadajte IČ DPH (napr. SK1234567890)",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement('p', { className: 'text-gray-600 text-sm mt-2' }, 'Vyplňte aspoň jedno z polí: IČO, DIČ, IČ DPH.'),
@@ -1488,7 +1484,7 @@ function App() {
                 onChange: (e) => setStreet(e.target.value),
                 required: true,
                 placeholder: "Názov ulice",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1503,7 +1499,7 @@ function App() {
                 onChange: (e) => setHouseNumber(e.target.value),
                 required: true,
                 placeholder: "Popisné číslo",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1525,7 +1521,7 @@ function App() {
                 maxLength: 6, // 3 digits + space + 2 digits
                 required: true,
                 placeholder: "123 45",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1540,7 +1536,7 @@ function App() {
                 onChange: (e) => setCity(e.target.value),
                 required: true,
                 placeholder: "Názov mesta",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1555,7 +1551,7 @@ function App() {
                 onChange: (e) => setCountry(e.target.value),
                 required: true,
                 placeholder: "Názov štátu",
-                disabled: loading || !!userNotificationMessage, 
+                disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
               })
             ),
             React.createElement(
@@ -1567,7 +1563,7 @@ function App() {
                   type: 'button',
                   onClick: handlePreviousPage,
                   className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-                  disabled: loading || !!userNotificationMessage, 
+                  disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
                 },
                 'Späť'
               ),
@@ -1577,9 +1573,8 @@ function App() {
                   type: 'submit', // This button will submit the form
                   onClick: (e) => handleRegisterSubmit(e, is_admin_register_page), // Ensure submit calls the main handler
                   className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-                  disabled: loading || !!userNotificationMessage, 
+                  disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
                 },
-                // Text tlačidla sa už nemení na "Registrujem..." tu, ale je riadený globálnym loading stavom
                 'Registrovať sa'
               )
             )
@@ -1593,7 +1588,7 @@ function App() {
         onSelect: setSelectedCountryDialCode,
         selectedCode: selectedCountryDialCode,
         countryCodes: countryCodes,
-        disabled: loading || !!userNotificationMessage, 
+        disabled: isSubmitting || !!userNotificationMessage, // Používame isSubmitting
       })
     )
   );
