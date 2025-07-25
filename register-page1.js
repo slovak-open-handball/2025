@@ -250,7 +250,7 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 }
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate }) { // <--- PRIDANÝ registrationStartDate
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate }) {
   // ChevronDown ikona (ekvivalent Lucide React - inline SVG)
   const ChevronDown = React.createElement(
     'svg',
@@ -283,7 +283,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
     isRegistrationOpen === false && countdownMessage ? (
       React.createElement(
         'div',
-        { className: 'text-center text-gray-800 font-semibold text-lg py-4' },
+        { className: 'text-center text-gray-800 text-lg py-4' }, // Odstránená trieda 'font-semibold'
         React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár nie je prístupný.'),
         registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
           React.createElement(
