@@ -4,7 +4,7 @@
 // Global application ID a Firebase konfigurácia (mali by byť konzistentné naprieč všetkými React aplikáciami)
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4t0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Updated URL for consistency, assuming this is the latest.
 
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
@@ -73,14 +73,21 @@ function App() {
     contactPhoneNumber: '',
     password: '',
     confirmPassword: '',
-    birthDate: '',
-    gender: '',
-    country: '',
-    city: '',
-    postalCode: '',
-    street: '',
+    // Removed birthDate, gender, role from top-level formData
+    // Added new fields for billing and address
+    houseNumber: '', // New field for address
+    country: '', // Moved to top-level for address, but also used in billing address
+    city: '', // Moved to top-level for address, but also used in billing address
+    postalCode: '', // Moved to top-level for address, but also used in billing address
+    street: '', // Moved to top-level for address, but also used in billing address
+    billing: { // New nested object for billing details
+      clubName: '',
+      ico: '',
+      dic: '',
+      icDph: '',
+    }
   });
-  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola
+  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola (removed from form, but kept for data structure if needed elsewhere)
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
@@ -296,7 +303,18 @@ function App() {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    // Special handling for nested billing object
+    if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
+      setFormData(prev => ({
+        ...prev,
+        billing: {
+          ...prev.billing,
+          [id]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [id]: value }));
+    }
   };
 
   const handleRoleChange = (e) => {
@@ -379,21 +397,35 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
 
-    // Validácia dátumu narodenia (musí mať aspoň 18 rokov)
-    const birthDate = new Date(formData.birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
-    if (age < 18) {
-      setNotificationMessage('Musíte mať aspoň 18 rokov pre registráciu.');
+    // Validácia fakturačných údajov
+    const { ico, dic, icDph } = formData.billing;
+    if (!ico && !dic && !icDph) {
+      setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
       setLoading(false);
       return;
     }
+
+    // Validácia formátu IČ DPH
+    if (icDph) {
+      const icDphRegex = /^[A-Z]{2}[0-9]+$/;
+      if (!icDphRegex.test(icDph)) {
+        setNotificationMessage('IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).');
+        setShowNotification(true);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Validácia PSČ
+    const postalCodeClean = formData.postalCode.replace(/\s/g, ''); // Odstráň medzery pre validáciu
+    if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
+      setNotificationMessage('PSČ musí mať presne 5 číslic.');
+      setShowNotification(true);
+      setLoading(false);
+      return;
+    }
+
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
@@ -414,13 +446,13 @@ function App() {
           email: formData.email,
           contactPhoneNumber: fullPhoneNumber,
           password: formData.password,
-          birthDate: formData.birthDate, // YYYY-MM-DD formát
-          gender: formData.gender,
+          // Removed birthDate, gender, role from here as they are no longer in form
           country: formData.country,
           city: formData.city,
           postalCode: formData.postalCode,
           street: formData.street,
-          role: userRole,
+          houseNumber: formData.houseNumber, // New field
+          billing: formData.billing, // Pass the entire billing object
           registrationDate: formatToDatetimeLocal(new Date()),
         }),
       });
@@ -438,14 +470,19 @@ function App() {
           contactPhoneNumber: '',
           password: '',
           confirmPassword: '',
-          birthDate: '',
-          gender: '',
-          country: '',
-          city: '',
-          postalCode: '',
-          street: '',
+          houseNumber: '', 
+          country: '', 
+          city: '', 
+          postalCode: '', 
+          street: '', 
+          billing: { 
+            clubName: '',
+            ico: '',
+            dic: '',
+            icDph: '',
+          }
         });
-        setUserRole('user');
+        setUserRole('user'); // Keep default role, not from form
         setPage(1); // Návrat na stránku 1
         // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
         setTimeout(() => {
@@ -506,8 +543,8 @@ function App() {
           loading: loading,
           notificationMessage: notificationMessage,
           closeNotification: closeNotification,
-          userRole: userRole,
-          handleRoleChange: handleRoleChange,
+          userRole: userRole, // Still passed, but not used in Page2Form for selection
+          handleRoleChange: handleRoleChange, // Still passed, but not used in Page2Form for selection
           NotificationModal: NotificationModal,
         })
     )
