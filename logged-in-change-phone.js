@@ -315,9 +315,9 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
 
   if (!isOpen) return null;
 
-  const filteredCountries = COUNTRIES.filter(country =>
-    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    country.dial_code.includes(searchTerm)
+  const filteredCountries = countryCodes.filter(country =>
+    country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    country.dialCode.includes(searchTerm)
   );
 
   return React.createElement(
@@ -333,7 +333,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
       ),
       React.createElement('input', {
         type: 'text',
-        placeholder: 'Hľadať krajinu alebo kód...',
+        placeholder: 'Hľadať kód krajiny alebo predvoľbu...',
         className: 'w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
         value: searchTerm,
         onChange: (e) => setSearchTerm(e.target.value),
@@ -346,13 +346,13 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
             'div',
             {
               key: country.code,
-              className: `p-2 cursor-pointer hover:bg-blue-100 ${selectedCode === country.dial_code ? 'bg-blue-200 font-semibold' : ''}`,
+              className: `p-2 cursor-pointer hover:bg-blue-100 ${selectedCode === country.dialCode ? 'bg-blue-200 font-semibold' : ''}`,
               onClick: () => {
-                onSelect(country.dial_code);
+                onSelect(country.dialCode);
                 onClose();
               },
             },
-            `${country.name} (${country.dial_code})`
+            `${country.code} (${country.dialCode})` // Zobrazenie kódu krajiny a predvoľby
           )
         )
       ),
@@ -514,14 +514,14 @@ function ChangePhoneApp() {
               // Aktualizujeme lokálne stavy z userProfileData
               // Rozdelíme telefónne číslo na predvoľbu a samotné číslo
               const fullPhoneNumber = userData.contactPhoneNumber || '';
-              let initialDialCode = '+421'; // Predvolená hodnota
+              let initialDialCode = '+421'; // Predvolená hodnota pre Slovensko
               let initialPhoneNumber = fullPhoneNumber;
 
               // Skúsime nájsť zhodnú predvoľbu a oddeliť ju od čísla
-              for (const country of COUNTRIES) {
-                if (fullPhoneNumber.startsWith(country.dial_code)) {
-                  initialDialCode = country.dial_code;
-                  initialPhoneNumber = fullPhoneNumber.substring(country.dial_code.length);
+              for (const country of countryCodes) { // Zmenené z COUNTRIES na countryCodes
+                if (fullPhoneNumber.startsWith(country.dialCode)) { // Zmenené z dial_code na dialCode
+                  initialDialCode = country.dialCode; // Zmenené z dial_code na dialCode
+                  initialPhoneNumber = fullPhoneNumber.substring(country.dialCode.length); // Zmenené z dial_code na dialCode
                   break;
                 }
               }
