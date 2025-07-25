@@ -148,8 +148,9 @@ function App() {
       return; // Čakajte, kým sa Firebase inicializuje a stav autentifikácie bude pripravený
     }
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const docRef = doc(db, `artifacts/${appId}/public/data/tournamentSettings/registration`);
+    // Cesta k dokumentu nastavení registrácie, zosúladená s header.js a screenshotom
+    // Dokument je v kolekcii 'settings' s ID 'registration'
+    const docRef = doc(db, 'settings', 'registration');
 
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -164,13 +165,32 @@ function App() {
         const registrationStartDateMs = data.registrationStartDate ? data.registrationStartDate.toMillis() : null;
         const registrationEndDateMs = data.registrationEndDate ? data.registrationEndDate.toMillis() : null;
 
-        if (registrationStartDateMs && nowUtcMs < registrationStartDateMs) {
+        // Kontrola platnosti dátumov a stavu registrácie
+        const isRegStartValid = registrationStartDateMs !== null && !isNaN(registrationStartDateMs);
+        const isRegEndValid = registrationEndDateMs !== null && !isNaN(registrationEndDateMs);
+
+        if (isRegStartValid && nowUtcMs < registrationStartDateMs) {
           isOpen = false;
           msg = 'Registrácia ešte nezačala.';
-        } else if (registrationEndDateMs && nowUtcMs > registrationEndDateMs) {
+        } else if (isRegEndValid && nowUtcMs > registrationEndDateMs) {
           isOpen = false;
           msg = 'Registrácia je momentálne uzavretá.';
+        } else if (!isRegStartValid && !isRegEndValid) {
+          // Ak nie sú definované ani začiatok ani koniec, registrácia je otvorená
+          isOpen = true;
+          msg = ''; // Žiadna správa, ak je predvolene otvorená
+        } else if (!isRegStartValid && isRegEndValid && nowUtcMs <= registrationEndDateMs) {
+          // Ak je definovaný len koniec a aktuálny čas je pred ním
+          isOpen = true;
+          msg = '';
+        } else if (isRegStartValid && !isRegEndValid && nowUtcMs >= registrationStartDateMs) {
+          // Ak je definovaný len začiatok a aktuálny čas je po ňom
+          isOpen = true;
+          msg = '';
         }
+        // Ak sú oba definované a aktuálny čas je medzi nimi, isOpen zostáva true
+        // Ak sú oba definované a aktuálny čas je mimo, už to bolo spracované vyššie
+        
       } else {
         // Ak dokument nastavení neexistuje, predpokladajte, že registrácia je predvolene otvorená
         isOpen = true;
