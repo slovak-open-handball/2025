@@ -18,13 +18,12 @@ const formatToDatetimeLocal = (date) => {
 };
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-// ZMENA: Pridaný prop 'displayNotificationsEnabled'
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    // ZMENA: Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií
+    // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií
     if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
@@ -50,7 +49,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     };
   }, [message, onClose, displayNotificationsEnabled]); // ZÁVISLOSŤ: Pridaný displayNotificationsEnabled
 
-  // ZMENA: Nevykresľuje sa, ak nie je zobrazené alebo ak sú notifikácie vypnuté
+  // Nevykresľuje sa, ak nie je zobrazené alebo ak sú notifikácie vypnuté
   if (!show && !message || !displayNotificationsEnabled) return null;
 
   return React.createElement(
@@ -694,34 +693,37 @@ function UsersManagementApp() {
                                     React.createElement(
                                         'div',
                                         { className: 'flex item-center justify-center space-x-2' },
-                                        React.createElement(
-                                            'button',
-                                            {
-                                              onClick: () => openRoleEditModal(u),
-                                              className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              // ZMENA: Zakázať tlačidlo, ak ide o aktuálneho používateľa
-                                              disabled: loading || (user && u.id === user.uid),
-                                            },
-                                            'Upraviť rolu'
-                                        ),
-                                        u.role === 'admin' && !u.approved && React.createElement(
-                                            'button',
-                                            {
-                                              onClick: () => handleApproveUser(u),
-                                              className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              disabled: loading,
-                                            },
-                                            'Schváliť'
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                              onClick: () => openConfirmationModal(u),
-                                              className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              // ZMENA: Zakázať tlačidlo, ak ide o aktuálneho používateľa
-                                              disabled: loading || (user && u.id === user.uid),
-                                            },
-                                            'Zmazať'
+                                        // ZMENA: Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
+                                        user && u.id !== user.uid && React.createElement(
+                                            React.Fragment,
+                                            null,
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                  onClick: () => openRoleEditModal(u),
+                                                  className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  disabled: loading,
+                                                },
+                                                'Upraviť rolu'
+                                            ),
+                                            u.role === 'admin' && !u.approved && React.createElement(
+                                                'button',
+                                                {
+                                                  onClick: () => handleApproveUser(u),
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  disabled: loading,
+                                                },
+                                                'Schváliť'
+                                            ),
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                  onClick: () => openConfirmationModal(u),
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  disabled: loading,
+                                                },
+                                                'Zmazať'
+                                            )
                                         )
                                     )
                                 )
