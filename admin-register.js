@@ -179,17 +179,14 @@ function App() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("AdminRegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
-        // Ak je používateľ už prihlásený a NIE JE práve v procese registrácie, presmerujte ho.
-        // Toto zabráni predčasnému presmerovaniu po createUserWithEmailAndPassword.
-        if (currentUser && !formSubmitting) { // Pridaná podmienka !formSubmitting
-            console.log("AdminRegisterApp: Používateľ už prihlásený a nie je v procese registrácie. Presmerovávam na logged-in-my-data.html.");
-            window.location.href = 'logged-in-my-data.html'; // Presmerovanie na hlavnú stránku po prihlásení
-            return; 
+        // If user is already logged in, redirect them to logged-in.html
+        if (currentUser) {
+            window.location.href = 'logged-in.html';
+            return; // Stop further rendering for this component
         }
-        setPageLoading(false); // Page is now fully loaded (auth is ready or user is null)
+        setPageLoading(false); // Page is now fully loaded (auth is ready)
       });
 
       signIn();
@@ -204,7 +201,11 @@ function App() {
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setPageLoading(false); // Stop loading on critical error
     }
-  }, [formSubmitting]); // Pridaná závislosť na formSubmitting
+  }, []); // Empty dependency array - runs only once on component mount
+
+  // Removed useEffect for updating header link visibility, as it will be handled by header.js
+
+  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -271,7 +272,7 @@ function App() {
     const recaptchaToken = await getRecaptchaToken('admin_register');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
-      return; // Zmenené z return null na return
+      return null;
     }
     console.log("reCAPTCHA Token pre registráciu admina:", recaptchaToken);
 
@@ -281,9 +282,7 @@ function App() {
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      console.log("Firebase Auth: Používateľ vytvorený:", userCredential.user.uid);
       await userCredential.user.updateProfile({ displayName: `${firstName} ${lastName}` });
-      console.log("Firebase Auth: Profil používateľa aktualizovaný.");
 
       const userDataToSave = {
         uid: userCredential.user.uid,
@@ -292,34 +291,25 @@ function App() {
         lastName: lastName,
         contactPhoneNumber: contactPhoneNumber, // Will be empty for admin register, but kept for schema consistency
         displayName: `${firstName} ${lastName}`,
-        role: 'admin', // Nastavené priamo na 'admin'
-        approved: false, // Predvolene neschválený
+        role: 'user', // Initially set as user, then updated to admin:false
+        approved: true, // Initially true, then updated to false for admin
         registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
-        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp(), // Pridaný timestamp zmeny hesla
-        displayNotifications: true
+        displayNotifications: true,
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Pridané pre sledovanie zmeny hesla
       };
 
-      console.log("Pokus o uloženie používateľa do Firestore s dátami:", userDataToSave);
+      console.log("Pokus o uloženie používateľa do Firestore s počiatočnými dátami:", userDataToSave);
 
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
-        console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
-
-        // Načítanie údajov z databázy po zápise na overenie
-        const docRef = db.collection('users').doc(userCredential.user.uid);
-        const docSnap = await docRef.get();
-        if (docSnap.exists) {
-          console.log("Údaje načítané z Firestore po zápise:", docSnap.data());
-        } else {
-          console.warn("Firestore: Dokument používateľa sa nenašiel po zápise.");
-        }
+        console.log(`Firestore: Používateľ ${email} s počiatočnou rolou 'user' a schválením 'true' bol uložený.`);
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
           const payload = {
             action: 'sendRegistrationEmail',
             email: email,
-            password: password, // Odosielanie hesla v e-maile je bezpečnostné riziko, zvážte alternatívy
+            password: password,
             isAdmin: true, // This is an admin registration
             firstName: firstName,
             lastName: lastName,
@@ -328,14 +318,13 @@ function App() {
           console.log("Odosielanie dát do Apps Script (registračný e-mail admina):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Dôležité pre zabránenie CORS chybám pri volaní Apps Script
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Požiadavka na odoslanie registračného e-mailu admina odoslaná.");
-          // S mode: 'no-cors' nemôžeme čítať odpoveď, takže nasledujúci blok je len pre logovanie
           try {
             const responseData = await response.text();
             console.log("Odpoveď z Apps Script (fetch - registračný e-mail admina) ako text:", responseData);
@@ -345,6 +334,31 @@ function App() {
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu admina cez Apps Script (chyba fetch):", emailError);
         }
+
+        // Update role to admin and approved to false for admin registrations
+        await db.collection('users').doc(userCredential.user.uid).update({
+          role: 'admin',
+          approved: false
+        });
+        console.log(`Firestore: rola používateľa ${email} bola aktualizovaná na 'admin' a schválené na 'false'.`);
+
+        // --- Logika pre ukladanie notifikácie pre administrátorov ---
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+            const notificationRecipientId = 'all_admins'; 
+
+            await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                message: notificationMessage,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                recipientId: notificationRecipientId,
+                read: false
+            });
+            console.log("Notifikácia o novej registrácii administrátora úspešne uložená do Firestore.");
+        } catch (e) {
+            console.error("App: Chyba pri ukladaní notifikácie o registrácii administrátora:", e);
+        }
+        // --- Koniec logiky pre ukladanie notifikácie ---
 
       } catch (firestoreError) {
         console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
@@ -356,14 +370,12 @@ function App() {
 
       setFormSubmitting(false); // Stop loading so the message is visible on the form
 
-      // Teraz sa odhlásime a presmerujeme po oneskorení
+      // Now sign out and redirect after a delay
       await auth.signOut();
-      setUser(null); // Explicitne nastavíme user na null po odhlásení
-      console.log("AdminRegisterApp: Používateľ odhlásený po úspešnej registrácii.");
+      setUser(null); // Explicitly set user to null after logout
 
-      // Presmerovanie po 5 sekundách
+      // Redirect after 5 seconds
       setTimeout(() => {
-        console.log("AdminRegisterApp: Presmerovanie na login.html...");
         window.location.href = 'login.html';
       }, 5000);
 
@@ -390,6 +402,12 @@ function App() {
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
     );
+  }
+
+  // If user is logged in (and pageLoading is false), redirect
+  if (user) {
+    window.location.href = 'logged-in.html';
+    return null;
   }
 
   // Priority display of successful registration message
@@ -481,8 +499,8 @@ function App() {
               value: email,
               onChange: (e) => setEmail(e.target.value),
               required: true,
-              placeholder: "Zadajte svoju e-mailovú adresu",
-              autoComplete: "email",
+              placeholder: 'Zadajte svoju e-mailovú adresu',
+              autoComplete: 'email',
               disabled: formSubmitting || !!message, // Use formSubmitting
             })
           ),
