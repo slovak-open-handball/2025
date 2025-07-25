@@ -111,11 +111,11 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
-      { className: 'relative shadow appearance-none border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Pridané triedy pre orámovanie a focus
+      { className: 'relative shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none', // Odstránené triedy pre orámovanie, tieň a focus, pridané border-none rounded-none
+        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none', // border-none a rounded-none zabezpečujú, že rodičovský div riadi orámovanie
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -337,11 +337,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 'Meno kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow appearance-none border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
               React.createElement('input', {
                 type: 'text',
                 id: 'firstName',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-lg',
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
                 value: formData.firstName,
                 onChange: handleChange,
                 required: true,
@@ -357,11 +357,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'lastName' }, 'Priezvisko kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow appearance-none border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
               React.createElement('input', {
                 type: 'text',
                 id: 'lastName',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-lg',
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
                 value: formData.lastName,
                 onChange: handleChange,
                 required: true,
@@ -377,11 +377,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow appearance-none border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
               React.createElement('input', {
                 type: 'email',
                 id: 'email',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-lg',
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
                 value: formData.email,
                 onChange: handleChange,
                 required: true,
@@ -398,7 +398,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 'Telefónne číslo kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'flex shadow appearance-none border rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
+              { className: 'flex shadow border rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
               React.createElement(
                 'button',
                 {
@@ -414,7 +414,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               React.createElement('input', {
                 type: 'tel',
                 id: 'contactPhoneNumber',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg flex-grow min-w-0', // Removed appearance-none, added flex-grow min-w-0
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg flex-grow min-w-0 border-none rounded-none', // Pridané border-none a rounded-none
                 value: formData.contactPhoneNumber,
                 onChange: (e) => {
                   const re = /^[0-9\b]+$/;
