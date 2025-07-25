@@ -250,7 +250,15 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 }
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate }) {
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady }) {
+  // Stavy pre viditeľnosť hesla
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
+  // Funkcie na prepínanie viditeľnosti hesla
+  const toggleShowPassword = () => setShowPassword(prev => !prev);
+  const toggleShowConfirmPassword = () => setShowConfirmPassword(prev => !prev);
+
   // ChevronDown ikona (ekvivalent Lucide React - inline SVG)
   const ChevronDown = React.createElement(
     'svg',
@@ -339,7 +347,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               required: true,
               placeholder: 'Zadajte vaše meno',
               tabIndex: 1,
-              disabled: loading || !isRegistrationOpen
+              disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
             })
           ),
           React.createElement(
@@ -355,7 +363,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               required: true,
               placeholder: 'Zadajte vaše priezvisko',
               tabIndex: 2,
-              disabled: loading || !isRegistrationOpen
+              disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
             })
           ),
           React.createElement(
@@ -372,7 +380,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
               tabIndex: 3,
-              disabled: loading || !isRegistrationOpen
+              disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
             })
           ),
           React.createElement(
@@ -389,7 +397,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                   className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:shadow-outline transition-colors duration-200 flex-shrink-0 flex items-center',
                   onClick: () => setIsCountryCodeModalOpen(true),
                   tabIndex: 4,
-                  disabled: loading || !isRegistrationOpen
+                  disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
                 },
                 selectedCountryDialCode || '+XXX',
                 ChevronDown
@@ -403,7 +411,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte telefónne číslo',
                 tabIndex: 5,
-                disabled: loading || !isRegistrationOpen
+                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zakázať, ak reCAPTCHA nie je pripravená
               })
             )
           ),
@@ -430,7 +438,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               )
             ),
             tabIndex: 6,
-            disabled: loading || !isRegistrationOpen
+            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zakázať, ak reCAPTCHA nie je pripravená
+            showPassword: showPassword, // Odovzdanie stavu
+            toggleShowPassword: toggleShowPassword // Odovzdanie funkcie
           }),
           React.createElement(PasswordInput, {
             id: 'confirmPassword',
@@ -443,14 +453,16 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
             tabIndex: 7,
-            disabled: loading || !isRegistrationOpen
+            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zakázať, ak reCAPTCHA nie je pripravená
+            showPassword: showConfirmPassword, // Odovzdanie stavu
+            toggleShowPassword: toggleShowConfirmPassword // Odovzdanie funkcie
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading || !isRegistrationOpen,
+              disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zakázať, ak reCAPTCHA nie je pripravená
               tabIndex: 8
             },
             loading ? React.createElement(
@@ -471,7 +483,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
-      disabled: loading || !isRegistrationOpen,
+      disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zakázať, ak reCAPTCHA nie je pripravená
     })
   );
 }
