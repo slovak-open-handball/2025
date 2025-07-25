@@ -6,15 +6,7 @@
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// ODSTRÁNENÉ: Firebase SDKs importy, pretože sa teraz načítavajú globálne cez script tagy v HTML
-// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 // Import komponentov pre stránky formulára
-// Tieto súbory musia byť tiež upravené, aby nepoužívali modulárne importy Firebase,
-// ale pristupovali k nemu globálne, ak by ho potrebovali.
-// V tomto prípade sú Page1Form a Page2Form len UI komponenty, takže ich importy sú v poriadku.
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
 
@@ -109,7 +101,7 @@ function App() {
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
     try {
-      // Skontrolujte, či je Firebase SDK načítané
+      // Skontrolujte, či je Firebase SDK načítané a dostupné
       if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.auth === 'undefined') {
         console.error("register.js: Firebase SDK nie je načítané alebo nie sú dostupné všetky moduly. Uistite sa, že sú script tagy Firebase v HTML.");
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
@@ -117,25 +109,17 @@ function App() {
         return;
       }
 
-      let firebaseApp;
-      // Ak už predvolená aplikácia existuje (napr. inicializovaná header.js), použite ju
-      if (firebase.apps.length > 0 && firebase.app().name === '[DEFAULT]') {
-          firebaseApp = firebase.app();
-          console.log("register.js: Používam existujúcu Firebase App inštanciu.");
-      } else {
-          // Inak inicializujte novú aplikáciu
-          const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-          firebaseApp = firebase.initializeApp(firebaseConfig);
-          console.log("register.js: Inicializujem novú Firebase App inštanciu.");
-      }
-      
-      const firestoreDb = firebase.firestore(firebaseApp);
-      const firebaseAuth = firebase.auth(firebaseApp);
+      // Používame existujúcu (predvolenú) Firebase aplikáciu, ktorú by mala inicializovať header.js
+      // Ak header.js inicializuje Firebase s názvom, bolo by potrebné použiť firebase.app('nazov_aplikacie')
+      // Ale pre jednoduchosť a kompatibilitu s header.js, ktorý pravdepodobne inicializuje predvolenú app,
+      // pristupujeme priamo k službám.
+      const firestoreDb = firebase.firestore(); // Získanie Firestore služby z predvolenej app
+      const firebaseAuth = firebase.auth();     // Získanie Auth služby z predvolenej app
 
       setDb(firestoreDb);
       setAuth(firebaseAuth);
 
-      // Používame firebaseAuth.onAuthStateChanged namiesto onAuthStateChanged (z importu)
+      // Používame firebaseAuth.onAuthStateChanged
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
         if (!currentUser && typeof __initial_auth_token !== 'undefined') {
           try {
@@ -177,7 +161,6 @@ function App() {
     const docRef = db.collection('settings').doc('registration');
 
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
-    // Používame docRef.onSnapshot namiesto onSnapshot (z importu)
     const unsubscribe = docRef.onSnapshot((docSnap) => {
       // --- DEBUGGING LOGS ---
       console.log("register.js: Inside onSnapshot callback. Received docSnap:", docSnap);
@@ -202,7 +185,8 @@ function App() {
       setCountdownMessage(''); // Reset správy odpočtu
 
       // Robustnejšia kontrola, či je docSnap platný DocumentSnapshot
-      if (docSnap && typeof docSnap.exists === 'function' && docSnap instanceof firebase.firestore.DocumentSnapshot) {
+      // Používame firebase.firestore.DocumentSnapshot pre správnu inštanciu
+      if (docSnap && typeof docSnap.exists === 'function' && typeof firebase !== 'undefined' && firebase.firestore && docSnap instanceof firebase.firestore.DocumentSnapshot) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
