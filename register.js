@@ -177,11 +177,6 @@ const initializeFirebase = () => {
 // Call initialization when the script loads
 initializeFirebase();
 
-// Assuming Page1Form and CountryCodeModal are loaded globally from register-page1.js
-// If using module imports, you would do:
-// import { Page1Form } from './register-page1.js';
-// import { Page2Form } from './register-page2.js';
-
 // Main App Component for Registration
 function App() {
   const [step, setStep] = React.useState(1);
@@ -202,8 +197,40 @@ function App() {
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Predvolená predvoľba pre Slovensko
+  const [isRegistrationOpen, setIsRegistrationOpen] = React.useState(null); // null = načítavam, true/false = stav
 
   const closeNotification = () => setNotificationMessage('');
+
+  // Načítanie stavu registrácie z Firestore
+  React.useEffect(() => {
+    const fetchRegistrationStatus = async () => {
+      if (!db || !__app_id) {
+        console.warn("Firestore alebo App ID nie je k dispozícii pre načítanie stavu registrácie.");
+        return;
+      }
+      try {
+        // Cesta k dokumentu, kde je uložený stav registrácie
+        const registrationDocRef = db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('tournamentSettings').doc('registration');
+        const docSnap = await registrationDocRef.get();
+
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          setIsRegistrationOpen(data.isOpen === true); // Predpokladáme pole 'isOpen' typu boolean
+          console.log("Stav registrácie načítaný:", data.isOpen);
+        } else {
+          // Ak dokument neexistuje, predpokladáme, že registrácia je otvorená (alebo predvolený stav)
+          setIsRegistrationOpen(true);
+          console.warn("Dokument so stavom registrácie nebol nájdený. Predvolený stav: Otvorená.");
+        }
+      } catch (error) {
+        console.error("Chyba pri načítaní stavu registrácie z Firestore:", error);
+        setIsRegistrationOpen(true); // V prípade chyby predpokladáme, že je otvorená, aby sa predišlo zablokovaniu
+        setNotificationMessage('Chyba pri načítaní stavu registrácie. Skúste to prosím neskôr.');
+      }
+    };
+
+    fetchRegistrationStatus();
+  }, [db, __app_id]); // Spustí sa pri zmene db alebo __app_id
 
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
@@ -215,6 +242,13 @@ function App() {
 
   const handleNext = (e) => {
     e.preventDefault();
+
+    // Ak registrácia nie je otvorená, nedovolíme pokračovať
+    if (!isRegistrationOpen) {
+      setNotificationMessage('Registrácia je momentálne uzavretá. Nie je možné pokračovať.');
+      return;
+    }
+
     const { password, confirmPassword } = formData;
 
     if (password !== confirmPassword) {
@@ -247,6 +281,13 @@ function App() {
 
   const handleSubmit = async (e, recaptchaToken) => {
     e.preventDefault();
+
+    // Opäť kontrola stavu registrácie pred odoslaním
+    if (!isRegistrationOpen) {
+      setNotificationMessage('Registrácia je momentálne uzavretá. Nie je možné odoslať formulár.');
+      return;
+    }
+
     setLoading(true);
     setNotificationMessage('');
 
@@ -346,7 +387,8 @@ function App() {
         setSelectedCountryDialCode: setSelectedCountryDialCode,
         selectedCountryDialCode: selectedCountryDialCode,
         PasswordInput: PasswordInput,
-        NotificationModal: NotificationModal
+        NotificationModal: NotificationModal,
+        isRegistrationOpen: isRegistrationOpen // Odovzdanie stavu registrácie
       }) :
       React.createElement(Page2Form, {
         formData: formData,
@@ -356,8 +398,9 @@ function App() {
         loading: loading,
         notificationMessage: notificationMessage,
         closeNotification: closeNotification,
-        NotificationModal: NotificationModal, // Pass NotificationModal to Page2Form
-        RECAPTCHA_SITE_KEY: RECAPTCHA_SITE_KEY // Pass RECAPTCHA_SITE_KEY to Page2Form
+        NotificationModal: NotificationModal,
+        RECAPTCHA_SITE_KEY: RECAPTCHA_SITE_KEY,
+        isRegistrationOpen: isRegistrationOpen // Odovzdanie stavu registrácie
       })
   );
 }
