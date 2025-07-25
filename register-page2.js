@@ -1,181 +1,106 @@
-// Page2Form Component
-function Page2Form({
-  clubName, setClubName,
-  ico, setIco,
-  dic, setDic,
-  icDph, setIcDph,
-  street, setStreet,
-  houseNumber, setHouseNumber,
-  zipCode, setZipCode,
-  city, setCity,
-  country, setCountry,
-  isSubmitting,
-  userNotificationMessage,
-  onPreviousPage,
-  onSubmit // This is the main submit handler from App
-}) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, 'Fakturačné údaje'),
-    React.createElement(
-      'div',
-      { className: 'space-y-4' },
-      React.createElement(
-        'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'club-name' }, 'Oficiálny názov klubu'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'club-name',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: clubName,
-          onChange: (e) => setClubName(e.target.value),
-          required: true,
-          placeholder: "Názov klubu",
-          disabled: isSubmitting || !!userNotificationMessage,
-        })
-      ),
-      React.createElement(
-        'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' }, 'IČO'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'ico',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: ico,
-          onChange: (e) => {
-            const value = e.target.value.replace(/\D/g, '');
-            setIco(value);
-          },
-          placeholder: "Zadajte IČO (iba čísla)",
-          disabled: isSubmitting || !!userNotificationMessage,
-        })
-      ),
-      React.createElement(
-        'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' }, 'DIČ'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'dic',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: dic,
-          onChange: (e) => {
-            const value = e.target.value.replace(/\D/g, '');
-            setDic(value);
-          },
-          placeholder: "Zadajte DIČ (iba čísla)",
-          disabled: isSubmitting || !!userNotificationMessage,
-        })
-      ),
-      React.createElement(
-        'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ic-dph' }, 'IČ DPH'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'ic-dph',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: icDph,
-          onChange: (e) => {
-            let value = e.target.value.toUpperCase();
-            if (value.length > 2) {
-              value = value.substring(0,2).replace(/[^A-Z]/g, '') + value.substring(2).replace(/\D/g, '');
-            } else {
-              value = value.replace(/[^A-Z]/g, '');
-            }
-            setIcDph(value);
-          },
-          placeholder: "Zadajte IČ DPH (napr. SK1234567890)",
-          disabled: isSubmitting || !!userNotificationMessage,
-        })
-      ),
-      React.createElement('p', { className: 'text-gray-600 text-sm mt-2' }, 'Vyplňte aspoň jedno z polí: IČO, DIČ, IČ DPH.'),
+// register-page2.js
+// Tento súbor obsahuje komponenty a logiku pre druhú stránku registračného formulára.
 
-      React.createElement('h3', { className: 'text-xl font-bold text-gray-800 mt-6 mb-2' }, 'Fakturačná adresa'),
+// Page2Form Component
+// Očakáva NotificationModal ako prop, aby sa zabezpečilo, že je k dispozícii.
+function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, NotificationModal, RECAPTCHA_SITE_KEY }) {
+  const [recaptchaToken, setRecaptchaToken] = React.useState('');
+
+  // Effect to load reCAPTCHA and get token
+  React.useEffect(() => {
+    if (typeof grecaptcha !== 'undefined' && RECAPTCHA_SITE_KEY) {
+      grecaptcha.ready(function() {
+        grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit' }).then(function(token) {
+          setRecaptchaToken(token);
+        });
+      });
+    }
+  }, [RECAPTCHA_SITE_KEY]); // Závislosť na RECAPTCHA_SITE_KEY
+
+  return React.createElement(
+    'div',
+    { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+    React.createElement(
+      'h2',
+      { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
+      'Registrácia (2/2)'
+    ),
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
+    React.createElement(
+      'form',
+      { onSubmit: (e) => handleSubmit(e, recaptchaToken), className: 'space-y-4' },
       React.createElement(
         'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 'Ulica'),
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingAddress' }, 'Fakturačná adresa'),
         React.createElement('input', {
           type: 'text',
-          id: 'street',
+          id: 'billingAddress',
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: street,
-          onChange: (e) => setStreet(e.target.value),
-          required: true,
-          placeholder: "Názov ulice",
-          disabled: isSubmitting || !!userNotificationMessage,
+          value: formData.billingAddress,
+          onChange: handleChange,
+          placeholder: 'Ulica a číslo domu',
+          tabIndex: 1
         })
       ),
       React.createElement(
         'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'house-number' }, 'Popisné číslo'),
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingCity' }, 'Mesto'),
         React.createElement('input', {
           type: 'text',
-          id: 'house-number',
+          id: 'billingCity',
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: houseNumber,
-          onChange: (e) => setHouseNumber(e.target.value),
-          required: true,
-          placeholder: "Popisné číslo",
-          disabled: isSubmitting || !!userNotificationMessage,
+          value: formData.billingCity,
+          onChange: handleChange,
+          placeholder: 'Mesto',
+          tabIndex: 2
         })
       ),
       React.createElement(
         'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'zip-code' }, 'PSČ'),
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingZip' }, 'PSČ'),
         React.createElement('input', {
           type: 'text',
-          id: 'zip-code',
+          id: 'billingZip',
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: zipCode,
-          onChange: (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length > 3) {
-              value = value.substring(0, 3) + ' ' + value.substring(3, 5);
-            }
-            setZipCode(value);
-          },
-          maxLength: 6,
-          required: true,
-          placeholder: "123 45",
-          disabled: isSubmitting || !!userNotificationMessage,
+          value: formData.billingZip,
+          onChange: handleChange,
+          placeholder: 'PSČ',
+          tabIndex: 3
         })
       ),
       React.createElement(
         'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 'Mesto'),
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingCountry' }, 'Krajina'),
         React.createElement('input', {
           type: 'text',
-          id: 'city',
+          id: 'billingCountry',
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: city,
-          onChange: (e) => setCity(e.target.value),
-          required: true,
-          placeholder: "Názov mesta",
-          disabled: isSubmitting || !!userNotificationMessage,
+          value: formData.billingCountry,
+          onChange: handleChange,
+          placeholder: 'Krajina',
+          tabIndex: 4
         })
       ),
       React.createElement(
         'div',
-        null,
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 'Štát'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'country',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: country,
-          onChange: (e) => setCountry(e.target.value),
-          required: true,
-          placeholder: "Názov štátu",
-          disabled: isSubmitting || !!userNotificationMessage,
-        })
+        { className: 'mb-4' },
+        React.createElement(
+          'label',
+          { className: 'inline-flex items-center' },
+          React.createElement('input', {
+            type: 'checkbox',
+            id: 'isAdmin',
+            className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md',
+            checked: formData.isAdmin,
+            onChange: handleChange,
+            tabIndex: 5
+          }),
+          React.createElement('span', { className: 'ml-2 text-gray-700' }, 'Chcem sa zaregistrovať ako administrátor')
+        )
       ),
       React.createElement(
         'div',
@@ -184,9 +109,10 @@ function Page2Form({
           'button',
           {
             type: 'button',
-            onClick: onPreviousPage,
+            onClick: handlePrev,
             className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-            disabled: isSubmitting || !!userNotificationMessage,
+            disabled: loading,
+            tabIndex: 6
           },
           'Späť'
         ),
@@ -194,13 +120,24 @@ function Page2Form({
           'button',
           {
             type: 'submit',
-            onClick: onSubmit,
-            className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-            disabled: isSubmitting || !!userNotificationMessage,
+            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+            disabled: loading,
+            tabIndex: 7
           },
-          'Registrovať sa'
+          loading ? React.createElement(
+            'div',
+            { className: 'flex items-center justify-center' },
+            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+              React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+              React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+            ),
+            'Registrujem...'
+          ) : 'Registrovať sa'
         )
       )
     )
   );
 }
+
+// Export the component for use in other files
+export { Page2Form };
