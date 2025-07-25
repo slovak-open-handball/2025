@@ -55,7 +55,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Fakturačné údaje'),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'clubName' }, 'Oficiálny názov klubu'),
           React.createElement('input', {
             type: 'text',
@@ -63,14 +63,15 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: formData.billing?.clubName || '', // Access nested property
             onChange: handleBillingChange,
-            placeholder: 'Zadajte názov klubu (nepovinné)',
+            required: true, // Made required
+            placeholder: 'Zadajte názov klubu',
             tabIndex: 9,
             disabled: loading
           })
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' }, 'IČO'),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
@@ -85,7 +86,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' }, 'DIČ'),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
@@ -100,7 +101,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icDph' }, 'IČ DPH'),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering and uppercase conversion
@@ -122,7 +123,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Fakturačná adresa'),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 'Ulica'),
           React.createElement('input', {
             type: 'text',
@@ -138,7 +139,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' }, 'Popisné číslo'),
           React.createElement('input', {
             type: 'text',
@@ -154,7 +155,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 'Mesto'),
           React.createElement('input', {
             type: 'text',
@@ -170,7 +171,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' }, 'PSČ'),
           React.createElement('input', {
             type: 'text',
@@ -187,7 +188,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
         React.createElement(
           'div',
-          null,
+          { className: 'mb-4' }, {/* Added mb-4 for spacing */}
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 'Štát'),
           React.createElement('input', {
             type: 'text',
