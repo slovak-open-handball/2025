@@ -160,13 +160,29 @@ async function initializeHeaderLogic() {
                                     const userId = change.doc.id;
                                     const userEmail = changedUserData.email || userId; // Použijeme email alebo UID
 
+                                    console.log(`Header.js: Detekovaná zmena pre používateľa ${userEmail} (ID: ${userId}). Typ zmeny: ${change.type}`);
+                                    console.log("Header.js: Nové dáta:", changedUserData);
+
                                     if (change.type === 'modified') {
                                         // Detekujeme konkrétne zmeny
                                         const oldData = usersCache[userId];
+                                        console.log("Header.js: Staré dáta z cache:", oldData);
+
                                         if (oldData) {
-                                            const changedFields = Object.keys(changedUserData).filter(key => 
-                                                JSON.stringify(changedUserData[key]) !== JSON.stringify(oldData[key])
-                                            );
+                                            const changedFields = Object.keys(changedUserData).filter(key => {
+                                                const oldValue = oldData[key];
+                                                const newValue = changedUserData[key];
+
+                                                // Špeciálne ošetrenie pre Timestamp objekty
+                                                if (oldValue && typeof oldValue.toDate === 'function' && newValue && typeof newValue.toDate === 'function') {
+                                                    return oldValue.toDate().getTime() !== newValue.toDate().getTime();
+                                                }
+                                                // Pre ostatné typy porovnávame stringifikované hodnoty
+                                                return JSON.stringify(newValue) !== JSON.stringify(oldValue);
+                                            });
+                                            
+                                            console.log("Header.js: Zmenené polia:", changedFields);
+
                                             if (changedFields.length > 0) {
                                                 message = `Používateľ ${userEmail} aktualizoval svoje údaje: ${changedFields.join(', ')}.`;
                                             }
@@ -182,11 +198,14 @@ async function initializeHeaderLogic() {
                                         message = `Používateľ ${userEmail} bol odstránený.`;
                                     }
 
+                                    console.log("Header.js: Generovaná správa notifikácie:", message);
+
                                     if (message) {
                                         showPushNotification(message);
                                         // Uloženie notifikácie do Firestore
                                         try {
-                                            await dbHeader.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').add({
+                                            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                                            await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
                                                 message: message,
                                                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                                                 recipientId: currentHeaderUser.uid, // Notifikácia je pre tohto admina
