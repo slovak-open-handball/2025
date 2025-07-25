@@ -107,6 +107,9 @@ function App() {
   // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
+  // Nový stav na indikáciu prebiehajúcej registrácie
+  const [isRegistering, setIsRegistering] = React.useState(false);
+
   const countdownIntervalRef = React.useRef(null);
 
   const isRegistrationOpen = React.useMemo(() => {
@@ -175,15 +178,14 @@ function App() {
       setAuth(firebaseAuth);
 
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        if (!currentUser && typeof __initial_auth_token === 'string' && __initial_auth_token.length > 0) {
-          try {
-            await firebaseAuth.signInWithCustomToken(__initial_auth_token);
-            console.log("register.js: Úspešné prihlásenie s vlastným tokenom.");
-          } catch (error) {
-            console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
-          }
+        // Iba presmerovať, ak je používateľ už prihlásený a NIE JE v procese registrácie
+        // Toto zabráni predčasnému presmerovaniu počas registrácie
+        if (currentUser && !isRegistering) {
+            console.log("register.js: Používateľ už prihlásený pri načítaní stránky, presmerovávam na logged-in-my-data.html");
+            window.location.href = 'logged-in-my-data.html';
+            return;
         }
-        setIsAuthReady(true);
+        setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
       });
 
       return () => unsubscribe();
@@ -192,7 +194,8 @@ function App() {
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
     }
-  }, []);
+  }, [isRegistering]); // Pridaná závislosť isRegistering
+
 
   // Načítanie a počúvanie stavu registrácie z Firestore
   React.useEffect(() => {
@@ -371,6 +374,7 @@ function App() {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
+    setIsRegistering(true); // Začiatok procesu registrácie
 
     // Validácia fakturačných údajov
     const { clubName, ico, dic, icDph } = formData.billing;
@@ -379,6 +383,7 @@ function App() {
         setNotificationMessage('Oficiálny názov klubu je povinný.');
         setShowNotification(true);
         setLoading(false);
+        setIsRegistering(false); // Resetovať stav
         return;
     }
 
@@ -386,6 +391,7 @@ function App() {
       setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
       setLoading(false);
+      setIsRegistering(false); // Resetovať stav
       return;
     }
 
@@ -395,6 +401,7 @@ function App() {
         setNotificationMessage('IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).');
         setShowNotification(true);
         setLoading(false);
+        setIsRegistering(false); // Resetovať stav
         return;
       }
     }
@@ -404,6 +411,7 @@ function App() {
       setNotificationMessage('PSČ musí mať presne 5 číslic.');
       setShowNotification(true);
       setLoading(false);
+      setIsRegistering(false); // Resetovať stav
       return;
     }
 
@@ -414,6 +422,7 @@ function App() {
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setLoading(false);
+        setIsRegistering(false); // Resetovať stav
         return;
       }
 
@@ -421,6 +430,7 @@ function App() {
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         setLoading(false);
+        setIsRegistering(false); // Resetovať stav
         return; // Zastav, ak token nebol získaný
       }
       console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
@@ -428,6 +438,8 @@ function App() {
       // 1. Vytvorenie používateľa vo Firebase Authentication
       const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
       const user = userCredential.user;
+      console.log("Používateľ vytvorený v Auth:", user.uid);
+
 
       // 2. Uloženie používateľských údajov do Firestore
       // Používame __app_id pre štruktúru kolekcie
@@ -470,33 +482,30 @@ function App() {
             // Ďalšie údaje, ak sú potrebné pre e-mail
           };
           console.log("Odosielanie dát do Apps Script (registračný e-mail):", payload);
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          // Pre no-cors fetch, await len zabezpečí odoslanie požiadavky, nie jej spracovanie serverom.
+          // Ak potrebujete potvrdenie o spracovaní, museli by ste zmeniť Apps Script na vrátenie CORS hlavičiek.
+          await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Používame 'no-cors', pretože nepotrebujeme čítať odpoveď
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
-          // V režime no-cors nemôžeme čítať odpoveď, takže nečakáme na response.json()
       } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
-          // Táto chyba neblokuje registráciu, len odoslanie e-mailu
       }
 
       setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
       setShowNotification(true);
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
-      // To je dôležité, aby sa predišlo automatickému prihláseniu na novovytvorený účet
-      // a aby sa zabezpečilo, že používateľ bude musieť prejsť cez prihlasovaciu stránku.
       try {
         await auth.signOut();
         console.log("Používateľ úspešne odhlásený po registrácii.");
       } catch (signOutError) {
         console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
-        // Táto chyba nie je kritická pre registráciu, ale je dobré ju logovať
       }
 
       // Vyčistiť formulár
@@ -506,18 +515,17 @@ function App() {
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
-      setPage(1); // Návrat na stránku 1 (alebo by sa malo rovno presmerovať)
+      setPage(1);
 
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 5000); // Zvýšené na 5 sekúnd pre istotu
+      }, 5000);
 
     } catch (error) {
       console.error('Chyba pri registrácii do Firebase:', error);
       let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
 
-      // Konkrétnejšie chybové správy z Firebase Auth
       switch (error.code) {
         case 'auth/email-already-in-use':
           errorMessage = 'Zadaná e-mailová adresa je už používaná.';
@@ -529,7 +537,6 @@ function App() {
           errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
           break;
         default:
-          // Pre ostatné chyby zobrazíme všeobecnú správu
           errorMessage = error.message || errorMessage;
           break;
       }
@@ -537,6 +544,7 @@ function App() {
       setShowNotification(true);
     } finally {
       setLoading(false);
+      setIsRegistering(false); // Ukončenie procesu registrácie
     }
   };
 
