@@ -348,6 +348,7 @@ function ChangeNameApp() {
           let notificationMessage = '';
           let notificationRecipientId = '';
 
+          // Zmena tu: Konkrétna správa o zmene mena a priezviska
           if (userProfileData.role === 'user') {
               notificationMessage = `Používateľ ${userProfileData.email} si zmenil meno na ${firstName} a priezvisko na ${lastName}.`;
               notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
@@ -368,7 +369,7 @@ function ChangeNameApp() {
       } catch (e) {
           console.error("ChangeNameApp: Chyba pri ukladaní notifikácie o zmene mena/priezviska:", e);
       }
-      // --- Koniec logiky pre ukladanie notifikácie ---
+      // --- Koniec logiky pre ukladania notifikácie ---
 
     } catch (e) {
       console.error("ChangeNameApp: Chyba pri aktualizácii mena a priezviska:", e);
