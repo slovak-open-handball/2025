@@ -499,28 +499,31 @@ function App() {
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
-      // 3. Načítanie údajov z databázy (po zápise)
-      const doc = await userDocRef.get();
-      if (doc.exists) {
-        console.log("Údaje používateľa úspešne načítané z Firestore:", doc.data());
-        // Tu môžete použiť načítané dáta, ak je to potrebné pre ďalšie operácie
-      } else {
-        console.warn("Načítanie údajov používateľa z Firestore zlyhalo po zápise.");
-      }
-
-      // 4. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
+      // 3. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
       try {
           const payload = {
             action: 'sendRegistrationEmail',
             email: formData.email,
             firstName: formData.firstName,
             lastName: formData.lastName,
-            // Ďalšie údaje, ak sú potrebné pre e-mail
+            contactPhoneNumber: fullPhoneNumber,
+            isAdmin: false, // Toto nie je administrátorská registrácia
+            billing: { // Pridanie fakturačných údajov
+              clubName: formData.billing.clubName,
+              ico: formData.billing.ico,
+              dic: formData.billing.dic,
+              icDph: formData.billing.icDph,
+              address: { // Adresa pre fakturačné údaje
+                street: formData.street,
+                houseNumber: formData.houseNumber,
+                zipCode: formData.postalCode,
+                city: formData.city,
+                country: formData.country
+              }
+            }
           };
           console.log("Odosielanie dát do Apps Script (registračný e-mail):", payload);
-          // Pre no-cors fetch, await len zabezpečí odoslanie požiadavky, nie jej spracovanie serverom.
-          // Ak potrebujete potvrdenie o spracovaní, museli by ste zmeniť Apps Script na vrátenie CORS hlavičiek.
-          await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -529,6 +532,12 @@ function App() {
             body: JSON.stringify(payload)
           });
           console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
+          try {
+            const responseData = await response.text();
+            console.log("Odpoveď z Apps Script (fetch - registračný e-mail) ako text:", responseData);
+          } catch (jsonError) {
+            console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
+          }
       } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
       }
