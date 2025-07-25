@@ -148,6 +148,81 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
+// CountryCodeModal Component for selecting phone dial code
+function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, countryCodes, disabled }) {
+  const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
+
+  React.useEffect(() => {
+    // Reset tempSelectedCode when modal opens or selectedCode changes externally
+    if (isOpen) {
+      setTempSelectedCode(selectedCode);
+    }
+  }, [isOpen, selectedCode]);
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    onSelect(tempSelectedCode);
+    onClose();
+  };
+
+  const handleClose = () => {
+    onClose();
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'modal' }, // Používa štýly definované v register.html pre .modal
+    React.createElement(
+      'div',
+      { className: 'modal-content max-w-lg w-full p-6' }, // Rozšírenie šírky modalu
+      React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mb-4' }, 'Vyberte predvoľbu krajiny'),
+      React.createElement(
+        'div',
+        { className: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-2' }, // Mriežka pre tlačidlá, s max výškou a scrollom
+        countryCodes.map((country) =>
+          React.createElement(
+            'button',
+            {
+              key: country.code,
+              onClick: () => setTempSelectedCode(country.dialCode),
+              className: `py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 
+                          ${tempSelectedCode === country.dialCode 
+                            ? 'bg-blue-600 text-white shadow-md' 
+                            : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`,
+              disabled: disabled,
+            },
+            `${country.code} ${country.dialCode}`
+          )
+        )
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end space-x-4 mt-6' },
+        React.createElement(
+          'button',
+          {
+            onClick: handleClose,
+            className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: disabled,
+          },
+          'Zatvoriť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleConfirm,
+            className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: disabled,
+          },
+          'OK'
+        )
+      )
+    )
+  );
+}
+
+
 // Main React component for the register.html page
 function App() {
   const [app, setApp] = React.useState(null);
@@ -166,6 +241,7 @@ function App() {
   const [lastName, setLastName] = React.useState('');
   const [contactPhoneNumberLocal, setContactPhoneNumberLocal] = React.useState(''); // Len samotné číslo
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Predvolená predvoľba pre SK
+  const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false); // Stav pre modálne okno predvoľby
 
   // Page 2 states (NEW)
   const [clubName, setClubName] = React.useState('');
@@ -950,24 +1026,24 @@ function App() {
                   React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-phone-number' }, 'Telefónne číslo kontaktnej osoby'),
                   React.createElement(
                     'div',
-                    { className: 'flex space-x-2' }, // Používame flexbox pre usporiadanie select a input vedľa seba
+                    { className: 'flex items-center border border-gray-300 rounded-lg shadow-sm focus-within:border-blue-500 focus-within:shadow-outline transition-all duration-200' }, // Spoločné orámovanie
                     React.createElement(
-                      'select',
+                      'button', // Zmenené na tlačidlo pre otvorenie modalu
                       {
-                        id: 'reg-country-code',
-                        className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                        value: selectedCountryDialCode,
-                        onChange: (e) => setSelectedCountryDialCode(e.target.value),
+                        type: 'button',
+                        onClick: () => setIsCountryCodeModalOpen(true),
+                        className: 'flex-shrink-0 py-2 px-3 text-gray-700 leading-tight focus:outline-none rounded-l-lg hover:bg-gray-100 transition-colors duration-200', // Bez orámovania
                         disabled: loading || !!userNotificationMessage,
                       },
-                      countryCodes.map((country) =>
-                        React.createElement('option', { key: country.code, value: country.dialCode }, `${country.code} ${country.dialCode}`)
+                      React.createElement('span', null, selectedCountryDialCode),
+                      React.createElement('svg', { className: 'ml-2 h-4 w-4 text-gray-600', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 9l-7 7-7-7' })
                       )
                     ),
                     React.createElement('input', {
                       type: 'tel',
                       id: 'reg-phone-number',
-                      className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                      className: 'flex-grow py-2 px-3 text-gray-700 leading-tight focus:outline-none rounded-r-lg', // Bez orámovania
                       value: contactPhoneNumberLocal,
                       onChange: (e) => {
                         const value = e.target.value.replace(/\D/g, ''); // Povoliť iba číslice
@@ -1261,7 +1337,16 @@ function App() {
             )
           )
         )
-      )
+      ),
+      // Country Code Selection Modal
+      React.createElement(CountryCodeModal, {
+        isOpen: isCountryCodeModalOpen,
+        onClose: () => setIsCountryCodeModalOpen(false),
+        onSelect: setSelectedCountryDialCode,
+        selectedCode: selectedCountryDialCode,
+        countryCodes: countryCodes,
+        disabled: loading || !!userNotificationMessage,
+      })
     )
   );
 }
