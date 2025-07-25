@@ -349,34 +349,38 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
     { className: 'modal' },
     React.createElement(
       'div',
-      { className: 'modal-content', ref: modalRef },
+      { 
+        className: 'modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md mx-auto', // Upravené pre šírku a centrovanie
+        ref: modalRef 
+      },
       React.createElement(
         'h3',
-        { className: 'text-xl font-bold mb-4' },
-        'Vybrať predvoľbu krajiny'
+        { className: 'text-xl font-bold mb-4 text-center' }, // Centrovaný nadpis
+        'Vyberte predvoľbu krajiny'
       ),
       React.createElement('input', {
         type: 'text',
-        placeholder: 'Hľadať kód krajiny alebo predvoľbu...',
+        placeholder: 'Hľadať podľa kódu alebo predvoľby...', // Upravený placeholder
         className: 'w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
         value: searchTerm,
         onChange: (e) => setSearchTerm(e.target.value),
       }),
       React.createElement(
         'div',
-        { className: 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-200 rounded-lg' }, // Grid layout for buttons
+        { className: 'grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-200 rounded-lg' }, // 3 stĺpce, gap-2
         filteredCountries.map((country) =>
           React.createElement(
             'button', // Changed to button
             {
               key: country.code,
-              className: `p-2 text-sm rounded-lg border transition-colors duration-200 ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-100 text-gray-800 border-gray-300'}`,
+              className: `p-2 text-sm rounded-lg border transition-colors duration-200 
+                          ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, // Hover efekt
               onClick: () => {
                 onSelect(country.dialCode);
                 onClose();
               },
             },
-            `${country.code} (${country.dialCode})` // Display country code and dial code
+            `${country.code} ${country.dialCode}` // Zobrazenie kódu krajiny a predvoľby bez zátvoriek
           )
         )
       ),
