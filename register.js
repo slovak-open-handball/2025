@@ -476,6 +476,17 @@ function App() {
       setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
       setShowNotification(true);
 
+      // Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
+      // To je dôležité, aby sa predišlo automatickému prihláseniu na novovytvorený účet
+      // a aby sa zabezpečilo, že používateľ bude musieť prejsť cez prihlasovaciu stránku.
+      try {
+        await auth.signOut();
+        console.log("Používateľ úspešne odhlásený po registrácii.");
+      } catch (signOutError) {
+        console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
+        // Táto chyba nie je kritická pre registráciu, ale je dobré ju logovať
+      }
+
       // Vyčistiť formulár
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
@@ -483,12 +494,12 @@ function App() {
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
-      setPage(1); // Návrat na stránku 1
+      setPage(1); // Návrat na stránku 1 (alebo by sa malo rovno presmerovať)
 
-      // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
+      // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 3000);
+      }, 5000); // Zvýšené na 5 sekúnd pre istotu
 
     } catch (error) {
       console.error('Chyba pri registrácii do Firebase:', error);
