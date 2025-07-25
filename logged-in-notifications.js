@@ -311,9 +311,9 @@ function NotificationsApp() {
       console.log("NotificationsApp: Prihlásený používateľ je schválený administrátor. Načítavam notifikácie.");
       setLoading(true);
       try {
-        // Načítanie notifikácií pre tohto admina, zoradené podľa timestampu (najnovšie prvé)
+        // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
         unsubscribeNotifications = db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications')
-          .where('recipientId', '==', user.uid) // Filtrovať podľa ID aktuálneho admina
+          .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
           .onSnapshot(snapshot => {
             const fetchedNotifications = [];
             snapshot.forEach(doc => {
