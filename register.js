@@ -1040,14 +1040,14 @@ function App() {
       }
 
       // Všetky kritické operácie zápisu dát sú dokončené a overené.
-      // Teraz nastavíme správu o úspechu a príznak, potom prejdeme k odhláseniu/presmerovaniu.
+      // Teraz nastavíme správu o úspechu a príznak.
       if (isAdminRegistration) {
         setUserNotificationMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme odoslali potvrdenie registrácie. Pre úplnú aktiváciu počkajte, prosím, na schválenie účtu iným administrátorom.`);
       } else {
         setUserNotificationMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       }
       setRegistrationSuccess(true); // Označenie úspešnej registrácie
-      setLoading(false); // ZMENA: Nastavíme loading na false hneď po úspechu, aby sa prešlo na success message
+      // ZMENA: setLoading(false) je ODSTRÁNENÉ odtiaľto. Loading zostane true, kým sa nezobrazí success message.
 
       // Až teraz, a len teraz, vykonáme odhlásenie a presmerovanie
       await auth.signOut(); 
@@ -1081,6 +1081,7 @@ function App() {
   const is_admin_register_page = currentPath === 'admin-register.html';
 
   // 1. Prioritné zobrazenie správy o úspešnej registrácii na registračných stránkach
+  // Ak je registrationSuccess true, zobrazí sa táto správa a nič iné.
   if (isRegistrationPage && registrationSuccess) { 
     return React.createElement(
       'div',
@@ -1104,6 +1105,7 @@ function App() {
   }
 
   // 2. Zobrazenie správy "Prebieha registrácia klubu..." počas načítania/odosielania
+  // Ak je loading true a registrationSuccess je false (alebo sa ešte len spracováva), zobrazí sa spinner.
   if (loading) { 
     return React.createElement(
       'div',
@@ -1121,6 +1123,7 @@ function App() {
   }
 
   // 3. Počiatočné načítanie aplikácie (pred zobrazením formulára alebo iných správ)
+  // Toto sa zobrazí len na začiatku, kým sa nenačítajú základné Firebase a nastavenia.
   if (user === undefined || !isAuthReady || !settingsLoaded) { 
     return React.createElement(
       'div',
@@ -1130,6 +1133,11 @@ function App() {
   }
 
   // 4. Registrácia je zatvorená (ak nie je admin stránka)
+  // Zobrazí sa, ak nie je admin stránka a registrácia nie je otvorená.
+  const now = new Date();
+  const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+  const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
   if (!is_admin_register_page && !isRegistrationOpen) {
     return React.createElement(
       'div',
@@ -1181,6 +1189,7 @@ function App() {
   }
     
   // 5. Zobrazenie registračného formulára (predvolené)
+  // Toto je fallback, ak žiadna z vyššie uvedených podmienok nie je splnená.
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
