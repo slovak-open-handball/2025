@@ -24,7 +24,8 @@ function stringToHash(str) {
 
 // Funkcia na zobrazenie push-up notifikácie
 function showPushNotification(message, notificationId) {
-    // ZMENA: Skontrolujeme nastavenie používateľa pred zobrazením notifikácie
+    // Táto kontrola je tu redundantná, pretože sa vykonáva už pred volaním tejto funkcie.
+    // Ale ponechávame ju pre istotu a konzistentnosť.
     if (currentUserProfileData && currentUserProfileData.displayNotifications === false) {
         console.log("Header.js: Notifikácie sú vypnuté v nastaveniach používateľa. Nezobrazujem push-up.");
         return;
@@ -242,9 +243,9 @@ async function initializeHeaderLogic() {
                                                 console.log("Header.js: Dáta notifikácie:", notificationData);
 
                                                 const message = notificationData.message;
-                                                if (message) {
+                                                // ZMENA: Označíme notifikáciu ako prečítanú vo Firestore len ak sú notifikácie povolené
+                                                if (message && currentUserProfileData && currentUserProfileData.displayNotifications !== false) {
                                                     showPushNotification(message, notificationId);
-                                                    // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
                                                     try {
                                                         await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
                                                             read: true
@@ -253,6 +254,8 @@ async function initializeHeaderLogic() {
                                                     } catch (updateError) {
                                                         console.error(`Header.js: Chyba pri označovaní notifikácie ${notificationId} ako prečítanej:`, updateError);
                                                     }
+                                                } else if (message) {
+                                                    console.log(`Header.js: Notifikácia ${notificationId} nebola zobrazená ani označená ako prečítaná, pretože používateľ má vypnuté notifikácie.`);
                                                 }
                                             }
                                         });
