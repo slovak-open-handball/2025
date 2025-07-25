@@ -179,6 +179,16 @@ function App() {
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
     // Používame docRef.onSnapshot namiesto onSnapshot (z importu)
     const unsubscribe = docRef.onSnapshot((docSnap) => {
+      // --- DEBUGGING LOGS ---
+      console.log("register.js: Inside onSnapshot callback. Received docSnap:", docSnap);
+      console.log("register.js: Type of docSnap:", typeof docSnap);
+      if (docSnap) {
+        console.log("register.js: docSnap.exists property type:", typeof docSnap.exists);
+        // This check will confirm if docSnap is indeed a DocumentSnapshot from Firebase
+        console.log("register.js: docSnap instanceof firebase.firestore.DocumentSnapshot:", docSnap instanceof firebase.firestore.DocumentSnapshot);
+      }
+      // --- END DEBUGGING LOGS ---
+
       // Získanie aktuálneho času v UTC milisekundách pre presné porovnanie
       const nowUtcMs = Date.now(); 
       let isOpen = true;
@@ -191,69 +201,78 @@ function App() {
       }
       setCountdownMessage(''); // Reset správy odpočtu
 
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
-        const registrationStartDateMs = data.registrationStartDate ? data.registrationStartDate.toMillis() : null;
-        const registrationEndDateMs = data.registrationEndDate ? data.registrationEndDate.toMillis() : null;
+      // Robustnejšia kontrola, či je docSnap platný DocumentSnapshot
+      if (docSnap && typeof docSnap.exists === 'function' && docSnap instanceof firebase.firestore.DocumentSnapshot) {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Konverzia dátumov z Firestore Timestamp na UTC milisekundy
+          const registrationStartDateMs = data.registrationStartDate ? data.registrationStartDate.toMillis() : null;
+          const registrationEndDateMs = data.registrationEndDate ? data.registrationEndDate.toMillis() : null;
 
-        // Kontrola platnosti dátumov a stavu registrácie
-        const isRegStartValid = registrationStartDateMs !== null && !isNaN(registrationStartDateMs);
-        const isRegEndValid = registrationEndDateMs !== null && !isNaN(registrationEndDateMs);
+          // Kontrola platnosti dátumov a stavu registrácie
+          const isRegStartValid = registrationStartDateMs !== null && !isNaN(registrationStartDateMs);
+          const isRegEndValid = registrationEndDateMs !== null && !isNaN(registrationEndDateMs);
 
-        if (isRegStartValid && nowUtcMs < registrationStartDateMs) {
-          isOpen = false;
-          msg = 'Registrácia ešte nezačala.';
+          if (isRegStartValid && nowUtcMs < registrationStartDateMs) {
+            isOpen = false;
+            msg = 'Registrácia ešte nezačala.';
+            
+            // Spustenie odpočtu
+            const updateCountdown = () => {
+                const remainingMs = registrationStartDateMs - Date.now();
+                if (remainingMs <= 0) {
+                    clearInterval(countdownIntervalRef.current);
+                    countdownIntervalRef.current = null;
+                    setCountdownMessage('');
+                    // Ak odpočet skončil, znovu vyhodnoťte stav registrácie (spustí sa onSnapshot)
+                    // Toto zabezpečí automatické sprístupnenie formulára
+                } else {
+                    const seconds = Math.floor((remainingMs / 1000) % 60);
+                    const minutes = Math.floor((remainingMs / (1000 * 60)) % 60);
+                    const hours = Math.floor((remainingMs / (1000 * 60 * 60)) % 24);
+                    const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+                    setCountdownMessage(`Otvorenie o: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+                }
+            };
+
+            updateCountdown(); // Prvé volanie pre okamžité zobrazenie
+            countdownIntervalRef.current = setInterval(updateCountdown, 1000); // Aktualizácia každú sekundu
+
+          } else if (isRegEndValid && nowUtcMs > registrationEndDateMs) {
+            isOpen = false;
+            const endDate = new Date(registrationEndDateMs);
+            // Formátovanie dátumu a času pre zobrazenie
+            const formattedEndDate = `${endDate.toLocaleDateString('sk-SK')} ${endDate.toLocaleTimeString('sk-SK')}`;
+            msg = `Registrácia je momentálne uzavretá. Ukončená: ${formattedEndDate}.`;
+          } else if (!isRegStartValid && !isRegEndValid) {
+            // Ak nie sú definované ani začiatok ani koniec, registrácia je otvorená
+            isOpen = true;
+            msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
+            console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
+          } else if (!isRegStartValid && isRegEndValid && nowUtcMs <= registrationEndDateMs) {
+            // Ak je definovaný len koniec a aktuálny čas je pred ním
+            isOpen = true;
+            msg = '';
+          } else if (isRegStartValid && !isRegEndValid && nowUtcMs >= registrationStartDateMs) {
+            // Ak je definovaný len začiatok a aktuálny čas je po ňom
+            isOpen = true;
+            msg = '';
+          }
+          // Ak sú oba definované a aktuálny čas je medzi nimi, isOpen zostáva true
+          // Ak sú oba definované a aktuálny čas je mimo, už to bolo spracované vyššie
           
-          // Spustenie odpočtu
-          const updateCountdown = () => {
-              const remainingMs = registrationStartDateMs - Date.now();
-              if (remainingMs <= 0) {
-                  clearInterval(countdownIntervalRef.current);
-                  countdownIntervalRef.current = null;
-                  setCountdownMessage('');
-                  // Ak odpočet skončil, znovu vyhodnoťte stav registrácie (spustí sa onSnapshot)
-                  // Toto zabezpečí automatické sprístupnenie formulára
-              } else {
-                  const seconds = Math.floor((remainingMs / 1000) % 60);
-                  const minutes = Math.floor((remainingMs / (1000 * 60)) % 60);
-                  const hours = Math.floor((remainingMs / (1000 * 60 * 60)) % 24);
-                  const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
-                  setCountdownMessage(`Otvorenie o: ${days}d ${hours}h ${minutes}m ${seconds}s`);
-              }
-          };
-
-          updateCountdown(); // Prvé volanie pre okamžité zobrazenie
-          countdownIntervalRef.current = setInterval(updateCountdown, 1000); // Aktualizácia každú sekundu
-
-        } else if (isRegEndValid && nowUtcMs > registrationEndDateMs) {
-          isOpen = false;
-          const endDate = new Date(registrationEndDateMs);
-          // Formátovanie dátumu a času pre zobrazenie
-          const formattedEndDate = `${endDate.toLocaleDateString('sk-SK')} ${endDate.toLocaleTimeString('sk-SK')}`;
-          msg = `Registrácia je momentálne uzavretá. Ukončená: ${formattedEndDate}.`;
-        } else if (!isRegStartValid && !isRegEndValid) {
-          // Ak nie sú definované ani začiatok ani koniec, registrácia je otvorená
+        } else { // docSnap exists() is false, meaning the document does not exist
+          // Ak dokument nastavení neexistuje, predpokladajte, že registrácia je predvolene otvorená
           isOpen = true;
           msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
           console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
-        } else if (!isRegStartValid && isRegEndValid && nowUtcMs <= registrationEndDateMs) {
-          // Ak je definovaný len koniec a aktuálny čas je pred ním
-          isOpen = true;
-          msg = '';
-        } else if (isRegStartValid && !isRegEndValid && nowUtcMs >= registrationStartDateMs) {
-          // Ak je definovaný len začiatok a aktuálny čas je po ňom
-          isOpen = true;
-          msg = '';
         }
-        // Ak sú oba definované a aktuálny čas je medzi nimi, isOpen zostáva true
-        // Ak sú oba definované a aktuálny čas je mimo, už to bolo spracované vyššie
-        
-      } else {
-        // Ak dokument nastavení neexistuje, predpokladajte, že registrácia je predvolene otvorená
+      } else { // docSnap is not a valid DocumentSnapshot or is null/undefined
+        console.error("register.js: Invalid docSnap received by onSnapshot:", docSnap);
+        // Fallback to open registration in case of unexpected snapshot format
         isOpen = true;
-        msg = 'Nastavenia registrácie neboli nájdené. Registrácia je predvolene otvorená.';
-        console.warn("Nastavenia registrácie neboli nájdené vo Firestore. Predvolene otvorená registrácia.");
+        msg = 'Chyba pri načítaní nastavení registrácie. Registrácia je predvolene otvorená.';
+        setShowNotification(true); // Zobraziť upozornenie
       }
 
       setIsRegistrationOpen(isOpen);
