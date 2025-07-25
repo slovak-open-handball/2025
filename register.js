@@ -110,8 +110,8 @@ function App() {
   React.useEffect(() => {
     try {
       // Skontrolujte, či je Firebase SDK načítané
-      if (typeof firebase === 'undefined') {
-        console.error("register.js: Firebase SDK nie je načítané. Uistite sa, že sú script tagy Firebase v HTML.");
+      if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.auth === 'undefined') {
+        console.error("register.js: Firebase SDK nie je načítané alebo nie sú dostupné všetky moduly. Uistite sa, že sú script tagy Firebase v HTML.");
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
         setShowNotification(true);
         return;
@@ -135,6 +135,7 @@ function App() {
       setDb(firestoreDb);
       setAuth(firebaseAuth);
 
+      // Používame firebaseAuth.onAuthStateChanged namiesto onAuthStateChanged (z importu)
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
         if (!currentUser && typeof __initial_auth_token !== 'undefined') {
           try {
@@ -176,6 +177,7 @@ function App() {
     const docRef = db.collection('settings').doc('registration');
 
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
+    // Používame docRef.onSnapshot namiesto onSnapshot (z importu)
     const unsubscribe = docRef.onSnapshot((docSnap) => {
       // Získanie aktuálneho času v UTC milisekundách pre presné porovnanie
       const nowUtcMs = Date.now(); 
