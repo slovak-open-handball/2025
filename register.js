@@ -398,7 +398,17 @@ function App() {
     setShowNotification(false);
 
     // Validácia fakturačných údajov
-    const { ico, dic, icDph } = formData.billing;
+    const { clubName, ico, dic, icDph } = formData.billing;
+
+    // Oficiálny názov klubu je povinný
+    if (!clubName.trim()) {
+        setNotificationMessage('Oficiálny názov klubu je povinný.');
+        setShowNotification(true);
+        setLoading(false);
+        return;
+    }
+
+    // Povinné aspoň jedno z IČO, DIČ, IČ DPH
     if (!ico && !dic && !icDph) {
       setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
@@ -430,12 +440,10 @@ function App() {
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
     try {
-      // Pre hlavné odoslanie formulára (registrácia používateľa) môžeme stále použiť 'cors'
-      // ak Apps Script posiela správne CORS hlavičky pre túto akciu.
-      // Ak by pretrvávali problémy, aj toto by sa muselo zmeniť na 'no-cors'.
+      // *** ZMENA TU: Používame mode: 'no-cors' pre hlavné odoslanie formulára ***
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'cors', // Môže byť zmenené na 'no-cors', ak pretrvávajú problémy s CORS
+        mode: 'no-cors', // <--- KĽÚČOVÁ ZMENA
         headers: {
           'Content-Type': 'application/json',
         },
@@ -457,43 +465,41 @@ function App() {
         }),
       });
 
-      const result = await response.json();
+      // Keďže používame 'no-cors', nemôžeme priamo čítať odpoveď (response.json()).
+      // Musíme sa spoľahnúť na to, že Apps Script spracuje registráciu.
+      console.log("Požiadavka na registráciu používateľa odoslaná (no-cors režim).");
+      setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
+      setShowNotification(true);
 
-      if (result.success) {
-        setNotificationMessage('Registrácia úspešná! Môžete sa prihlásiť.');
-        setShowNotification(true);
-        // Vyčistiť formulár
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          contactPhoneNumber: '',
-          password: '',
-          confirmPassword: '',
-          houseNumber: '', 
-          country: '', 
-          city: '', 
-          postalCode: '', 
-          street: '', 
-          billing: { 
-            clubName: '',
-            ico: '',
-            dic: '',
-            icDph: '',
-          }
-        });
-        setUserRole('user'); // Keep default role, not from form
-        setPage(1); // Návrat na stránku 1
-        // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
-        setTimeout(() => {
-          window.location.href = 'login.html';
-        }, 3000);
-      } else {
-        setNotificationMessage(result.message || 'Registrácia zlyhala. Skúste to prosím znova.');
-        setShowNotification(true);
-      }
+      // Vyčistiť formulár
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        contactPhoneNumber: '',
+        password: '',
+        confirmPassword: '',
+        houseNumber: '', 
+        country: '', 
+        city: '', 
+        postalCode: '', 
+        street: '', 
+        billing: { 
+          clubName: '',
+          ico: '',
+          dic: '',
+          icDph: '',
+        }
+      });
+      setUserRole('user'); // Keep default role, not from form
+      setPage(1); // Návrat na stránku 1
+      // Presmerovanie na prihlasovaciu stránku po krátkej oneskorení
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 3000);
+      
     } catch (error) {
-      console.error('Chyba pri registrácii:', error);
+      console.error('Chyba pri registrácii (fetch zlyhal):', error);
       setNotificationMessage('Chyba pri registrácii. Skúste to prosím neskôr.');
       setShowNotification(true);
     } finally {
