@@ -101,8 +101,9 @@ function App() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
-  // Recaptcha ref
-  const recaptchaRef = React.useRef(null);
+  // Nový stav pre reCAPTCHA pripravenosť
+  const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
+
   const countdownIntervalRef = React.useRef(null); // Ref pre uloženie ID intervalu odpočtu
 
   // Výpočet stavu registrácie ako memoizovaná hodnota (rovnako ako v index.js)
@@ -271,6 +272,22 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Effect pre kontrolu pripravenosti reCAPTCHA
+  React.useEffect(() => {
+    const checkRecaptcha = () => {
+      if (window.grecaptcha && window.grecaptcha.ready) {
+        window.grecaptcha.ready(() => {
+          setIsRecaptchaReady(true);
+          console.log("register.js: reCAPTCHA je pripravená.");
+        });
+      } else {
+        // Ak grecaptcha ešte nie je k dispozícii, skúste to znova po krátkej pauze
+        setTimeout(checkRecaptcha, 100);
+      }
+    };
+    checkRecaptcha();
+  }, []);
+
 
   const closeNotification = () => {
     setShowNotification(false);
@@ -292,6 +309,13 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
 
+    if (!isRecaptchaReady) {
+      setNotificationMessage('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.');
+      setShowNotification(true);
+      setLoading(false);
+      return;
+    }
+
     // Validácia na strane klienta pre stránku 1
     if (formData.password !== formData.confirmPassword) {
       setNotificationMessage('Heslá sa nezhodujú.');
@@ -309,10 +333,10 @@ function App() {
     }
 
     // Overenie reCAPTCHA
-    const recaptchaToken = await recaptchaRef.current.executeAsync();
-    recaptchaRef.current.reset(); // Reset reCAPTCHA po vykonaní
-
     try {
+      const recaptchaToken = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit' });
+      // Pre reCAPTCHA v3 nie je potrebné volať grecaptcha.reset()
+
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'cors',
@@ -330,7 +354,7 @@ function App() {
       if (result.success) {
         setPage(2);
       } else {
-        setNotificationMessage('reCAPTCHA overenie zlyhalo. Skúste to prosím znova.');
+        setNotificationMessage(result.message || 'reCAPTCHA overenie zlyhalo. Skúste to prosím znova.');
         setShowNotification(true);
       }
     } catch (error) {
@@ -468,6 +492,7 @@ function App() {
           isRegistrationOpen: isRegistrationOpen, // Odovzdanie stavu registrácie
           countdownMessage: countdown, // Odovzdanie správy odpočtu
           registrationStartDate: registrationStartDate, // Odovzdanie registrationStartDate
+          isRecaptchaReady: isRecaptchaReady, // Odovzdanie stavu pripravenosti reCAPTCHA
         }) :
         React.createElement(Page2Form, {
           formData: formData,
@@ -481,10 +506,7 @@ function App() {
           handleRoleChange: handleRoleChange,
           NotificationModal: NotificationModal,
         })
-    ),
-    // reCAPTCHA skript - zabezpečte, aby bol načítaný raz a bol globálne dostupný
-    React.createElement('script', { src: `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`, async: true, defer: true }),
-    React.createElement('div', { id: 'recaptcha-badge', className: 'g-recaptcha', 'data-sitekey': RECAPTCHA_SITE_KEY, 'data-size': 'invisible', 'data-callback': 'onRecaptchaSuccess', 'data-badge': 'bottomleft' })
+    )
   );
 }
 
