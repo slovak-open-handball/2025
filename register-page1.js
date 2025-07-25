@@ -340,7 +340,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           { onSubmit: handleNext, className: 'space-y-4' },
           React.createElement(
             'div',
-            null,
+            { className: 'mb-4' }, // Pridaná medzera
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 'Meno kontaktnej osoby'),
             React.createElement('input', {
               type: 'text',
@@ -356,7 +356,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           ),
           React.createElement(
             'div',
-            null,
+            { className: 'mb-4' }, // Pridaná medzera
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'lastName' }, 'Priezvisko kontaktnej osoby'),
             React.createElement('input', {
               type: 'text',
@@ -372,7 +372,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           ),
           React.createElement(
             'div',
-            null,
+            { className: 'mb-4' }, // Pridaná medzera
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa kontaktnej osoby'),
             React.createElement('input', {
               type: 'email',
@@ -389,7 +389,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           ),
           React.createElement(
             'div',
-            null,
+            { className: 'mb-4' }, // Pridaná medzera
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 'Telefónne číslo kontaktnej osoby'),
             React.createElement(
               'div',
