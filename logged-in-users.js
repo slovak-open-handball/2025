@@ -581,6 +581,9 @@ function UsersManagementApp() {
       });
       console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
 
+      // Pridanie presmerovania po úspešnom zmazaní
+      window.location.href = 'https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users';
+
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa:", e);
       setError(`Chyba pri mazaní používateľa: ${e.message}`);
