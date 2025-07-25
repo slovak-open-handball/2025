@@ -454,9 +454,8 @@ function App() {
 
 
       // 2. Uloženie používateľských údajov do Firestore
-      // Používame __app_id pre štruktúru kolekcie
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const userDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid);
+      // Zmenená cesta pre zápis do databázy na /users/{userId}
+      const userDocRef = db.collection('users').doc(user.uid);
 
       console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       await userDocRef.set({
