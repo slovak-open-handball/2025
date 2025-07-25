@@ -66,15 +66,12 @@
     <!-- Hlavný obsah React aplikácie -->
     <div id="root"></div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-    <!-- React a ReactDOM -->
+    <!-- React a ReactDOM - Tieto musia byť načítané pred tvojimi React modulmi -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- ODSTRÁNENÉ: <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> -->
+    <!-- ODSTRÁNENÉ: Staré Firebase SDK script tagy -->
 
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
@@ -95,15 +92,20 @@
         const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
     </script>
 
-    <!-- Vlastné skripty -->
+    <!-- Vlastné skripty - TERAZ S type="module" -->
+    <!-- Načítanie komponentov stránok formulára a hlavného App komponentu.
+         Poradie je dôležité: Page1Form a Page2Form musia byť definované pred App,
+         pretože App ich importuje. -->
+    <script type="module" src="register-page1.js"></script>
+    <script type="module" src="register-page2.js"></script>
+    <script type="module" src="register.js"></script>
+
+    <!-- header.js by mal byť načítaný po definovaní globálnych premenných,
+         alebo sa uisti, že jeho logika nezávisí na Reacte alebo Firebase,
+         kým nie sú úplne inicializované. Ak header.js používa Firebase,
+         mal by tiež importovať Firebase moduly a byť type="module". -->
     <script src="header.js"></script>
     
-    <!-- Načítanie komponentov stránok formulára a hlavného App komponentu.
-         Poradie je dôležité: Page1Form a Page2Form musia byť definované pred App. -->
-    <script type="text/babel" src="register-page1.js"></script>
-    <script type="text/babel" src="register-page2.js"></script>
-    <script type="text/babel" src="register.js"></script>
-
     <script type="text/javascript">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
