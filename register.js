@@ -1020,13 +1020,14 @@ function App() {
           console.log("Odosielam dáta na Apps Script (registračný e-mail):", payload);
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Dôležité pre obídenie CORS politiky, ak Apps Script nemá správne hlavičky
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload)
           });
           console.log("Žiadosť na odoslanie registračného e-mailu odoslaná.");
+          // Pri 'no-cors' mode nemôžeme čítať odpoveď, takže logovanie responseData je len pre debug.
           try {
             const responseData = await response.text();
             console.log("Odpoveď z Apps Scriptu (fetch - registračný e-mail) ako text:", responseData); 
