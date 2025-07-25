@@ -141,7 +141,7 @@ function App() {
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true); // Tento stav bude riadiť zobrazenie "Načítavam..."
+  const [loading, setLoading] = React.useState(false); // ZMENA: Inicializácia na false, riadené len formulárom
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
@@ -180,7 +180,7 @@ function App() {
     try {
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte login.html.");
-        setLoading(false);
+        // setLoading(false); // ZMENA: Odstránené, loading je už false
         return;
       }
 
@@ -210,7 +210,7 @@ function App() {
         console.log("LoginApp: onAuthStateChanged volaný. currentUser:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Set user state to null or user object
         setIsAuthReady(true); // Mark auth as ready after the first check
-        setLoading(false); // Auth state checked, stop loading for initial page load
+        // setLoading(false); // ZMENA: ODSTRÁNENÉ - toto spôsobovalo predčasné resetovanie tlačidla
       });
 
       signIn();
@@ -223,7 +223,7 @@ function App() {
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
+      // setLoading(false); // ZMENA: Odstránené, loading je už false
     }
   }, []); // Empty dependency array - runs only once on component mount
 
@@ -249,14 +249,14 @@ function App() {
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            setLoading(false); // Nastavenia sú načítané aj v prípade chyby
+            // setLoading(false); // ZMENA: Odstránené, loading je už false
           });
 
           return () => unsubscribeSettings();
       } catch (e) {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          setLoading(false); // Nastavenia sú načítané aj v prípade chyby
+          // setLoading(false); // ZMENA: Odstránené, loading je už false
       }
     };
 
@@ -299,7 +299,7 @@ function App() {
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
-      setLoading(true);
+      setLoading(true); // ZMENA: Nastaviť loading na true aj pri odhlásení
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
@@ -307,7 +307,7 @@ function App() {
       console.error("Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoading(false);
+      setLoading(false); // ZMENA: Resetovať loading na false po odhlásení (aj pri chybe)
     }
   }, [auth]);
 
@@ -446,9 +446,7 @@ function App() {
       setEmail('');
       setPassword('');
       
-      // ZMENA: Odstránené setLoading(false) odtiaľto.
       // Loading zostane true, kým sa nespustí presmerovanie.
-
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
       }, 5000);
@@ -468,7 +466,7 @@ function App() {
   // Display loading state (pre celú stránku)
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia)
   // ALEBO !settingsLoaded (nastavenia sa ešte načítavajú),
-  // zobraz loading.
+  // zobraz full-page loading.
   if (!isAuthReady || user === undefined || !settingsLoaded) { 
     // Ak je user objekt (prihlásený) a auth je ready, znamená to, že je prihlásený, presmeruj
     if (isAuthReady && user) { 
