@@ -41,7 +41,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
     React.createElement(
       'h2',
       { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-      'Registrácia - strana 2'
+      'Registrácia - strana 2' // Zmenený nadpis
     ),
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
     React.createElement(
