@@ -93,6 +93,9 @@ function TournamentSettingsApp() {
   // New state variable for periodic update of isRegistrationOpen
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
+  // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+  const appId = 'default-app-id'; 
+
   // Calculate registration status as a memoized value
   const isRegistrationOpen = React.useMemo(() => {
     if (!settingsLoaded) return false; // Wait until settings are loaded
@@ -105,8 +108,8 @@ function TournamentSettingsApp() {
     const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
 
     return (
-      (isRegStartValid ? now >= regStart : true) && // If regStart is not valid, assume registration has started
-      (isRegEndValid ? now <= regEnd : true)        // If regEnd is not valid, assume registration has not ended
+      (isRegStartValid ? now >= regStart : true) && // Ak regStart nie je platný, predpokladáme, že registrácia začala
+      (isRegEndValid ? now <= regEnd : true)        // Ak regEnd nie je platný, predpokladáme, že registrácia neskončila
     );
   }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
 
@@ -466,6 +469,22 @@ function TournamentSettingsApp() {
         registrationEndDate: regEnd ? firebase.firestore.Timestamp.fromDate(regEnd) : null,
       });
       setUserNotificationMessage("Nastavenia registrácie úspešne aktualizované!");
+
+      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      try {
+          // Používame pevne zadanú premennú appId z vonkajšieho scope
+          await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+              message: `Nastavenia registrácie boli aktualizované. Začiatok: ${regStart ? regStart.toLocaleDateString('sk-SK') + ' ' + regStart.toLocaleTimeString('sk-SK') : 'N/A'}, Koniec: ${regEnd ? regEnd.toLocaleDateString('sk-SK') + ' ' + regEnd.toLocaleTimeString('sk-SK') : 'N/A'}.`,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
+              read: false
+          });
+          console.log("Notifikácia o aktualizácii nastavení registrácie úspešne uložená do Firestore.");
+      } catch (e) {
+          console.error("TournamentSettingsApp: Chyba pri ukladaní notifikácie o aktualizácii nastavení registrácie:", e);
+      }
+      // --- Koniec logiky pre ukladania notifikácie ---
+
     } catch (e) {
       console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
       setError(`Chyba pri aktualizácii nastavenia: ${e.message}`);
