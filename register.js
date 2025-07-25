@@ -107,8 +107,9 @@ function App() {
   // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
-  // Nový stav na indikáciu prebiehajúcej registrácie
+  // Nový stav na indikáciu prebiehajúcej registrácie (používa sa aj ref pre okamžitý prístup)
   const [isRegistering, setIsRegistering] = React.useState(false);
+  const isRegisteringRef = React.useRef(false); // Ref pre okamžitý prístup v onAuthStateChanged
 
   const countdownIntervalRef = React.useRef(null);
 
@@ -179,10 +180,10 @@ function App() {
 
       const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
         // Iba presmerovať, ak je používateľ už prihlásený a NIE JE v procese registrácie
-        // Toto zabráni predčasnému presmerovaniu počas registrácie
-        if (currentUser && !isRegistering) {
+        // Používame isRegisteringRef.current pre okamžitý prístup k stavu
+        if (currentUser && !isRegisteringRef.current) {
             console.log("register.js: Používateľ už prihlásený pri načítaní stránky, presmerovávam na logged-in-my-data.html");
-            window.location.href = 'logged-in-my-data.html';
+            window.location.href = 'login.html'; // Presmerovanie na login.html, nie logged-in-my-data.html
             return;
         }
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
@@ -194,8 +195,7 @@ function App() {
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
     }
-  }, [isRegistering]); // Pridaná závislosť isRegistering
-
+  }, []); // Odstránená závislosť isRegistering, pretože ref je okamžitý
 
   // Načítanie a počúvanie stavu registrácie z Firestore
   React.useEffect(() => {
@@ -374,7 +374,8 @@ function App() {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
-    setIsRegistering(true); // Začiatok procesu registrácie
+    setIsRegistering(true); // Nastavenie stavu pre re-render
+    isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
     // Validácia fakturačných údajov
     const { clubName, ico, dic, icDph } = formData.billing;
@@ -383,7 +384,8 @@ function App() {
         setNotificationMessage('Oficiálny názov klubu je povinný.');
         setShowNotification(true);
         setLoading(false);
-        setIsRegistering(false); // Resetovať stav
+        setIsRegistering(false);
+        isRegisteringRef.current = false;
         return;
     }
 
@@ -391,7 +393,8 @@ function App() {
       setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
       setLoading(false);
-      setIsRegistering(false); // Resetovať stav
+      setIsRegistering(false);
+      isRegisteringRef.current = false;
       return;
     }
 
@@ -401,7 +404,8 @@ function App() {
         setNotificationMessage('IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).');
         setShowNotification(true);
         setLoading(false);
-        setIsRegistering(false); // Resetovať stav
+        setIsRegistering(false);
+        isRegisteringRef.current = false;
         return;
       }
     }
@@ -411,7 +415,8 @@ function App() {
       setNotificationMessage('PSČ musí mať presne 5 číslic.');
       setShowNotification(true);
       setLoading(false);
-      setIsRegistering(false); // Resetovať stav
+      setIsRegistering(false);
+      isRegisteringRef.current = false;
       return;
     }
 
@@ -422,7 +427,8 @@ function App() {
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setLoading(false);
-        setIsRegistering(false); // Resetovať stav
+        setIsRegistering(false);
+        isRegisteringRef.current = false;
         return;
       }
 
@@ -430,7 +436,8 @@ function App() {
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         setLoading(false);
-        setIsRegistering(false); // Resetovať stav
+        setIsRegistering(false);
+        isRegisteringRef.current = false;
         return; // Zastav, ak token nebol získaný
       }
       console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
@@ -545,6 +552,7 @@ function App() {
     } finally {
       setLoading(false);
       setIsRegistering(false); // Ukončenie procesu registrácie
+      isRegisteringRef.current = false; // Reset referencie
     }
   };
 
