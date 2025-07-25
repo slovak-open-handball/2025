@@ -160,8 +160,22 @@ async function initializeHeaderLogic() {
 
             if (currentHeaderUser) {
                 try {
-                    // Načítanie roly prihláseného používateľa
-                    const userDoc = await dbHeader.collection('users').doc(currentHeaderUser.uid).get();
+                    const userDocRef = dbHeader.collection('users').doc(currentHeaderUser.uid);
+                    let userDoc = await userDocRef.get();
+
+                    // Check if it's a brand new user (creation time is very close to last sign-in time)
+                    // This is a heuristic to detect if the user was just created by register.js
+                    const isNewUser = currentHeaderUser.metadata.creationTime &&
+                                      currentHeaderUser.metadata.lastSignInTime &&
+                                      Math.abs(new Date(currentHeaderUser.metadata.creationTime).getTime() - new Date(currentHeaderUser.metadata.lastSignInTime).getTime()) < 5000; // 5 sekúnd tolerancie
+
+                    if (!userDoc.exists && isNewUser) {
+                        console.log(`Header.js: Používateľský dokument pre nového používateľa ${currentHeaderUser.uid} sa zatiaľ nenašiel. Čakám a skúšam znova...`);
+                        // Introduce a small delay for Firestore write propagation
+                        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+                        userDoc = await userDocRef.get(); // Try fetching again
+                    }
+
                     if (userDoc.exists) {
                         const userData = userDoc.data();
                         const userRole = userData.role;
@@ -178,11 +192,10 @@ async function initializeHeaderLogic() {
                         if (!isValidFirestoreTimestamp(passwordLastChanged)) {
                             console.warn("Header.js: 'passwordLastChanged' nie je platný Timestamp objekt.", { type: typeof passwordLastChanged, value: passwordLastChanged });
 
-                            // Kontrola, či je používateľ novo registrovaný (napr. do 5 minút)
-                            // Toto dáva serverTimestamp() čas na propagáciu
+                            // Tolerancia pre novo registrovaných používateľov (až 10 minút)
                             const now = new Date();
                             const registeredDate = isValidFirestoreTimestamp(registeredAt) ? registeredAt.toDate() : null;
-                            const isRecentlyRegistered = registeredDate && (now.getTime() - registeredDate.getTime() < 5 * 60 * 1000); // 5 minút
+                            const isRecentlyRegistered = registeredDate && (now.getTime() - registeredDate.getTime() < 10 * 60 * 1000); // 10 minút tolerancie
 
                             if (isRecentlyRegistered) {
                                 console.log("Header.js: Používateľ je novo registrovaný, dočasne tolerujem neplatný 'passwordLastChanged'.");
@@ -242,8 +255,8 @@ async function initializeHeaderLogic() {
                             console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na notifikácie admina nebol nastavený.");
                         }
                     } else {
-                        console.warn("Header.js: Používateľský dokument sa nenašiel pre UID:", currentHeaderUser.uid);
-                        // Ak sa dokument používateľa nenašiel, odhláste ho z bezpečnostných dôvodov
+                        console.error("Header.js: Používateľský dokument sa nenašiel ani po opakovanom pokuse pre UID:", currentHeaderUser.uid);
+                        // Ak sa dokument používateľa nenašiel ani po oneskorení, odhláste ho z bezpečnostných dôvodov
                         await authHeader.signOut();
                         window.location.href = 'login.html';
                         return;
