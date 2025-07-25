@@ -1,22 +1,8 @@
 // register-page2.js
-// Tento súbor obsahuje komponenty a logiku pre druhú stránku registračného formulára.
+// Obsahuje komponenty a logiku pre druhú stránku registračného formulára.
 
 // Page2Form Component
-// Očakáva NotificationModal ako prop, aby sa zabezpečilo, že je k dispozícii.
-function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, NotificationModal, RECAPTCHA_SITE_KEY }) {
-  const [recaptchaToken, setRecaptchaToken] = React.useState('');
-
-  // Effect to load reCAPTCHA and get token
-  React.useEffect(() => {
-    if (typeof grecaptcha !== 'undefined' && RECAPTCHA_SITE_KEY) {
-      grecaptcha.ready(function() {
-        grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'submit' }).then(function(token) {
-          setRecaptchaToken(token);
-        });
-      });
-    }
-  }, [RECAPTCHA_SITE_KEY]); // Závislosť na RECAPTCHA_SITE_KEY
-
+export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, userRole, handleRoleChange, NotificationModal }) {
   return React.createElement(
     'div',
     { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
@@ -28,78 +14,127 @@ function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, 
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
     React.createElement(
       'form',
-      { onSubmit: (e) => handleSubmit(e, recaptchaToken), className: 'space-y-4' },
+      { onSubmit: handleSubmit, className: 'space-y-4' },
       React.createElement(
         'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingAddress' }, 'Fakturačná adresa'),
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'birthDate' }, 'Dátum narodenia'),
         React.createElement('input', {
-          type: 'text',
-          id: 'billingAddress',
+          type: 'date',
+          id: 'birthDate',
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: formData.billingAddress,
+          value: formData.birthDate,
           onChange: handleChange,
-          placeholder: 'Ulica a číslo domu',
-          tabIndex: 1
+          required: true,
+          tabIndex: 9,
+          disabled: loading
         })
       ),
       React.createElement(
         'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingCity' }, 'Mesto'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'billingCity',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: formData.billingCity,
-          onChange: handleChange,
-          placeholder: 'Mesto',
-          tabIndex: 2
-        })
-      ),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingZip' }, 'PSČ'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'billingZip',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: formData.billingZip,
-          onChange: handleChange,
-          placeholder: 'PSČ',
-          tabIndex: 3
-        })
-      ),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'billingCountry' }, 'Krajina'),
-        React.createElement('input', {
-          type: 'text',
-          id: 'billingCountry',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-          value: formData.billingCountry,
-          onChange: handleChange,
-          placeholder: 'Krajina',
-          tabIndex: 4
-        })
-      ),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'gender' }, 'Pohlavie'),
         React.createElement(
-          'label',
-          { className: 'inline-flex items-center' },
-          React.createElement('input', {
-            type: 'checkbox',
-            id: 'isAdmin',
-            className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md',
-            checked: formData.isAdmin,
+          'select',
+          {
+            id: 'gender',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+            value: formData.gender,
             onChange: handleChange,
-            tabIndex: 5
-          }),
-          React.createElement('span', { className: 'ml-2 text-gray-700' }, 'Chcem sa zaregistrovať ako administrátor')
+            required: true,
+            tabIndex: 10,
+            disabled: loading
+          },
+          React.createElement('option', { value: '' }, 'Vyberte pohlavie'),
+          React.createElement('option', { value: 'Muž' }, 'Muž'),
+          React.createElement('option', { value: 'Žena' }, 'Žena'),
+          React.createElement('option', { value: 'Iné' }, 'Iné')
+        )
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 'Krajina'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'country',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: formData.country,
+          onChange: handleChange,
+          required: true,
+          placeholder: 'Zadajte krajinu',
+          tabIndex: 11,
+          disabled: loading
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 'Mesto'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'city',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: formData.city,
+          onChange: handleChange,
+          required: true,
+          placeholder: 'Zadajte mesto',
+          tabIndex: 12,
+          disabled: loading
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' }, 'PSČ'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'postalCode',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: formData.postalCode,
+          onChange: handleChange,
+          required: true,
+          placeholder: 'Zadajte PSČ',
+          tabIndex: 13,
+          disabled: loading
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 'Ulica a číslo domu'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'street',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: formData.street,
+          onChange: handleChange,
+          required: true,
+          placeholder: 'Zadajte ulicu a číslo domu',
+          tabIndex: 14,
+          disabled: loading
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'role' }, 'Úloha'),
+        React.createElement(
+          'select',
+          {
+            id: 'role',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+            value: userRole,
+            onChange: handleRoleChange,
+            required: true,
+            tabIndex: 15,
+            disabled: loading
+          },
+          React.createElement('option', { value: '' }, 'Vyberte úlohu'),
+          React.createElement('option', { value: 'player' }, 'Hráč'),
+          React.createElement('option', { value: 'coach' }, 'Tréner'),
+          React.createElement('option', { value: 'referee' }, 'Rozhodca'),
+          React.createElement('option', { value: 'user' }, 'Len používateľ')
         )
       ),
       React.createElement(
@@ -112,7 +147,7 @@ function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, 
             onClick: handlePrev,
             className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
             disabled: loading,
-            tabIndex: 6
+            tabIndex: 16
           },
           'Späť'
         ),
@@ -122,7 +157,7 @@ function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, 
             type: 'submit',
             className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
             disabled: loading,
-            tabIndex: 7
+            tabIndex: 17
           },
           loading ? React.createElement(
             'div',
@@ -138,6 +173,3 @@ function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, 
     )
   );
 }
-
-// Export the component for use in other files
-export { Page2Form };
