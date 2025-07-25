@@ -109,12 +109,10 @@ function App() {
         return;
       }
 
-      // Používame existujúcu (predvolenú) Firebase aplikáciu, ktorú by mala inicializovať header.js
-      // Ak header.js inicializuje Firebase s názvom, bolo by potrebné použiť firebase.app('nazov_aplikacie')
-      // Ale pre jednoduchosť a kompatibilitu s header.js, ktorý pravdepodobne inicializuje predvolenú app,
-      // pristupujeme priamo k službám.
-      const firestoreDb = firebase.firestore(); // Získanie Firestore služby z predvolenej app
-      const firebaseAuth = firebase.auth();     // Získanie Auth služby z predvolenej app
+      // Vždy získajte služby z predvolenej Firebase aplikácie.
+      // Predpokladáme, že predvolená aplikácia je už inicializovaná (napr. cez header.js).
+      const firestoreDb = firebase.firestore(); 
+      const firebaseAuth = firebase.auth();     
 
       setDb(firestoreDb);
       setAuth(firebaseAuth);
