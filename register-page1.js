@@ -329,7 +329,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         React.createElement(
           'h2',
           { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-          'Registrácia (1/2)'
+          'Registrácia - strana 1'
         ),
         React.createElement(
           'form',
@@ -407,7 +407,13 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 id: 'contactPhoneNumber',
                 className: 'shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                 value: formData.contactPhoneNumber,
-                onChange: handleChange,
+                onChange: (e) => {
+                  // Filtrujeme iba číslice
+                  const re = /^[0-9\b]+$/; // Povoliť iba číslice a backspace
+                  if (e.target.value === '' || re.test(e.target.value)) {
+                    handleChange(e); // Ak je hodnota prázdna alebo obsahuje iba číslice, aktualizujeme stav
+                  }
+                },
                 required: true,
                 placeholder: 'Zadajte telefónne číslo',
                 tabIndex: 5,
