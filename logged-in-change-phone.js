@@ -237,7 +237,7 @@ function ChangePhoneApp() {
                     window.location.href = 'login.html';
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("ChangePhoneApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -263,7 +263,7 @@ function ChangePhoneApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-  // useEffect for updating header link visibility (remains for consistency)
+  // Effect for updating header link visibility (remains for consistency)
   React.useEffect(() => {
     console.log(`ChangePhoneApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
@@ -344,6 +344,29 @@ function ChangePhoneApp() {
         contactPhoneNumber: contactPhoneNumber,
       });
       setUserNotificationMessage("Telefónne číslo bolo úspešne aktualizované!");
+
+      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      try {
+          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          let notificationMessage = '';
+          // Notifikácia pre všetkých administrátorov, ak zmenu vykonal bežný používateľ
+          notificationMessage = `Používateľ ${userProfileData.email} si zmenil telefónne číslo na ${contactPhoneNumber}.`;
+          const notificationRecipientId = 'all_admins'; 
+
+          if (notificationMessage) {
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                  message: notificationMessage,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  recipientId: notificationRecipientId,
+                  read: false
+              });
+              console.log("Notifikácia o zmene telefónneho čísla úspešne uložená do Firestore.");
+          }
+      } catch (e) {
+          console.error("ChangePhoneApp: Chyba pri ukladaní notifikácie o zmene telefónneho čísla:", e);
+      }
+      // --- Koniec logiky pre ukladanie notifikácie ---
+
     } catch (e) {
       console.error("ChangePhoneApp: Chyba pri aktualizácii telefónneho čísla:", e);
       setError(`Chyba pri aktualizácii telefónneho čísla: ${e.message}`);
