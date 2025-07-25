@@ -6,6 +6,11 @@
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
+// ODSTRÁNENÉ: Firebase SDKs importy, pretože sa teraz načítavajú globálne cez script tagy v HTML
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
@@ -109,10 +114,20 @@ function App() {
         return;
       }
 
-      // Vždy získajte služby z predvolenej Firebase aplikácie.
-      // Predpokladáme, že predvolená aplikácia je už inicializovaná (napr. cez header.js).
-      const firestoreDb = firebase.firestore(); 
-      const firebaseAuth = firebase.auth();     
+      let firebaseAppInstance;
+      try {
+        // Pokúste sa získať predvolenú aplikáciu, ak už existuje
+        firebaseAppInstance = firebase.app();
+        console.log("register.js: Používam existujúcu Firebase App inštanciu.");
+      } catch (e) {
+        // Ak predvolená aplikácia neexistuje, inicializujte ju
+        console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        firebaseAppInstance = firebase.initializeApp(firebaseConfig);
+      }
+      
+      const firestoreDb = firebase.firestore(firebaseAppInstance); 
+      const firebaseAuth = firebase.auth(firebaseAppInstance);     
 
       setDb(firestoreDb);
       setAuth(firebaseAuth);
