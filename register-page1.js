@@ -115,7 +115,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10', // Odstránené triedy pre orámovanie, tieň a focus
+        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none', // Odstránené triedy pre orámovanie, tieň a focus, pridané border-none rounded-none
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -167,7 +167,7 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
       document.addEventListener('mousedown', handleOutsideClick);
     } else {
       document.removeEventListener('mousedown', handleOutsideClick);
-    }
+    };
 
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
