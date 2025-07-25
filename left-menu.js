@@ -46,7 +46,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
-            } else if (jsFileName === 'logged-in-send-message' && typeof SendMessageApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-soh-chat' && typeof SendMessageApp !== 'undefined') {
                 rootComponent = SendMessageApp;
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
@@ -84,7 +84,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
-            } else if (jsFileName === 'logged-in-send-message' && typeof SendMessageApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-soh-chat' && typeof SendMessageApp !== 'undefined') {
                 rootComponent = SendMessageApp;
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
@@ -118,7 +118,7 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-change-password': ['admin', 'user'],
         'menu-my-settings': ['admin', 'user'],
         'menu-notifications': ['admin', 'user'],
-        'menu-send-message': ['admin'],
+        'menu-soh-chat': ['admin', 'user'],
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
         'menu-tournament-settings': ['admin']
