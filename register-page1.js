@@ -155,6 +155,8 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
   React.useEffect(() => {
     if (isOpen) {
       setTempSelectedCode(selectedCode);
+      // Reset searchTerm when modal opens
+      setSearchTerm(''); 
     }
   }, [isOpen, selectedCode]);
 
@@ -178,6 +180,7 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 
   if (!isOpen) return null;
 
+  // Filter countries based on searchTerm. If searchTerm is empty, all countries are shown.
   const filteredCountries = countryCodes.filter(country =>
     country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     country.dialCode.includes(searchTerm)
