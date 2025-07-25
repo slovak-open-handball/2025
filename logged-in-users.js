@@ -189,7 +189,9 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 
 
 // Main React component for the logged-in-users.html page
-function UsersApp() {
+// ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
+// a presunuté mimo funkcie, aby bolo globálne dostupné.
+function UsersManagementApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
@@ -216,15 +218,16 @@ function UsersApp() {
 
     try {
       if (typeof firebase === 'undefined') {
-        console.error("UsersApp: Firebase SDK nie je načítané.");
+        console.error("UsersManagementApp: Firebase SDK nie je načítané.");
         setError("Firebase SDK nie je načítané. Skontrolujte logged-in-users.html.");
         setLoading(false);
         return;
       }
 
       let firebaseApp;
+      // ZMENA: Používame globálnu premennú firebaseConfig namiesto __firebase_config
       if (firebase.apps.length === 0) {
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
+        firebaseApp = firebase.initializeApp(firebaseConfig);
       } else {
         firebaseApp = firebase.app();
       }
@@ -237,17 +240,18 @@ function UsersApp() {
 
       const signIn = async () => {
         try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
+          // ZMENA: Používame globálnu premennú initialAuthToken namiesto __initial_auth_token
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
           }
         } catch (e) {
-          console.error("UsersApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+          console.error("UsersManagementApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("UsersApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -260,7 +264,7 @@ function UsersApp() {
         }
       };
     } catch (e) {
-      console.error("UsersApp: Nepodarilo sa inicializovať Firebase:", e);
+      console.error("UsersManagementApp: Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
@@ -272,27 +276,27 @@ function UsersApp() {
 
     if (isAuthReady && db && user !== undefined) {
       if (user === null) {
-        console.log("UsersApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
 
       if (user) {
-        console.log(`UsersApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
         setLoading(true);
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("UsersApp: onSnapshot pre používateľský dokument spustený.");
+            console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("UsersApp: Používateľský dokument existuje, dáta:", userData);
+              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("UsersApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("UsersApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                  console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
@@ -303,26 +307,26 @@ function UsersApp() {
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`UsersApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+              console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("UsersApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                  console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("UsersApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                  console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("UsersApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("UsersApp: Timestampy sú rovnaké, aktualizujem localStorage.");
+                  console.log("UsersManagementApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -335,14 +339,14 @@ function UsersApp() {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("UsersApp: Načítanie používateľských dát dokončené, loading: false");
+              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
-              console.warn("UsersApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
             }
           }, error => {
-            console.error("UsersApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+            console.error("UsersManagementApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
             if (error.code === 'permission-denied') {
                 setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
             } else if (error.code === 'unavailable') {
@@ -357,22 +361,22 @@ function UsersApp() {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
-            console.log("UsersApp: Načítanie používateľských dát zlyhalo, loading: false");
+            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
-          console.error("UsersApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+          console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
         }
       }
     } else if (isAuthReady && user === undefined) {
-        console.log("UsersApp: Auth ready, user undefined. Nastavujem loading na false.");
+        console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false.");
         setLoading(false);
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("UsersApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
@@ -380,7 +384,7 @@ function UsersApp() {
 
   // Effect for updating header link visibility
   React.useEffect(() => {
-    console.log(`UsersApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -392,13 +396,13 @@ function UsersApp() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
-        console.log("UsersApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+        console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         registerLink && registerLink.classList.remove('hidden'); 
-        console.log("UsersApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
   }, [user]);
@@ -412,7 +416,7 @@ function UsersApp() {
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("UsersApp: Chyba pri odhlásení:", e);
+      console.error("UsersManagementApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -437,7 +441,7 @@ function UsersApp() {
     let unsubscribeUsers;
 
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-      console.log("UsersApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov.");
+      console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov.");
       setLoading(true);
       try {
         unsubscribeUsers = db.collection('users').onSnapshot(snapshot => {
@@ -448,14 +452,14 @@ function UsersApp() {
           setUsers(fetchedUsers);
           setLoading(false);
           setError('');
-          console.log("UsersApp: Používatelia aktualizovaní z onSnapshot.");
+          console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot.");
         }, error => {
-          console.error("UsersApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error);
+          console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error);
           setError(`Chyba pri načítaní používateľov: ${error.message}`);
           setLoading(false);
         });
       } catch (e) {
-        console.error("UsersApp: Chyba pri nastavovaní onSnapshot pre používateľov (try-catch):", e);
+        console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre používateľov (try-catch):", e);
         setError(`Chyba pri nastavovaní poslucháča pre používateľov: ${e.message}`);
         setLoading(false);
       }
@@ -465,7 +469,7 @@ function UsersApp() {
 
     return () => {
       if (unsubscribeUsers) {
-        console.log("UsersApp: Ruším odber onSnapshot pre používateľov.");
+        console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľov.");
         unsubscribeUsers();
       }
     };
@@ -514,7 +518,7 @@ function UsersApp() {
       console.log("Notifikácia o schválení používateľa úspešne uložená do Firestore.");
 
     } catch (e) {
-      console.error("UsersApp: Chyba pri schvaľovaní používateľa:", e);
+      console.error("UsersManagementApp: Chyba pri schvaľovaní používateľa:", e);
       setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
@@ -545,7 +549,7 @@ function UsersApp() {
       console.log("Notifikácia o zmene roly používateľa úspešne uložená do Firestore.");
 
     } catch (e) {
-      console.error("UsersApp: Chyba pri ukladaní roly:", e);
+      console.error("UsersManagementApp: Chyba pri ukladaní roly:", e);
       setError(`Chyba pri ukladaní roly: ${e.message}`);
     } finally {
       setLoading(false);
@@ -576,7 +580,7 @@ function UsersApp() {
       console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
 
     } catch (e) {
-      console.error("UsersApp: Chyba pri mazaní používateľa:", e);
+      console.error("UsersManagementApp: Chyba pri mazaní používateľa:", e);
       setError(`Chyba pri mazaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
@@ -586,7 +590,7 @@ function UsersApp() {
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("UsersApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
@@ -606,7 +610,7 @@ function UsersApp() {
 
   // If user is not admin, redirect
   if (userProfileData && userProfileData.role !== 'admin') {
-    console.log("UsersApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam.");
+    console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam.");
     window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
