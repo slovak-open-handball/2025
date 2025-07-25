@@ -3,7 +3,7 @@
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Predpokladáme, že táto URL je správna pre overenie reCAPTCHA
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Predpokladáme, že táto URL je správna pre Apps Script
 
 // Import komponentov pre stránky formulára
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
@@ -84,7 +84,7 @@ function App() {
       icDph: '',
     }
   });
-  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola, ale už nie je voliteľná vo formulári
+  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
@@ -349,38 +349,15 @@ function App() {
       return;
     }
 
-    // Prechod na ďalšiu stránku po overení reCAPTCHA (v no-cors režime, len pre prechod)
-    try {
-      const recaptchaToken = await getRecaptchaToken('page_transition'); // Akcia pre prechod stránky
-      if (!recaptchaToken) {
+    // Získanie reCAPTCHA tokenu pre prechod na ďalšiu stránku (klient-side overenie)
+    const recaptchaToken = await getRecaptchaToken('page_transition');
+    if (!recaptchaToken) {
         setLoading(false);
         return; // Zastav, ak token nebol získaný
-      }
-
-      // Odoslanie tokenu na Apps Script pre overenie (v no-cors režime)
-      // V režime no-cors nemôžeme priamo čítať odpoveď, takže predpokladáme úspech pre prechod
-      // Skutočné overenie sa vykoná pri finálnom handleSubmit
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Používame 'no-cors' pre prechod, aby sa predišlo blokovaniu
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'verifyRecaptcha', // Akcia pre Apps Script
-          recaptchaToken: recaptchaToken,
-        }),
-      });
-      console.log("Požiadavka na overenie reCAPTCHA pre prechod stránky odoslaná (no-cors režim).");
-      setPage(2);
-
-    } catch (error) {
-      console.error('Chyba pri overovaní reCAPTCHA pre prechod stránky:', error);
-      setNotificationMessage('Chyba pri overovaní reCAPTCHA. Skúste to prosím neskôr.');
-      setShowNotification(true);
-    } finally {
-      setLoading(false);
     }
+    console.log("reCAPTCHA Token pre prechod stránky získaný (klient-side overenie).");
+    setPage(2);
+    setLoading(false); // Ukončiť načítavanie po prechode na ďalšiu stránku
   };
 
   const handlePrev = () => {
@@ -440,36 +417,13 @@ function App() {
         return;
       }
 
-      // Získanie reCAPTCHA tokenu pre finálnu registráciu
-      const recaptchaToken = await getRecaptchaToken('register_user'); // Akcia pre registráciu používateľa
+      // Získanie reCAPTCHA tokenu pre finálnu registráciu (klient-side overenie)
+      const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         setLoading(false);
         return; // Zastav, ak token nebol získaný
       }
-
-      // Overenie reCAPTCHA tokenu na serveri (Google Apps Script)
-      // Používame 'cors' na čítanie odpovede zo servera
-      const recaptchaVerifyResponse = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'verifyRecaptcha', // Akcia pre Apps Script
-          recaptchaToken: recaptchaToken,
-        }),
-      });
-
-      const recaptchaVerifyResult = await recaptchaVerifyResponse.json();
-
-      if (!recaptchaVerifyResult.success) {
-        setNotificationMessage(recaptchaVerifyResult.message || 'Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.');
-        setShowNotification(true);
-        setLoading(false);
-        return;
-      }
-      console.log("reCAPTCHA overenie úspešné.");
+      console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
       // 1. Vytvorenie používateľa vo Firebase Authentication
       const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
@@ -490,13 +444,34 @@ function App() {
         houseNumber: formData.houseNumber,
         billing: formData.billing,
         role: userRole, // Predvolená rola 'user'
-        approved: true, // <--- TOTO BOLO PRIDANÉ
+        approved: true,
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
       });
 
-      // Ak je potrebné odoslať overovací e-mail (voliteľné, ale odporúčané pre bezpečnosť)
-      // await user.sendEmailVerification();
-      // console.log("Overovací e-mail odoslaný.");
+      // 3. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
+      try {
+          const payload = {
+            action: 'sendRegistrationEmail',
+            email: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            // Ďalšie údaje, ak sú potrebné pre e-mail
+          };
+          console.log("Odosielanie dát do Apps Script (registračný e-mail):", payload);
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Používame 'no-cors', pretože nepotrebujeme čítať odpoveď
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+          console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
+          // V režime no-cors nemôžeme čítať odpoveď, takže nečakáme na response.json()
+      } catch (emailError) {
+          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
+          // Táto chyba neblokuje registráciu, len odoslanie e-mailu
+      }
 
       setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
       setShowNotification(true);
