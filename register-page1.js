@@ -10,7 +10,7 @@ const countryCodes = [
   { code: 'AX', dialCode: '+358' }, { code: 'AZ', dialCode: '+994' }, { code: 'BA', dialCode: '+387' },
   { code: 'BB', dialCode: '+1‑246' }, { code: 'BD', dialCode: '+880' }, { code: 'BE', dialCode: '+32' },
   { code: 'BF', dialCode: '+226' }, { code: 'BG', dialCode: '+359' }, { code: 'BH', dialCode: '+973' },
-  { code: 'BI', dialCode: '+257' }, { code: 'BJ', dialCode: '+229' }, { code: 'BL', dialleCode: '+590' },
+  { code: 'BI', dialCode: '+257' }, { code: 'BJ', dialCode: '+229' }, { code: 'BL', dialCode: '+590' },
   { code: 'BM', dialCode: '+1‑441' }, { code: 'BN', dialCode: '+673' }, { code: 'BO', dialCode: '+591' },
   { code: 'BQ', dialCode: '+599' }, { code: 'BR', dialCode: '+55' }, { code: 'BS', dialCode: '+1‑242' },
   { code: 'BT', dialCode: '+975' }, { code: 'BW', dialCode: '+267' }, { code: 'BY', dialCode: '+375' },
