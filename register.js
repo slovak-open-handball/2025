@@ -31,6 +31,7 @@ const countryCodes = [
   { code: 'AT', dialCode: '+43' },
   { code: 'AU', dialCode: '+61' },
   { code: 'AW', dialCode: '+297' },
+  { code: 'AX', dialCode: '+358' },
   { code: 'AZ', dialCode: '+994' },
   { code: 'BA', dialCode: '+387' },
   { code: 'BB', dialCode: '+1‑246' },
@@ -461,10 +462,11 @@ function App() {
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Inicializácia na undefined
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false); // ZMENA: Inicializácia na false, bude sa riadiť len počas registrácie
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // NOVÝ stav pre úspešnú registráciu
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
 
   // Page 1 states
   const [email, setEmail] = React.useState('');
@@ -541,7 +543,7 @@ function App() {
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60)) / (1000 * 60));
+    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)); // ZMENA: Opravený výpočet minút
     const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
@@ -591,7 +593,8 @@ function App() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("RegisterApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
-        setLoading(false); // Auth state checked, stop loading
+        setIsAuthReady(true); // Autentifikácia je pripravená
+        setLoading(false); // ZMENA: Nastavíme loading na false až tu, po overení auth stavu
       });
 
       signIn();
@@ -612,7 +615,8 @@ function App() {
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
     const fetchSettings = async () => {
-      if (!db || user !== null) { // Wait for DB and user to be explicitly null (not logged in)
+      // ZMENA: Kontrolujeme isAuthReady namiesto user !== null, aby sme zabezpečili, že Firebase je pripravené
+      if (!db || !isAuthReady) { 
         return;
       }
       try {
@@ -643,7 +647,8 @@ function App() {
     };
 
     fetchSettings();
-  }, [db, user]); // Depend on db and user (to ensure user is null before fetching settings)
+  }, [db, isAuthReady]); // ZMENA: Závisí od db a isAuthReady
+
 
   // Effect for countdown (runs when registrationStartDate changes)
   React.useEffect(() => {
@@ -897,8 +902,9 @@ function App() {
     }
     console.log("reCAPTCHA Token pre registráciu:", recaptchaToken);
 
-    setLoading(true);
+    setLoading(true); // ZMENA: Nastavíme loading na true na začiatku
     setError('');
+    setUserNotificationMessage(''); // Vyčistíme notifikácie
     setRegistrationSuccess(false); // Reset success state at the start of submission
     
     try {
@@ -965,18 +971,18 @@ function App() {
       // --- Logika pre ukladanie notifikácie pre administrátorov (tiež awaited) ---
       try {
           const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Používame globálne appId
-          let notificationMessage = '';
+          let notificationMessageForAdmins = ''; // ZMENA: premenovaná pre jasnosť
           const notificationRecipientId = 'all_admins'; 
 
           if (isAdminRegistration) {
-              notificationMessage = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
+              notificationMessageForAdmins = `Nový administrátor ${email} sa zaregistroval a čaká na schválenie.`;
           } else {
-              notificationMessage = `Nový používateľ ${email} sa zaregistroval.`;
+              notificationMessageForAdmins = `Nový používateľ ${email} sa zaregistroval.`;
           }
 
-          if (notificationMessage) {
+          if (notificationMessageForAdmins) {
               await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                  message: notificationMessage,
+                  message: notificationMessageForAdmins,
                   timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                   recipientId: notificationRecipientId,
                   read: false
@@ -987,7 +993,7 @@ function App() {
           console.error("App: Chyba pri ukladaní notifikácie o registrácii:", e);
           // Do not re-throw, allow main registration to proceed even if notification fails
       }
-      // --- Koniec logiky pre ukladanie notifikácie ---
+      // --- Koniec logiky pre ukladania notifikácie ---
 
       // Odoslanie e-mailu po úspešnom uložení do Firestore
       // Táto operácia nie je awaited, aby neblokovala UI a presmerovanie.
@@ -1041,7 +1047,7 @@ function App() {
         setUserNotificationMessage(`Ďakujeme za registráciu Vášho klubu na turnaj Slovak Open Handball. Na e-mailovú adresu ${email} sme odoslali potvrdenie registrácie.`);
       }
       setRegistrationSuccess(true); // Označenie úspešnej registrácie
-      setLoading(false);
+      // setLoading(false); // ZMENA: NIKDY NENASTAVUJEME LOADING NA FALSE PO ÚSPECHU TU!
 
       // Až teraz, a len teraz, vykonáme odhlásenie a presmerovanie
       await auth.signOut(); 
@@ -1064,7 +1070,7 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
-      setLoading(false); 
+      setLoading(false); // ZMENA: Nastavíme loading na false IBA pri chybe
       setUserNotificationMessage(''); // Vyčistíme akúkoľvek čakajúcu správu o úspechu
       setRegistrationSuccess(false); // Zabezpečíme, že príznak úspechu je pri chybe false
     } 
@@ -1097,12 +1103,29 @@ function App() {
     );
   }
 
-  // Ak nie je registrácia s úspešnou správou, potom kontrolujeme ostatné stavy načítania
-  if (loading || user === undefined || !settingsLoaded) {
+  // Ak je loading true (prebieha registrácia), zobrazíme správu "Prebieha registrácia klubu..."
+  if (loading) { // ZMENA: Nová podmienka pre loading stav
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam...')
+      React.createElement(
+        'div',
+        { className: 'text-xl font-semibold text-gray-700 flex flex-col items-center' },
+        React.createElement('svg', { className: 'animate-spin h-10 w-10 text-blue-500 mb-4', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+          React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+          React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+        ),
+        'Prebieha registrácia klubu...'
+      )
+    );
+  }
+
+  // Ak nie je registrácia s úspešnou správou a nie je loading, potom kontrolujeme ostatné stavy načítania
+  if (user === undefined || !isAuthReady || !settingsLoaded) { // ZMENA: user === undefined pre počiatočný stav
+    return React.createElement(
+      'div',
+      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam aplikáciu...')
     );
   }
 
@@ -1165,6 +1188,10 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage('') // Clear message when modal closes
+    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-md mt-20 mb-10 p-4' },
@@ -1203,7 +1230,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoje meno",
                 autoComplete: "given-name",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1221,7 +1248,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoje priezvisko",
                 autoComplete: "family-name",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             is_admin_register_page ? (
@@ -1238,7 +1265,7 @@ function App() {
                   required: true,
                   placeholder: "Zadajte svoju e-mailovú adresu",
                   autoComplete: "email",
-                  disabled: loading || !!userNotificationMessage,
+                  disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
                 })
               )
             ) : (
@@ -1258,7 +1285,7 @@ function App() {
                         type: 'button',
                         onClick: () => setIsCountryCodeModalOpen(true),
                         className: 'flex-shrink-0 py-2 px-3 text-gray-700 leading-tight focus:outline-none rounded-l-lg hover:bg-gray-100 transition-colors duration-200 flex items-center', // Bez orámovania, pridané flex items-center
-                        disabled: loading || !!userNotificationMessage,
+                        disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
                       },
                       React.createElement('span', null, selectedCountryDialCode),
                       React.createElement('svg', { className: 'ml-2 h-4 w-4 text-gray-600 inline-block', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, // Pridané inline-block
@@ -1276,7 +1303,7 @@ function App() {
                       },
                       required: true,
                       placeholder: "Zadajte číslo",
-                      disabled: loading || !!userNotificationMessage,
+                      disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
                     })
                   )
                 ),
@@ -1300,7 +1327,7 @@ function App() {
                 required: true,
                 placeholder: "Zadajte svoju e-mailovú adresu",
                 autoComplete: "email",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1320,7 +1347,7 @@ function App() {
               autoComplete: "new-password",
               showPassword: showPasswordReg,
               toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-              disabled: loading || !!userNotificationMessage,
+              disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               description: React.createElement(
                 React.Fragment,
                 null,
@@ -1346,7 +1373,7 @@ function App() {
               autoComplete: "new-password",
               showPassword: showConfirmPasswordReg,
               toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-              disabled: loading || !!userNotificationMessage,
+              disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
             }),
             React.createElement(
               'button',
@@ -1354,7 +1381,7 @@ function App() {
                 type: 'button', // Changed to button type
                 onClick: handleNextPage,
                 className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               },
               'Ďalej'
             )
@@ -1381,7 +1408,7 @@ function App() {
                 onChange: (e) => setClubName(e.target.value),
                 required: true,
                 placeholder: "Názov klubu",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1398,7 +1425,7 @@ function App() {
                   setIco(value);
                 },
                 placeholder: "Zadajte IČO (iba čísla)",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1415,7 +1442,7 @@ function App() {
                   setDic(value);
                 },
                 placeholder: "Zadajte DIČ (iba čísla)",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1438,7 +1465,7 @@ function App() {
                   setIcDph(value);
                 },
                 placeholder: "Zadajte IČ DPH (napr. SK1234567890)",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement('p', { className: 'text-gray-600 text-sm mt-2' }, 'Vyplňte aspoň jedno z polí: IČO, DIČ, IČ DPH.'),
@@ -1456,7 +1483,7 @@ function App() {
                 onChange: (e) => setStreet(e.target.value),
                 required: true,
                 placeholder: "Názov ulice",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1471,7 +1498,7 @@ function App() {
                 onChange: (e) => setHouseNumber(e.target.value),
                 required: true,
                 placeholder: "Popisné číslo",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1493,7 +1520,7 @@ function App() {
                 maxLength: 6, // 3 digits + space + 2 digits
                 required: true,
                 placeholder: "123 45",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1508,7 +1535,7 @@ function App() {
                 onChange: (e) => setCity(e.target.value),
                 required: true,
                 placeholder: "Názov mesta",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1523,7 +1550,7 @@ function App() {
                 onChange: (e) => setCountry(e.target.value),
                 required: true,
                 placeholder: "Názov štátu",
-                disabled: loading || !!userNotificationMessage,
+                disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
               })
             ),
             React.createElement(
@@ -1535,7 +1562,7 @@ function App() {
                   type: 'button',
                   onClick: handlePreviousPage,
                   className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-                  disabled: loading || !!userNotificationMessage,
+                  disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
                 },
                 'Späť'
               ),
@@ -1545,19 +1572,10 @@ function App() {
                   type: 'submit', // This button will submit the form
                   onClick: (e) => handleRegisterSubmit(e, is_admin_register_page), // Ensure submit calls the main handler
                   className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-                  disabled: loading || !!userNotificationMessage,
+                  disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
                 },
-                loading ? (
-                  React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-center' },
-                    React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
-                      React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
-                      React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
-                    ),
-                    'Registrujem...'
-                  )
-                ) : 'Registrovať sa'
+                // ZMENA: Text tlačidla sa už nemení na "Registrujem..." tu, ale je riadený globálnym loading stavom
+                'Registrovať sa'
               )
             )
           )
@@ -1570,7 +1588,7 @@ function App() {
         onSelect: setSelectedCountryDialCode,
         selectedCode: selectedCountryDialCode,
         countryCodes: countryCodes,
-        disabled: loading || !!userNotificationMessage,
+        disabled: loading || !!userNotificationMessage, // ZMENA: Disabled aj pri userNotificationMessage
       })
     )
   );
