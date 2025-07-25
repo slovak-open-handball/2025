@@ -315,7 +315,7 @@ const countryCodes = [
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // CountryCodeModal Component
-function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
+function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled }) { // Pridaný disabled prop
   const [searchTerm, setSearchTerm] = React.useState('');
   const modalRef = React.useRef(null);
 
@@ -343,6 +343,11 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
     country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     country.dialCode.includes(searchTerm)
   );
+
+  // Funkcia pre tlačidlo OK - zatvorí modálne okno
+  const handleConfirm = () => {
+    onClose();
+  };
 
   return React.createElement(
     'div',
@@ -377,8 +382,9 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
                           ${selectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, 
               onClick: () => {
                 onSelect(country.dialCode);
-                // onClose(); // Nechceme zatvárať hneď po výbere, ale až po OK/Zavrieť
+                // Nechceme zatvárať hneď po výbere, ale až po OK/Zavrieť
               },
+              disabled: disabled, // Tlačidlá sú disabled, ak je modálne okno disabled
             },
             `${country.code} ${country.dialCode}` 
           )
@@ -386,20 +392,22 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode }) {
       ),
       React.createElement(
         'div',
-        { className: 'flex justify-end space-x-4 mt-4' }, // Tlačidlá OK a Zavrieť
+        { className: 'flex justify-end space-x-4 mt-6' }, // Tlačidlá OK a Zavrieť, s mt-6
         React.createElement(
           'button',
           {
-            onClick: onClose, // Obe tlačidlá zavrú modálne okno
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            onClick: onClose, // Používame priamo onClose prop
+            className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: disabled,
           },
           'Zavrieť'
         ),
         React.createElement(
           'button',
           {
-            onClick: onClose, // Obe tlačidlá zavrú modálne okno
-            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            onClick: handleConfirm, // Voláme novú handleConfirm funkciu
+            className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: disabled,
           },
           'OK'
         )
@@ -839,6 +847,7 @@ function ChangePhoneApp() {
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
+      disabled: loading, // Pass the loading state to disable buttons in modal
     })
   );
 }
