@@ -46,8 +46,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
-            } else if (jsFileName === 'logged-in-soh-chat' && typeof SendMessageApp !== 'undefined') {
-                rootComponent = SendMessageApp;
+            } else if (jsFileName === 'logged-in-soh-chat' && typeof SohChatApp !== 'undefined') { // ZMENA: Preimenované
+                rootComponent = SohChatApp; // ZMENA: Preimenované
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
             } else if (jsFileName === 'logged-in-all-registrations' && typeof AllRegistrationsApp !== 'undefined') {
@@ -84,8 +84,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
                 rootComponent = NotificationsApp;
-            } else if (jsFileName === 'logged-in-soh-chat' && typeof SendMessageApp !== 'undefined') {
-                rootComponent = SendMessageApp;
+            } else if (jsFileName === 'logged-in-soh-chat' && typeof SohChatApp !== 'undefined') { // ZMENA: Preimenované
+                rootComponent = SohChatApp; // ZMENA: Preimenované
             } else if (jsFileName === 'logged-in-users' && typeof UsersApp !== 'undefined') {
                 rootComponent = UsersApp;
             } else if (jsFileName === 'logged-in-all-registrations' && typeof AllRegistrationsApp !== 'undefined') {
@@ -118,7 +118,7 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-change-password': ['admin', 'user'],
         'menu-my-settings': ['admin', 'user'],
         'menu-notifications': ['admin', 'user'],
-        'menu-soh-chat': ['admin', 'user'],
+        'menu-soh-chat': ['admin'], // ZMENA: Preimenované ID
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
         'menu-tournament-settings': ['admin']
