@@ -694,7 +694,8 @@ function UsersManagementApp() {
                                             {
                                               onClick: () => openRoleEditModal(u),
                                               className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              disabled: loading,
+                                              // ZMENA: Zakázať tlačidlo, ak ide o aktuálneho používateľa
+                                              disabled: loading || (user && u.id === user.uid),
                                             },
                                             'Upraviť rolu'
                                         ),
@@ -712,7 +713,8 @@ function UsersManagementApp() {
                                             {
                                               onClick: () => openConfirmationModal(u),
                                               className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                              disabled: loading,
+                                              // ZMENA: Zakázať tlačidlo, ak ide o aktuálneho používateľa
+                                              disabled: loading || (user && u.id === user.uid),
                                             },
                                             'Zmazať'
                                         )
