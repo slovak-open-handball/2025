@@ -502,7 +502,8 @@ function App() {
       // Pridanie krátkeho oneskorenia, aby sa zabezpečilo spracovanie sieťových požiadaviek
       await new Promise(resolve => setTimeout(resolve, 200)); // Oneskorenie 200ms
 
-      setNotificationMessage('Registrácia úspešná! Budete presmerovaní na prihlasovaciu stránku.');
+      // Aktualizovaná správa po úspešnej registrácii
+      setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
