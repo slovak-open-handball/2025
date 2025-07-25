@@ -344,7 +344,8 @@ function ChangeNameApp() {
       // Notifikáciu uložíme pre všetkých adminov, ak zmenu vykonal bežný používateľ.
       // Ak zmenu vykonal admin, notifikácia je pre neho.
       try {
-          const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+          // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+          const appId = 'default-app-id'; 
           let notificationMessage = '';
           let notificationRecipientId = '';
 
