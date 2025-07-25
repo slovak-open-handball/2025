@@ -136,7 +136,8 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    description && React.createElement('p', { className: 'text-gray-600 text-xs italic mt-1' }, description)
+    // Oprava: Zmenené <p> na <div> pre popis hesla, aby sa zabránilo chybe DOM nesting.
+    description && React.createElement('div', { className: 'text-gray-600 text-xs italic mt-1' }, description)
   );
 }
 
