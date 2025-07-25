@@ -6,12 +6,15 @@
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Firebase SDKs
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ODSTRÁNENÉ: Firebase SDKs importy, pretože sa teraz načítavajú globálne cez script tagy v HTML
+// import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+// import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import komponentov pre stránky formulára
+// Tieto súbory musia byť tiež upravené, aby nepoužívali modulárne importy Firebase,
+// ale pristupovali k nemu globálne, ak by ho potrebovali.
+// V tomto prípade sú Page1Form a Page2Form len UI komponenty, takže ich importy sú v poriadku.
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
 
@@ -106,29 +109,47 @@ function App() {
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
     try {
-      const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-      const app = initializeApp(firebaseConfig);
-      const firestoreDb = getFirestore(app);
-      const firebaseAuth = getAuth(app);
+      // Skontrolujte, či je Firebase SDK načítané
+      if (typeof firebase === 'undefined') {
+        console.error("register.js: Firebase SDK nie je načítané. Uistite sa, že sú script tagy Firebase v HTML.");
+        setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
+        setShowNotification(true);
+        return;
+      }
+
+      let firebaseApp;
+      // Ak už predvolená aplikácia existuje (napr. inicializovaná header.js), použite ju
+      if (firebase.apps.length > 0 && firebase.app().name === '[DEFAULT]') {
+          firebaseApp = firebase.app();
+          console.log("register.js: Používam existujúcu Firebase App inštanciu.");
+      } else {
+          // Inak inicializujte novú aplikáciu
+          const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+          firebaseApp = firebase.initializeApp(firebaseConfig);
+          console.log("register.js: Inicializujem novú Firebase App inštanciu.");
+      }
+      
+      const firestoreDb = firebase.firestore(firebaseApp);
+      const firebaseAuth = firebase.auth(firebaseApp);
 
       setDb(firestoreDb);
       setAuth(firebaseAuth);
 
-      const unsubscribe = onAuthStateChanged(firebaseAuth, async (currentUser) => {
+      const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
         if (!currentUser && typeof __initial_auth_token !== 'undefined') {
           try {
-            await signInWithCustomToken(firebaseAuth, __initial_auth_token);
+            await firebaseAuth.signInWithCustomToken(__initial_auth_token);
           } catch (error) {
             console.error("Chyba pri prihlásení s vlastným tokenom:", error);
             try {
-              await signInAnonymously(firebaseAuth);
+              await firebaseAuth.signInAnonymously();
             } catch (anonError) {
               console.error("Chyba pri anonymnom prihlásení:", anonError);
             }
           }
         } else if (!currentUser) {
           try {
-            await signInAnonymously(firebaseAuth);
+            await firebaseAuth.signInAnonymously();
           } catch (anonError) {
             console.error("Chyba pri anonymnom prihlásení:", anonError);
           }
@@ -138,7 +159,7 @@ function App() {
 
       return () => unsubscribe();
     } catch (error) {
-      console.error("Chyba pri inicializácii Firebase:", error);
+      console.error("Chyba pri inicializácii Firebase v register.js:", error);
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
     }
@@ -152,10 +173,10 @@ function App() {
 
     // Cesta k dokumentu nastavení registrácie, zosúladená s header.js a screenshotom
     // Dokument je v kolekcii 'settings' s ID 'registration'
-    const docRef = doc(db, 'settings', 'registration');
+    const docRef = db.collection('settings').doc('registration');
 
     // Nastavenie poslucháča v reálnom čase pre nastavenia registrácie
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = docRef.onSnapshot((docSnap) => {
       // Získanie aktuálneho času v UTC milisekundách pre presné porovnanie
       const nowUtcMs = Date.now(); 
       let isOpen = true;
@@ -454,4 +475,6 @@ function App() {
 }
 
 // Zabezpečenie vykreslenia komponentu App
-ReactDOM.render(React.createElement(App, null), document.getElementById('root'));
+// Používame ReactDOM.createRoot pre React 18
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App, null));
