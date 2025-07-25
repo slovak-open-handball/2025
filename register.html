@@ -73,8 +73,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- React a ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
@@ -105,7 +105,7 @@
     <script type="module" src="register.js"></script>
 
     <script type="text/javascript">
-        // Funkcia na načítanie hlavičky
+        // Funkcia na načítanie hlavičky (ponechaná pre referenciu, ale nebude volaná)
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -122,18 +122,20 @@
 
         // Spustí sa po načítaní DOM a všetkých skriptov
         window.onload = function() {
-            // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
-                // Po načítaní hlavičky inicializovať jej logiku
-                if (typeof initializeHeaderLogic === 'function') {
-                    initializeHeaderLogic();
-                } else {
-                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                }
-                // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
-            }).catch(error => {
-                console.error("Chyba pri inicializácii stránky:", error);
-            });
+            // // Načítať hlavičku ako prvú (ODSTRÁNENÉ, aby sa predišlo konfliktom s header.js logikou počas registrácie)
+            // loadHeader().then(() => {
+            //     // Po načítaní hlavičky inicializovať jej logiku
+            //     if (typeof initializeHeaderLogic === 'function') {
+            //         initializeHeaderLogic();
+            //     } else {
+            //         console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
+            //     }
+            // }).catch(error => {
+            //     console.error("Chyba pri inicializácii stránky:", error);
+            // });
+
+            // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
+            // (Žiadna ďalšia logika tu nie je potrebná, pretože register.js sa načíta ako modul a spustí App)
         };
     </script>
 </body>
