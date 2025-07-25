@@ -18,13 +18,6 @@ function NotificationModal({ message, onClose }) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
     };
   }, [message, onClose]);
 
@@ -300,12 +293,15 @@ function NotificationsApp() {
   React.useEffect(() => {
     let unsubscribeNotifications;
 
+    // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+    const appId = 'default-app-id'; 
+
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
       console.log("NotificationsApp: Prihlásený používateľ je schválený administrátor. Načítavam notifikácie.");
       setLoading(true);
       try {
         // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
-        unsubscribeNotifications = db.collection('artifacts').doc('default-app-id').collection('public').doc('data').collection('adminNotifications')
+        unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
           .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
           .onSnapshot(snapshot => {
             const fetchedNotifications = [];
@@ -353,7 +349,9 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+      // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+      const appId = 'default-app-id';
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
         read: true
       });
       setUserNotificationMessage("Notifikácia označená ako prečítaná.");
@@ -373,7 +371,9 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
+      // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+      const appId = 'default-app-id';
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
       setUserNotificationMessage("Notifikácia zmazaná.");
     } catch (e) {
       console.error("NotificationsApp: Chyba pri mazaní notifikácie:", e);
@@ -431,7 +431,7 @@ function NotificationsApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Administrátorské notifikácie'
+          'Upozornenia'
         ),
         notifications.length === 0 && !loading ? (
             React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne nové notifikácie.')
