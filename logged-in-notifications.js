@@ -147,6 +147,7 @@ function NotificationsApp() {
       // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
       if (user) {
         console.log(`NotificationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        // Nastavíme loading na true, pretože začíname načítavať profilové dáta
         setLoading(true); // Nastavíme loading na true tu
 
         try {
@@ -314,6 +315,7 @@ function NotificationsApp() {
         // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
         unsubscribeNotifications = db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications')
           .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
+          // ODSTRÁNENÁ podmienka .where('read', '==', false)
           .onSnapshot(snapshot => {
             const fetchedNotifications = [];
             snapshot.forEach(doc => {
@@ -360,7 +362,9 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+      // Bezpečný prístup k __app_id
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
         read: true
       });
       setUserNotificationMessage("Notifikácia označená ako prečítaná.");
@@ -380,7 +384,9 @@ function NotificationsApp() {
     setLoading(true);
     setError('');
     try {
-      await db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
+      // Bezpečný prístup k __app_id
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).delete();
       setUserNotificationMessage("Notifikácia zmazaná.");
     } catch (e) {
       console.error("NotificationsApp: Chyba pri mazaní notifikácie:", e);
@@ -441,7 +447,7 @@ function NotificationsApp() {
           'Administrátorské notifikácie'
         ),
         notifications.length === 0 && !loading ? (
-            React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne nové notifikácie.')
+            React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne notifikácie na zobrazenie.')
         ) : (
             React.createElement(
                 'div',
