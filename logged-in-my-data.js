@@ -340,6 +340,9 @@ function MyDataApp() {
     );
   }
 
+  // Ak je userProfileData.billing.address definované, vytvoríme si premennú pre zjednodušenie
+  const billingAddress = userProfileData.billing ? userProfileData.billing.address : null;
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -408,24 +411,25 @@ function MyDataApp() {
               React.createElement(
                 'div',
                 { className: 'space-y-2' },
-                userProfileData.billing.companyName && React.createElement(
+                userProfileData.billing.clubName && React.createElement( // Zmena: companyName na clubName
                   'div',
                   null,
                   React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                    ` ${userProfileData.billing.companyName}`
+                    React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'), // Zmena: Názov spoločnosti na Názov klubu
+                    ` ${userProfileData.billing.clubName}`
                   )
                 ),
-                (userProfileData.billing.street || userProfileData.billing.city || userProfileData.billing.zipCode || userProfileData.billing.country) && React.createElement(
+                // Zmena: Prístup k adrese cez billingAddress
+                billingAddress && (billingAddress.street || billingAddress.houseNumber || billingAddress.city || billingAddress.zipCode || billingAddress.country) && React.createElement(
                   'div',
                   null,
                   React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                    ` ${userProfileData.billing.street || ''}, ${userProfileData.billing.zipCode || ''} ${userProfileData.billing.city || ''}, ${userProfileData.billing.country || ''}`
+                    ` ${billingAddress.street || ''} ${billingAddress.houseNumber || ''}, ${billingAddress.zipCode || ''} ${billingAddress.city || ''}, ${billingAddress.country || ''}`
                   )
                 ),
                 userProfileData.billing.ico && React.createElement(
