@@ -21,7 +21,7 @@ const formatToDatetimeLocal = (date) => {
 };
 
 // NotificationModal Component pre zobrazovanie dočasných správ
-function NotificationModal({ message, onClose }) {
+function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný prop 'type'
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -52,10 +52,13 @@ function NotificationModal({ message, onClose }) {
 
   if (!show && !message) return null;
 
+  // Dynamické triedy pre farbu pozadia na základe typu správy
+  const bgColorClass = type === 'success' ? 'bg-green-500' : 'bg-blue-500';
+
   return React.createElement(
     'div',
     {
-      className: `fixed bottom-4 right-4 bg-blue-500 text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
       style: { zIndex: 1000 }
     },
     React.createElement('p', { className: 'font-semibold' }, message)
@@ -88,8 +91,10 @@ function App() {
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
+  const [notificationType, setNotificationType] = React.useState('info'); // Nový stav pre typ notifikácie
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
+  const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // Nový stav pre úspešnú registráciu
 
   // Firebase stav
   const [db, setDb] = React.useState(null);
@@ -159,6 +164,7 @@ function App() {
         console.error("register.js: Firebase SDK nie je načítané alebo nie sú dostupné všetky moduly. Uistite sa, že sú script tagy Firebase v HTML.");
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
         setShowNotification(true);
+        setNotificationType('error');
         return;
       }
 
@@ -189,6 +195,7 @@ function App() {
       console.error("Chyba pri inicializácii Firebase v register.js:", error);
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
+      setNotificationType('error');
     }
   }, []); // Odstránená závislosť isRegistering, pretože ref je okamžitý
 
@@ -215,6 +222,7 @@ function App() {
             console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
             setShowNotification(true);
+            setNotificationType('error');
             setSettingsLoaded(true);
           });
 
@@ -223,6 +231,7 @@ function App() {
           console.error("register.js: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setNotificationMessage(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setShowNotification(true);
+          setNotificationType('error');
           setSettingsLoaded(true);
       }
     };
@@ -280,6 +289,7 @@ function App() {
   const closeNotification = () => {
     setShowNotification(false);
     setNotificationMessage('');
+    setNotificationType('info'); // Reset typu notifikácie
   };
 
   const handleChange = (e) => {
@@ -306,6 +316,7 @@ function App() {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
       setNotificationMessage("reCAPTCHA API nie je načítané alebo pripravené.");
       setShowNotification(true);
+      setNotificationType('error');
       return null;
     }
     try {
@@ -315,6 +326,7 @@ function App() {
       console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
       setNotificationMessage(`Chyba reCAPTCHA: ${e.message}`);
       setShowNotification(true);
+      setNotificationType('error');
       return null;
     }
   };
@@ -324,10 +336,12 @@ function App() {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
+    setNotificationType('info');
 
     if (!isRecaptchaReady) {
       setNotificationMessage('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.');
       setShowNotification(true);
+      setNotificationType('error');
       setLoading(false);
       return;
     }
@@ -335,6 +349,7 @@ function App() {
     if (formData.password !== formData.confirmPassword) {
       setNotificationMessage('Heslá sa nezhodujú.');
       setShowNotification(true);
+      setNotificationType('error');
       setLoading(false);
       return;
     }
@@ -343,6 +358,7 @@ function App() {
     if (!passwordRegex.test(formData.password)) {
       setNotificationMessage('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.');
       setShowNotification(true);
+      setNotificationType('error');
       setLoading(false);
       return;
     }
@@ -362,6 +378,7 @@ function App() {
     setPage(1);
     setNotificationMessage('');
     setShowNotification(false);
+    setNotificationType('info');
   };
 
   const handleSubmit = async (e) => {
@@ -369,6 +386,7 @@ function App() {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
+    setNotificationType('info');
     setIsRegistering(true); // Nastavenie stavu pre re-render
     isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
@@ -378,6 +396,7 @@ function App() {
     if (!clubName.trim()) {
         setNotificationMessage('Oficiálny názov klubu je povinný.');
         setShowNotification(true);
+        setNotificationType('error');
         setLoading(false);
         setIsRegistering(false);
         isRegisteringRef.current = false;
@@ -387,6 +406,7 @@ function App() {
     if (!ico && !dic && !icDph) {
       setNotificationMessage('Musíte zadať aspoň jedno z polí IČO, DIČ alebo IČ DPH.');
       setShowNotification(true);
+      setNotificationType('error');
       setLoading(false);
       setIsRegistering(false);
       isRegisteringRef.current = false;
@@ -398,6 +418,7 @@ function App() {
       if (!icDphRegex.test(icDph)) {
         setNotificationMessage('IČ DPH musí začínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).');
         setShowNotification(true);
+        setNotificationType('error');
         setLoading(false);
         setIsRegistering(false);
         isRegisteringRef.current = false;
@@ -409,6 +430,7 @@ function App() {
     if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
       setNotificationMessage('PSČ musí mať presne 5 číslic.');
       setShowNotification(true);
+      setNotificationType('error');
       setLoading(false);
       setIsRegistering(false);
       isRegisteringRef.current = false;
@@ -421,6 +443,7 @@ function App() {
       if (!auth || !db) {
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
+        setNotificationType('error');
         setLoading(false);
         setIsRegistering(false);
         isRegisteringRef.current = false;
@@ -445,6 +468,7 @@ function App() {
         console.error("register.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
         setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
         setShowNotification(true);
+        setNotificationType('error');
         setLoading(false);
         setIsRegistering(false);
         isRegisteringRef.current = false;
@@ -515,10 +539,16 @@ function App() {
       // Aktualizovaná správa po úspešnej registrácii
       setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
+      setNotificationType('success'); // Nastavenie typu notifikácie na úspech
+      setRegistrationSuccess(true); // Nastavenie stavu úspešnej registrácie
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
-      // Riadok 'await auth.signOut();' bol odstránený, aby sa predišlo predčasnému odhláseniu.
-
+      try {
+        await auth.signOut();
+        console.log("Používateľ úspešne odhlásený po registrácii.");
+      } catch (signOutError) {
+        console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
+      }
 
       // Vyčistiť formulár
       setFormData({
@@ -527,12 +557,12 @@ function App() {
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
-      setPage(1);
+      setPage(1); // Reset na prvú stránku formulára
 
-      // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení
+      // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 5000);
+      }, 5000); // 5 sekúnd na zobrazenie notifikácie
 
     } catch (error) {
       console.error('Chyba počas registrácie alebo zápisu do Firestore:', error);
@@ -561,6 +591,7 @@ function App() {
       }
       setNotificationMessage(errorMessage);
       setShowNotification(true);
+      setNotificationType('error');
     } finally {
       setLoading(false);
       setIsRegistering(false); // Ukončenie procesu registrácie
@@ -571,7 +602,10 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
+    // Notifikačné okno sa vždy zobrazuje, ale je podmienečne skryté CSS triedami
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+
+    // Podmienečné renderovanie formulára alebo správy o úspechu
     !settingsLoaded || !isAuthReady ? (
       React.createElement(
         'div',
@@ -582,14 +616,36 @@ function App() {
         ),
         'Načítavam stav registrácie...'
       )
+    ) : registrationSuccess ? (
+      // Zobrazenie úspešnej správy namiesto formulára
+      React.createElement(
+        'div',
+        { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+        React.createElement(
+          'h2',
+          { className: 'text-2xl font-bold mb-4 text-green-600' },
+          'Registrácia úspešná!'
+        ),
+        React.createElement(
+          'p',
+          { className: 'text-gray-700' },
+          notificationMessage // Zobrazí detailnú správu z notifikácie
+        ),
+        React.createElement(
+          'p',
+          { className: 'text-gray-500 text-sm mt-4' },
+          'Budete automaticky presmerovaní na prihlasovaciu stránku.'
+        )
+      )
     ) : (
+      // Zobrazenie formulára, ak registrácia nebola úspešná
       page === 1 ?
         React.createElement(Page1Form, {
           formData: formData,
           handleChange: handleChange,
           handleNext: handleNext,
           loading: loading,
-          notificationMessage: notificationMessage,
+          notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
           closeNotification: closeNotification,
           isCountryCodeModalOpen: isCountryCodeModalOpen,
           setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
@@ -607,7 +663,7 @@ function App() {
           handlePrev: handlePrev,
           handleSubmit: handleSubmit,
           loading: loading,
-          notificationMessage: notificationMessage,
+          notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
           closeNotification: closeNotification,
           userRole: userRole,
           handleRoleChange: handleRoleChange,
