@@ -629,7 +629,7 @@ function App() {
       // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
         'div',
-        { className: 'bg-green-500 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na zelené
+        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
         React.createElement(
           'h2',
           { className: 'text-2xl font-bold mb-4 text-black' }, // Zmenená farba textu nadpisu na čiernu
@@ -642,7 +642,7 @@ function App() {
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na zelenom pozadí
+          { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na tmavšom zelenom pozadí
           'Budete automaticky presmerovaní na prihlasovaciu stránku.'
         )
       )
