@@ -410,7 +410,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
             className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
-          'Zavrieť'
+          'Zatvoriť'
         ),
         React.createElement(
           'button',
