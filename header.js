@@ -98,6 +98,9 @@ function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
 async function initializeHeaderLogic() {
     console.log("Header.js: Inicializujem logiku hlavičky.");
 
+    // Bezpečný prístup k __app_id
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
     try {
         if (typeof firebase === 'undefined') {
             console.error("Header.js: Firebase SDK nie je načítané.");
@@ -167,7 +170,7 @@ async function initializeHeaderLogic() {
                         if (userRole === 'admin' && userApproved === true) {
                             console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
                             // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
-                            unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications')
+                            unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
                                 .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
                                 .where('read', '==', false) // Len neprečítané notifikácie
                                 .onSnapshot(snapshot => {
@@ -194,7 +197,7 @@ async function initializeHeaderLogic() {
                                                 showPushNotification(message, notificationId);
                                                 // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
                                                 try {
-                                                    await dbHeader.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
+                                                    await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
                                                         read: true
                                                     });
                                                     console.log(`Header.js: Notifikácia ${notificationId} označená ako prečítaná vo Firestore.`);
