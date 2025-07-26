@@ -290,7 +290,7 @@ function NotificationsApp() {
     };
   }, [handleLogout]);
 
-  // Effect for fetching all admin UIDs
+  // Effect for fetching all admin Uids
   React.useEffect(() => {
     let unsubscribeAdmins;
     if (db) {
@@ -412,7 +412,7 @@ function NotificationsApp() {
       // Načítaj aktuálny stav notifikácie
       const doc = await notificationRef.get();
       if (!doc.exists) {
-        setUserNotificationMessage("Notifikácia už neexistuje.");
+        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
         setLoading(false);
         return;
       }
@@ -428,14 +428,14 @@ function NotificationsApp() {
       // Ak všetci administrátori "zmazali" túto notifikáciu, vymaž ju úplne
       if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
         await notificationRef.delete();
-        setUserNotificationMessage("Notifikácia bola úplne zmazaná z databázy.");
+        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
         console.log(`Notifikácia ${notificationId} bola úplne zmazaná z databázy.`);
       } else {
         // Inak aktualizuj len pole 'deletedFor'
         await notificationRef.update({
           deletedFor: deletedFor
         });
-        setUserNotificationMessage("Notifikácia bola skrytá pre vás.");
+        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
         console.log(`Notifikácia ${notificationId} bola skrytá pre používateľa ${user.uid}.`);
       }
     } catch (e) {
