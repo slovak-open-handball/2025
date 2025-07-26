@@ -73,20 +73,24 @@ function updateHeaderLinks(currentUser, isRegistrationOpenStatus) {
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
 
+    // Všetky odkazy sú štandardne skryté v HTML. Tu ich zobrazujeme podľa podmienok.
+    // Odkaz "Domov" je vždy viditeľný a nie je tu spravovaný.
+
     if (authLink && profileLink && logoutButton && registerLink) {
         if (currentUser) { // Ak je používateľ prihlásený
-            authLink.classList.add('hidden');
-            profileLink.classList.remove('hidden');
-            logoutButton.classList.remove('hidden');
-            registerLink.classList.add('hidden'); // Skryť registračný odkaz, ak je prihlásený
+            profileLink.classList.remove('hidden'); // Zobraziť "Moja zóna"
+            logoutButton.classList.remove('hidden'); // Zobraziť "Odhlásenie"
+            authLink.classList.add('hidden'); // Skryť "Prihlásenie"
+            registerLink.classList.add('hidden'); // Skryť "Registrácia na turnaj"
         } else { // Ak používateľ nie je prihlásený
-            authLink.classList.remove('hidden');
-            profileLink.classList.add('hidden');
-            logoutButton.classList.add('hidden');
+            authLink.classList.remove('hidden'); // Zobraziť "Prihlásenie"
+            profileLink.classList.add('hidden'); // Skryť "Moja zóna"
+            logoutButton.classList.add('hidden'); // Skryť "Odhlásenie"
+            
             if (isRegistrationOpenStatus) {
-                registerLink.classList.remove('hidden');
+                registerLink.classList.remove('hidden'); // Zobraziť "Registrácia na turnaj" ak je otvorená
             } else {
-                registerLink.classList.add('hidden');
+                registerLink.classList.add('hidden'); // Skryť "Registrácia na turnaj" ak nie je otvorená
             }
         }
     } else {
@@ -147,6 +151,7 @@ async function initializeHeaderLogic() {
         // Listener pre zmeny stavu autentifikácie
         authHeader.onAuthStateChanged(async (currentHeaderUser) => {
             console.log("Header.js: onAuthStateChanged - Používateľ:", currentHeaderUser ? currentHeaderUser.uid : "null");
+            // Aktualizujeme viditeľnosť odkazov pri každej zmene stavu autentifikácie
             updateHeaderLinks(currentHeaderUser, currentIsRegistrationOpenStatus);
 
             // Zrušenie predchádzajúceho listenera na notifikácie
