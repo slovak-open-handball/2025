@@ -12,8 +12,9 @@ function getUrlParams() {
     return params;
 }
 
-// PasswordInput Component (prevzatý z login.js pre konzistentnosť)
+// PasswordInput Component pre polia hesla s prepínačom viditeľnosti
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
+  // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -23,9 +24,12 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
 
   const EyeOffIcon = React.createElement(
     'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' }, // SVG element má fill="none"
+    // Cesta pre vyplnený stred (pupila)
     React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    // Cesta pre vonkajší obrys oka (bez výplne)
     React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    // Cesta pre šikmú čiaru
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
@@ -49,7 +53,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
-        tabIndex: tabIndex,
+        tabIndex: tabIndex
       }),
       React.createElement(
         'button',
@@ -62,11 +66,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    description && React.createElement(
-      'p',
-      { className: 'text-gray-600 text-sm mt-2' },
-      description
-    )
+    description && React.createElement('div', { className: 'text-gray-600 text-xs italic mt-1' }, description)
   );
 }
 
@@ -78,7 +78,8 @@ function ResetPasswordApp() {
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
     const [error, setError] = React.useState('');
-    const [message, setMessage] = React.useState('');
+    const [message, setMessage] = React.useState(''); // Správa o overení kódu
+    const [successMessage, setSuccessMessage] = React.useState(''); // Správa o úspešnom resete hesla
     const [loading, setLoading] = React.useState(true);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -100,10 +101,10 @@ function ResetPasswordApp() {
             if (currentMode && currentOobCode) {
                 setMode(currentMode);
                 setOobCode(currentOobCode);
-                // Overenie oobCode (voliteľné, ale dobrá prax pre zobrazenie relevantného obsahu)
+                // Overenie oobCode a získanie e-mailu
                 authInstance.verifyPasswordResetCode(currentOobCode)
                     .then(email => {
-                        setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
+                        setMessage(`Prosím, zadajte nové heslo pre ${email}.`); // Nastavíme informačnú správu
                         setLoading(false);
                     })
                     .catch(e => {
@@ -125,7 +126,7 @@ function ResetPasswordApp() {
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setError('');
-        setMessage('');
+        setSuccessMessage(''); // Reset úspešnej správy
 
         if (!auth || !oobCode) {
             setError("Chyba: Autentifikácia nie je pripravená alebo chýba kód.");
@@ -146,12 +147,8 @@ function ResetPasswordApp() {
         setLoading(true);
         try {
             await auth.confirmPasswordReset(oobCode, newPassword);
-            setMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku.");
-            // Po úspešnom resete hesla aktualizujeme passwordLastChanged vo Firestore
-            // Najprv získame aktuálneho používateľa (ak je prihlásený, čo by nemal byť po resete)
-            // Alebo získame UID z oobCode (verifyPasswordResetCode vracia email, nie UID priamo)
-            // Pre zjednodušenie to môžeme vynechať, pretože používateľ sa prihlási s novým heslom a vtedy sa timestamp aktualizuje.
-            // Ak by sme to chceli robiť tu, potrebovali by sme db instanciu a získať UID používateľa z emailu.
+            setSuccessMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku."); // Nastavíme úspešnú správu
+            setMessage(''); // Vyčistíme informačnú správu
             
             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
             setTimeout(() => {
@@ -183,7 +180,7 @@ function ResetPasswordApp() {
         );
     }
 
-    if (error && !message) { // Zobraz chybu, ak nie je úspešná správa
+    if (error && !successMessage) { // Zobraz chybu, ak nie je úspešná správa
         return React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center' },
@@ -201,7 +198,7 @@ function ResetPasswordApp() {
         );
     }
 
-    if (message) { // Zobraz úspešnú správu
+    if (successMessage) { // Zobraz úspešnú správu po resete hesla
         return React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center' },
@@ -209,9 +206,9 @@ function ResetPasswordApp() {
             React.createElement(
                 'div',
                 { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-                message
+                successMessage
             ),
-            !message.includes("Budete presmerovaní") && React.createElement( // Zobraz odkaz, ak nie je automatické presmerovanie
+            !successMessage.includes("Budete presmerovaní") && React.createElement( // Zobraz odkaz, ak nie je automatické presmerovanie
                 'a',
                 { href: 'login.html', className: 'text-blue-600 hover:underline mt-4 inline-block' },
                 'Späť na prihlásenie'
@@ -225,6 +222,11 @@ function ResetPasswordApp() {
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md' },
             React.createElement('h1', { className: 'text-2xl font-bold text-center text-gray-800 mb-6' }, 'Nastaviť nové heslo'),
+            message && React.createElement( // Zobraz informačnú správu nad formulárom
+                'div',
+                { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
+                message
+            ),
             React.createElement(
                 'form',
                 { onSubmit: handleResetPassword, className: 'space-y-4' },
@@ -262,7 +264,7 @@ function ResetPasswordApp() {
                     onCopy: (e) => e.preventDefault(),
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
-                    placeholder: 'Zadajte nové heslo znova',
+                    placeholder: 'Zadajte heslo znova',
                     autoComplete: 'new-password',
                     disabled: loading,
                     showPassword: showConfirmPassword,
@@ -289,5 +291,5 @@ function ResetPasswordApp() {
         );
     }
 
-    return null; // Nič nevykresľuj, ak režim nie je resetPassword
+    return null; // Nič nevykresľuj, ak režim nie je resetPassword alebo už bola spracovaná úspešná správa
 }
