@@ -14,7 +14,7 @@
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
-        /* Štýly pre modálne okná (ak by sa používali v budúcnosti) */
+        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -34,9 +34,9 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: left;
+            max-width: 400px; /* Obmedzenie šírky modálneho okna */
+            width: 90%; /* Responzívna šírka */
+            text-align: left; /* Zabezpečí, že text v modale bude zarovnaný doľava */
         }
     </style>
     <!-- Firebase SDKs -->
@@ -83,6 +83,9 @@
         <!-- React aplikácia sa tu vykreslí -->
     </div>
 
+    <!-- Placeholder pre push-up notifikácie (pre header.js) -->
+    <div id="header-notification-area" class="fixed top-20 right-4 z-50 w-full max-w-sm pointer-events-none"></div>
+
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
     <script src="login.js"></script>
     <script>
@@ -109,7 +112,7 @@
                         document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                         return;
                     }
-                    if (typeof App === 'undefined') {
+                    if (typeof App === 'undefined') { // Predpokladáme, že hlavný komponent v login.js sa volá App
                         console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
                         document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                         return;
