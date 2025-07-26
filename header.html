@@ -1,11 +1,13 @@
 <!-- Tento súbor obsahuje iba hlavičku, ktorá sa bude dynamicky načítavať do iných stránok. -->
 <header class="w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center">
     <div class="flex items-center space-x-6">
-        <!-- Odkaz na Domov (index.html) -->
+        <!-- Odkaz na Domov (index.html) - vždy viditeľný -->
         <a href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
+        <!-- Registračný odkaz - štandardne skrytý, zobrazí sa dynamicky -->
         <a id="register-link" href="register.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Registrácia na turnaj</a>
     </div>
     <div class="flex items-center space-x-6">
+        <!-- Odkazy pre prihlásených používateľov - štandardne skryté, zobrazia sa dynamicky -->
         <a id="profile-link" href="logged-in-my-data.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Moja zóna</a>
         <a id="auth-link" href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Prihlásenie</a>
         <button id="logout-button" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Odhlásenie</button>
