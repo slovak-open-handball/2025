@@ -4,7 +4,7 @@
 // const firebaseConfig = { ... };
 // const initialAuthToken = null;
 
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7oRQ3JN8fh6b1-07Aew2pAhY8uK7K7dxxfywwtzv6opOGcYcBfnUYc4XL6MRvTYKExw/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 const formatToDatetimeLocal = (date) => {
