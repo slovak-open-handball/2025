@@ -449,7 +449,7 @@ function App() {
       return null;
     }
     try {
-      const token = await grecaptcha.execute(RECAPTcha_SITE_KEY, { action: action });
+      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
       console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
@@ -736,15 +736,8 @@ function App() {
                 className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200',
               },
               'Zabudli ste heslo?'
-            ),
-            React.createElement(
-              'a',
-              {
-                href: 'register.html',
-                className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200',
-              },
-              'Registrovať sa'
             )
+            // Odstránený React.createElement pre odkaz "Registrovať sa"
           )
         )
       )
