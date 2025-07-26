@@ -61,7 +61,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     ),
     description && React.createElement(
       'p',
-      { className: 'text-gray-600 text-sm mt-2' },
+      { className: 'text-gray-600 text-sm mt-2' }, // Zmenené z -mt-2 na mt-2 pre konzistentnosť s register.js
       description
     )
   );
@@ -118,7 +118,7 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// ResetPasswordModal Component - NOVÝ KOMPONENT
+// ResetPasswordModal Component
 function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message, error }) {
   const [email, setEmail] = React.useState('');
 
@@ -256,7 +256,7 @@ function App() {
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
-    let firestoreInstance;
+    let firestoreInstance; // Deklarácia tu, aby bola dostupná v callbacku
 
     try {
       if (typeof firebase === 'undefined') {
@@ -269,8 +269,8 @@ function App() {
 
       const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
+      firestoreInstance = firebase.firestore(firebaseApp); // Priradenie tu
+      setDb(firestoreInstance); // Nastavenie do stavu
 
       const signIn = async () => {
         try {
@@ -287,8 +287,15 @@ function App() {
         setIsAuthReady(true);
         
         if (currentUser) {
+            // Používame firestoreInstance, ktorá je zaručene inicializovaná v tomto scope
+            if (!firestoreInstance) { 
+                console.error("LoginApp: Firestore inštancia nie je dostupná v onAuthStateChanged.");
+                setError("Chyba pri inicializácii databázy. Skúste to prosím znova.");
+                await authInstance.signOut();
+                return;
+            }
             try {
-                const userDocRef = db.collection('users').doc(currentUser.uid);
+                const userDocRef = firestoreInstance.collection('users').doc(currentUser.uid);
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
@@ -302,7 +309,6 @@ function App() {
                         await authInstance.signOut();
                         localStorage.removeItem(localStorageKey);
                         setUserNotificationMessage("Vaše heslo bolo zmenené na inom zariadení. Prihláste sa prosím znova.");
-                        // Následne sa stránka znova načíta a zobrazí prihlasovací formulár
                         return;
                     } else if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime === 0) {
                         // Ak passwordLastChanged nebolo nikdy nastavené, nastavíme ho teraz
@@ -373,12 +379,18 @@ function App() {
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setShowNotification(true); // Ak je chyba, zobraz notifikáciu
+            setNotificationType('error'); // Nastav typ notifikácie na chybu
+            setSettingsLoaded(true);
           });
 
           return () => unsubscribeSettings();
       } catch (e) {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setShowNotification(true); // Ak je chyba, zobraz notifikáciu
+          setNotificationType('error'); // Nastav typ notifikácie na chybu
+          setSettingsLoaded(true);
       }
     };
 
