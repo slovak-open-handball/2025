@@ -328,7 +328,6 @@ function UsersManagementApp() {
                   return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("UsersManagementApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -512,7 +511,7 @@ function UsersManagementApp() {
 
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToApprove.email} bol schválený.`,
+        message: `Používateľ ${userToApprove.email} bol schválené.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
@@ -567,9 +566,35 @@ function UsersManagementApp() {
     setError('');
     setUserNotificationMessage('');
     try {
-      // Delete user from Firestore
+      // 1. Zmazať používateľa z Firestore
       await db.collection('users').doc(userToDelete.id).delete();
-      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný.`);
+      console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
+
+      // 2. Odoslať požiadavku na Google Apps Script na zmazanie používateľa z Firebase Authentication
+      try {
+        const payload = {
+          action: 'deleteUserFromAuth', // Nová akcia pre Apps Script
+          uid: userToDelete.id, // UID používateľa, ktorého chceme zmazať
+          email: userToDelete.email // Pre logovanie/potvrdenie v Apps Script
+        };
+        console.log("Odosielanie požiadavky na Apps Script na zmazanie používateľa z Auth:", payload);
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', // Dôležité pre Apps Script
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+        console.log("Požiadavka na zmazanie používateľa z Auth odoslaná.");
+        // V režime 'no-cors' nemôžeme čítať odpoveď, takže nebudeme analyzovať response.text()
+      } catch (appsScriptError) {
+        console.error("Chyba pri odosielaní požiadavky na Apps Script (zmazanie používateľa z Auth):", appsScriptError);
+        setError(`Chyba pri zmazaní používateľa z autentifikácie: ${appsScriptError.message}`);
+        // Ak zlyhá Apps Script, stále chceme zobraziť úspech pre Firestore zmazanie
+      }
+
+      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy a požiadavka na zmazanie z autentifikácie bola odoslaná.`);
       closeConfirmationModal();
 
       // Uložiť notifikáciu pre všetkých administrátorov
@@ -581,11 +606,11 @@ function UsersManagementApp() {
       });
       console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
 
-      // Pridanie presmerovania po úspešnom zmazaní na novú kartu
-      window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
+      // Odstránime presmerovanie na Firebase Console, keďže sa to bude diať automaticky cez Apps Script
+      // window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri mazaní používateľa:", e);
+      console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
       setError(`Chyba pri mazaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
