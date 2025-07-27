@@ -412,26 +412,23 @@ function ChangePasswordApp() {
     };
   }, [handleLogout]);
 
-  // Funkcia pre validáciu hesla (konzistentná s register.js a admin-register.js, bez špeciálnych znakov)
+  // Funkcia pre validáciu hesla (teraz presne zhodná s register.js)
   const validatePassword = (pwd) => {
     const messages = [];
 
     const minLengthMet = pwd.length >= 10;
-    messages.push({ text: "minimálne 10 znakov", isMet: minLengthMet });
-
-    const maxLengthMet = pwd.length <= 4096;
-    messages.push({ text: "maximálne 4096 znakov", isMet: maxLengthMet });
-
-    const hasUpperCaseMet = /[A-Z]/.test(pwd);
-    messages.push({ text: "aspoň jedno veľké písmeno", isMet: hasUpperCaseMet });
+    messages.push({ text: "aspoň 10 znakov", isMet: minLengthMet });
 
     const hasLowerCaseMet = /[a-z]/.test(pwd);
     messages.push({ text: "aspoň jedno malé písmeno", isMet: hasLowerCaseMet });
 
+    const hasUpperCaseMet = /[A-Z]/.test(pwd);
+    messages.push({ text: "aspoň jedno veľké písmeno", isMet: hasUpperCaseMet });
+
     const hasDigitMet = /[0-9]/.test(pwd);
     messages.push({ text: "aspoň jednu číslicu", isMet: hasDigitMet });
 
-    const isValid = minLengthMet && maxLengthMet && hasUpperCaseMet && hasLowerCaseMet && hasDigitMet;
+    const isValid = minLengthMet && hasLowerCaseMet && hasUpperCaseMet && hasDigitMet;
 
     return {
         isValid: isValid,
@@ -602,7 +599,7 @@ function ChangePasswordApp() {
             showPassword: showNewPassword,
             toggleShowPassword: () => setShowNewPassword(!showNewPassword),
             disabled: loading,
-            validationRules: newPasswordValidation.validationMessages // !!! TOTO JE KĽÚČOVÁ ZMENA !!!
+            validationRules: newPasswordValidation.validationMessages // Odovzdanie výsledkov validácie
           }),
           React.createElement(PasswordInput, {
             id: 'confirm-new-password',
