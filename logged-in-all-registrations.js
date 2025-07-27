@@ -14,7 +14,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
         // Logovanie pre debugovanie
         console.log("NotificationModal useEffect: message=", message, "displayNotificationsEnabled=", displayNotificationsEnabled);
 
-        // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
+        // Zobrazí notifikáciu len ak je správa (nie prázdny reťazec) A notifikácie sú povolené
         if (message && displayNotificationsEnabled) {
             console.log("NotificationModal: Zobrazujem notifikáciu.");
             setShow(true);
@@ -27,7 +27,10 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
                 setTimeout(onClose, 500);
             }, 10000); // Notifikácia zmizne po 10 sekundách
         } else {
-            console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", stav show:", show, ", notifikácie povolené:", displayNotificationsEnabled, ").");
+            // Logovať len ak bola správa prítomná a teraz sa skrýva, alebo ak sú notifikácie explicitne vypnuté
+            if (message || !displayNotificationsEnabled) {
+                console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", stav show:", show, ", notifikácie povolené:", displayNotificationsEnabled, ").");
+            }
             setShow(false);
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
@@ -42,8 +45,8 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
         };
     }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
-    // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
-    if ((!show && !message) || !displayNotificationsEnabled) return null;
+    // Nezobrazovať notifikáciu, ak show nie je true, alebo message je prázdny, alebo notifikácie nie sú povolené
+    if (!show || !message || !displayNotificationsEnabled) return null;
 
     return React.createElement(
         'div',
@@ -338,24 +341,24 @@ function AllRegistrationsApp() {
                     setAllUsers(usersData);
                     setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
                     setLoading(false);
-                    // ODSTRÁNENÉ: setUserNotificationMessage("Dáta registrácie boli úspešne načítané!");
+                    // ODSTRÁNENÉ: setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
                 }, error => {
                     console.error("AllRegistrationsApp: Chyba pri načítaní všetkých používateľov z Firestore:", error);
                     setError(`Chyba pri načítaní používateľov: ${error.message}`);
                     setLoading(false);
-                    // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`);
+                    // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
                 });
             } catch (e) {
                 console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre všetkých používateľov:", e);
                 setError(`Chyba pri načítaní používateľov: ${e.message}`);
                 setLoading(false);
-                // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
+                // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
             }
         } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
             setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
             setLoading(false);
             console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Prístup zamietnutý.");
-            // ODSTRÁNENÉ: setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
+            // ODSTRÁNENÉ: setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky."); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
         } else if (isAuthReady && user === null) {
             console.log("AllRegistrationsApp: Používateľ nie je prihlásený. Presmerovanie na login.html.");
             window.location.href = 'login.html';
