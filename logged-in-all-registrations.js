@@ -1,6 +1,7 @@
 // logged-in-all-registrations.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-all-registrations.html.
+// sú globálne definované v <head> logged-in-all-registrations.html a že header.js
+// už inicializoval Firebase a spravuje autentifikáciu a odkazy hlavičky.
 
 // NotificationModal Component (pre konzistentné notifikácie)
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -144,10 +145,9 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     );
 }
 
-
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() {
-    const [app, setApp] = React.useState(null);
+    // Firebase instancie budú získané z globálnej firebase aplikácie inicializovanej v HTML/header.js
     const [auth, setAuth] = React.useState(null);
     const [db, setDb] = React.useState(null);
     const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
@@ -164,10 +164,8 @@ function AllRegistrationsApp() {
     const [activeFilters, setActiveFilters] = React.useState({}); // { columnName: [value1, value2] }
     const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
 
-    // Effect for Firebase initialization and Auth Listener setup (runs only once)
+    // Effect for Firebase instance setup (runs only once)
     React.useEffect(() => {
-        let unsubscribeAuth;
-
         try {
             if (typeof firebase === 'undefined') {
                 console.error("AllRegistrationsApp: Firebase SDK nie je načítané.");
@@ -176,40 +174,18 @@ function AllRegistrationsApp() {
                 return;
             }
 
-            let firebaseAppInstance;
-            // Skontrolujte, či už existuje predvolená aplikácia Firebase
-            if (firebase.apps.length === 0) {
-                // Používame globálne firebaseConfig
-                firebaseAppInstance = firebase.initializeApp(firebaseConfig);
-            } else {
-                firebaseAppInstance = firebase.app(); // Použite existujúcu predvolenú aplikáciu
-                console.warn("AllRegistrationsApp: Firebase App named '[DEFAULT]' already exists. Using existing app instance.");
-            }
-            setApp(firebaseAppInstance);
+            // Získanie už inicializovaných inštancií Firebase
+            const firebaseAppInstance = firebase.app();
+            setAuth(firebase.auth(firebaseAppInstance));
+            setDb(firebase.firestore(firebaseAppInstance));
+            console.log("AllRegistrationsApp: Firebase Auth a Firestore inštancie získané z globálnej aplikácie.");
 
-            const authInstance = firebase.auth(firebaseAppInstance);
-            setAuth(authInstance);
-            const firestoreInstance = firebase.firestore(firebaseAppInstance);
-            setDb(firestoreInstance);
-
-            const signIn = async () => {
-                try {
-                    if (initialAuthToken) {
-                        await authInstance.signInWithCustomToken(initialAuthToken);
-                    }
-                } catch (e) {
-                    console.error("AllRegistrationsApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-                    setError(`Chyba pri prihlásení: ${e.message}`);
-                }
-            };
-
-            unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+            // Nastavenie listenera pre autentifikáciu
+            const unsubscribeAuth = firebase.auth(firebaseAppInstance).onAuthStateChanged(async (currentUser) => {
                 console.log("AllRegistrationsApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
                 setUser(currentUser); // Nastaví Firebase User objekt
                 setIsAuthReady(true); // Mark auth as ready after the first check
             });
-
-            signIn();
 
             return () => {
                 if (unsubscribeAuth) {
@@ -217,18 +193,19 @@ function AllRegistrationsApp() {
                 }
             };
         } catch (e) {
-            console.error("AllRegistrationsApp: Nepodarilo sa inicializovať Firebase:", e);
+            console.error("AllRegistrationsApp: Nepodarilo sa získať Firebase inštancie alebo nastaviť Auth listener:", e);
             setError(`Chyba pri inicializácii Firebase: ${e.message}`);
             setLoading(false);
         }
-    }, []);
+    }, []); // Prázdne pole závislostí zabezpečí, že sa spustí len raz
 
-    // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+    // Načítanie používateľských dát z Firestore po inicializácii Auth a DB
     React.useEffect(() => {
         let unsubscribeUserDoc;
+        // appId by mal byť globálne dostupný z HTML
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        if (isAuthReady && db && user !== undefined) {
+        if (isAuthReady && db && auth && user !== undefined) { // Pridaná závislosť na 'auth'
             if (user === null) {
                 console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
                 window.location.href = 'login.html';
@@ -247,7 +224,9 @@ function AllRegistrationsApp() {
                             const userData = docSnapshot.data();
                             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
-                            // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+                            // Táto logika je už v header.js, ale pre istotu ju tu ponechávam pre prípad,
+                            // že by sa stránka načítala priamo bez plnej inicializácie header.js
+                            // alebo pre prípad, že by sa zmenila rola/approved status počas session.
                             if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                                 console.error("AllRegistrationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
                                 console.log("AllRegistrationsApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
@@ -282,7 +261,6 @@ function AllRegistrationsApp() {
                                 localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                                 console.log("AllRegistrationsApp: Timestampy sú rovnaké, aktualizujem localStorage.");
                             }
-                            // --- KONIEC LOGIKY ODHLÁSENIA ---
 
                             setUserProfileData(userData); // Uloženie celých dát profilu
                             setLoading(false);
@@ -341,6 +319,7 @@ function AllRegistrationsApp() {
     // Effect for fetching all users from Firestore
     React.useEffect(() => {
         let unsubscribeAllUsers;
+        // appId by mal byť globálne dostupný z HTML
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
@@ -384,59 +363,6 @@ function AllRegistrationsApp() {
         };
     }, [db, userProfileData, isAuthReady]); // Závisí od db a userProfileData
 
-    // Effect for updating header link visibility (remains the same)
-    React.useEffect(() => {
-        console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-        const authLink = document.getElementById('auth-link');
-        const profileLink = document.getElementById('profile-link');
-        const logoutButton = document.getElementById('logout-button');
-        const registerLink = document.getElementById('register-link');
-
-        if (authLink) {
-            if (user) { // If user is logged in
-                authLink.classList.add('hidden');
-                profileLink && profileLink.classList.remove('hidden');
-                logoutButton && logoutButton.classList.remove('hidden');
-                registerLink && registerLink.classList.add('hidden');
-                console.log("AllRegistrationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-            } else { // If user is not logged in
-                authLink.classList.remove('hidden');
-                profileLink && profileLink.classList.add('hidden');
-                logoutButton && logoutButton.classList.add('hidden');
-                registerLink && registerLink.classList.remove('hidden'); 
-                console.log("AllRegistrationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-            }
-        }
-    }, [user]);
-
-    // Handle logout (needed for the header logout button)
-    const handleLogout = React.useCallback(async () => {
-        if (!auth) return;
-        try {
-            setLoading(true);
-            await auth.signOut();
-            setUserNotificationMessage("Úspešne odhlásený.");
-            window.location.href = 'login.html';
-        } catch (e) {
-            console.error("AllRegistrationsApp: Chyba pri odhlásení:", e);
-            setError(`Chyba pri odhlásení: ${e.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, [auth]);
-
-    // Attach logout handler to the button in the header
-    React.useEffect(() => {
-        const logoutButton = document.getElementById('logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', handleLogout);
-        }
-        return () => {
-            if (logoutButton) {
-                logoutButton.removeEventListener('click', handleLogout);
-            }
-        };
-    }, [handleLogout]);
 
     // Sorting logic
     const handleSort = (column) => {
@@ -454,7 +380,19 @@ function AllRegistrationsApp() {
                 const dateA = a.registeredAt ? a.registeredAt.toDate() : new Date(0);
                 const dateB = b.registeredAt ? b.registeredAt.toDate() : new Date(0);
                 return direction === 'asc' ? dateA - dateB : dateB - dateA;
-            } else if (typeof valA === 'string' && typeof valB === 'string') {
+            } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
+                const parts = column.split('.');
+                let nestedValA = a;
+                let nestedValB = b;
+                for (const part of parts) {
+                    nestedValA = nestedValA ? nestedValA[part] : undefined;
+                    nestedValB = nestedValB ? nestedValB[part] : undefined;
+                }
+                const finalValA = nestedValA || '';
+                const finalValB = nestedValB || '';
+                return direction === 'asc' ? String(finalValA).localeCompare(String(finalValB)) : String(finalValB).localeCompare(String(finalValA));
+            }
+            else if (typeof valA === 'string' && typeof valB === 'string') {
                 return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else {
                 return direction === 'asc' ? valA - valB : valB - valA;
@@ -478,6 +416,10 @@ function AllRegistrationsApp() {
                     nestedVal = nestedVal ? nestedVal[part] : undefined;
                 }
                 val = nestedVal;
+            }
+            // Špecifické pre boolean stĺpce (napr. 'approved')
+            if (typeof val === 'boolean') {
+                return val ? 'áno' : 'nie';
             }
             return String(val || '').toLowerCase(); // Všetko na malé písmená
         }))].filter(v => v !== '').sort(); // Odstrániť prázdne a zoradiť
@@ -524,6 +466,10 @@ function AllRegistrationsApp() {
                         userValue = String(nestedVal || '').toLowerCase();
                     } else {
                         userValue = String(user[column] || '').toLowerCase();
+                    }
+                    // Špecifické pre boolean stĺpce (napr. 'approved')
+                    if (typeof user[column] === 'boolean') {
+                        userValue = user[column] ? 'áno' : 'nie';
                     }
                     return filterValues.includes(userValue);
                 });
