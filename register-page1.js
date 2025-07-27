@@ -88,7 +88,7 @@ const countryCodes = [
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex, preDescription }) { // Pridaný preDescription
+export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex }) { // Zmenené description na validationRules
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -108,15 +108,15 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
   return React.createElement(
     'div',
     { className: 'mb-4' },
-    preDescription && React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, preDescription), // Pridaný preDescription
+    preDescription && React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, preDescription),
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
-      { className: 'relative shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
+      { className: 'relative shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none', // border-none a rounded-none zabezpečujú, že rodičovský div riadi orámovanie
+        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none',
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -140,7 +140,22 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    description && React.createElement('div', { className: 'text-gray-600 text-xs italic mt-1' }, description)
+    validationRules && React.createElement(
+      'div',
+      { className: 'text-gray-600 text-xs italic mt-1' },
+      React.createElement(
+        'ul',
+        { className: 'list-none pl-0' }, // Používame list-none a pl-0 pre vlastné odrážky
+        validationRules.map((rule, index) =>
+          React.createElement(
+            'li',
+            { key: index, className: `flex items-center ${rule.met ? 'text-green-600' : 'text-gray-600'}` },
+            rule.met ? React.createElement('span', { className: 'mr-2 text-green-500' }, '✔') : React.createElement('span', { className: 'mr-2' }, '•'),
+            rule.text
+          )
+        )
+      )
+    )
   );
 }
 
@@ -281,6 +296,21 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   const now = new Date();
   const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null; 
 
+  // Funkcia na overenie hesla a vrátenie stavu pravidiel
+  const getPasswordValidationRules = (password) => {
+    const rules = [
+      { text: 'aspoň 8 znakov', met: password.length >= 8 },
+      { text: 'aspoň jedno malé písmeno', met: /[a-z]/.test(password) },
+      { text: 'aspoň jedno veľké písmeno', met: /[A-Z]/.test(password) },
+      { text: 'aspoň jednu číslicu', met: /\d/.test(password) },
+    ];
+    return rules;
+  };
+
+  const passwordValidationRules = getPasswordValidationRules(formData.password);
+  const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
+
+
   return React.createElement(
     'div',
     { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
@@ -335,15 +365,15 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'), // Nový text
+            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'),
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 'Meno kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
               React.createElement('input', {
                 type: 'text',
                 id: 'firstName',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none',
                 value: formData.firstName,
                 onChange: handleChange,
                 required: true,
@@ -359,11 +389,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'lastName' }, 'Priezvisko kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
               React.createElement('input', {
                 type: 'text',
                 id: 'lastName',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none',
                 value: formData.lastName,
                 onChange: handleChange,
                 required: true,
@@ -376,15 +406,15 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'), // Nový text
+            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'),
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa kontaktnej osoby'),
             React.createElement(
               'div',
-              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' }, // Odstránené appearance-none
+              { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
               React.createElement('input', {
                 type: 'email',
                 id: 'email',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none', // Zmenené triedy
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none',
                 value: formData.email,
                 onChange: handleChange,
                 required: true,
@@ -417,7 +447,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               React.createElement('input', {
                 type: 'tel',
                 id: 'contactPhoneNumber',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg flex-grow min-w-0 border-none rounded-none', // Pridané border-none a rounded-none
+                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg flex-grow min-w-0 border-none rounded-none',
                 value: formData.contactPhoneNumber,
                 onChange: (e) => {
                   const re = /^[0-9\b]+$/;
@@ -442,19 +472,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo',
             autoComplete: 'new-password',
-            preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v registračnom formulári na webovej stránke turnaja.', // Nový text
-            description: React.createElement(
-              React.Fragment,
-              null,
-              'Heslo musí obsahovať:',
-              React.createElement(
-                'ul',
-                { className: 'list-disc list-inside ml-4' },
-                React.createElement('li', null, 'aspoň jedno malé písmeno,'),
-                React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
-                React.createElement('li', null, 'aspoň jednu číslicu.')
-              )
-            ),
+            preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v registračnom formulári na webovej stránke turnaja.',
+            validationRules: passwordValidationRules, // Používame nové validationRules
             tabIndex: 6,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showPassword,
@@ -470,6 +489,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
+            validationRules: confirmPasswordValidationRules, // Používame nové validationRules
             tabIndex: 7,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showConfirmPassword,
