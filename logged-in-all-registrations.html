@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Všetky registrácie</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            padding-left: 256px; /* Odsadenie pre ľavé menu */
+        }
+        /* Základné štýly pre modálne okno (ak sa budú používať) */
+        .modal {
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        /* Custom scrollbar pre tabuľku */
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 8px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- Globálne premenné pre Firebase konfiguráciu -->
+    <script>
+        // Tieto premenné sú definované globálne a budú použité v header.js, left-menu.js a tejto aplikácii
+        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Použi svoje skutočné APP_ID
+        const __firebase_config = JSON.stringify({
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // Použi svoj skutočný API_KEY
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        });
+        const __initial_auth_token = null; // Pre túto stránku nie je potrebný počiatočný auth token
+        const __firebase_app_name = 'allRegistrationsApp'; // Názov Firebase aplikácie pre túto stránku
+
+        // Inicializácia Firebase aplikácie tu, aby bola dostupná pre všetky skripty
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(JSON.parse(__firebase_config));
+                console.log("all-registrations.html: Firebase App '[DEFAULT]' inicializovaná v head.");
+            } else {
+                console.log("all-registrations.html: Firebase App '[DEFAULT]' už existuje.");
+            }
+        } catch (e) {
+            console.error("all-registrations.html: Chyba pri inicializácii Firebase App v head:", e);
+        }
+    </script>
+</head>
+<body class="bg-gray-100">
+    <!-- Hlavička - bude načítaná dynamicky -->
+    <div id="header-placeholder"></div>
+    <!-- Ľavé menu - bude načítané dynamicky -->
+    <div id="left-menu-placeholder"></div>
+
+    <!-- Hlavný obsah React aplikácie -->
+    <div id="root" class="flex-1 p-8">
+        <!-- React aplikácia sa vykreslí sem -->
+    </div>
+
+    <!-- Placeholder pre push-up notifikácie (pre header.js) -->
+    <div id="header-notification-area" class="fixed top-20 right-4 z-50 w-full max-w-sm pointer-events-none"></div>
+
+    <!-- Načítanie vlastných skriptov -->
+    <script src="header.js"></script>
+    <script src="left-menu.js"></script>
+    <script src="logged-in-all-registrations.js"></script>
+
+    <script>
+        // Funkcia na načítanie hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+                // Inicializujeme logiku hlavičky po jej načítaní
+                if (typeof initializeHeaderLogic === 'function') {
+                    await initializeHeaderLogic();
+                    console.log("all-registrations.html: Logika hlavičky inicializovaná.");
+                }
+            } catch (error) {
+                console.error("all-registrations.html: Chyba pri načítaní hlavičky:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+            }
+        }
+
+        // Funkcia na načítanie ľavého menu
+        async function loadLeftMenu() {
+            try {
+                const response = await fetch('left-menu.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const menuHtml = await response.text();
+                document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
+                // Inicializujeme logiku ľavého menu po jeho načítaní
+                if (typeof initializeLeftMenuLogic === 'function') {
+                    await initializeLeftMenuLogic();
+                    console.log("all-registrations.html: Logika ľavého menu inicializovaná.");
+                }
+            } catch (error) {
+                console.error("all-registrations.html: Chyba pri načítaní menu:", error);
+                document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
+            }
+        }
+
+        // Spustíme načítanie hlavičky a menu po načítaní DOM
+        window.onload = async () => {
+            await loadHeader();
+            await loadLeftMenu();
+
+            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof AllRegistrationsApp === 'undefined') { // Predpokladáme, že hlavný komponent sa volá AllRegistrationsApp
+                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(AllRegistrationsApp, null));
+            console.log("all-registrations.html: React App vykreslená.");
+        };
+    </script>
+</body>
+</html>
