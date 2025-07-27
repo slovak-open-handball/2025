@@ -357,7 +357,7 @@ function AllRegistrationsApp() {
         }),
         React.createElement(
             'div',
-            { className: 'w-full max-w-full px-4 mt-8 mb-10' }, {/* Zmenené max-w-4xl na max-w-full a pridaný px-4 */}
+            { className: 'w-full max-w-full px-4 mt-8 mb-10' },
             error && React.createElement(
                 'div',
                 { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -374,7 +374,7 @@ function AllRegistrationsApp() {
                 ) : (
                     React.createElement(
                         'div',
-                        { className: 'overflow-x-auto' }, {/* Umožňuje horizontálny scroll pre veľké tabuľky */}
+                        { className: 'overflow-x-auto' },
                         React.createElement(
                             'table',
                             { className: 'min-w-full bg-white rounded-lg shadow-md' },
