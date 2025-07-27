@@ -8,6 +8,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     const timerRef = React.useRef(null);
 
     React.useEffect(() => {
+        // Zobrazí notifikáciu len ak je správa a displayNotificationsEnabled je true
         if (message && displayNotificationsEnabled) {
             setShow(true);
             if (timerRef.current) {
@@ -16,7 +17,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
             timerRef.current = setTimeout(() => {
                 setShow(false);
                 setTimeout(onClose, 500);
-            }, 10000);
+            }, 10000); // Notifikácia zmizne po 10 sekundách
         } else {
             setShow(false);
             if (timerRef.current) {
@@ -30,8 +31,9 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
                 clearTimeout(timerRef.current);
             }
         };
-    }, [message, onClose, displayNotificationsEnabled]);
+    }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
+    // Nezobrazovať notifikáciu, ak nie je správa alebo ak sú notifikácie zakázané
     if (!show && !message || !displayNotificationsEnabled) return null;
 
     return React.createElement(
@@ -40,13 +42,13 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
             className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
                 show ? 'translate-y-0' : '-translate-y-full'
             }`,
-            style: { pointerEvents: 'none' }
+            style: { pointerEvents: 'none' } // Umožňuje klikanie cez notifikáciu
         },
         React.createElement(
             'div',
             {
                 className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-                style: { pointerEvents: 'auto' }
+                style: { pointerEvents: 'auto' } // Umožňuje interakciu s notifikáciou (napr. text)
             },
             React.createElement('p', { className: 'font-semibold' }, message)
         )
@@ -142,7 +144,7 @@ function AllRegistrationsApp() {
     const [isAuthReady, setIsAuthReady] = React.useState(false); // Flag pre pripravenosť autentifikácie
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
-    const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+    const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Stav pre notifikácie
 
     const [allUsers, setAllUsers] = React.useState([]); // Stav pre všetkých používateľov z databázy
     const [isFilterModalOpen, setIsFilterModalOpen] = React.useState(false);
@@ -522,7 +524,7 @@ function AllRegistrationsApp() {
         React.createElement(NotificationModal, {
             message: userNotificationMessage,
             onClose: () => setUserNotificationMessage(''),
-            displayNotificationsEnabled: userProfileData.displayNotifications // Odovzdávame stav notifikácií
+            displayNotificationsEnabled: userProfileData.displayNotifications // Odovzdávame stav notifikácií z userProfileData
         }),
         React.createElement(FilterModal, {
             isOpen: isFilterModalOpen,
