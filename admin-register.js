@@ -380,6 +380,7 @@ function App() {
           // ZMENA: Odstránenie mode: 'no-cors' a pridanie lepšej kontroly odpovede
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
