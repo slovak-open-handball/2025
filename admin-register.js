@@ -15,7 +15,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 // Pridaný prop 'validationStatus' pre detailnú vizuálnu indikáciu platnosti hesla
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, validationStatus }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
@@ -71,24 +71,19 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    description && React.createElement(
+    // ZMENA: Štýl popisu hesla pre konzistenciu s register.html
+    React.createElement(
       'div',
       { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
       'Heslo musí obsahovať:',
       React.createElement(
         'ul',
-        { className: 'list-none pl-4' }, // Odstránime predvolené odrážky prehliadača
+        { className: 'list-none pl-4' }, // Používame list-none a vlastné odrážky pre dynamiku
         React.createElement(
           'li',
           { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
           React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
           'aspoň 10 znakov,'
-        ),
-        React.createElement(
-          'li',
-          { className: `flex items-center ${validationStatus.maxLength ? 'text-green-600' : 'text-gray-600'}` },
-          React.createElement('span', { className: 'mr-2' }, validationStatus.maxLength ? '✔' : '•'),
-          'maximálne 4096 znakov,'
         ),
         React.createElement(
           'li',
@@ -192,7 +187,7 @@ function App() {
   // Nové stavy pre validáciu hesla
   const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
     minLength: false,
-    maxLength: false,
+    maxLength: false, // maxLength sa stále kontroluje, ale nezobrazuje sa v zozname
     hasUpperCase: false,
     hasLowerCase: false,
     hasNumber: false,
@@ -287,12 +282,13 @@ function App() {
   const validatePassword = (pwd) => {
     const status = {
       minLength: pwd.length >= 10,
-      maxLength: pwd.length <= 4096,
+      maxLength: pwd.length <= 4096, // Táto podmienka sa stále kontroluje
       hasUpperCase: /[A-Z]/.test(pwd),
       hasLowerCase: /[a-z]/.test(pwd),
       hasNumber: /[0-9]/.test(pwd),
     };
-    status.isValid = Object.values(status).every(Boolean); // Celková platnosť
+    // Celková platnosť závisí od všetkých podmienok vrátane maxLength
+    status.isValid = status.minLength && status.maxLength && status.hasUpperCase && status.hasLowerCase && status.hasNumber;
     return status;
   };
 
