@@ -158,6 +158,16 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
 
+  // Deklarácia stavov pre používateľov a filtrovanie
+  const [allUsers, setAllUsers] = React.useState([]); 
+  const [filteredUsers, setFilteredUsers] = React.useState([]);
+  const [currentSort, setCurrentSort] = React.useState({ column: 'registrationDate', direction: 'desc' });
+  const [filterModalOpen, setFilterModalOpen] = React.useState(false);
+  const [filterColumn, setFilterColumn] = React.useState('');
+  const [activeFilters, setActiveFilters] = React.useState({});
+  const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
+
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
@@ -428,6 +438,9 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // Filtering logic
   const openFilterModal = (column) => {
+      console.log("AllRegistrationsApp: openFilterModal volaná pre stĺpec:", column); // NOVÝ LOG
+      console.log("AllRegistrationsApp: Aktuálny stav allUsers:", allUsers); // NOVÝ DIAGNOSTICKÝ LOG
+
       setFilterColumn(column);
       // Získanie unikátnych hodnôt pre daný stĺpec, prevedené na string a malé písmená pre konzistentnosť
       const values = [...new Set(allUsers.map(u => {
