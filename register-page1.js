@@ -510,7 +510,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo',
             autoComplete: 'new-password',
-            preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v registračnom formulári na webovej stránke turnaja.',
+            preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.',
             validationRules: passwordValidationRules,
             tabIndex: 6,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
