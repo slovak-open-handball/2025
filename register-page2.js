@@ -35,6 +35,26 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
     }
   };
 
+  // Kontrola, či sú všetky povinné polia vyplnené na Page2
+  const isFormValidPage2 = formData.billing?.clubName.trim() !== '' &&
+                           (formData.billing?.ico.trim() !== '' ||
+                            formData.billing?.dic.trim() !== '' ||
+                            formData.billing?.icDph.trim() !== '') &&
+                           formData.street.trim() !== '' &&
+                           formData.houseNumber.trim() !== '' &&
+                           formData.city.trim() !== '' &&
+                           formData.postalCode.replace(/\s/g, '').length === 5 &&
+                           formData.country.trim() !== '';
+
+  // Dynamické triedy pre tlačidlo "Registrovať sa"
+  const registerButtonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
+    ${!isFormValidPage2 || loading
+      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
+    }
+  `;
+
   return React.createElement(
     'div',
     { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
@@ -222,14 +242,14 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           'button',
           {
             type: 'submit',
-            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-            disabled: loading,
+            className: registerButtonClasses, // Použitie dynamických tried
+            disabled: !isFormValidPage2 || loading, // Tlačidlo je zakázané, ak formulár nie je platný alebo sa načítava
             tabIndex: 19
           },
           loading ? React.createElement(
             'div',
             { className: 'flex items-center justify-center' },
-            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Farba spinneru zmenená na zelenú
               React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
               React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
             ),
