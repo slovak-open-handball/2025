@@ -582,7 +582,6 @@ function ChangePasswordApp() {
                 React.createElement('li', null, 'aspoň jedno malé písmeno,'),
                 React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
                 React.createElement('li', null, 'aspoň jednu číslicu,'),
-                React.createElement('li', null, 'aspoň jeden špeciálny znak (!@#$%^&*(),.?":{}|<>]).') // Aktualizovaný popis
               )
             )
           }),
