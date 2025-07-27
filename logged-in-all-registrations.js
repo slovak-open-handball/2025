@@ -8,17 +8,23 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     const timerRef = React.useRef(null);
 
     React.useEffect(() => {
+        // Logovanie pre debugovanie
+        console.log("NotificationModal useEffect: message=", message, "displayNotificationsEnabled=", displayNotificationsEnabled);
+
         // Zobrazí notifikáciu len ak je správa a displayNotificationsEnabled je true
         if (message && displayNotificationsEnabled) {
+            console.log("NotificationModal: Zobrazujem notifikáciu.");
             setShow(true);
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
             }
             timerRef.current = setTimeout(() => {
+                console.log("NotificationModal: Skrývam notifikáciu po časovom limite.");
                 setShow(false);
                 setTimeout(onClose, 500);
             }, 10000); // Notifikácia zmizne po 10 sekundách
         } else {
+            console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", povolené:", displayNotificationsEnabled, ", stav show:", show, ").");
             setShow(false);
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
@@ -34,8 +40,12 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
     // Nezobrazovať notifikáciu, ak nie je správa alebo ak sú notifikácie zakázané
-    if (!show && !message || !displayNotificationsEnabled) return null;
+    if (!show && !message || !displayNotificationsEnabled) {
+        console.log("NotificationModal: Renderujem null (notifikácia skrytá).");
+        return null;
+    }
 
+    console.log("NotificationModal: Renderujem notifikáciu DIV.");
     return React.createElement(
         'div',
         {
@@ -281,6 +291,8 @@ function AllRegistrationsApp() {
                         if (docSnapshot.exists) {
                             const userData = docSnapshot.data();
                             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
+                            // Logovanie hodnoty displayNotifications
+                            console.log("AllRegistrationsApp: userProfileData loaded, displayNotifications:", userData.displayNotifications);
 
                             // --- Kontrola passwordLastChanged pre platnosť relácie ---
                             if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
@@ -425,7 +437,11 @@ function AllRegistrationsApp() {
             setLoading(true);
             await auth.signOut();
             setUserNotificationMessage("Úspešne odhlásený.");
-            window.location.href = 'login.html';
+            console.log("AllRegistrationsApp: Správa o odhlásení nastavená. Čakám 2 sekundy pred presmerovaním.");
+            // Pridanie oneskorenia pred presmerovaním
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000); // 2-sekundové oneskorenie na zobrazenie notifikácie
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri odhlásení:", e);
             setError(`Chyba pri odhlásení: ${e.message}`);
@@ -644,7 +660,7 @@ function AllRegistrationsApp() {
                             React.createElement(
                                 'tbody',
                                 { className: 'text-gray-600 text-sm font-light' },
-                                filteredUsers.map((u) => (
+                                filteredUsers.map((u) => ( // Používame filteredUsers
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
@@ -675,4 +691,5 @@ function AllRegistrationsApp() {
     );
 }
 
+// Explicitne sprístupniť komponent globálne
 window.AllRegistrationsApp = AllRegistrationsApp;
