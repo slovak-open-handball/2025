@@ -143,7 +143,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
     showValidationList && validationRules && React.createElement( // Podmienené zobrazenie zoznamu
       'div',
       { className: 'text-gray-600 text-xs italic mt-1' },
-      React.createElement('p', { className: 'font-semibold mb-1' }, 'Heslo musí obsahovať:'), {/* Nový text */}
+      React.createElement('p', { className: 'font-semibold mb-1' }, 'Heslo musí obsahovať:'),
       React.createElement(
         'ul',
         { className: 'list-none pl-0' },
