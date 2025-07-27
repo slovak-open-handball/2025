@@ -1,6 +1,31 @@
 // Tento súbor už nenačítava Firebase ani nevykonáva autentifikáciu.
 // Spolieha sa na to, že Firebase je inicializované a používateľ je prihlásený v hlavnej aplikácii.
 
+// Funkcia na zvýraznenie aktívnej položky menu
+function highlightActiveMenuItem() {
+    // Odstránime zvýraznenie zo všetkých predtým aktívnych položiek
+    const allMenuItems = document.querySelectorAll('.w-64 a');
+    allMenuItems.forEach(item => {
+        item.classList.remove('bg-blue-600', 'font-bold', 'text-white'); // Odstránime existujúce zvýraznenie
+        item.classList.add('hover:bg-blue-600'); // Vrátime hover efekt
+    });
+
+    // Získame aktuálnu cestu URL (napr. /logged-in-my-data.html)
+    const currentPath = window.location.pathname;
+    // Získame len názov súboru (napr. logged-in-my-data)
+    const currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+
+    // Nájdeme odkaz v menu, ktorého href atribút končí aktuálnou stránkou
+    const activeLink = document.querySelector(`.w-64 a[href$="${currentPage}"]`);
+
+    if (activeLink) {
+        // Zvýrazníme aktívnu položku
+        activeLink.classList.remove('hover:bg-blue-600'); // Odstránime hover, aby sa nekolidoval so zvýraznením
+        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white'); // Pridáme triedy pre zvýraznenie
+    }
+}
+
+
 // Funkcia na načítanie obsahu do hlavnej oblasti
 // Táto funkcia by mala byť volaná z hlavnej React aplikácie (MyDataApp)
 // na dynamické načítanie rôznych sub-komponentov/stránok do #root divu.
@@ -58,6 +83,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
                 const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(rootComponent, null));
+                highlightActiveMenuItem(); // Zvýrazníme aktívnu položku po načítaní obsahu
             } else {
                 console.warn(`Komponent pre ${jsFileName} nie je definovaný alebo React/ReactDOM nie sú načítané.`);
                 rootElement.innerHTML = `<div class="text-red-500 text-center p-4">Chyba: Komponent pre stránku "${jsFileName}" sa nenašiel.</div>`;
@@ -99,6 +125,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
                 const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(rootComponent, null));
+                highlightActiveMenuItem(); // Zvýrazníme aktívnu položku po opätovnom načítaní
             } else {
                 console.warn(`Komponent pre ${jsFileName} nie je definovaný po opätovnom načítaní.`);
                 rootElement.innerHTML = `<div class="text-red-500 text-center p-4">Chyba: Komponent pre stránku "${jsFileName}" sa nenašiel po opätovnom načítaní.</div>`;
@@ -144,6 +171,8 @@ window.updateMenuItemsVisibility = function(userRole) {
             }
         }
     }
+    // Po aktualizácii viditeľnosti menu zvýrazníme aktívnu položku
+    highlightActiveMenuItem();
 };
 
 // Spracovanie kliknutí na odkazy v menu
@@ -162,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.error("loadContent funkcia nie je definovaná.");
             }
+            // Zvýrazníme aktívnu položku okamžite po kliknutí
+            highlightActiveMenuItem();
         });
     });
+    // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky
+    highlightActiveMenuItem();
 });
