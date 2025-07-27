@@ -388,10 +388,8 @@ function AllRegistrationsApp() {
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Meno'),
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Priezvisko'),
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Telefón'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Rola'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Schválený'),
+                                    // Odstránené stĺpce: Rola, Schválený, Posledná zmena hesla
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Dátum registrácie'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Posledná zmena hesla'),
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Názov klubu'),
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'IČO'),
                                     React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'DIČ'),
@@ -414,10 +412,8 @@ function AllRegistrationsApp() {
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.contactPhoneNumber || '-'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role || '-'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
+                                        // Odstránené stĺpce: Rola, Schválený, Posledná zmena hesla
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate || '-'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.passwordLastChanged || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.clubName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.ico || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.dic || '-'),
