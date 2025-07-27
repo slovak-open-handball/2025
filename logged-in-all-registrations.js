@@ -286,7 +286,8 @@ function AllRegistrationsApp() {
                         } else if (error.code === 'unavailable') {
                             setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
                         } else if (error.code === 'unauthenticated') {
-                             setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
+                             setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlási
+                             ť.`);
                              if (auth) {
                                 auth.signOut();
                                 window.location.href = 'login.html';
@@ -408,7 +409,7 @@ function AllRegistrationsApp() {
         const values = [...new Set(allUsers.map(u => {
             let val = u[column];
             if (column === 'registrationDate' && val && typeof val.toDate === 'function') {
-                // ZMENA: Používame toLocaleString pre zobrazenie dátumu a času vo filtri
+                // Používame toLocaleString pre zobrazenie dátumu a času vo filtri
                 val = val.toDate().toLocaleString('sk-SK'); 
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
@@ -457,7 +458,7 @@ function AllRegistrationsApp() {
                 currentFiltered = currentFiltered.filter(user => {
                     let userValue;
                     if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
-                        // ZMENA: Používame toLocaleString aj pre porovnanie vo filtri
+                        // Používame toLocaleString aj pre porovnanie vo filtri
                         userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase(); 
                     } else if (column.includes('.')) {
                         const parts = column.split('.');
@@ -558,6 +559,16 @@ function AllRegistrationsApp() {
                             React.createElement(
                                 'tr',
                                 null,
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('role') },
+                                    'Rola',
+                                    currentSort.column === 'role' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                                ),
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('approved') },
+                                    'Schválený',
+                                    currentSort.column === 'approved' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                                ),
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registrationDate') },
                                     'Dátum registrácie',
                                     currentSort.column === 'registrationDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
@@ -582,21 +593,6 @@ function AllRegistrationsApp() {
                                     'Tel. číslo',
                                     currentSort.column === 'contactPhoneNumber' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
                                     React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('contactPhoneNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                                ),
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('role') },
-                                    'Rola',
-                                    currentSort.column === 'role' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                                ),
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('approved') },
-                                    'Schválený',
-                                    currentSort.column === 'approved' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                                ),
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('passwordLastChanged') },
-                                    'Posledná zmena hesla',
-                                    currentSort.column === 'passwordLastChanged' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('passwordLastChanged'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
                                 ),
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.clubName') },
                                     'Názov klubu',
@@ -652,22 +648,20 @@ function AllRegistrationsApp() {
                                 React.createElement(
                                     'tr',
                                     null,
-                                    React.createElement('td', { colSpan: '17', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                                    React.createElement('td', { colSpan: '16', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.') // ZMENA: colSpan znížený na 16
                                 )
                             ) : (
                                 filteredUsers.map(u => (
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                        // ZMENA: Používame toLocaleString pre zobrazenie dátumu a času
+                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role || '-'),
+                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate ? u.registrationDate.toDate().toLocaleString('sk-SK') : '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.contactPhoneNumber || '-'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role || '-'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.passwordLastChanged ? u.passwordLastChanged.toDate().toLocaleString('sk-SK') : '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.clubName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.ico || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.dic || '-'),
