@@ -53,6 +53,41 @@
         .overflow-x-auto::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* Nové štýly pre notifikácie */
+        /* Kontajner pre notifikácie */
+        #header-notification-area {
+            position: fixed;
+            top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Notifikácie sa zarovnajú doprava */
+            max-width: 350px; /* Maximálna šírka kontajnera notifikácií */
+            pointer-events: none; /* Umožňuje klikanie cez kontajner */
+        }
+
+        /* Jednotlivá notifikácia */
+        .notification-item {
+            background-color: #3A8D41; /* Zelená farba */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px; /* Medzi notifikáciami */
+            opacity: 0;
+            transform: translateX(100%); /* Začína mimo obrazovky vpravo */
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            pointer-events: auto; /* Umožňuje interakciu s notifikáciou */
+            width: 100%; /* Vyplní max-width kontajnera */
+            box-sizing: border-box; /* Zabezpečí, že padding nepridá šírku */
+        }
+
+        .notification-item.show {
+            opacity: 1;
+            transform: translateX(0); /* Posunie sa na miesto */
+        }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -101,8 +136,9 @@
         <!-- React aplikácia sa vykreslí sem -->
     </div>
 
-    <!-- Placeholder pre push-up notifikácie (pre header.js) -->
-    <div id="header-notification-area" class="fixed top-20 right-4 z-50 w-full max-w-sm pointer-events-none"></div>
+    <!-- Kontajner pre push-up notifikácie (pre header.js) -->
+    <!-- Tento div je teraz hlavným kontajnerom pre všetky notifikácie -->
+    <div id="header-notification-area"></div>
 
     <!-- Načítanie vlastných skriptov -->
     <script src="header.js"></script>
