@@ -54,7 +54,8 @@
             background: #555;
         }
 
-        /* Štýly pre notifikácie */
+        /* Štýly pre notifikácie - tieto by mali byť definované v header.html/header.js, ale pre istotu ich tu ponechávam ako referenciu, ak by sa header.html nenačítal správne */
+        /* Tieto štýly sú teraz v header.html, takže ich tu nepotrebujeme duplikovať, ale ak by sa header.html nenačítal, mohli by byť fallbackom. Pre optimálne riešenie by mali byť len v header.html. */
         #header-notification-area {
             position: fixed;
             top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
@@ -135,8 +136,8 @@
         <!-- React aplikácia sa vykreslí sem -->
     </div>
 
-    <!-- Kontajner pre push-up notifikácie (pre header.js) -->
-    <div id="header-notification-area"></div>
+    <!-- PÔVODNÝ DUPLICITNÝ KONTANJER PRE NOTIFIKÁCIE BOL ODSTRÁNENÝ -->
+    <!-- <div id="header-notification-area"></div> -->
 
     <!-- Načítanie vlastných skriptov -->
     <!-- header.js sa teraz načíta dynamicky vo funkcii loadHeader() -->
