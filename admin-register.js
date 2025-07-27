@@ -306,7 +306,7 @@ function App() {
     setFormSubmitting(true);
     setError('');
     setNotificationType('info');
-    setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+//    setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
