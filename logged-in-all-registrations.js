@@ -158,7 +158,7 @@ function AllRegistrationsApp() {
     const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Stav pre notifikácie
     const [allUsers, setAllUsers] = React.useState([]); // Všetci používatelia z Firestore
     const [filteredUsers, setFilteredUsers] = React.useState([]); // Filtrovaní používatelia
-    const [currentSort, setCurrentSort] = React.useState({ column: 'registrationDate', direction: 'desc' });
+    const [currentSort, setCurrentSort] = React.useState({ column: 'registrationDate', direction: 'desc' }); // ZMENA: Predvolené triedenie podľa registrationDate
     const [filterModalOpen, setFilterModalOpen] = React.useState(false);
     const [filterColumn, setFilterColumn] = React.useState('');
     const [activeFilters, setActiveFilters] = React.useState({}); // { columnName: [value1, value2] }
@@ -376,9 +376,9 @@ function AllRegistrationsApp() {
             const valA = a[column] || '';
             const valB = b[column] || '';
 
-            if (column === 'registrationDate') {
-                const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date(0);
-                const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date(0);
+            if (column === 'registrationDate') { // ZMENA: Používame registrationDate
+                const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date(0); // ZMENA: Používame registrationDate
+                const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date(0); // ZMENA: Používame registrationDate
                 return direction === 'asc' ? dateA - dateB : dateB - dateA;
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
@@ -407,7 +407,7 @@ function AllRegistrationsApp() {
         // Získanie unikátnych hodnôt pre daný stĺpec, prevedené na string a malé písmená pre konzistentnosť
         const values = [...new Set(allUsers.map(u => {
             let val = u[column];
-            if (column === 'registrationDate' && val && typeof val.toDate === 'function') {
+            if (column === 'registrationDate' && val && typeof val.toDate === 'function') { // ZMENA: Používame registrationDate
                 val = val.toDate().toLocaleDateString('sk-SK'); // Formát dátumu pre zobrazenie
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
@@ -455,8 +455,8 @@ function AllRegistrationsApp() {
             if (filterValues.length > 0) {
                 currentFiltered = currentFiltered.filter(user => {
                     let userValue;
-                    if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
-                        userValue = user.registrationDate.toDate().toLocaleDateString('sk-SK').toLowerCase();
+                    if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') { // ZMENA: Používame registrationDate
+                        userValue = user.registrationDate.toDate().toLocaleDateString('sk-SK').toLowerCase(); // ZMENA: Používame registrationDate
                     } else if (column.includes('.')) {
                         const parts = column.split('.');
                         let nestedVal = user;
@@ -556,10 +556,10 @@ function AllRegistrationsApp() {
                             React.createElement(
                                 'tr',
                                 null,
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registrationDate') },
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registrationDate') }, // ZMENA: Používame registrationDate
                                     'Dátum registrácie',
-                                    currentSort.column === 'registrationDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                                    currentSort.column === 'registrationDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'), // ZMENA: Používame registrationDate
+                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️') // ZMENA: Používame registrationDate
                                 ),
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('firstName') },
                                     'Meno',
@@ -657,7 +657,7 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate ? u.registrationDate.toDate().toLocaleDateString('sk-SK') : '-'),
+                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate ? u.registrationDate.toDate().toLocaleDateString('sk-SK') : '-'), // ZMENA: Používame registrationDate
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email || '-'),
