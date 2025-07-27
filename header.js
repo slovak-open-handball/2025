@@ -25,6 +25,8 @@ function stringToHash(str) {
 // Funkcia na zobrazenie push-up notifikácie
 // Teraz prijíma aj parameter displayNotificationsEnabled
 function showPushNotification(message, notificationId, displayNotificationsEnabled) {
+    console.log(`Header.js: showPushNotification volaná pre ID: ${notificationId}, Správa: "${message}", Notifikácie povolené: ${displayNotificationsEnabled}`);
+
     // Ak sú notifikácie vypnuté v profile používateľa, nezobrazuj ich
     if (!displayNotificationsEnabled) {
         console.log(`Header.js: Notifikácia s ID ${notificationId} nebola zobrazená, pretože používateľ má notifikácie vypnuté.`);
@@ -33,9 +35,10 @@ function showPushNotification(message, notificationId, displayNotificationsEnabl
 
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
-        console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
+        console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený. Notifikácia nemôže byť zobrazená.");
         return;
     }
+    console.log("Header.js: 'header-notification-area' element nájdený:", notificationArea);
 
     // Skontrolujeme, či táto notifikácia už bola zobrazená v tejto relácii (používame localStorage)
     const lastShownTime = localStorage.getItem(`notification_shown_${notificationId}`);
@@ -53,6 +56,7 @@ function showPushNotification(message, notificationId, displayNotificationsEnabl
     
     // Pridáme notifikáciu na začiatok oblasti (najnovšie hore)
     notificationArea.prepend(notificationDiv);
+    console.log(`Header.js: Notifikácia div pridaná do DOM pre ID: ${notificationId}.`);
 
     // Uložíme čas zobrazenia do lokálneho úložiska
     localStorage.setItem(`notification_shown_${notificationId}`, now.toString());
@@ -61,15 +65,18 @@ function showPushNotification(message, notificationId, displayNotificationsEnabl
     setTimeout(() => {
         notificationDiv.classList.remove('translate-y-full', 'opacity-0');
         notificationDiv.classList.add('translate-y-0', 'opacity-100');
+        console.log(`Header.js: Animácia zobrazenia spustená pre ID: ${notificationId}.`);
     }, 10); // Krátke oneskorenie pre spustenie animácie
 
     // Automatické skrytie po 10 sekundách
     setTimeout(() => {
         notificationDiv.classList.remove('translate-y-0', 'opacity-100');
         notificationDiv.classList.add('translate-y-full', 'opacity-0');
+        console.log(`Header.js: Animácia skrytia spustená pre ID: ${notificationId}.`);
         // Po dokončení animácie odstránime element z DOM
         notificationDiv.addEventListener('transitionend', () => {
             notificationDiv.remove();
+            console.log(`Header.js: Notifikácia div odstránená z DOM pre ID: ${notificationId}.`);
         }, { once: true });
     }, 10000);
 }
@@ -123,6 +130,7 @@ async function initializeHeaderLogic() {
         if (firebase.apps.length === 0) {
             // Používame globálne __firebase_config
             firebaseAppHeader = firebase.initializeApp(JSON.parse(__firebase_config));
+            console.log("Header.js: Firebase App inicializovaná.");
         } else {
             // Ak už predvolená aplikácia existuje, použite ju
             firebaseAppHeader = firebase.app();
@@ -130,6 +138,7 @@ async function initializeHeaderLogic() {
         }
         authHeader = firebase.auth(firebaseAppHeader);
         dbHeader = firebase.firestore(firebaseAppHeader);
+        console.log("Header.js: Firebase Auth a Firestore inštancie získané.");
 
         // Načítanie nastavení registrácie pre odkaz "Registrácia na turnaj"
         let currentIsRegistrationOpenStatus = false;
@@ -148,8 +157,10 @@ async function initializeHeaderLogic() {
                     (isRegStartValid ? now >= regStart : true) &&
                     (isRegEndValid ? now <= regEnd : true)
                 );
+                console.log(`Header.js: Stav registrácie: ${currentIsRegistrationOpenStatus ? 'Otvorená' : 'Zatvorená'}.`);
             } else {
                 currentIsRegistrationOpenStatus = false; // Predvolene zatvorené, ak sa nastavenia nenašli
+                console.log("Header.js: Nastavenia registrácie nenašiel. Stav: Zatvorená.");
             }
         } catch (error) {
             console.error("Header.js: Chyba pri načítaní nastavení registrácie pre hlavičku:", error);
@@ -183,13 +194,14 @@ async function initializeHeaderLogic() {
                         const userRole = userData.role;
                         const userApproved = userData.approved;
                         userDisplayNotificationsSetting = userData.displayNotifications === true; // Aktualizácia globálnej premennej
+                        console.log(`Header.js: Používateľské nastavenie displayNotifications: ${userDisplayNotificationsSetting}`);
 
 
                         // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
                         if (userRole === 'admin' && userApproved === false) {
                             console.warn("Header.js: Neschválený administrátor sa pokúsil o prístup. Odhlasujem.");
                             // Zobrazí notifikáciu len ak je povolená v profile používateľa (čo v tomto prípade asi nebude)
-                            showPushNotification("Váš administrátorský účet ešte nebol schválený. Pre prístup kontaktujte administrátora.", "unapprovedAdminLogout", userDisplayNotificationsSetting);
+                            showPushNotification("Váš administrátorský účet ešte nebol schválený. Pre prístup kontaktujte administrátora.", stringToHash("unapprovedAdminLogout"), userDisplayNotificationsSetting);
                             await authHeader.signOut();
                             window.location.href = 'login.html';
                             return; // Zastav ďalšie spracovanie pre tohto používateľa
@@ -217,6 +229,12 @@ async function initializeHeaderLogic() {
                                             const notificationData = change.doc.data();
                                             const notificationId = change.doc.id;
                                             
+                                            // Skontrolujeme, či notifikácia už nie je v cache (zabráni duplicitám pri rýchlych zmenách)
+                                            if (notificationsCache[notificationId] && notificationsCache[notificationId].message === notificationData.message) {
+                                                console.log(`Header.js: Notifikácia s ID ${notificationId} už je v cache a je rovnaká. Preskakujem.`);
+                                                return;
+                                            }
+
                                             console.log(`Header.js: Detekovaná nová neprečítaná notifikácia (ID: ${notificationId}).`);
                                             console.log("Header.js: Dáta notifikácie:", notificationData);
 
@@ -224,6 +242,9 @@ async function initializeHeaderLogic() {
                                             if (message) {
                                                 // Odovzdaj nastavenie notifikácií používateľa funkcii showPushNotification
                                                 showPushNotification(message, notificationId, userDisplayNotificationsSetting);
+                                                // Pridáme do cache
+                                                notificationsCache[notificationId] = notificationData;
+
                                                 // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
                                                 try {
                                                     await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
