@@ -84,9 +84,10 @@ function AllRegistrationsApp() {
             }
 
             let firebaseAppInstance;
-            // Používame globálnu premennú firebaseConfig namiesto __firebase_config
+            // Používame globálnu premennú __firebase_config a parsujeme ju, ak aplikácia ešte nie je inicializovaná.
+            // Ak je už inicializovaná (napr. v HTML hlavičke), získame predvolenú inštanciu.
             if (firebase.apps.length === 0) {
-                firebaseAppInstance = firebase.initializeApp(firebaseConfig);
+                firebaseAppInstance = firebase.initializeApp(JSON.parse(__firebase_config));
             } else {
                 firebaseAppInstance = firebase.app();
             }
@@ -436,3 +437,6 @@ function AllRegistrationsApp() {
         )
     );
 }
+
+// Explicitne sprístupniť komponent globálne
+window.AllRegistrationsApp = AllRegistrationsApp;
