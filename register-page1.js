@@ -88,7 +88,7 @@ const countryCodes = [
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
+export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex, preDescription }) { // Pridaný preDescription
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -108,6 +108,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
   return React.createElement(
     'div',
     { className: 'mb-4' },
+    preDescription && React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, preDescription), // Pridaný preDescription
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
@@ -334,6 +335,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
+            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'), // Nový text
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 'Meno kontaktnej osoby'),
             React.createElement(
               'div',
@@ -374,6 +376,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
+            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'), // Nový text
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa kontaktnej osoby'),
             React.createElement(
               'div',
@@ -439,6 +442,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo',
             autoComplete: 'new-password',
+            preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v registračnom formulári na webovej stránke turnaja.', // Nový text
             description: React.createElement(
               React.Fragment,
               null,
