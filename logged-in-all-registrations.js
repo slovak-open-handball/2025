@@ -3,7 +3,6 @@
 // sú globálne definované v <head> logged-in-all-registrations.html.
 
 // NotificationModal Component (pre konzistentné notifikácie)
-// Odstránená podmienka displayNotificationsEnabled pre konzistentné správanie
 function NotificationModal({ message, onClose }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
@@ -588,7 +587,7 @@ function AllRegistrationsApp() {
     // Ak používateľ nie je admin, presmeruj ho
     if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
         console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor a snaží sa pristupovať k všetkým registráciám, presmerovávam.");
-        window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
+        window.location.href = 'login.html'; // Presmerovanie na login.html, ak nemá prístup
         return null;
     }
 
@@ -598,7 +597,6 @@ function AllRegistrationsApp() {
         React.createElement(NotificationModal, {
             message: userNotificationMessage,
             onClose: () => setUserNotificationMessage('')
-            // displayNotificationsEnabled prop bol odstránený
         }),
         React.createElement(FilterModal, {
             isOpen: isFilterModalOpen,
@@ -640,22 +638,41 @@ function AllRegistrationsApp() {
                                     'tr',
                                     { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                                     // Hlavičky stĺpcov s onClick udalosťou
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Rola') }, 'Rola'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Schválený') }, 'Schválený'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Dátum registrácie') }, 'Dátum registrácie'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Meno') }, 'Meno'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Priezvisko') }, 'Priezvisko'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('E-mail') }, 'E-mail'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Telefón') }, 'Telefón'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Názov klubu') }, 'Názov klubu'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('IČO') }, 'IČO'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('DIČ') }, 'DIČ'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('IČ DPH') }, 'IČ DPH'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Ulica') }, 'Ulica'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Popisné číslo') }, 'Popisné číslo'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Mesto') }, 'Mesto'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('PSČ') }, 'PSČ'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Krajina') }, 'Krajina')
+                                    Object.entries(columnDataMap).map(([displayName, dataKey]) => {
+                                        const isActive = appliedFilters[dataKey] && appliedFilters[dataKey].length > 0;
+                                        const filteredValues = isActive ? appliedFilters[dataKey].join(', ') : '';
+
+                                        return React.createElement(
+                                            'th',
+                                            {
+                                                key: dataKey,
+                                                className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150',
+                                                onClick: () => openFilterModal(displayName)
+                                            },
+                                            React.createElement('div', { className: 'flex items-center' },
+                                                React.createElement('span', null, displayName),
+                                                isActive && React.createElement(
+                                                    'svg',
+                                                    {
+                                                        xmlns: 'http://www.w3.org/2000/svg',
+                                                        className: 'h-4 w-4 ml-2 text-blue-600',
+                                                        viewBox: '0 0 20 20',
+                                                        fill: 'currentColor'
+                                                    },
+                                                    React.createElement('path', {
+                                                        fillRule: 'evenodd',
+                                                        d: 'M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z',
+                                                        clipRule: 'evenodd'
+                                                    })
+                                                )
+                                            ),
+                                            isActive && React.createElement(
+                                                'div',
+                                                { className: 'text-xs text-gray-500 normal-case mt-1' },
+                                                `Filtrované: ${filteredValues}`
+                                            )
+                                        );
+                                    })
                                 )
                             ),
                             React.createElement(
