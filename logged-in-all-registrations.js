@@ -55,24 +55,35 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     );
 }
 
-// FilterModal Component - Modálne okno pre filtrovanie
-function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValue, onClearFilter }) {
-    const [filterInput, setFilterInput] = React.useState(initialFilterValue || '');
+// FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
+function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
+    // selectedValues je teraz pole pre viacnásobný výber
+    const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
 
     React.useEffect(() => {
-        setFilterInput(initialFilterValue || '');
-    }, [initialFilterValue, isOpen]);
+        setSelectedValues(initialFilterValues || []);
+    }, [initialFilterValues, isOpen]); // Resetovať pri otvorení alebo zmene počiatočných hodnôt
 
     if (!isOpen) return null;
 
+    const handleCheckboxChange = (value) => {
+        setSelectedValues(prev => {
+            if (prev.includes(value)) {
+                return prev.filter(item => item !== value); // Odstrániť, ak už je vybrané
+            } else {
+                return [...prev, value]; // Pridať, ak nie je vybrané
+            }
+        });
+    };
+
     const handleApply = () => {
-        onApplyFilter(columnName, filterInput);
+        onApplyFilter(columnName, selectedValues); // Odovzdať pole vybraných hodnôt
         onClose();
     };
 
     const handleClear = () => {
         onClearFilter(columnName);
-        setFilterInput(''); // Vymaže vstup v modali
+        setSelectedValues([]); // Vymaže všetky vybrané hodnoty
         onClose();
     };
 
@@ -92,14 +103,26 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                 `Filtrovať stĺpec: ${columnName}`
             ),
             React.createElement(
-                'input',
-                {
-                    type: 'text',
-                    className: 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
-                    placeholder: `Zadajte hodnotu pre ${columnName}...`,
-                    value: filterInput,
-                    onChange: (e) => setFilterInput(e.target.value)
-                }
+                'div',
+                { className: 'max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 mb-4' },
+                uniqueColumnValues.length > 0 ? (
+                    uniqueColumnValues.map(value =>
+                        React.createElement(
+                            'label',
+                            { key: value, className: 'flex items-center space-x-2 py-1 cursor-pointer hover:bg-gray-100 rounded-md px-2' },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                className: 'form-checkbox h-4 w-4 text-blue-600 rounded-sm focus:ring-blue-500',
+                                value: value,
+                                checked: selectedValues.includes(value),
+                                onChange: () => handleCheckboxChange(value)
+                            }),
+                            React.createElement('span', { className: 'text-gray-700' }, value === '' ? '(Prázdna hodnota)' : value) // Zobrazenie pre prázdne hodnoty
+                        )
+                    )
+                ) : (
+                    React.createElement('p', { className: 'text-gray-500 text-center' }, 'Žiadne unikátne hodnoty na filtrovanie.')
+                )
             ),
             React.createElement(
                 'div',
@@ -149,7 +172,8 @@ function AllRegistrationsApp() {
     const [allUsers, setAllUsers] = React.useState([]); // Stav pre všetkých používateľov z databázy
     const [isFilterModalOpen, setIsFilterModalOpen] = React.useState(false);
     const [currentFilterColumn, setCurrentFilterColumn] = React.useState('');
-    const [appliedFilters, setAppliedFilters] = React.useState({}); // { 'email': 'john', 'role': 'admin' }
+    const [uniqueValuesForModal, setUniqueValuesForModal] = React.useState([]); // Nový stav pre unikátne hodnoty pre modal
+    const [appliedFilters, setAppliedFilters] = React.useState({}); // { 'email': ['john'], 'role': ['admin', 'user'] }
 
     // Mapovanie zobrazovaných názvov stĺpcov na kľúče dát
     const columnDataMap = {
@@ -423,23 +447,59 @@ function AllRegistrationsApp() {
         };
     }, [handleLogout]);
 
+    // Funkcia na rekurzívne získanie hodnoty z objektu podľa cesty (napr. 'billing.clubName')
+    const getNestedValue = (obj, path) => {
+        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    };
+
+    // Funkcia na získanie unikátnych hodnôt pre daný stĺpec
+    const getUniqueValuesForColumn = (columnDisplayName) => {
+        const dataKey = columnDataMap[columnDisplayName];
+        if (!dataKey) return [];
+
+        const values = allUsers.map(user => {
+            let value = getNestedValue(user, dataKey);
+            // Špeciálne ošetrenie pre boolean 'approved' stĺpec
+            if (dataKey === 'approved') {
+                return value ? 'Áno' : 'Nie';
+            }
+            // Konvertovať na reťazec a orezávať pre konzistentnosť
+            return (value === null || value === undefined) ? '' : String(value).trim();
+        });
+
+        // Filtrovať duplikáty a zoradiť
+        const unique = [...new Set(values)].sort((a, b) => {
+            // Prázdne hodnoty vždy na konci
+            if (a === '') return 1;
+            if (b === '') return -1;
+            return a.localeCompare(b, 'sk', { sensitivity: 'base' });
+        });
+        return unique;
+    };
+
+
     // Funkcie pre správu filtrovacieho modálneho okna
     const openFilterModal = (columnDisplayName) => {
         setCurrentFilterColumn(columnDisplayName);
+        // Získame unikátne hodnoty pre tento stĺpec a nastavíme ich pre modal
+        setUniqueValuesForModal(getUniqueValuesForColumn(columnDisplayName));
         setIsFilterModalOpen(true);
     };
 
     const closeFilterModal = () => {
         setIsFilterModalOpen(false);
         setCurrentFilterColumn('');
+        setUniqueValuesForModal([]); // Vyčistiť unikátne hodnoty pri zatvorení
     };
 
-    const handleApplyFilter = (columnDisplayName, value) => {
+    // handleApplyFilter teraz prijíma pole hodnôt
+    const handleApplyFilter = (columnDisplayName, selectedValues) => {
         const dataKey = columnDataMap[columnDisplayName];
         if (dataKey) {
+            // Ukladáme pole vybraných hodnôt
             setAppliedFilters(prevFilters => ({
                 ...prevFilters,
-                [dataKey]: value.toLowerCase() // Ukladáme malými písmenami pre case-insensitive porovnanie
+                [dataKey]: selectedValues.map(val => String(val).toLowerCase()) // Ukladáme malými písmenami pre case-insensitive porovnanie
             }));
         }
     };
@@ -455,11 +515,6 @@ function AllRegistrationsApp() {
         }
     };
 
-    // Funkcia na rekurzívne získanie hodnoty z objektu podľa cesty (napr. 'billing.clubName')
-    const getNestedValue = (obj, path) => {
-        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-    };
-
     // Filtrovanie používateľov na základe aplikovaných filtrov
     const filteredUsers = React.useMemo(() => {
         if (Object.keys(appliedFilters).length === 0) {
@@ -467,24 +522,26 @@ function AllRegistrationsApp() {
         }
 
         return allUsers.filter(user => {
-            return Object.entries(appliedFilters).every(([filterKey, filterValue]) => {
+            return Object.entries(appliedFilters).every(([filterKey, filterValuesArray]) => {
+                // Ak pre daný filter nie sú vybrané žiadne hodnoty, tento filter neaplikujeme
+                if (filterValuesArray.length === 0) {
+                    return true;
+                }
+
                 let userValue;
                 // Špeciálne ošetrenie pre boolean 'approved' stĺpec
                 if (filterKey === 'approved') {
                     userValue = user.approved ? 'áno' : 'nie'; // Konvertujeme na string pre porovnanie
-                    return userValue.includes(filterValue);
-                } else if (filterKey === 'registrationDate') {
-                    // Pre dátum registrácie porovnávame formátovaný reťazec
-                    userValue = user.registrationDate ? user.registrationDate.toLowerCase() : '';
-                    return userValue.includes(filterValue);
+                } else {
+                    // Pre ostatné polia
+                    userValue = getNestedValue(user, filterKey);
+                    userValue = (userValue === null || userValue === undefined) ? '' : String(userValue);
                 }
-                // Pre ostatné polia
-                userValue = getNestedValue(user, filterKey);
-                if (typeof userValue === 'string') {
-                    return userValue.toLowerCase().includes(filterValue);
-                }
-                // Ak hodnota nie je string (napr. číslo), konvertujeme ju na string
-                return String(userValue).toLowerCase().includes(filterValue);
+                
+                // Skontrolujeme, či hodnota používateľa je zahrnutá v poli vybraných hodnôt
+                return filterValuesArray.some(filterVal => 
+                    userValue.toLowerCase().includes(filterVal)
+                );
             });
         });
     }, [allUsers, appliedFilters]);
@@ -531,8 +588,10 @@ function AllRegistrationsApp() {
             onClose: closeFilterModal,
             columnName: currentFilterColumn,
             onApplyFilter: handleApplyFilter,
-            initialFilterValue: getNestedValue(appliedFilters, columnDataMap[currentFilterColumn] || '') || '', // Získanie aktuálnej hodnoty filtra
-            onClearFilter: handleClearFilter
+            // initialFilterValues je teraz pole, ak existuje, inak prázdne pole
+            initialFilterValues: appliedFilters[columnDataMap[currentFilterColumn]] || [], 
+            onClearFilter: handleClearFilter,
+            uniqueColumnValues: uniqueValuesForModal // Odovzdávame unikátne hodnoty pre zoznam checkboxov
         }),
         React.createElement(
             'div',
@@ -585,7 +644,7 @@ function AllRegistrationsApp() {
                             React.createElement(
                                 'tbody',
                                 { className: 'text-gray-600 text-sm font-light' },
-                                filteredUsers.map((u) => ( // Používame filteredUsers
+                                filteredUsers.map((u) => (
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
@@ -616,5 +675,4 @@ function AllRegistrationsApp() {
     );
 }
 
-// Explicitne sprístupniť komponent globálne
 window.AllRegistrationsApp = AllRegistrationsApp;
