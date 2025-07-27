@@ -4,6 +4,8 @@
 // už inicializoval Firebase a spravuje autentifikáciu a odkazy hlavičky.
 
 // NotificationModal Component (pre konzistentné notifikácie)
+// Tento modal je určený pre správy generované priamo touto React aplikáciou.
+// Notifikácie z header.js sa zobrazujú cez showPushNotification.
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
@@ -336,20 +338,24 @@ function AllRegistrationsApp() {
                     setAllUsers(usersData);
                     setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
                     setLoading(false);
+                    // ODSTRÁNENÉ: setUserNotificationMessage("Dáta registrácie boli úspešne načítané!");
                 }, error => {
                     console.error("AllRegistrationsApp: Chyba pri načítaní všetkých používateľov z Firestore:", error);
                     setError(`Chyba pri načítaní používateľov: ${error.message}`);
                     setLoading(false);
+                    // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`);
                 });
             } catch (e) {
                 console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre všetkých používateľov:", e);
                 setError(`Chyba pri načítaní používateľov: ${e.message}`);
                 setLoading(false);
+                // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
             }
         } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
             setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
             setLoading(false);
             console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Prístup zamietnutý.");
+            // ODSTRÁNENÉ: setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
         } else if (isAuthReady && user === null) {
             console.log("AllRegistrationsApp: Používateľ nie je prihlásený. Presmerovanie na login.html.");
             window.location.href = 'login.html';
@@ -510,7 +516,7 @@ function AllRegistrationsApp() {
             React.createElement(NotificationModal, {
                 message: userNotificationMessage,
                 onClose: () => setUserNotificationMessage(''),
-                displayNotificationsEnabled: userProfileData?.displayNotifications // ODovzdanie propu!
+                displayNotificationsEnabled: userProfileData?.displayNotifications
             }),
             React.createElement(
                 'div',
