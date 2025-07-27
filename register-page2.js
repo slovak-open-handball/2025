@@ -76,7 +76,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'clubName' }, 'Oficiálny názov klubu'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'clubName' }, 
+            'Oficiálny názov klubu',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'clubName',
@@ -92,7 +95,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' }, 'IČO'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' }, 
+            'IČO',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+          ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
             id: 'ico',
@@ -107,7 +113,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' }, 'DIČ'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' }, 
+            'DIČ',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+          ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
             id: 'dic',
@@ -122,7 +131,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icDph' }, 'IČ DPH'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icDph' }, 
+            'IČ DPH',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+          ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering and uppercase conversion
             id: 'icDph',
@@ -144,7 +156,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 'Ulica'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' }, 
+            'Ulica',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'street',
@@ -160,7 +175,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' }, 'Popisné číslo'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' }, 
+            'Popisné číslo',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'houseNumber',
@@ -176,7 +194,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 'Mesto'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' }, 
+            'Mesto',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'city',
@@ -192,7 +213,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' }, 'PSČ'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' }, 
+            'PSČ',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'postalCode',
@@ -209,7 +233,10 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         React.createElement(
           'div',
           { className: 'mb-4' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 'Štát'),
+          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' }, 
+            'Štát',
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+          ),
           React.createElement('input', {
             type: 'text',
             id: 'country',
@@ -224,6 +251,12 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         ),
       ),
 
+      React.createElement(
+        'div',
+        { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlami
+        React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '*'), ' Povinné pole'),
+        React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '**'), ' Povinné aspoň jedno z polí IČO, DIČ, IČ DPH')
+      ),
       React.createElement(
         'div',
         { className: 'flex justify-between mt-6' },
