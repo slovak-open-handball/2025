@@ -493,7 +493,7 @@ function App() {
         postalCode: formData.postalCode,
         street: formData.street,
         houseNumber: formData.houseNumber,
-        billing: formData.billing,
+        billing: formData.billing, // Toto už je objekt s clubName, ico, dic, icDph
         role: userRole, // Predvolená rola 'user'
         approved: true,
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
@@ -509,19 +509,18 @@ function App() {
             lastName: formData.lastName,
             contactPhoneNumber: fullPhoneNumber,
             isAdmin: false, // Toto nie je administrátorská registrácia
-            billing: { // Pridanie fakturačných údajov
+            billing: { // Fakturačné údaje
               clubName: formData.billing.clubName,
               ico: formData.billing.ico,
               dic: formData.billing.dic,
               icDph: formData.billing.icDph,
-              address: { // Adresa pre fakturačné údaje
-                street: formData.street,
-                houseNumber: formData.houseNumber,
-                zipCode: formData.postalCode,
-                city: formData.city,
-                country: formData.country
-              }
-            }
+            },
+            // Adresa sa posiela ako samostatné polia, nie vnorené do billing
+            street: formData.street,
+            houseNumber: formData.houseNumber,
+            postalCode: formData.postalCode,
+            city: formData.city,
+            country: formData.country
           };
           console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
