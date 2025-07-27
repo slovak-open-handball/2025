@@ -88,7 +88,7 @@ const countryCodes = [
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex }) { // Zmenené description na validationRules
+export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex, showValidationList = true }) { // Pridaný showValidationList prop
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -140,12 +140,13 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    validationRules && React.createElement(
+    showValidationList && validationRules && React.createElement( // Podmienené zobrazenie zoznamu
       'div',
       { className: 'text-gray-600 text-xs italic mt-1' },
+      React.createElement('p', { className: 'font-semibold mb-1' }, 'Heslo musí obsahovať:'), {/* Nový text */}
       React.createElement(
         'ul',
-        { className: 'list-none pl-0' }, // Používame list-none a pl-0 pre vlastné odrážky
+        { className: 'list-none pl-0' },
         validationRules.map((rule, index) =>
           React.createElement(
             'li',
@@ -299,7 +300,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // Funkcia na overenie hesla a vrátenie stavu pravidiel
   const getPasswordValidationRules = (password) => {
     const rules = [
-      { text: 'aspoň 8 znakov', met: password.length >= 8 },
+      { text: 'aspoň 10 znakov', met: password.length >= 10 }, // Zmenené na 10 znakov
       { text: 'aspoň jedno malé písmeno', met: /[a-z]/.test(password) },
       { text: 'aspoň jedno veľké písmeno', met: /[A-Z]/.test(password) },
       { text: 'aspoň jednu číslicu', met: /\d/.test(password) },
@@ -308,7 +309,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   };
 
   const passwordValidationRules = getPasswordValidationRules(formData.password);
-  const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
+  // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
+  // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
 
   return React.createElement(
@@ -473,11 +475,12 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             placeholder: 'Zadajte heslo',
             autoComplete: 'new-password',
             preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v registračnom formulári na webovej stránke turnaja.',
-            validationRules: passwordValidationRules, // Používame nové validationRules
+            validationRules: passwordValidationRules,
             tabIndex: 6,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showPassword,
-            toggleShowPassword: toggleShowPassword
+            toggleShowPassword: toggleShowPassword,
+            showValidationList: true // Zobrazovať zoznam pre toto pole
           }),
           React.createElement(PasswordInput, {
             id: 'confirmPassword',
@@ -489,11 +492,12 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
-            validationRules: confirmPasswordValidationRules, // Používame nové validationRules
+            // validationRules: confirmPasswordValidationRules, // Už sa nepoužíva pre zobrazenie
             tabIndex: 7,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showConfirmPassword,
-            toggleShowPassword: toggleShowConfirmPassword
+            toggleShowPassword: toggleShowConfirmPassword,
+            showValidationList: false // Nezobrazovať zoznam pre toto pole
           }),
           React.createElement(
             'button',
