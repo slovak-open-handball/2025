@@ -3,7 +3,8 @@
 // sú globálne definované v <head> logged-in-all-registrations.html.
 
 // NotificationModal Component (pre konzistentné notifikácie)
-function NotificationModal({ message, onClose, displayNotificationsEnabled }) { // Pridaný displayNotificationsEnabled prop
+// Odstránený prop 'displayNotificationsEnabled' pre konzistenciu s logged-in-my-data.js
+function NotificationModal({ message, onClose }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
 
@@ -11,8 +12,8 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) { 
         // Logovanie pre debugovanie
         console.log("NotificationModal useEffect: message=", message);
 
-        // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
-        if (message && displayNotificationsEnabled) { // Pridaná podmienka displayNotificationsEnabled
+        // Zobrazí notifikáciu len ak je správa
+        if (message) {
             console.log("NotificationModal: Zobrazujem notifikáciu.");
             setShow(true);
             if (timerRef.current) {
@@ -37,11 +38,11 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) { 
                 clearTimeout(timerRef.current);
             }
         };
-    }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
+    }, [message, onClose]); // Závisí len od message a onClose
 
-    // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
-    if ((!show && !message) || !displayNotificationsEnabled) { // Upravená podmienka
-        console.log("NotificationModal: Renderujem null (notifikácia skrytá alebo zakázaná).");
+    // Nezobrazovať notifikáciu, ak nie je správa
+    if (!show && !message) {
+        console.log("NotificationModal: Renderujem null (notifikácia skrytá).");
         return null;
     }
 
@@ -436,7 +437,7 @@ function AllRegistrationsApp() {
         try {
             setLoading(true);
             await auth.signOut();
-            setUserNotificationMessage("Úspešne odhlásený.");
+            setUserNotificationMessage("Úspešne odhlásený."); // Logovanie, že správa bola nastavená
             console.log("AllRegistrationsApp: Správa o odhlásení nastavená. Čakám 2 sekundy pred presmerovaním.");
             // Pridanie oneskorenia pred presmerovaním
             setTimeout(() => {
@@ -596,8 +597,8 @@ function AllRegistrationsApp() {
         { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
         React.createElement(NotificationModal, {
             message: userNotificationMessage,
-            onClose: () => setUserNotificationMessage(''),
-            displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu
+            onClose: () => setUserNotificationMessage('')
+            // Odstránený displayNotificationsEnabled prop pre konzistenciu s logged-in-my-data.js
         }),
         React.createElement(FilterModal, {
             isOpen: isFilterModalOpen,
