@@ -156,7 +156,6 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
-                    // Dynamicky načítajte header.js AŽ PO vložení header.html
                     const headerScript = document.createElement('script');
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
