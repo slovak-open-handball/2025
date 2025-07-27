@@ -3,17 +3,15 @@
 // sú globálne definované v <head> logged-in-all-registrations.html.
 
 // NotificationModal Component (pre konzistentné notifikácie)
-// Odstránený prop 'displayNotificationsEnabled' pre konzistenciu s logged-in-my-data.js
-function NotificationModal({ message, onClose }) {
+function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
 
     React.useEffect(() => {
-        // Logovanie pre debugovanie
-        console.log("NotificationModal useEffect: message=", message);
+        console.log("NotificationModal useEffect: message=", message, "displayNotificationsEnabled=", displayNotificationsEnabled);
 
-        // Zobrazí notifikáciu len ak je správa
-        if (message) {
+        // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené v profile používateľa
+        if (message && displayNotificationsEnabled) {
             console.log("NotificationModal: Zobrazujem notifikáciu.");
             setShow(true);
             if (timerRef.current) {
@@ -25,7 +23,7 @@ function NotificationModal({ message, onClose }) {
                 setTimeout(onClose, 500);
             }, 10000); // Notifikácia zmizne po 10 sekundách
         } else {
-            console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", stav show:", show, ").");
+            console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", stav show:", show, ", povolené:", displayNotificationsEnabled, ").");
             setShow(false);
             if (timerRef.current) {
                 clearTimeout(timerRef.current);
@@ -38,10 +36,10 @@ function NotificationModal({ message, onClose }) {
                 clearTimeout(timerRef.current);
             }
         };
-    }, [message, onClose]); // Závisí len od message a onClose
+    }, [message, onClose, displayNotificationsEnabled]);
 
-    // Nezobrazovať notifikáciu, ak nie je správa
-    if (!show && !message) {
+    // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
+    if ((!show && !message) || !displayNotificationsEnabled) {
         console.log("NotificationModal: Renderujem null (notifikácia skrytá).");
         return null;
     }
@@ -72,8 +70,9 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
 
     React.useEffect(() => {
+        // Inicializovať selectedValues pri otvorení modalu alebo zmene initialFilterValues
         setSelectedValues(initialFilterValues || []);
-    }, [initialFilterValues, isOpen]); // Resetovať pri otvorení alebo zmene počiatočných hodnôt
+    }, [initialFilterValues, isOpen]);
 
     if (!isOpen) return null;
 
@@ -223,8 +222,6 @@ function AllRegistrationsApp() {
             }
 
             let firebaseAppInstance;
-            // Používame globálnu premennú __firebase_config a parsujeme ju, ak aplikácia ešte nie je inicializovaná.
-            // Ak je už inicializovaná (napr. v HTML hlavičke), získame predvolenú inštanciu.
             if (firebase.apps.length === 0) {
                 firebaseAppInstance = firebase.initializeApp(JSON.parse(__firebase_config));
             } else {
@@ -239,8 +236,6 @@ function AllRegistrationsApp() {
 
             const signIn = async () => {
                 try {
-                    // initialAuthToken je definovaný v HTML, ale pre túto stránku ho nepoužívame na automatické prihlásenie
-                    // Používateľ by mal byť už prihlásený z predchádzajúcej stránky.
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await authInstance.signInWithCustomToken(__initial_auth_token);
                     }
@@ -268,7 +263,7 @@ function AllRegistrationsApp() {
             setError(`Chyba pri inicializácii Firebase: ${e.message}`);
             setLoading(false);
         }
-    }, []); // Prázdne pole závislostí - spustí sa len raz pri mountovaní komponentu
+    }, []);
 
     // Effect pre načítanie používateľských dát z Firestore a kontrolu oprávnení
     React.useEffect(() => {
@@ -292,7 +287,6 @@ function AllRegistrationsApp() {
                         if (docSnapshot.exists) {
                             const userData = docSnapshot.data();
                             console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
-                            // Logovanie hodnoty displayNotifications
                             console.log("AllRegistrationsApp: userProfileData loaded, displayNotifications:", userData.displayNotifications);
 
                             // --- Kontrola passwordLastChanged pre platnosť relácie ---
@@ -335,6 +329,14 @@ function AllRegistrationsApp() {
                             setUserProfileData(userData);
                             setLoading(false);
                             setError('');
+
+                            // TESTOVACIA NOTIFIKÁCIA: Zobrazí sa po načítaní dát
+                            if (userData.displayNotifications) { // Zobrazí sa len ak sú notifikácie povolené
+                                setTimeout(() => {
+                                    setUserNotificationMessage("Testovacia notifikácia: Dáta načítané úspešne!");
+                                }, 1000); // Zobrazí sa po 1 sekunde
+                            }
+
 
                             // Aktualizácia viditeľnosti položiek ľavého menu na základe roly
                             if (typeof window.updateMenuItemsVisibility === 'function') {
@@ -429,7 +431,7 @@ function AllRegistrationsApp() {
                 unsubscribeAllUsers();
             }
         };
-    }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
+    }, [db, userProfileData]);
 
     // Handle logout (potrebné pre tlačidlo odhlásenia v hlavičke)
     const handleLogout = React.useCallback(async () => {
@@ -513,7 +515,7 @@ function AllRegistrationsApp() {
     const handleApplyFilter = (columnDisplayName, selectedValues) => {
         const dataKey = columnDataMap[columnDisplayName];
         if (dataKey) {
-            // Ukladáme pole vybraných hodnôt
+            // Ukladáme pole vybraných hodnôt, už sú malé písmená z FilterModal
             setAppliedFilters(prevFilters => ({
                 ...prevFilters,
                 [dataKey]: selectedValues.map(val => String(val).toLowerCase()) // Ukladáme malými písmenami pre case-insensitive porovnanie
@@ -555,9 +557,9 @@ function AllRegistrationsApp() {
                     userValue = (userValue === null || userValue === undefined) ? '' : String(userValue);
                 }
                 
-                // Skontrolujeme, či hodnota používateľa je zahrnutá v poli vybraných hodnôt
+                // ZMENA: Používame === pre presnú zhodu namiesto includes
                 return filterValuesArray.some(filterVal => 
-                    userValue.toLowerCase().includes(filterVal)
+                    userValue.toLowerCase() === filterVal // filterVal je už malými písmenami
                 );
             });
         });
@@ -597,8 +599,8 @@ function AllRegistrationsApp() {
         { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
         React.createElement(NotificationModal, {
             message: userNotificationMessage,
-            onClose: () => setUserNotificationMessage('')
-            // Odstránený displayNotificationsEnabled prop pre konzistenciu s logged-in-my-data.js
+            onClose: () => setUserNotificationMessage(''),
+            displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu
         }),
         React.createElement(FilterModal, {
             isOpen: isFilterModalOpen,
