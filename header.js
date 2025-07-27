@@ -262,6 +262,28 @@ async function initializeHeaderLogic() {
             }
         });
     }
+
+    // Logika pre zmenu URL v adresnom riadku (iba vizuálne)
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentFullUrl = window.location.href;
+        // Skontrolujeme, či aktuálna URL obsahuje ".github.io"
+        if (currentFullUrl.includes(".github.io")) {
+            // Vytvoríme novú URL, ktorú chceme zobraziť
+            // Nahradíme ".github.io" za ".io"
+            const newDisplayedUrl = currentFullUrl.replace(".github.io", ".io");
+
+            try {
+                // Použijeme history.replaceState() na zmenu URL v adresnom riadku
+                // bez pridania novej položky do histórie prehliadača.
+                window.history.replaceState(null, '', newDisplayedUrl);
+                console.log(`Header.js: URL v adresnom riadku zmenená na: ${newDisplayedUrl}`);
+            } catch (e) {
+                console.error("Header.js: Chyba pri zmene URL pomocou history.replaceState:", e);
+            }
+        } else {
+            console.log("Header.js: Aktuálna URL neobsahuje '.github.io', nie je potrebné ju meniť.");
+        }
+    });
 }
 
 // Sprístupnenie funkcie globálne, aby ju mohol volať register.html a iné stránky
