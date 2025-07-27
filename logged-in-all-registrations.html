@@ -54,9 +54,7 @@
             background: #555;
         }
 
-        /* Tieto štýly pre notifikácie sú teraz definované v header.html, takže ich tu nie je potrebné duplikovať. */
-        /* Ak by však header.html nebol načítaný, tieto by mohli slúžiť ako fallback. */
-        /* Pre optimálne riešenie by mali byť len v header.html. */
+        /* Štýly pre notifikácie */
         #header-notification-area {
             position: fixed;
             top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
@@ -113,13 +111,15 @@
         const __initial_auth_token = null; // Pre túto stránku nie je potrebný počiatočný auth token
         const __firebase_app_name = 'allRegistrationsApp'; // Názov Firebase aplikácie pre túto stránku
 
-        // Inicializácia Firebase aplikácie tu, aby bola dostupná pre všetky skripty
+        // NOVINKA: Jednotná inicializácia Firebase aplikácie globálne
+        // Ak už predvolená aplikácia existuje, použije sa existujúca inštancia.
+        // Ak nie, inicializuje sa nová.
         try {
-            if (!firebase.apps.length) {
+            if (firebase.apps.length === 0) {
                 firebase.initializeApp(JSON.parse(__firebase_config));
                 console.log("all-registrations.html: Firebase App '[DEFAULT]' inicializovaná v head.");
             } else {
-                console.log("all-registrations.html: Firebase App '[DEFAULT]' už existuje.");
+                console.log("all-registrations.html: Firebase App '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
             }
         } catch (e) {
             console.error("all-registrations.html: Chyba pri inicializácii Firebase App v head:", e);
@@ -137,8 +137,9 @@
         <!-- React aplikácia sa vykreslí sem -->
     </div>
 
-    <!-- PÔVODNÝ DUPLICITNÝ KONTANJER PRE NOTIFIKÁCIE BOL ODSTRÁNENÝ -->
-    <!-- <div id="header-notification-area"></div> -->
+    <!-- Kontajner pre push-up notifikácie (pre header.js) -->
+    <!-- UISTI SA, ŽE TOTO JE JEDINÝ #header-notification-area V TOMTO SÚBORE -->
+    <div id="header-notification-area"></div>
 
     <!-- Načítanie vlastných skriptov -->
     <!-- header.js sa teraz načíta dynamicky vo funkcii loadHeader() -->
@@ -156,6 +157,7 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
+                    // Dynamicky načítajte header.js AŽ PO vložení header.html
                     const headerScript = document.createElement('script');
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
