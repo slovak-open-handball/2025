@@ -71,8 +71,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    // ZMENA: Štýl popisu hesla pre konzistenciu s register.html
-    React.createElement(
+    // ZMENA: Podmienka pre zobrazenie popisu hesla - zobrazí sa len ak je validationStatus definovaný
+    validationStatus && React.createElement(
       'div',
       { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
       'Heslo musí obsahovať:',
@@ -587,14 +587,15 @@ function App() {
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
             disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
-            validationStatus: { // Pre potvrdenie hesla stačí, či sa zhoduje a či je hlavné heslo platné
-              isValid: isConfirmPasswordMatching && passwordValidationStatus.isValid,
-              minLength: passwordValidationStatus.minLength, // Zobrazíme aj detaily hlavného hesla
-              maxLength: passwordValidationStatus.maxLength,
-              hasUpperCase: passwordValidationStatus.hasUpperCase,
-              hasLowerCase: passwordValidationStatus.hasLowerCase,
-              hasNumber: passwordValidationStatus.hasNumber,
-            }
+            // ZMENA: validationStatus prop je teraz vynechaný, aby sa nezobrazoval zoznam požiadaviek
+            // validationStatus: {
+            //   isValid: isConfirmPasswordMatching && passwordValidationStatus.isValid,
+            //   minLength: passwordValidationStatus.minLength,
+            //   maxLength: passwordValidationStatus.maxLength,
+            //   hasUpperCase: passwordValidationStatus.hasUpperCase,
+            //   hasLowerCase: passwordValidationStatus.hasLowerCase,
+            //   hasNumber: passwordValidationStatus.hasNumber,
+            // }
           }),
           React.createElement(
             'button',
