@@ -335,7 +335,7 @@ function App() {
         displayName: `${firstName} ${lastName}`,
         role: 'admin', // Priamo nastavené ako admin
         approved: false, // Priamo nastavené ako neschválený admin
-        registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+        registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
         displayNotifications: true,
         passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Pridané pre sledovanie zmeny hesla
       };
