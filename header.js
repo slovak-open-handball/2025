@@ -9,6 +9,7 @@ let dbHeader;
 let unsubscribeAdminNotificationsListener = null; // Pre uloženie funkcie na zrušenie odberu notifikácií
 let initialNotificationsLoadComplete = false; // Flag pre odlíšenie počiatočného načítania notifikácií
 let notificationsCache = {}; // Cache na ukladanie stavu notifikácií pre detekciu zmien
+let userDisplayNotificationsSetting = false; // Nová globálna premenná pre nastavenie notifikácií používateľa
 
 // Pomocná funkcia na generovanie hashu zo stringu
 function stringToHash(str) {
@@ -22,7 +23,14 @@ function stringToHash(str) {
 }
 
 // Funkcia na zobrazenie push-up notifikácie
-function showPushNotification(message, notificationId) {
+// Teraz prijíma aj parameter displayNotificationsEnabled
+function showPushNotification(message, notificationId, displayNotificationsEnabled) {
+    // Ak sú notifikácie vypnuté v profile používateľa, nezobrazuj ich
+    if (!displayNotificationsEnabled) {
+        console.log(`Header.js: Notifikácia s ID ${notificationId} nebola zobrazená, pretože používateľ má notifikácie vypnuté.`);
+        return;
+    }
+
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
         console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
@@ -163,19 +171,25 @@ async function initializeHeaderLogic() {
                 console.log("Header.js: Zrušený listener pre notifikácie admina.");
             }
 
+            // Reset nastavenia notifikácií používateľa
+            userDisplayNotificationsSetting = false;
+
             if (currentHeaderUser) {
                 try {
-                    // Načítanie roly prihláseného používateľa
+                    // Načítanie roly a nastavení notifikácií prihláseného používateľa
                     const userDoc = await dbHeader.collection('users').doc(currentHeaderUser.uid).get();
                     if (userDoc.exists) {
                         const userData = userDoc.data();
                         const userRole = userData.role;
                         const userApproved = userData.approved;
+                        userDisplayNotificationsSetting = userData.displayNotifications === true; // Aktualizácia globálnej premennej
+
 
                         // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
                         if (userRole === 'admin' && userApproved === false) {
                             console.warn("Header.js: Neschválený administrátor sa pokúsil o prístup. Odhlasujem.");
-                            showPushNotification("Váš administrátorský účet ešte nebol schválený. Pre prístup kontaktujte administrátora.", "unapprovedAdminLogout");
+                            // Zobrazí notifikáciu len ak je povolená v profile používateľa (čo v tomto prípade asi nebude)
+                            showPushNotification("Váš administrátorský účet ešte nebol schválený. Pre prístup kontaktujte administrátora.", "unapprovedAdminLogout", userDisplayNotificationsSetting);
                             await authHeader.signOut();
                             window.location.href = 'login.html';
                             return; // Zastav ďalšie spracovanie pre tohto používateľa
@@ -208,7 +222,8 @@ async function initializeHeaderLogic() {
 
                                             const message = notificationData.message;
                                             if (message) {
-                                                showPushNotification(message, notificationId);
+                                                // Odovzdaj nastavenie notifikácií používateľa funkcii showPushNotification
+                                                showPushNotification(message, notificationId, userDisplayNotificationsSetting);
                                                 // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
                                                 try {
                                                     await dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
