@@ -1,6 +1,6 @@
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
+// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -11,7 +11,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+// Komponent NotificationModal pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -62,8 +62,8 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-// Teraz akceptuje 'validationRules' ako pole objektov pre dynamické zobrazenie pravidiel
+// Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti
+// Akceptuje 'validationRules' ako pole objektov pre dynamické zobrazenie pravidiel
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationRules }) {
   // SVG ikony pre oko (zobraziť heslo) a oko-preškrtnuté (skryť heslo)
   const EyeIcon = React.createElement(
@@ -138,12 +138,12 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   );
 }
 
-// Main React component for the logged-in-change-password.html page
+// Hlavný React komponent pre stránku logged-in-change-password.html
 function ChangePasswordApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  const [user, setUser] = React.useState(undefined); // Objekt Firebase User z onAuthStateChanged
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
@@ -154,7 +154,7 @@ function ChangePasswordApp() {
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
 
-  // States for password visibility
+  // Stavy pre viditeľnosť hesla
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
@@ -163,7 +163,7 @@ function ChangePasswordApp() {
   const [newPasswordValidation, setNewPasswordValidation] = React.useState({ isValid: false, validationMessages: [] });
 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // Efekt pre inicializáciu Firebase a nastavenie poslucháča autentifikácie (spustí sa len raz)
   React.useEffect(() => {
     let unsubscribeAuth;
     let firestoreInstance;
@@ -224,11 +224,11 @@ function ChangePasswordApp() {
     }
   }, []); // Prázdne pole závislostí - spustí sa len raz pri načítaní komponentu
 
-  // Effect for loading user profile data from Firestore after Auth and DB are initialized
+  // Efekt pre načítanie údajov používateľského profilu z Firestore po inicializácii autentifikácie a DB
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
+    // Spustí sa len ak je autentifikácia pripravená, DB je k dispozícii a používateľ je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
       if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
         console.log("ChangePasswordApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -261,34 +261,34 @@ function ChangePasswordApp() {
                   return; // Zastaviť ďalšie spracovanie
               }
 
-              // Normal processing if passwordLastChanged is valid
+              // Normálne spracovanie, ak je passwordLastChanged platný
               const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`ChangePasswordApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+              console.log(`ChangePasswordApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Uložené: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  // First load for this user/browser, initialize localStorage and do NOT logout
+                  // Prvé načítanie pre tohto používateľa/prehliadač, inicializuj localStorage a NEODHLASUJ
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangePasswordApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-                  // No return here, continue with normal data processing for the first load
+                  // Nepokračujeme tu, pokračujeme s normálnym spracovaním dát pre prvé načítanie
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  // Password was changed on another device/session
+                  // Heslo bolo zmenené na inom zariadení/relácii
                   console.log("ChangePasswordApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  localStorage.removeItem(localStorageKey); // Vyčistiť localStorage po odhlásení
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  // This should ideally not happen if Firestore is the source of truth
+                  // Toto by sa ideálne nemalo stať, ak je Firestore zdrojom pravdy
                   console.warn("ChangePasswordApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
-                  // Times are equal, ensure localStorage is up-to-date
+                  // Časy sú rovnaké, zabezpečte, aby bol localStorage aktuálny
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangePasswordApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
@@ -296,7 +296,7 @@ function ChangePasswordApp() {
 
               setUserProfileData(userData); // Aktualizujeme stav userProfileData
               
-              setLoading(false); // Stop loading po načítaní používateľských dát
+              setLoading(false); // Zastavíme načítavanie po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
 
               // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
@@ -327,13 +327,13 @@ function ChangePasswordApp() {
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
-            setLoading(false); // Stop loading aj pri chybe
+            setLoading(false); // Zastaví načítavanie aj pri chybe
             console.log("ChangePasswordApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
           console.error("ChangePasswordApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // Stop loading aj pri chybe
+          setLoading(false); // Zastaví načítavanie aj pri chybe
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -350,9 +350,9 @@ function ChangePasswordApp() {
     };
   }, [isAuthReady, db, user, auth]); // Závisí od isAuthReady, db, user a auth
 
-  // useEffect for updating header link visibility
+  // Efekt pre aktualizáciu viditeľnosti odkazov v hlavičke
   React.useEffect(() => {
-    console.log(`ChangePasswordApp: useEffect for updating header links. User: ${user ? user.uid : 'null'}`);
+    console.log(`ChangePasswordApp: useEffect pre aktualizáciu odkazov v hlavičke. Používateľ: ${user ? user.uid : 'null'}`);
     // Volanie globálnej funkcie z header.js na aktualizáciu odkazov v hlavičke
     // Používame priame volanie, ako v logged-in-change-name.js
     if (typeof updateHeaderLinks === 'function') { 
@@ -383,7 +383,7 @@ function ChangePasswordApp() {
     }
   }, [user]); // Závisí od objektu používateľa
 
-  // Handle logout (needed for the header logout button)
+  // Spracovanie odhlásenia (potrebné pre tlačidlo odhlásenia v hlavičke)
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
@@ -399,7 +399,7 @@ function ChangePasswordApp() {
     }
   }, [auth]);
 
-  // Attach logout handler to the button in the header (via event listener, not direct onClick)
+  // Pripojenie obsluhy odhlásenia k tlačidlu v hlavičke (cez event listener, nie priamo onClick)
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
@@ -469,12 +469,12 @@ function ChangePasswordApp() {
     setUserNotificationMessage('');
 
     try {
-      // Re-authenticate user before changing password for security
+      // Znova overiť používateľa pred zmenou hesla z bezpečnostných dôvodov
       const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
       await user.reauthenticateWithCredential(credential);
       console.log("ChangePasswordApp: Používateľ úspešne znovu overený.");
 
-      // Update password
+      // Aktualizovať heslo
       await user.updatePassword(newPassword);
       console.log("ChangePasswordApp: Heslo úspešne zmenené.");
 
@@ -492,12 +492,12 @@ function ChangePasswordApp() {
 
       setUserNotificationMessage("Heslo bolo úspešne zmenené. Pre vašu bezpečnosť vás odhlasujeme. Prosím, prihláste sa s novým heslom.");
       
-      // Clear password fields
+      // Vyčistiť polia hesla
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
 
-      // Sign out user after password change for security
+      // Odhlásiť používateľa po zmene hesla z bezpečnostných dôvodov
       await auth.signOut();
       console.log("ChangePasswordApp: Používateľ odhlásený po zmene hesla.");
       
@@ -526,7 +526,7 @@ function ChangePasswordApp() {
     }
   };
 
-  // Display loading state
+  // Zobrazenie stavu načítavania
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
         console.log("ChangePasswordApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -602,7 +602,7 @@ function ChangePasswordApp() {
             showPassword: showNewPassword,
             toggleShowPassword: () => setShowNewPassword(!showNewPassword),
             disabled: loading,
-            validationRules: newPasswordValidation.validationMessages // Odovzdanie výsledkov validácie
+            validationRules: newPasswordValidation.validationMessages // !!! TOTO JE KĽÚČOVÁ ZMENA !!!
           }),
           React.createElement(PasswordInput, {
             id: 'confirm-new-password',
