@@ -54,8 +54,7 @@
             background: #555;
         }
 
-        /* Nové štýly pre notifikácie */
-        /* Kontajner pre notifikácie */
+        /* Štýly pre notifikácie */
         #header-notification-area {
             position: fixed;
             top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
@@ -137,32 +136,42 @@
     </div>
 
     <!-- Kontajner pre push-up notifikácie (pre header.js) -->
-    <!-- Tento div je teraz hlavným kontajnerom pre všetky notifikácie -->
     <div id="header-notification-area"></div>
 
     <!-- Načítanie vlastných skriptov -->
-    <script src="header.js"></script>
+    <!-- header.js sa teraz načíta dynamicky vo funkcii loadHeader() -->
     <script src="left-menu.js"></script>
     <script src="logged-in-all-registrations.js"></script>
 
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            const headerPlaceholder = document.getElementById('header-placeholder');
+            if (headerPlaceholder) {
+                try {
+                    const response = await fetch('header.html');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const headerHtml = await response.text();
+                    headerPlaceholder.innerHTML = headerHtml;
+
+                    // Dynamicky načítajte header.js AŽ PO vložení header.html
+                    const headerScript = document.createElement('script');
+                    headerScript.src = 'header.js';
+                    headerScript.onload = () => {
+                        console.log("header.js načítaný a spustený.");
+                        if (typeof initializeHeaderLogic === 'function') {
+                            initializeHeaderLogic();
+                        }
+                    };
+                    headerScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní header.js:", e);
+                    };
+                    document.body.appendChild(headerScript);
+
+                } catch (error) {
+                    console.error("all-registrations.html: Chyba pri načítaní hlavičky:", error);
+                    headerPlaceholder.innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
                 }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-                // Inicializujeme logiku hlavičky po jej načítaní
-                if (typeof initializeHeaderLogic === 'function') {
-                    await initializeHeaderLogic();
-                    console.log("all-registrations.html: Logika hlavičky inicializovaná.");
-                }
-            } catch (error) {
-                console.error("all-registrations.html: Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
 
@@ -188,7 +197,7 @@
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
-            await loadHeader();
+            await loadHeader(); // Toto teraz dynamicky načíta aj header.js
             await loadLeftMenu();
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
