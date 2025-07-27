@@ -63,41 +63,44 @@ function NotificationModal({ message, onClose }) {
 }
 
 // Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti
-// Akceptuje 'validationRules' ako pole objektov pre dynamické zobrazenie pravidiel
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationRules }) {
-  // SVG ikony pre oko (zobraziť heslo) a oko-preškrtnuté (skryť heslo)
+// Akceptuje 'validationStatus' ako objekt pre detailnú vizuálnu indikáciu platnosti hesla
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus }) {
+  // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S ADMIN-REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Cesta pre ikonu oka (viditeľné)
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM12 15a3 3 0 100-6 3 3 0 000 6z' })
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
   );
 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    // Cesta pre ikonu celého oka
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 5 12 5c4.638 0 8.573 2.51 9.963 7.322.034.139.034.279 0 .418A10.05 10.05 0 0112 19c-4.638 0-8.573-2.51-9.963-7.322zM12 15a3 3 0 100-6 3 3 0 000 6z' }),
-    // Cesta pre diagonálnu čiaru preškrtnutia
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M4 20 L20 4' }) // Diagonálna čiara
+    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
+
+  // Okraj inputu bude vždy predvolený (border-gray-300)
+  const borderClass = 'border-gray-300';
 
   return React.createElement(
     'div',
-    null,
+    { className: 'mb-4' }, // Pridaná trieda mb-4 pre konzistentné medzery
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
-      { className: 'relative flex items-center' },
+      { className: 'relative' },
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10 mb-0 mt-0',
+        // Používame len predvolenú triedu okraja
+        className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
-        onCopy: (e) => e.preventDefault(),
-        onPaste: (e) => e.preventDefault(),
-        onCut: (e) => e.preventDefault(),
+        onCopy: onCopy,
+        onPaste: onPaste,
+        onCut: onCut,
         required: true,
         placeholder: placeholder,
         autoComplete: autoComplete,
@@ -108,30 +111,43 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         {
           type: 'button',
           onClick: toggleShowPassword,
-          className: 'absolute right-0 pr-3 flex items-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg top-1/2 -translate-y-1/2',
+          className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 focus:outline-none',
           disabled: disabled,
         },
-        showPassword ? EyeOffIcon : EyeIcon
+        showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    // Dynamické zobrazenie pravidiel validácie
-    validationRules && validationRules.length > 0 && React.createElement(
+    // ZMENA: Podmienka pre zobrazenie popisu hesla - zobrazí sa len ak je validationStatus definovaný
+    validationStatus && React.createElement(
       'div',
-      { className: 'text-sm mt-2' },
+      { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
+      'Heslo musí obsahovať:',
       React.createElement(
         'ul',
-        { className: 'list-none pl-0' }, // Odstránime predvolené odrážky a odsadenie
-        validationRules.map((rule, index) =>
-          React.createElement(
-            'li',
-            { key: index, className: `flex items-center ${rule.isMet ? 'text-green-600' : 'text-gray-600'}` },
-            React.createElement(
-              'span',
-              { className: 'mr-2 font-bold' }, // Pridáme font-bold pre lepšiu viditeľnosť symbolu
-              rule.isMet ? '✔' : '•'
-            ),
-            rule.text
-          )
+        { className: 'list-none pl-4' }, // Používame list-none a vlastné odrážky pre dynamiku
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+          'aspoň 10 znakov,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+          'aspoň jedno veľké písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+          'aspoň jedno malé písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+          'aspoň jednu číslicu.'
         )
       )
     )
@@ -159,8 +175,15 @@ function ChangePasswordApp() {
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = React.useState(false);
 
-  // Stav pre výsledky validácie nového hesla
-  const [newPasswordValidation, setNewPasswordValidation] = React.useState({ isValid: false, validationMessages: [] });
+  // Stav pre výsledky validácie nového hesla (ako v admin-register.js)
+  const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    isValid: false, // Celková platnosť hesla
+  });
+  const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
 
 
   // Efekt pre inicializáciu Firebase a nastavenie poslucháča autentifikácie (spustí sa len raz)
@@ -412,29 +435,28 @@ function ChangePasswordApp() {
     };
   }, [handleLogout]);
 
-  // Funkcia pre validáciu hesla (teraz presne zhodná s register.js)
+  // Funkcia pre validáciu hesla (teraz presne zhodná s admin-register.js)
   const validatePassword = (pwd) => {
-    const messages = [];
-
-    const minLengthMet = pwd.length >= 10;
-    messages.push({ text: "aspoň 10 znakov", isMet: minLengthMet });
-
-    const hasLowerCaseMet = /[a-z]/.test(pwd);
-    messages.push({ text: "aspoň jedno malé písmeno", isMet: hasLowerCaseMet });
-
-    const hasUpperCaseMet = /[A-Z]/.test(pwd);
-    messages.push({ text: "aspoň jedno veľké písmeno", isMet: hasUpperCaseMet });
-
-    const hasDigitMet = /[0-9]/.test(pwd);
-    messages.push({ text: "aspoň jednu číslicu", isMet: hasDigitMet });
-
-    const isValid = minLengthMet && hasLowerCaseMet && hasUpperCaseMet && hasDigitMet;
-
-    return {
-        isValid: isValid,
-        validationMessages: messages
+    const status = {
+      minLength: pwd.length >= 10,
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
     };
+    // Celková platnosť hesla
+    status.isValid = status.minLength && status.hasUpperCase && status.hasLowerCase && status.hasNumber;
+    return status;
   };
+
+  // Effect pre validáciu hesla pri zmene 'newPassword' alebo 'confirmNewPassword'
+  React.useEffect(() => {
+    const pwdStatus = validatePassword(newPassword);
+    setPasswordValidationStatus(pwdStatus);
+
+    // isConfirmPasswordMatching závisí aj od celkovej platnosti nového hesla
+    setIsConfirmPasswordMatching(newPassword === confirmNewPassword && newPassword.length > 0 && pwdStatus.isValid);
+  }, [newPassword, confirmNewPassword]);
+
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -451,13 +473,9 @@ function ChangePasswordApp() {
       return;
     }
 
-    const validationResults = validatePassword(newPassword);
-    if (!validationResults.isValid) {
-      // Zostavenie chybovej správy z nesplnených pravidiel
-      const errors = validationResults.validationMessages
-        .filter(msg => !msg.isMet)
-        .map(msg => msg.text);
-      setError("Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".");
+    // Používame celkový stav platnosti z passwordValidationStatus
+    if (!passwordValidationStatus.isValid) {
+      setError("Nové heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
       return;
     }
 
@@ -509,9 +527,12 @@ function ChangePasswordApp() {
       } else if (e.code === 'auth/weak-password') {
         // Použijeme validatePassword pre detailnejšiu správu o slabom hesle
         const validationResults = validatePassword(newPassword);
-        const errors = validationResults.validationMessages
-            .filter(msg => !msg.isMet)
-            .map(msg => msg.text);
+        const errors = [];
+        if (!validationResults.minLength) errors.push("aspoň 10 znakov");
+        if (!validationResults.hasLowerCase) errors.push("aspoň jedno malé písmeno");
+        if (!validationResults.hasUpperCase) errors.push("aspoň jedno veľké písmeno");
+        if (!validationResults.hasNumber) errors.push("aspoň jednu číslicu");
+        
         setError("Nové heslo je príliš slabé. Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".");
       } else if (e.code === 'auth/requires-recent-login') {
         setError("Táto akcia vyžaduje nedávne prihlásenie. Prosím, odhláste sa a znova sa prihláste a skúste to znova.");
@@ -589,7 +610,8 @@ function ChangePasswordApp() {
             onChange: (e) => {
                 const value = e.target.value;
                 setNewPassword(value);
-                setNewPasswordValidation(validatePassword(value)); // Okamžitá aktualizácia validácie
+                // Okamžitá aktualizácia validácie
+                setPasswordValidationStatus(validatePassword(value)); 
             },
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
@@ -599,7 +621,7 @@ function ChangePasswordApp() {
             showPassword: showNewPassword,
             toggleShowPassword: () => setShowNewPassword(!showNewPassword),
             disabled: loading,
-            validationRules: newPasswordValidation.validationMessages // Odovzdanie výsledkov validácie
+            validationStatus: passwordValidationStatus // Odovzdanie detailného stavu validácie hesla
           }),
           React.createElement(PasswordInput, {
             id: 'confirm-new-password',
@@ -619,8 +641,10 @@ function ChangePasswordApp() {
             'button',
             {
               type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading,
+              className: `bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 ${
+                loading || !passwordValidationStatus.isValid || !isConfirmPasswordMatching ? 'opacity-50 cursor-not-allowed' : ''
+              }`,
+              disabled: loading || !passwordValidationStatus.isValid || !isConfirmPasswordMatching,
             },
             loading ? (
               React.createElement(
