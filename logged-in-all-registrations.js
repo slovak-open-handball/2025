@@ -516,7 +516,7 @@ function AllRegistrationsApp() {
             React.createElement(NotificationModal, {
                 message: userNotificationMessage,
                 onClose: () => setUserNotificationMessage(''),
-                displayNotificationsEnabled: userProfileData?.displayNotifications
+                displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu!
             }),
             React.createElement(
                 'div',
