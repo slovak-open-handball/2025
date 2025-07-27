@@ -58,6 +58,89 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   );
 }
 
+// FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
+function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
+    // selectedValues je teraz pole pre viacnásobný výber
+    // initialFilterValues už obsahujú hodnoty v malých písmenách, takže ich len použijeme
+    const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
+
+    React.useEffect(() => {
+        // Inicializovať selectedValues pri otvorení modalu alebo zmene initialFilterValues
+        // Zabezpečí, že pri opätovnom otvorení modalu sa nastavia správne začiarknuté polia
+        setSelectedValues(initialFilterValues || []);
+    }, [initialFilterValues, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleCheckboxChange = (value) => {
+        // KĽÚČOVÁ ZMENA: Prevod hodnoty na malé písmená pre konzistentné porovnávanie
+        const lowerCaseValue = String(value).toLowerCase();
+        setSelectedValues(prev => {
+            if (prev.includes(lowerCaseValue)) {
+                return prev.filter(item => item !== lowerCaseValue); // Odstrániť, ak už je vybrané
+            } else {
+                return [...prev, lowerCaseValue]; // Pridať, ak nie je vybrané
+            }
+        });
+    };
+
+    const handleApply = () => {
+        onApplyFilter(columnName, selectedValues);
+        onClose();
+    };
+
+    const handleClear = () => {
+        setSelectedValues([]);
+        onClearFilter(columnName);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-sm' },
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, `Filter pre ${columnName}`),
+            React.createElement(
+                'div',
+                { className: 'max-h-60 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
+                uniqueColumnValues.map((value, index) =>
+                    React.createElement(
+                        'div',
+                        { key: index, className: 'flex items-center mb-2' },
+                        React.createElement('input', {
+                            type: 'checkbox',
+                            id: `filter-${columnName}-${index}`,
+                            value: value,
+                            checked: selectedValues.includes(String(value).toLowerCase()), // Kontrola na malé písmená
+                            onChange: () => handleCheckboxChange(value),
+                            className: 'mr-2'
+                        }),
+                        React.createElement('label', { htmlFor: `filter-${columnName}-${index}` }, value || '(Prázdne)')
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                    onClick: onClose
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600',
+                    onClick: handleClear
+                }, 'Vymazať filter'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    onClick: handleApply
+                }, 'Použiť filter')
+            )
+        )
+    );
+}
+
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const [app, setApp] = React.useState(null);
@@ -254,6 +337,175 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     };
   }, [isAuthReady, db, user, auth]);
 
+  // Effect for fetching all users from Firestore
+  React.useEffect(() => {
+    let unsubscribeAllUsers;
+    // appId by mal byť globálne dostupný z HTML
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+        console.log("AllRegistrationsApp: Admin prihlásený a schválený. Načítavam všetkých používateľov.");
+        setLoading(true);
+        try {
+            // Získanie všetkých používateľov z kolekcie 'users'
+            unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
+                const usersData = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log("AllRegistrationsApp: Všetci používatelia načítaní:", usersData);
+                setAllUsers(usersData);
+                setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
+                setLoading(false);
+                setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Zobrazenie notifikácie
+            }, error => {
+                console.error("AllRegistrationsApp: Chyba pri načítaní všetkých používateľov z Firestore:", error);
+                setError(`Chyba pri načítaní používateľov: ${error.message}`);
+                setLoading(false);
+                setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`); // Zobrazenie notifikácie
+            });
+        } catch (e) {
+            console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre všetkých používateľov:", e);
+            setError(`Chyba pri načítaní používateľov: ${e.message}`);
+            setLoading(false);
+            setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`); // Zobrazenie notifikácie
+        }
+    } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
+        setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
+        setLoading(false);
+        console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Prístup zamietnutý.");
+        setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky."); // Zobrazenie notifikácie
+    } else if (isAuthReady && user === null) {
+        console.log("AllRegistrationsApp: Používateľ nie je prihlásený. Presmerovanie na login.html.");
+        window.location.href = 'login.html';
+    }
+
+    return () => {
+        if (unsubscribeAllUsers) {
+            console.log("AllRegistrationsApp: Ruším odber onSnapshot pre všetkých používateľov.");
+            unsubscribeAllUsers();
+        }
+    };
+  }, [db, userProfileData, isAuthReady]); // Závisí od db a userProfileData
+
+
+  // Sorting logic
+  const handleSort = (column) => {
+      let direction = 'asc';
+      if (currentSort.column === column && currentSort.direction === 'asc') {
+          direction = 'desc';
+      }
+      setCurrentSort({ column, direction });
+
+      const sorted = [...filteredUsers].sort((a, b) => {
+          const valA = a[column] || '';
+          const valB = b[column] || '';
+
+          if (column === 'registrationDate') {
+              const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date(0);
+              const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date(0);
+              return direction === 'asc' ? dateA - dateB : dateB - dateA;
+          } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
+              const parts = column.split('.');
+              let nestedValA = a;
+              let nestedValB = b;
+              for (const part of parts) {
+                  nestedValA = nestedValA ? nestedValA[part] : undefined;
+                  nestedValB = nestedValB ? nestedValB[part] : undefined;
+              }
+              const finalValA = nestedValA || '';
+              const finalValB = nestedValB || '';
+              return direction === 'asc' ? String(finalValA).localeCompare(String(finalValB)) : String(finalValB).localeCompare(String(finalValA));
+          }
+          else if (typeof valA === 'string' && typeof valB === 'string') {
+              return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          } else {
+              return direction === 'asc' ? valA - valB : valB - valA;
+          }
+      });
+      setFilteredUsers(sorted);
+  };
+
+  // Filtering logic
+  const openFilterModal = (column) => {
+      setFilterColumn(column);
+      // Získanie unikátnych hodnôt pre daný stĺpec, prevedené na string a malé písmená pre konzistentnosť
+      const values = [...new Set(allUsers.map(u => {
+          let val = u[column];
+          if (column === 'registrationDate' && val && typeof val.toDate === 'function') {
+              // Používame toLocaleString pre zobrazenie dátumu a času vo filtri
+              val = val.toDate().toLocaleString('sk-SK');
+          } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
+              const parts = column.split('.');
+              let nestedVal = u;
+              for (const part of parts) {
+                  nestedVal = nestedVal ? nestedVal[part] : undefined;
+              }
+              val = nestedVal;
+          }
+          // Špecifické pre boolean stĺpce (napr. 'approved')
+          if (typeof val === 'boolean') {
+              return val ? 'áno' : 'nie';
+          }
+          return String(val || '').toLowerCase(); // Všetko na malé písmená
+      }))].filter(v => v !== '').sort(); // Odstrániť prázdne a zoradiť
+      setUniqueColumnValues(values);
+      setFilterModalOpen(true);
+  };
+
+  const closeFilterModal = () => {
+      setFilterModalOpen(false);
+      setFilterColumn('');
+      setUniqueColumnValues([]);
+  };
+
+  const applyFilter = (column, values) => {
+      // Uloženie vybraných hodnôt filtra (už sú v malých písmenách)
+      setActiveFilters(prev => ({ ...prev, [column]: values }));
+  };
+
+  const clearFilter = (column) => {
+      setActiveFilters(prev => {
+          const newFilters = { ...prev };
+          delete newFilters[column];
+          return newFilters;
+      });
+  };
+
+  // Effect to re-apply filters when activeFilters or allUsers change
+  React.useEffect(() => {
+      let currentFiltered = [...allUsers];
+
+      Object.keys(activeFilters).forEach(column => {
+          const filterValues = activeFilters[column];
+          if (filterValues.length > 0) {
+              currentFiltered = currentFiltered.filter(user => {
+                  let userValue;
+                  if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
+                      // Používame toLocaleString aj pre porovnanie vo filtri
+                      userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase();
+                  } else if (column.includes('.')) {
+                      const parts = column.split('.');
+                      let nestedVal = user;
+                      for (const part of parts) {
+                          nestedVal = nestedVal ? nestedVal[part] : undefined;
+                      }
+                      userValue = String(nestedVal || '').toLowerCase();
+                  } else {
+                      userValue = String(user[column] || '').toLowerCase();
+                  }
+                  // Špecifické pre boolean stĺpce (napr. 'approved')
+                  if (typeof user[column] === 'boolean') {
+                      userValue = user[column] ? 'áno' : 'nie';
+                  }
+                  return filterValues.includes(userValue);
+              });
+          }
+      });
+      setFilteredUsers(currentFiltered);
+  }, [allUsers, activeFilters]);
+
+
   // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`AllRegistrationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
@@ -374,14 +626,148 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Všetky registrácie' // Zmenený hlavný nadpis
+          'Všetky registrácie'
         ),
-        // Tu by bol kód pre tabuľku registrácií
+        // Tabuľka všetkých registrácií
         React.createElement(
-            'p',
-            { className: 'text-gray-700 text-center text-xl' },
-            'Tabuľka všetkých registrácií sa tu zobrazí po implementácii logiky načítania a zobrazenia dát.'
-        )
+            'div',
+            { className: 'overflow-x-auto relative shadow-md sm:rounded-lg' },
+            React.createElement(
+                'table',
+                { className: 'w-full text-sm text-left text-gray-500' },
+                React.createElement(
+                    'thead',
+                    { className: 'text-xs text-gray-700 uppercase bg-gray-50' },
+                    React.createElement(
+                        'tr',
+                        null,
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('role') },
+                            'Rola',
+                            currentSort.column === 'role' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('approved') },
+                            'Schválený',
+                            currentSort.column === 'approved' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registrationDate') },
+                            'Dátum registrácie',
+                            currentSort.column === 'registrationDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('firstName') },
+                            'Meno',
+                            currentSort.column === 'firstName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('firstName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('lastName') },
+                            'Priezvisko',
+                            currentSort.column === 'lastName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('lastName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('email') },
+                            'Email',
+                            currentSort.column === 'email' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('email'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('contactPhoneNumber') },
+                            'Tel. číslo',
+                            currentSort.column === 'contactPhoneNumber' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('contactPhoneNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.clubName') },
+                            'Názov klubu',
+                            currentSort.column === 'billing.clubName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.clubName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.ico') },
+                            'IČO',
+                            currentSort.column === 'billing.ico' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.ico'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.dic') },
+                            'DIČ',
+                            currentSort.column === 'billing.dic' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.dic'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.icDph') },
+                            'IČ DPH',
+                            currentSort.column === 'billing.icDph' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.icDph'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('street') },
+                            'Ulica',
+                            currentSort.column === 'street' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('street'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('houseNumber') },
+                            'Číslo domu',
+                            currentSort.column === 'houseNumber' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('houseNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('city') },
+                            'Mesto',
+                            currentSort.column === 'city' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('city'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('postalCode') },
+                            'PSČ',
+                            currentSort.column === 'postalCode' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('postalCode'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        ),
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('country') },
+                            'Krajina',
+                            currentSort.column === 'country' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('country'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        )
+                    )
+                ),
+                React.createElement(
+                    'tbody',
+                    null,
+                    filteredUsers.length === 0 ? (
+                        React.createElement(
+                            'tr',
+                            null,
+                            React.createElement('td', { colSpan: '16', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                        )
+                    ) : (
+                        filteredUsers.map(u => (
+                            React.createElement(
+                                'tr',
+                                { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate ? u.registrationDate.toDate().toLocaleString('sk-SK') : '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.contactPhoneNumber || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.clubName || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.ico || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.dic || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.icDph || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.street || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.houseNumber || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.city || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.postalCode || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.country || '-')
+                            )
+                        ))
+                    )
+                )
+            )
+        ),
+        React.createElement(FilterModal, {
+            isOpen: filterModalOpen,
+            onClose: closeFilterModal,
+            columnName: filterColumn,
+            onApplyFilter: applyFilter,
+            initialFilterValues: activeFilters[filterColumn] || [],
+            onClearFilter: clearFilter,
+            uniqueColumnValues: uniqueColumnValues
+        })
       )
     )
   );
