@@ -37,7 +37,6 @@ function NotificationModal({ message, onClose }) {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
   }, [message, onClose]);
@@ -172,8 +171,8 @@ function ChangePasswordApp() {
       const signIn = async () => {
         try {
           // initialAuthToken je globálna premenná definovaná v HTML
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authInstance.signInWithCustomToken(__initial_auth_token);
             console.log("ChangePasswordApp: Počiatočné prihlásenie s custom tokenom úspešné.");
           } else {
             console.log("ChangePasswordApp: Žiadny initialAuthToken na počiatočné prihlásenie.");
@@ -392,6 +391,7 @@ function ChangePasswordApp() {
     };
   }, [handleLogout]);
 
+  // Funkcia pre validáciu hesla (konzistentná s register.js a admin-register.js)
   const validatePassword = (pwd) => {
     const errors = [];
 
@@ -409,6 +409,9 @@ function ChangePasswordApp() {
     }
     if (!/[0-9]/.test(pwd)) {
       errors.push("aspoň jednu číslicu");
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) { // Pridaná kontrola na špeciálne znaky
+      errors.push("aspoň jeden špeciálny znak (!@#$%^&*(),.?\":{}|<>])");
     }
 
     if (errors.length === 0) {
@@ -485,6 +488,7 @@ function ChangePasswordApp() {
       if (e.code === 'auth/wrong-password') {
         setError("Zadané aktuálne heslo je nesprávne.");
       } else if (e.code === 'auth/weak-password') {
+        // Použijeme validatePassword pre detailnejšiu správu o slabom hesle
         setError("Nové heslo je príliš slabé. " + validatePassword(newPassword));
       } else if (e.code === 'auth/requires-recent-login') {
         setError("Táto akcia vyžaduje nedávne prihlásenie. Prosím, odhláste sa a znova sa prihláste a skúste to znova.");
@@ -577,7 +581,8 @@ function ChangePasswordApp() {
                 { className: 'list-disc list-inside ml-4' },
                 React.createElement('li', null, 'aspoň jedno malé písmeno,'),
                 React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
-                React.createElement('li', null, 'aspoň jednu číslicu.')
+                React.createElement('li', null, 'aspoň jednu číslicu,'),
+                React.createElement('li', null, 'aspoň jeden špeciálny znak (!@#$%^&*(),.?":{}|<>]).') // Aktualizovaný popis
               )
             )
           }),
