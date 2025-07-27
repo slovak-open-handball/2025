@@ -286,8 +286,7 @@ function AllRegistrationsApp() {
                         } else if (error.code === 'unavailable') {
                             setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
                         } else if (error.code === 'unauthenticated') {
-                             setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlási
-                             ť.`);
+                             setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
                              if (auth) {
                                 auth.signOut();
                                 window.location.href = 'login.html';
@@ -308,6 +307,7 @@ function AllRegistrationsApp() {
             setLoading(false);
         }
 
+
         return () => {
             if (unsubscribeUserDoc) {
                 console.log("AllRegistrationsApp: Ruším odber onSnapshot pre používateľský dokument.");
@@ -315,7 +315,6 @@ function AllRegistrationsApp() {
             }
         };
     }, [isAuthReady, db, user, auth]);
-
 
     // Effect for fetching all users from Firestore
     React.useEffect(() => {
@@ -410,7 +409,7 @@ function AllRegistrationsApp() {
             let val = u[column];
             if (column === 'registrationDate' && val && typeof val.toDate === 'function') {
                 // Používame toLocaleString pre zobrazenie dátumu a času vo filtri
-                val = val.toDate().toLocaleString('sk-SK'); 
+                val = val.toDate().toLocaleString('sk-SK');
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
                 let nestedVal = u;
@@ -459,7 +458,7 @@ function AllRegistrationsApp() {
                     let userValue;
                     if (column === 'registrationDate' && user.registrationDate && typeof user.registrationDate.toDate === 'function') {
                         // Používame toLocaleString aj pre porovnanie vo filtri
-                        userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase(); 
+                        userValue = user.registrationDate.toDate().toLocaleString('sk-SK').toLowerCase();
                     } else if (column.includes('.')) {
                         const parts = column.split('.');
                         let nestedVal = user;
@@ -511,7 +510,7 @@ function AllRegistrationsApp() {
             React.createElement(NotificationModal, {
                 message: userNotificationMessage,
                 onClose: () => setUserNotificationMessage(''),
-                displayNotificationsEnabled: userProfileData?.displayNotifications
+                displayNotificationsEnabled: userProfileData?.displayNotifications // ODovzdanie propu!
             }),
             React.createElement(
                 'div',
@@ -648,7 +647,7 @@ function AllRegistrationsApp() {
                                 React.createElement(
                                     'tr',
                                     null,
-                                    React.createElement('td', { colSpan: '16', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.') // ZMENA: colSpan znížený na 16
+                                    React.createElement('td', { colSpan: '16', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                                 )
                             ) : (
                                 filteredUsers.map(u => (
