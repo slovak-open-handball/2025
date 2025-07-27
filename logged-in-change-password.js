@@ -431,8 +431,6 @@ function ChangePasswordApp() {
     const hasDigitMet = /[0-9]/.test(pwd);
     messages.push({ text: "aspoň jednu číslicu", isMet: hasDigitMet });
 
-    // Špeciálne znaky boli odstránené podľa požiadavky
-
     const isValid = minLengthMet && maxLengthMet && hasUpperCaseMet && hasLowerCaseMet && hasDigitMet;
 
     return {
