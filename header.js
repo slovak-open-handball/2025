@@ -186,6 +186,7 @@ async function initializeHeaderLogic() {
             userDisplayNotificationsSetting = false;
 
             if (currentHeaderUser) {
+                console.log(`Header.js: Používateľ ${currentHeaderUser.uid} je prihlásený. Načítavam jeho profil.`);
                 try {
                     // Načítanie roly a nastavení notifikácií prihláseného používateľa
                     const userDoc = await dbHeader.collection('users').doc(currentHeaderUser.uid).get();
@@ -194,7 +195,7 @@ async function initializeHeaderLogic() {
                         const userRole = userData.role;
                         const userApproved = userData.approved;
                         userDisplayNotificationsSetting = userData.displayNotifications === true; // Aktualizácia globálnej premennej
-                        console.log(`Header.js: Používateľské nastavenie displayNotifications: ${userDisplayNotificationsSetting}`);
+                        console.log(`Header.js: Používateľské nastavenie displayNotifications pre ${currentHeaderUser.uid}: ${userDisplayNotificationsSetting}`);
 
 
                         // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
@@ -208,23 +209,25 @@ async function initializeHeaderLogic() {
                         }
 
                         if (userRole === 'admin' && userApproved === true) {
-                            console.log("Header.js: Prihlásený používateľ je schválený administrátor. Nastavujem listener na notifikácie admina.");
+                            console.log("Header.js: Prihlásený používateľ je schválený administrátor. Pripravujem nastavenie listenera na notifikácie admina.");
                             // Nastavenie listenera na nové, neprečítané notifikácie pre tohto admina alebo pre 'all_admins'
                             unsubscribeAdminNotificationsListener = dbHeader.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
                                 .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
                                 .where('read', '==', false) // Len neprečítané notifikácie
                                 .onSnapshot(snapshot => {
+                                    console.log(`Header.js: onSnapshot pre adminNotifications spustený. Počet zmien: ${snapshot.docChanges().length}`);
                                     if (!initialNotificationsLoadComplete) {
                                         // Pri prvom načítaní len naplníme cache a nastavíme flag
                                         snapshot.docs.forEach(doc => {
                                             notificationsCache[doc.id] = doc.data();
                                         });
                                         initialNotificationsLoadComplete = true;
-                                        console.log("Header.js: Počiatočné načítanie neprečítaných notifikácií pre push-up dokončené.");
+                                        console.log("Header.js: Počiatočné načítanie neprečítaných notifikácií pre push-up dokončené. Cache naplnená.");
                                         return;
                                     }
 
                                     snapshot.docChanges().forEach(async change => {
+                                        console.log(`Header.js: Detekovaná zmena typu: ${change.type} pre notifikáciu ID: ${change.doc.id}`);
                                         if (change.type === 'added') { // Zaujímajú nás len novo pridané neprečítané notifikácie
                                             const notificationData = change.doc.data();
                                             const notificationId = change.doc.id;
@@ -258,7 +261,7 @@ async function initializeHeaderLogic() {
                                         }
                                     });
                                 }, error => {
-                                    console.error("Header.js: Chyba pri počúvaní notifikácií admina:", error);
+                                    console.error("Header.js: Chyba pri počúvaní notifikácií admina (onSnapshot error):", error);
                                 });
                         } else {
                             console.log("Header.js: Používateľ nie je administrátor alebo nie je schválený. Listener na notifikácie admina nebol nastavený.");
@@ -267,13 +270,15 @@ async function initializeHeaderLogic() {
                         console.warn("Header.js: Používateľský dokument sa nenašiel pre UID:", currentHeaderUser.uid);
                     }
                 } catch (e) {
-                    console.error("Header.js: Chyba pri načítaní roly používateľa alebo nastavení listenera:", e);
+                    console.error("Header.js: Chyba pri načítaní roly používateľa alebo nastavovaní listenera:", e);
                 }
+            } else {
+                console.log("Header.js: Používateľ nie je prihlásený. Listener na notifikácie admina nebol nastavený.");
             }
         });
 
     } catch (e) {
-        console.error("Header.js: Chyba pri inicializácii Firebase v hlavičke:", e);
+        console.error("Header.js: Chyba pri inicializácii Firebase v hlavičke (hlavný try-catch):", e);
     }
 
     // Spracovanie odhlásenia pre tlačidlo v hlavičke
