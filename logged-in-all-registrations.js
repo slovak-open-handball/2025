@@ -3,69 +3,8 @@
 // sú globálne definované v <head> logged-in-all-registrations.html a že header.js
 // už inicializoval Firebase a spravuje autentifikáciu a odkazy hlavičky.
 
-// NotificationModal Component (pre konzistentné notifikácie)
-// Tento modal je určený pre správy generované priamo touto React aplikáciou.
-// Notifikácie z header.js sa zobrazujú cez showPushNotification.
-function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
-    const [show, setShow] = React.useState(false);
-    const timerRef = React.useRef(null);
-
-    React.useEffect(() => {
-        // Logovanie pre debugovanie
-        console.log("NotificationModal useEffect: message=", message, "displayNotificationsEnabled=", displayNotificationsEnabled);
-
-        // Zobrazí notifikáciu len ak je správa (nie prázdny reťazec) A notifikácie sú povolené
-        if (message && displayNotificationsEnabled) {
-            console.log("NotificationModal: Zobrazujem notifikáciu.");
-            setShow(true);
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
-            timerRef.current = setTimeout(() => {
-                console.log("NotificationModal: Skrývam notifikáciu po časovom limite.");
-                setShow(false);
-                setTimeout(onClose, 500);
-            }, 10000); // Notifikácia zmizne po 10 sekundách
-        } else {
-            // Logovať len ak bola správa prítomná a teraz sa skrýva, alebo ak sú notifikácie explicitne vypnuté
-            if (message || !displayNotificationsEnabled) {
-                console.log("NotificationModal: Skrývam notifikáciu alebo nezobrazujem (správa:", message, ", stav show:", show, ", notifikácie povolené:", displayNotificationsEnabled, ").");
-            }
-            setShow(false);
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-                timerRef.current = null;
-            }
-        }
-
-        return () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
-        };
-    }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
-
-    // Nezobrazovať notifikáciu, ak show nie je true, alebo message je prázdny, alebo notifikácie nie sú povolené
-    if (!show || !message || !displayNotificationsEnabled) return null;
-
-    return React.createElement(
-        'div',
-        {
-            className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-                show ? 'translate-y-0' : '-translate-y-full'
-            }`,
-            style: { pointerEvents: 'none' }
-        },
-        React.createElement(
-            'div',
-            {
-                className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-                style: { pointerEvents: 'auto' }
-            },
-            React.createElement('p', { className: 'font-semibold' }, message)
-        )
-    );
-}
+// NotificationModal Component (a s ním súvisiace useEffect) bol odstránený na žiadosť používateľa.
+// Ak potrebujete notifikácie v rámci tejto React aplikácie, budete musieť implementovať nový systém.
 
 // FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
 function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
@@ -160,7 +99,7 @@ function AllRegistrationsApp() {
     const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
-    const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Stav pre notifikácie
+    // userNotificationMessage a súvisiaca logika odstránená
     const [allUsers, setAllUsers] = React.useState([]); // Všetci používatelia z Firestore
     const [filteredUsers, setFilteredUsers] = React.useState([]); // Filtrovaní používatelia
     const [currentSort, setCurrentSort] = React.useState({ column: 'registrationDate', direction: 'desc' });
@@ -341,24 +280,24 @@ function AllRegistrationsApp() {
                     setAllUsers(usersData);
                     setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
                     setLoading(false);
-                    // ODSTRÁNENÉ: setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
+                    // setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
                 }, error => {
                     console.error("AllRegistrationsApp: Chyba pri načítaní všetkých používateľov z Firestore:", error);
                     setError(`Chyba pri načítaní používateľov: ${error.message}`);
                     setLoading(false);
-                    // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
+                    // setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
                 });
             } catch (e) {
                 console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre všetkých používateľov:", e);
                 setError(`Chyba pri načítaní používateľov: ${e.message}`);
                 setLoading(false);
-                // ODSTRÁNENÉ: setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
+                // setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
             }
         } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
             setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
             setLoading(false);
             console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Prístup zamietnutý.");
-            // ODSTRÁNENÉ: setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky."); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
+            // setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky."); // Tieto riadky sú zakomentované, takže sa notifikácia nezobrazí
         } else if (isAuthReady && user === null) {
             console.log("AllRegistrationsApp: Používateľ nie je prihlásený. Presmerovanie na login.html.");
             window.location.href = 'login.html';
@@ -395,7 +334,7 @@ function AllRegistrationsApp() {
                 let nestedValB = b;
                 for (const part of parts) {
                     nestedValA = nestedValA ? nestedValA[part] : undefined;
-                    nestedValB = nestedValB ? nestedValB[part] : undefined;
+                    nestedValB = nestedValValB ? nestedValB[part] : undefined;
                 }
                 const finalValA = nestedValA || '';
                 const finalValB = nestedValB || '';
@@ -516,11 +455,7 @@ function AllRegistrationsApp() {
         return React.createElement(
             'div',
             { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-            React.createElement(NotificationModal, {
-                message: userNotificationMessage,
-                onClose: () => setUserNotificationMessage(''),
-                displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu!
-            }),
+            // NotificationModal bol odstránený, takže tu už nie je renderovaný
             React.createElement(
                 'div',
                 { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -536,11 +471,7 @@ function AllRegistrationsApp() {
     return React.createElement(
         'div',
         { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-        React.createElement(NotificationModal, {
-            message: userNotificationMessage,
-            onClose: () => setUserNotificationMessage(''),
-            displayNotificationsEnabled: userProfileData?.displayNotifications // ODovzdanie propu!
-        }),
+        // NotificationModal bol odstránený, takže tu už nie je renderovaný
         React.createElement(
             'div',
             { className: 'w-full max-w-7xl mt-20 mb-10 p-4' },
