@@ -565,6 +565,15 @@ function ChangePasswordApp() {
     );
   }
 
+  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  const buttonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${loading || currentPassword.length === 0 || !passwordValidationStatus.isValid || !isConfirmPasswordMatching
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -641,10 +650,8 @@ function ChangePasswordApp() {
             'button',
             {
               type: 'submit',
-              className: `bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 ${
-                loading || !passwordValidationStatus.isValid || !isConfirmPasswordMatching ? 'opacity-50 cursor-not-allowed' : ''
-              }`,
-              disabled: loading || !passwordValidationStatus.isValid || !isConfirmPasswordMatching,
+              className: buttonClasses, // Použitie dynamických tried
+              disabled: loading || currentPassword.length === 0 || !passwordValidationStatus.isValid || !isConfirmPasswordMatching,
             },
             loading ? (
               React.createElement(
