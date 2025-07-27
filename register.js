@@ -53,7 +53,7 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   if (!show && !message) return null;
 
   // Dynamické triedy pre farbu pozadia na základe typu správy
-  const bgColorClass = type === 'success' ? 'bg-green-500' : 'bg-blue-500';
+  const bgColorClass = type === 'success' ? 'bg-green-500' : 'bg-red-500';
 
   return React.createElement(
     'div',
@@ -632,7 +632,7 @@ function App() {
       // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
         'div',
-        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
+        { className: 'bg-green-600 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
         React.createElement(
           'h2',
           { className: 'text-2xl font-bold mb-4 text-black' }, // Zmenená farba textu nadpisu na čiernu
