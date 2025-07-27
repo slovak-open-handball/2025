@@ -17,7 +17,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Pridaný prop 'validationStatus' pre detailnú vizuálnu indikáciu platnosti hesla
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
-const EyeIcon = React.createElement(
+  const EyeIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
@@ -377,26 +377,23 @@ function App() {
           };
           console.log("Odosielanie dát do Apps Script (registračný e-mail admina):", payload);
           
-          // ZMENA: Odstránenie mode: 'no-cors' a pridanie lepšej kontroly odpovede
+          // ZMENA: Pridanie mode: 'no-cors'
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
+            mode: 'no-cors', // Dôležité pre Apps Script, aby sa predišlo CORS chybám
             body: JSON.stringify(payload)
           });
 
-          if (response.ok) {
-            const responseData = await response.text();
-            console.log("Odpoveď z Apps Script (registračný e-mail admina):", responseData);
-            // ZMENA: Nemeníme message, pretože sa zobrazí na zelenej stránke
-          } else {
-            const errorText = await response.text();
-            console.error(`Chyba pri odosielaní registračného e-mailu admina: ${response.status} ${response.statusText} - ${errorText}`);
-            setError(`Chyba pri odosielaní e-mailu: ${response.status} ${response.statusText}. Skontrolujte Apps Script a nastavenia CORS.`);
-            setNotificationType('error');
-          }
+          // Pri mode: 'no-cors', response.ok bude vždy false a response.status bude 0.
+          // Preto musíme predpokladať úspech, ak nedôjde k chybe siete.
+          // Ak potrebujete overenie úspechu, je lepšie použiť CORS a správne nastaviť Apps Script.
+          console.log("Odpoveď z Apps Script (registračný e-mail admina) s no-cors:", response);
+          // ZMENA: Nemeníme message, pretože sa zobrazí na zelenej stránke
+          // Ak by ste chceli spracovať odpoveď, musíte zvážiť odstránenie 'no-cors' a nastavenie CORS na Apps Script.
+
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu admina cez Apps Script (chyba fetch):", emailError);
           setError(`Nepodarilo sa odoslať e-mail s potvrdením: ${emailError.message}. Skontrolujte pripojenie a Apps Script.`);
