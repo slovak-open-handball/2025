@@ -14,8 +14,8 @@ const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-// Pridaný prop 'isValid' pre vizuálnu indikáciu platnosti hesla
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, isValid }) {
+// Pridaný prop 'validationStatus' pre detailnú vizuálnu indikáciu platnosti hesla
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, validationStatus }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
@@ -35,14 +35,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
-  // Dynamické triedy pre okraj inputu na základe isValid a či má hodnotu
-  const borderClass = value.length > 0
-    ? (isValid ? 'border-green-500' : 'border-red-500')
-    : 'border-gray-300'; // Predvolený okraj, ak nie je zadané žiadne heslo
-
-  // Dynamické triedy pre farbu popisu
-  // ZMENA: Ak nie je isValid, zostane text-gray-600 (sivá)
-  const descriptionColorClass = isValid ? 'text-green-600' : 'text-gray-600';
+  // Okraj inputu bude vždy predvolený (border-gray-300)
+  const borderClass = 'border-gray-300';
 
   return React.createElement(
     'div',
@@ -54,6 +48,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
+        // Používame len predvolenú triedu okraja
         className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
@@ -77,9 +72,43 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       )
     ),
     description && React.createElement(
-      'div', // Zmenené z 'p' na 'div'
-      { className: `text-xs italic mt-1 ${descriptionColorClass}` }, // Upravené triedy pre konzistenciu a pridaná dynamická farba
-      description
+      'div',
+      { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
+      'Heslo musí obsahovať:',
+      React.createElement(
+        'ul',
+        { className: 'list-none pl-4' }, // Odstránime predvolené odrážky prehliadača
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+          'aspoň 10 znakov,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.maxLength ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.maxLength ? '✔' : '•'),
+          'maximálne 4096 znakov,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+          'aspoň jedno veľké písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+          'aspoň jedno malé písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+          'aspoň jednu číslicu.'
+        )
+      )
     )
   );
 }
@@ -161,7 +190,14 @@ function App() {
   const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
 
   // Nové stavy pre validáciu hesla
-  const [isPasswordValid, setIsPasswordValid] = React.useState(false);
+  const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
+    minLength: false,
+    maxLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    isValid: false, // Celková platnosť hesla
+  });
   const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
 
 
@@ -247,40 +283,25 @@ function App() {
     }
   };
 
+  // ZMENA: validatePassword teraz vracia objekt so stavmi jednotlivých požiadaviek
   const validatePassword = (pwd) => {
-    const errors = [];
-
-    // Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.
-    // Min. 10 znakov.
-    if (pwd.length < 10) {
-      errors.push("aspoň 10 znakov");
-    }
-    if (pwd.length > 4096) {
-      errors.push("maximálne 4096 znakov");
-    }
-    if (!/[A-Z]/.test(pwd)) {
-      errors.push("aspoň jedno veľké písmeno");
-    }
-    if (!/[a-z]/.test(pwd)) {
-      errors.push("aspoň jedno malé písmeno");
-    }
-    if (!/[0-9]/.test(pwd)) {
-      errors.push("aspoň jednu číslicu");
-    }
-
-    if (errors.length === 0) {
-      return null; // Heslo je platné
-    } else {
-      return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
-    }
+    const status = {
+      minLength: pwd.length >= 10,
+      maxLength: pwd.length <= 4096,
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
+    };
+    status.isValid = Object.values(status).every(Boolean); // Celková platnosť
+    return status;
   };
 
   // Effect pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
   React.useEffect(() => {
-    const pwdError = validatePassword(password);
-    setIsPasswordValid(!pwdError); // Ak validatePassword vráti null, heslo je platné
+    const pwdStatus = validatePassword(password);
+    setPasswordValidationStatus(pwdStatus);
 
-    setIsConfirmPasswordMatching(password === confirmPassword && password.length > 0 && !pwdError); // Musí sa zhodovať a byť platné
+    setIsConfirmPasswordMatching(password === confirmPassword && password.length > 0 && pwdStatus.isValid);
   }, [password, confirmPassword]);
 
 
@@ -302,9 +323,9 @@ function App() {
       return;
     }
 
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
+    // ZMENA: Používame celkový stav platnosti z passwordValidationStatus
+    if (!passwordValidationStatus.isValid) {
+      setError("Heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
       setNotificationType('error');
       return;
     }
@@ -349,14 +370,6 @@ function App() {
       try {
         await db.collection('users').doc(userCredential.user.uid).set(userDataToSave);
         console.log(`Firestore: Používateľ ${email} s rolou 'admin' a schválením 'false' bol uložený.`);
-
-        // ZMENA: Odstránená redundantná update operácia, pretože rola a schválenie sú nastavené priamo v 'set'
-        // await db.collection('users').doc(userCredential.user.uid).update({
-        //   role: 'admin',
-        //   approved: false
-        // });
-        // console.log(`Firestore: rola používateľa ${email} bola aktualizovaná na 'admin' a schválené na 'false'.`);
-
 
         // Attempt to send email via Apps Script immediately after saving initial data
         try {
@@ -433,7 +446,7 @@ function App() {
       if (e.code === 'auth/email-already-in-use') {
         setError("E-mailová adresa už existuje. Vyberte prosím inú.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. " + validatePassword(password));
+        setError("Heslo je príliš slabé. " + e.message); // Použijeme správu z Firebase Auth
       } else if (e.code === 'auth/invalid-email') {
         setError("Neplatný formát e-mailovej adresy.");
       } else {
@@ -558,25 +571,12 @@ function App() {
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
-            placeholder: 'Zvoľte si heslo (min. 10 znakov)',
+            placeholder: 'Zvoľte si heslo',
             autoComplete: 'new-password',
             showPassword: showPasswordReg,
             toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
             disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
-            description: React.createElement(
-              React.Fragment,
-              null,
-              'Heslo musí obsahovať:',
-              React.createElement(
-                'ul',
-                { className: 'list-disc list-inside ml-4' },
-                React.createElement('li', null, 'aspoň 10 znakov,'), // Aktualizované pre konzistenciu
-                React.createElement('li', null, 'aspoň jedno malé písmeno,'),
-                React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
-                React.createElement('li', null, 'aspoň jednu číslicu.')
-              )
-            ),
-            isValid: isPasswordValid // Odovzdanie stavu validácie hesla
+            validationStatus: passwordValidationStatus // Odovzdanie detailného stavu validácie hesla
           }),
           React.createElement(PasswordInput, {
             id: 'reg-confirm-password',
@@ -591,14 +591,21 @@ function App() {
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
             disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
-            isValid: isConfirmPasswordMatching && isPasswordValid // Heslo musí byť platné a zhodovať sa
+            validationStatus: { // Pre potvrdenie hesla stačí, či sa zhoduje a či je hlavné heslo platné
+              isValid: isConfirmPasswordMatching && passwordValidationStatus.isValid,
+              minLength: passwordValidationStatus.minLength, // Zobrazíme aj detaily hlavného hesla
+              maxLength: passwordValidationStatus.maxLength,
+              hasUpperCase: passwordValidationStatus.hasUpperCase,
+              hasLowerCase: passwordValidationStatus.hasLowerCase,
+              hasNumber: passwordValidationStatus.hasNumber,
+            }
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: formSubmitting || (message && notificationType === 'success') || !isPasswordValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné
+              disabled: formSubmitting || (message && notificationType === 'success') || !passwordValidationStatus.isValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné alebo sa nezhoduje
             },
             formSubmitting ? ( // Use formSubmitting
               React.createElement(
