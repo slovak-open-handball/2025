@@ -14,7 +14,8 @@ const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description }) {
+// Pridaný prop 'isValid' pre vizuálnu indikáciu platnosti hesla
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, isValid }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
@@ -34,6 +35,15 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
+  // Dynamické triedy pre okraj inputu na základe isValid a či má hodnotu
+  const borderClass = value.length > 0
+    ? (isValid ? 'border-green-500' : 'border-red-500')
+    : 'border-gray-300'; // Predvolený okraj, ak nie je zadané žiadne heslo
+
+  // Dynamické triedy pre farbu popisu
+  // ZMENA: Ak nie je isValid, zostane text-gray-600 (sivá)
+  const descriptionColorClass = isValid ? 'text-green-600' : 'text-gray-600';
+
   return React.createElement(
     'div',
     { className: 'mb-4' }, // Pridaná trieda mb-4 pre konzistentné medzery
@@ -44,7 +54,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -68,14 +78,14 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     ),
     description && React.createElement(
       'div', // Zmenené z 'p' na 'div'
-      { className: 'text-gray-600 text-xs italic mt-1' }, // Upravené triedy pre konzistenciu
+      { className: `text-xs italic mt-1 ${descriptionColorClass}` }, // Upravené triedy pre konzistenciu a pridaná dynamická farba
       description
     )
   );
 }
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose }) {
+function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný prop 'type'
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -106,22 +116,23 @@ function NotificationModal({ message, onClose }) {
 
   if (!show && !message) return null;
 
+  // Dynamické triedy pre farbu pozadia na základe typu správy
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-green-500';
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Nastavenie červenej pre chyby
+  } else {
+    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+  }
+
   return React.createElement(
     'div',
     {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
+      className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+      style: { zIndex: 1000 }
     },
-    React.createElement(
-      'div',
-      {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
+    React.createElement('p', { className: 'font-semibold' }, message)
   );
 }
 
@@ -136,6 +147,7 @@ function App() {
   const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
   const [message, setMessage] = React.useState('');
   const [error, setError] = React.useState('');
+  const [notificationType, setNotificationType] = React.useState('info'); // Nový stav pre typ notifikácie
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -148,6 +160,11 @@ function App() {
   const [showPasswordReg, setShowPasswordReg] = React.useState(false);
   const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
 
+  // Nové stavy pre validáciu hesla
+  const [isPasswordValid, setIsPasswordValid] = React.useState(false);
+  const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
+
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
@@ -156,6 +173,7 @@ function App() {
     try {
       if (typeof firebase === 'undefined') {
         setError("Firebase SDK nie je načítané. Skontrolujte admin-register.html.");
+        setNotificationType('error');
         setPageLoading(false); // Stop loading on critical error
         return;
       }
@@ -178,6 +196,7 @@ function App() {
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
+          setNotificationType('error');
         }
       };
 
@@ -202,6 +221,7 @@ function App() {
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
+      setNotificationType('error');
       setPageLoading(false); // Stop loading on critical error
     }
   }, []); // Empty dependency array - runs only once on component mount
@@ -213,6 +233,7 @@ function App() {
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
       setError("reCAPTCHA API nie je načítané alebo pripravené.");
+      setNotificationType('error');
       return null;
     }
     try {
@@ -221,6 +242,7 @@ function App() {
     } catch (e) {
       console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
       setError(`Chyba reCAPTCHA: ${e.message}`);
+      setNotificationType('error');
       return null;
     }
   };
@@ -228,6 +250,8 @@ function App() {
   const validatePassword = (pwd) => {
     const errors = [];
 
+    // Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.
+    // Min. 10 znakov.
     if (pwd.length < 10) {
       errors.push("aspoň 10 znakov");
     }
@@ -245,42 +269,57 @@ function App() {
     }
 
     if (errors.length === 0) {
-      return null;
+      return null; // Heslo je platné
     } else {
       return "Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".";
     }
   };
 
+  // Effect pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
+  React.useEffect(() => {
+    const pwdError = validatePassword(password);
+    setIsPasswordValid(!pwdError); // Ak validatePassword vráti null, heslo je platné
+
+    setIsConfirmPasswordMatching(password === confirmPassword && password.length > 0 && !pwdError); // Musí sa zhodovať a byť platné
+  }, [password, confirmPassword]);
+
+
   const handleRegisterAdmin = async (e) => {
     e.preventDefault();
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
+      setNotificationType('error');
       return;
     }
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
       setError("Vyplňte prosím všetky polia.");
+      setNotificationType('error');
       return;
     }
     if (password !== confirmPassword) {
       setError("Heslá sa nezhodujú. Skontrolujte ich prosím.");
+      setNotificationType('error');
       return;
     }
 
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
+      setNotificationType('error');
       return;
     }
 
     const recaptchaToken = await getRecaptchaToken('admin_register');
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
+      setNotificationType('error');
       return null;
     }
     console.log("reCAPTCHA Token pre registráciu admina:", recaptchaToken);
 
     setFormSubmitting(true); // Show loading indicator for form submission
     setError(''); // Clear previous errors
+    setNotificationType('info'); // Reset notification type
     setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
 
     try {
@@ -371,12 +410,14 @@ function App() {
       } catch (firestoreError) {
         console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
         setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
+        setNotificationType('error');
         setFormSubmitting(false); // Reset formSubmitting on error
         setMessage(''); // Clear message on error
         return;
       }
 
       setFormSubmitting(false); // Stop loading so the message is visible on the form
+      setNotificationType('success'); // Nastavenie typu notifikácie na úspech
 
       // Now sign out and redirect after a delay
       await auth.signOut();
@@ -398,6 +439,7 @@ function App() {
       } else {
         setError(`Chyba pri registrácii: ${e.message}`);
       }
+      setNotificationType('error');
       setFormSubmitting(false); // Reset formSubmitting on error
       setMessage(''); // Clear message on error
     }
@@ -412,15 +454,8 @@ function App() {
     );
   }
 
-  // If user is logged in (and pageLoading is false), redirect
-  // ZMENA: Táto podmienka je teraz odstránená, aby sa zabránilo automatickému presmerovaniu
-  // if (user) {
-  //   window.location.href = 'logged-in-my-data.html';
-  //   return null;
-  // }
-
   // Priority display of successful registration message
-  if (message) {
+  if (message && notificationType === 'success') { // Zobrazí sa len pre úspešné správy
     return React.createElement(
       'div',
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
@@ -429,14 +464,14 @@ function App() {
         { className: 'w-full max-w-md mt-20 mb-10 p-4' },
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-xl w-full text-center' },
-          React.createElement('h1', { className: 'text-3xl font-bold text-gray-800 mb-4' }, 'Registrácia úspešná!'),
+          { className: 'bg-green-700 text-white p-8 rounded-lg shadow-xl w-full text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
+          React.createElement('h1', { className: 'text-3xl font-bold text-black mb-4' }, 'Registrácia úspešná!'), // Zmenená farba textu nadpisu na čiernu
           React.createElement(
-            'div',
-            { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
+            'p',
+            { className: 'text-white' }, // Text zostáva biely pre kontrast
             message
           ),
-          React.createElement('p', { className: 'text-lg text-gray-600' }, 'Presmerovanie na prihlasovaciu stránku...')
+          React.createElement('p', { className: 'text-gray-200 text-sm mt-4' }, 'Presmerovanie na prihlasovaciu stránku...')
         )
       )
     );
@@ -446,9 +481,11 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
+    // Notifikačné okno sa zobrazí LEN pre chyby alebo informačné správy, NIE pre úspešnú registráciu
+    (message && notificationType !== 'success') && React.createElement(NotificationModal, {
         message: message, // Use local message state for this modal
-        onClose: () => setMessage('')
+        onClose: () => setMessage(''),
+        type: notificationType // Odovzdanie typu notifikácie
     }),
     React.createElement(
       'div',
@@ -478,7 +515,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje meno',
               autoComplete: 'given-name',
-              disabled: formSubmitting || !!message, // Use formSubmitting
+              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
             })
           ),
           React.createElement(
@@ -494,7 +531,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje priezvisko',
               autoComplete: 'family-name',
-              disabled: formSubmitting || !!message, // Use formSubmitting
+              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
             })
           ),
           React.createElement(
@@ -510,7 +547,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
-              disabled: formSubmitting || !!message, // Use formSubmitting
+              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
             })
           ),
           React.createElement(PasswordInput, {
@@ -525,7 +562,7 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showPasswordReg,
             toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-            disabled: formSubmitting || !!message, // Use formSubmitting
+            disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
             description: React.createElement(
               React.Fragment,
               null,
@@ -533,11 +570,13 @@ function App() {
               React.createElement(
                 'ul',
                 { className: 'list-disc list-inside ml-4' },
+                React.createElement('li', null, 'aspoň 10 znakov,'), // Aktualizované pre konzistenciu
                 React.createElement('li', null, 'aspoň jedno malé písmeno,'),
                 React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
                 React.createElement('li', null, 'aspoň jednu číslicu.')
               )
             ),
+            isValid: isPasswordValid // Odovzdanie stavu validácie hesla
           }),
           React.createElement(PasswordInput, {
             id: 'reg-confirm-password',
@@ -551,14 +590,15 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-            disabled: formSubmitting || !!message, // Use formSubmitting
+            disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
+            isValid: isConfirmPasswordMatching && isPasswordValid // Heslo musí byť platné a zhodovať sa
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: formSubmitting || !!message, // Use formSubmitting
+              disabled: formSubmitting || (message && notificationType === 'success') || !isPasswordValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné
             },
             formSubmitting ? ( // Use formSubmitting
               React.createElement(
