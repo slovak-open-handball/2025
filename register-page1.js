@@ -108,7 +108,10 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
     'div',
     { className: 'mb-4' },
     preDescription && React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, preDescription),
-    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
+    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, 
+      label,
+      React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*') // Single asterisk for password fields
+    ),
     React.createElement(
       'div',
       { className: 'relative shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
@@ -311,6 +314,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
   // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
+
   // Kontrola, či sú všetky povinné polia vyplnené
   const isFormValid = formData.firstName.trim() !== '' &&
                       formData.lastName.trim() !== '' &&
@@ -388,7 +392,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             'div',
             { className: 'mb-4' },
             React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'),
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 'Meno kontaktnej osoby'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 
+              'Meno kontaktnej osoby',
+              React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+            ),
             React.createElement(
               'div',
               { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
@@ -408,7 +415,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'lastName' }, 'Priezvisko kontaktnej osoby'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'lastName' }, 
+              'Priezvisko kontaktnej osoby',
+              React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+            ),
             React.createElement(
               'div',
               { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
@@ -429,7 +439,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             'div',
             { className: 'mb-4' },
             React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'E-mailová adresa bude slúžiť na všetku komunikáciu súvisiacu s turnajom - zasielanie informácií, faktúr atď.'),
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 'E-mailová adresa kontaktnej osoby'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' }, 
+              'E-mailová adresa kontaktnej osoby',
+              React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+            ),
             React.createElement(
               'div',
               { className: 'shadow border rounded-lg w-full focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
@@ -450,7 +463,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'mb-4' },
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 'Telefónne číslo kontaktnej osoby'),
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'contactPhoneNumber' }, 
+              'Telefónne číslo kontaktnej osoby',
+              React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
+            ),
             React.createElement(
               'div',
               { className: 'flex shadow border rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all duration-200' },
@@ -519,6 +535,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             toggleShowPassword: toggleShowConfirmPassword,
             showValidationList: false // Nezobrazovať zoznam pre toto pole
           }),
+          React.createElement(
+            'div',
+            { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlom
+            React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '*'), ' Povinné pole'),
+          ),
           React.createElement(
             'button',
             {
