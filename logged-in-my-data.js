@@ -1,18 +1,18 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> hlavného HTML súboru (napr. logged-in-my-data.html)
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
+// logged-in-my-data.js
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> logged-in-my-data.html.
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose }) {
+// Pridaný prop 'displayNotificationsEnabled'
+function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (message) {
+    // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
+    if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -32,12 +32,12 @@ function NotificationModal({ message, onClose }) {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
-  }, [message, onClose]);
+  }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
-  if (!show && !message) return null;
+  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
+  if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
     'div',
@@ -348,7 +348,8 @@ function MyDataApp() {
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('')
+        onClose: () => setUserNotificationMessage(''),
+        displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu
     }),
     React.createElement(
       'div',
