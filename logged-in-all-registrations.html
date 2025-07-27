@@ -13,9 +13,8 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            padding-left: 256px; /* Odsadenie pre ľavé menu */
         }
-        /* Základné štýly pre modálne okno (ak sa budú používať) */
+        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -37,24 +36,20 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             max-width: 500px;
             width: 90%;
+            position: relative;
         }
-        /* Custom scrollbar pre tabuľku */
-        .overflow-x-auto::-webkit-scrollbar {
-            height: 8px;
+        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        #main-content-area {
+            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            padding: 1rem;
+            flex-grow: 1;
         }
-        .overflow-x-auto::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
+        @media (max-width: 768px) {
+            #main-content-area {
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+            }
         }
-        .overflow-x-auto::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /* Štýly pre notifikácie */
+        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
         #header-notification-area {
             position: fixed;
             top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
@@ -92,60 +87,45 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Globálne premenné pre Firebase konfiguráciu -->
+    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
-        // Tieto premenné sú definované globálne a budú použité v header.js, left-menu.js a tejto aplikácii
-        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Použi svoje skutočné APP_ID
-        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // Použi svoj skutočný API_KEY
-            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-            projectId: "prihlasovanie-4f3f3",
-            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-            messagingSenderId: "26454452024",
-            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        });
-        const __initial_auth_token = null; // Pre túto stránku nie je potrebný počiatočný auth token
-        const __firebase_app_name = 'allRegistrationsApp'; // Názov Firebase aplikácie pre túto stránku
-
-        // NOVINKA: Jednotná inicializácia Firebase aplikácie globálne
-        // Ak už predvolená aplikácia existuje, použije sa existujúca inštancia.
-        // Ak nie, inicializuje sa nová.
-        try {
-            if (firebase.apps.length === 0) {
-                firebase.initializeApp(JSON.parse(__firebase_config));
-                console.log("all-registrations.html: Firebase App '[DEFAULT]' inicializovaná v head.");
-            } else {
-                console.log("all-registrations.html: Firebase App '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
-            }
-        } catch (e) {
-            console.error("all-registrations.html: Chyba pri inicializácii Firebase App v head:", e);
-        }
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const firebaseConfig = {
+          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+          projectId: "prihlasovanie-4f3f3",
+          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+          messagingSenderId: "26454452024",
+          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        
+        // NOVINKA: Inicializácia Firebase aplikácie globálne
+        firebase.initializeApp(firebaseConfig);
     </script>
 </head>
-<body class="bg-gray-100">
-    <!-- Hlavička - bude načítaná dynamicky -->
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
-    <!-- Ľavé menu - bude načítané dynamicky -->
-    <div id="left-menu-placeholder"></div>
 
-    <!-- Hlavný obsah React aplikácie -->
-    <div id="root" class="flex-1 p-8">
-        <!-- React aplikácia sa vykreslí sem -->
+    <div class="flex flex-1">
+        <!-- Ľavé menu sa načíta dynamicky -->
+        <div id="left-menu-placeholder"></div>
+        
+        <!-- Hlavná oblasť pre obsah React aplikácie -->
+        <div id="main-content-area" class="flex-1 p-4">
+            <!-- React aplikácia sa vykreslí sem -->
+            <div id="root"></div>
+        </div>
     </div>
 
-    <!-- Kontajner pre push-up notifikácie (pre header.js) -->
-    <!-- UISTI SA, ŽE TOTO JE JEDINÝ #header-notification-area V TOMTO SÚBORE -->
-    <div id="header-notification-area"></div>
-
-    <!-- Načítanie vlastných skriptov -->
-    <!-- header.js sa teraz načíta dynamicky vo funkcii loadHeader() -->
-    <script src="left-menu.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
     <script src="logged-in-all-registrations.js"></script>
 
+    <!-- Načítanie hlavičky a logiky menu -->
     <script>
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
@@ -157,7 +137,6 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
-                    // Dynamicky načítajte header.js AŽ PO vložení header.html
                     const headerScript = document.createElement('script');
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
@@ -170,37 +149,41 @@
                         console.error("Chyba pri načítaní header.js:", e);
                     };
                     document.body.appendChild(headerScript);
-
                 } catch (error) {
-                    console.error("all-registrations.html: Chyba pri načítaní hlavičky:", error);
-                    headerPlaceholder.innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+                    console.error("Chyba pri načítaní hlavičky:", error);
                 }
             }
         }
 
         // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
-            try {
-                const response = await fetch('left-menu.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
+            if (leftMenuPlaceholder) {
+                try {
+                    const response = await fetch('left-menu.html');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const menuHtml = await response.text();
+                    leftMenuPlaceholder.innerHTML = menuHtml;
+
+                    const menuScript = document.createElement('script');
+                    menuScript.src = 'left-menu.js';
+                    menuScript.onload = () => {
+                        console.log("left-menu.js načítaný a spustený.");
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                    };
+                    menuScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní left-menu.js:", e);
+                    };
+                    document.body.appendChild(menuScript);
+                } catch (error) {
+                    console.error("Chyba pri načítaní ľavého menu:", error);
                 }
-                const menuHtml = await response.text();
-                document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
-                // Inicializujeme logiku ľavého menu po jeho načítaní
-                if (typeof initializeLeftMenuLogic === 'function') {
-                    await initializeLeftMenuLogic();
-                    console.log("all-registrations.html: Logika ľavého menu inicializovaná.");
-                }
-            } catch (error) {
-                console.error("all-registrations.html: Chyba pri načítaní menu:", error);
-                document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
             }
         }
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
-            await loadHeader(); // Toto teraz dynamicky načíta aj header.js
+            await loadHeader();
             await loadLeftMenu();
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
@@ -209,7 +192,8 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            if (typeof AllRegistrationsApp === 'undefined') { // Predpokladáme, že hlavný komponent sa volá AllRegistrationsApp
+            // Zmena: MyDataApp na AllRegistrationsApp
+            if (typeof AllRegistrationsApp === 'undefined') {
                 console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
@@ -217,7 +201,7 @@
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(AllRegistrationsApp, null));
-            console.log("all-registrations.html: React App vykreslená.");
+            console.log("logged-in-all-registrations.html: React App vykreslená.");
         };
     </script>
 </body>
