@@ -53,6 +53,85 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     );
 }
 
+// FilterModal Component - Modálne okno pre filtrovanie
+function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValue, onClearFilter }) {
+    const [filterInput, setFilterInput] = React.useState(initialFilterValue || '');
+
+    React.useEffect(() => {
+        setFilterInput(initialFilterValue || '');
+    }, [initialFilterValue, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleApply = () => {
+        onApplyFilter(columnName, filterInput);
+        onClose();
+    };
+
+    const handleClear = () => {
+        onClearFilter(columnName);
+        setFilterInput(''); // Vymaže vstup v modali
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50'
+        },
+        React.createElement(
+            'div',
+            {
+                className: 'bg-white p-6 rounded-lg shadow-xl w-96 max-w-full'
+            },
+            React.createElement(
+                'h2',
+                { className: 'text-xl font-bold mb-4' },
+                `Filtrovať stĺpec: ${columnName}`
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    className: 'w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    placeholder: `Zadajte hodnotu pre ${columnName}...`,
+                    value: filterInput,
+                    onChange: (e) => setFilterInput(e.target.value)
+                }
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement(
+                    'button',
+                    {
+                        className: 'px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition-colors duration-200',
+                        onClick: onClose
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        className: 'px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200',
+                        onClick: handleClear
+                    },
+                    'Vymazať filter'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200',
+                        onClick: handleApply
+                    },
+                    'Použiť filter'
+                )
+            )
+        )
+    );
+}
+
+
 // Hlavný React komponent pre stránku všetkých registrácií
 function AllRegistrationsApp() {
     const [app, setApp] = React.useState(null);
@@ -66,6 +145,29 @@ function AllRegistrationsApp() {
     const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
     const [allUsers, setAllUsers] = React.useState([]); // Stav pre všetkých používateľov z databázy
+    const [isFilterModalOpen, setIsFilterModalOpen] = React.useState(false);
+    const [currentFilterColumn, setCurrentFilterColumn] = React.useState('');
+    const [appliedFilters, setAppliedFilters] = React.useState({}); // { 'email': 'john', 'role': 'admin' }
+
+    // Mapovanie zobrazovaných názvov stĺpcov na kľúče dát
+    const columnDataMap = {
+        'Rola': 'role',
+        'Schválený': 'approved',
+        'Dátum registrácie': 'registrationDate',
+        'Meno': 'firstName',
+        'Priezvisko': 'lastName',
+        'E-mail': 'email',
+        'Telefón': 'contactPhoneNumber',
+        'Názov klubu': 'billing.clubName',
+        'IČO': 'billing.ico',
+        'DIČ': 'billing.dic',
+        'IČ DPH': 'billing.icDph',
+        'Ulica': 'street',
+        'Popisné číslo': 'houseNumber',
+        'Mesto': 'city',
+        'PSČ': 'postalCode',
+        'Krajina': 'country'
+    };
 
     // Používame globálne definované appId
     const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -319,6 +421,73 @@ function AllRegistrationsApp() {
         };
     }, [handleLogout]);
 
+    // Funkcie pre správu filtrovacieho modálneho okna
+    const openFilterModal = (columnDisplayName) => {
+        setCurrentFilterColumn(columnDisplayName);
+        setIsFilterModalOpen(true);
+    };
+
+    const closeFilterModal = () => {
+        setIsFilterModalOpen(false);
+        setCurrentFilterColumn('');
+    };
+
+    const handleApplyFilter = (columnDisplayName, value) => {
+        const dataKey = columnDataMap[columnDisplayName];
+        if (dataKey) {
+            setAppliedFilters(prevFilters => ({
+                ...prevFilters,
+                [dataKey]: value.toLowerCase() // Ukladáme malými písmenami pre case-insensitive porovnanie
+            }));
+        }
+    };
+
+    const handleClearFilter = (columnDisplayName) => {
+        const dataKey = columnDataMap[columnDisplayName];
+        if (dataKey) {
+            setAppliedFilters(prevFilters => {
+                const newFilters = { ...prevFilters };
+                delete newFilters[dataKey];
+                return newFilters;
+            });
+        }
+    };
+
+    // Funkcia na rekurzívne získanie hodnoty z objektu podľa cesty (napr. 'billing.clubName')
+    const getNestedValue = (obj, path) => {
+        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    };
+
+    // Filtrovanie používateľov na základe aplikovaných filtrov
+    const filteredUsers = React.useMemo(() => {
+        if (Object.keys(appliedFilters).length === 0) {
+            return allUsers;
+        }
+
+        return allUsers.filter(user => {
+            return Object.entries(appliedFilters).every(([filterKey, filterValue]) => {
+                let userValue;
+                // Špeciálne ošetrenie pre boolean 'approved' stĺpec
+                if (filterKey === 'approved') {
+                    userValue = user.approved ? 'áno' : 'nie'; // Konvertujeme na string pre porovnanie
+                    return userValue.includes(filterValue);
+                } else if (filterKey === 'registrationDate') {
+                    // Pre dátum registrácie porovnávame formátovaný reťazec
+                    userValue = user.registrationDate ? user.registrationDate.toLowerCase() : '';
+                    return userValue.includes(filterValue);
+                }
+                // Pre ostatné polia
+                userValue = getNestedValue(user, filterKey);
+                if (typeof userValue === 'string') {
+                    return userValue.toLowerCase().includes(filterValue);
+                }
+                // Ak hodnota nie je string (napr. číslo), konvertujeme ju na string
+                return String(userValue).toLowerCase().includes(filterValue);
+            });
+        });
+    }, [allUsers, appliedFilters]);
+
+
     // Zobrazenie stavu načítavania
     if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
         if (isAuthReady && user === null) {
@@ -355,6 +524,14 @@ function AllRegistrationsApp() {
             onClose: () => setUserNotificationMessage(''),
             displayNotificationsEnabled: userProfileData.displayNotifications // Odovzdávame stav notifikácií
         }),
+        React.createElement(FilterModal, {
+            isOpen: isFilterModalOpen,
+            onClose: closeFilterModal,
+            columnName: currentFilterColumn,
+            onApplyFilter: handleApplyFilter,
+            initialFilterValue: getNestedValue(appliedFilters, columnDataMap[currentFilterColumn] || '') || '', // Získanie aktuálnej hodnoty filtra
+            onClearFilter: handleClearFilter
+        }),
         React.createElement(
             'div',
             { className: 'w-full max-w-full px-4 mt-8 mb-10' },
@@ -369,7 +546,7 @@ function AllRegistrationsApp() {
                 React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
                     'Všetky registrácie'
                 ),
-                allUsers.length === 0 && !loading ? (
+                filteredUsers.length === 0 && !loading ? (
                     React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne registrácie na zobrazenie.')
                 ) : (
                     React.createElement(
@@ -384,28 +561,29 @@ function AllRegistrationsApp() {
                                 React.createElement(
                                     'tr',
                                     { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Rola'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Schválený'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Dátum registrácie'), // Tretí stĺpec
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Meno'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Priezvisko'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'E-mail'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Telefón'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Názov klubu'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'IČO'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'DIČ'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'IČ DPH'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Ulica'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Popisné číslo'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Mesto'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'PSČ'),
-                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Krajina')
+                                    // Hlavičky stĺpcov s onClick udalosťou
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Rola') }, 'Rola'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Schválený') }, 'Schválený'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Dátum registrácie') }, 'Dátum registrácie'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Meno') }, 'Meno'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Priezvisko') }, 'Priezvisko'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('E-mail') }, 'E-mail'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Telefón') }, 'Telefón'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Názov klubu') }, 'Názov klubu'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('IČO') }, 'IČO'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('DIČ') }, 'DIČ'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('IČ DPH') }, 'IČ DPH'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Ulica') }, 'Ulica'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Popisné číslo') }, 'Popisné číslo'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Mesto') }, 'Mesto'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('PSČ') }, 'PSČ'),
+                                    React.createElement('th', { className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer hover:bg-gray-300 transition-colors duration-150', onClick: () => openFilterModal('Krajina') }, 'Krajina')
                                 )
                             ),
                             React.createElement(
                                 'tbody',
                                 { className: 'text-gray-600 text-sm font-light' },
-                                allUsers.map((u) => (
+                                filteredUsers.map((u) => ( // Používame filteredUsers
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
