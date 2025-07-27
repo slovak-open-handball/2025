@@ -67,27 +67,31 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
 // FilterModal Component - Modálne okno pre filtrovanie s viacnásobným výberom
 function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilterValues, onClearFilter, uniqueColumnValues }) {
     // selectedValues je teraz pole pre viacnásobný výber
+    // initialFilterValues už obsahujú hodnoty v malých písmenách, takže ich len použijeme
     const [selectedValues, setSelectedValues] = React.useState(initialFilterValues || []);
 
     React.useEffect(() => {
         // Inicializovať selectedValues pri otvorení modalu alebo zmene initialFilterValues
+        // Zabezpečí, že pri opätovnom otvorení modalu sa nastavia správne začiarknuté polia
         setSelectedValues(initialFilterValues || []);
     }, [initialFilterValues, isOpen]);
 
     if (!isOpen) return null;
 
     const handleCheckboxChange = (value) => {
+        // KĽÚČOVÁ ZMENA: Prevod hodnoty na malé písmená pre konzistentné porovnávanie
+        const lowerCaseValue = String(value).toLowerCase();
         setSelectedValues(prev => {
-            if (prev.includes(value)) {
-                return prev.filter(item => item !== value); // Odstrániť, ak už je vybrané
+            if (prev.includes(lowerCaseValue)) {
+                return prev.filter(item => item !== lowerCaseValue); // Odstrániť, ak už je vybrané
             } else {
-                return [...prev, value]; // Pridať, ak nie je vybrané
+                return [...prev, lowerCaseValue]; // Pridať, ak nie je vybrané
             }
         });
     };
 
     const handleApply = () => {
-        onApplyFilter(columnName, selectedValues); // Odovzdať pole vybraných hodnôt
+        onApplyFilter(columnName, selectedValues); // Odovzdať pole vybraných hodnôt (už sú malé písmená)
         onClose();
     };
 
@@ -124,7 +128,8 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
                                 type: 'checkbox',
                                 className: 'form-checkbox h-4 w-4 text-blue-600 rounded-sm focus:ring-blue-500',
                                 value: value,
-                                checked: selectedValues.includes(value),
+                                // KĽÚČOVÁ ZMENA: Porovnávanie hodnoty checkboxu s malými písmenami v selectedValues
+                                checked: selectedValues.includes(String(value).toLowerCase()),
                                 onChange: () => handleCheckboxChange(value)
                             }),
                             React.createElement('span', { className: 'text-gray-700' }, value === '' ? '(Prázdna hodnota)' : value) // Zobrazenie pre prázdne hodnoty
@@ -557,7 +562,7 @@ function AllRegistrationsApp() {
                     userValue = (userValue === null || userValue === undefined) ? '' : String(userValue);
                 }
                 
-                // ZMENA: Používame === pre presnú zhodu namiesto includes
+                // Používame === pre presnú zhodu namiesto includes
                 return filterValuesArray.some(filterVal => 
                     userValue.toLowerCase() === filterVal // filterVal je už malými písmenami
                 );
