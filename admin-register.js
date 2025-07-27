@@ -166,9 +166,10 @@ function App() {
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
   const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
-  const [message, setMessage] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [notificationType, setNotificationType] = React.useState('info'); // Nový stav pre typ notifikácie
+
+  // ZMENA: Používame 'errorMessage' pre chyby a 'successMessage' pre správu na zelenej stránke
+  const [errorMessage, setErrorMessage] = React.useState(''); // Pre chyby (červený box a modál)
+  const [successMessage, setSuccessMessage] = React.useState(''); // Pre zelenú stránku úspechu
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -200,8 +201,7 @@ function App() {
 
     try {
       if (typeof firebase === 'undefined') {
-        setError("Firebase SDK nie je načítané. Skontrolujte admin-register.html.");
-        setNotificationType('error');
+        setErrorMessage("Firebase SDK nie je načítané. Skontrolujte admin-register.html.");
         setPageLoading(false); // Stop loading on critical error
         return;
       }
@@ -223,19 +223,13 @@ function App() {
           }
         } catch (e) {
           console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-          setNotificationType('error');
+          setErrorMessage(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         setUser(currentUser);
         setIsAuthReady(true);
-        // ZMENA: Odstránené automatické presmerovanie po prihlásení na tejto stránke
-        // if (currentUser) {
-        //     window.location.href = 'logged-in-my-data.html';
-        //     return;
-        // }
         setPageLoading(false); // Page is now fully loaded (auth is ready)
       });
 
@@ -248,20 +242,14 @@ function App() {
       };
     } catch (e) {
       console.error("Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setNotificationType('error');
+      setErrorMessage(`Chyba pri inicializácii Firebase: ${e.message}`);
       setPageLoading(false); // Stop loading on critical error
     }
   }, []); // Empty dependency array - runs only once on component mount
 
-  // Removed useEffect for updating header link visibility, as it will be handled by header.js
-
-  // Removed handleLogout and its useEffect listener, as it will be handled by header.js
-
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
-      setError("reCAPTCHA API nie je načítané alebo pripravené.");
-      setNotificationType('error');
+      setErrorMessage("reCAPTCHA API nie je načítané alebo pripravené.");
       return null;
     }
     try {
@@ -269,8 +257,7 @@ function App() {
       return token;
     } catch (e) {
       console.error("Chyba pri získavaní reCAPTCHA tokenu:", e);
-      setError(`Chyba reCAPTCHA: ${e.message}`);
-      setNotificationType('error');
+      setErrorMessage(`Chyba reCAPTCHA: ${e.message}`);
       return null;
     }
   };
@@ -301,41 +288,35 @@ function App() {
   const handleRegisterAdmin = async (e) => {
     e.preventDefault();
     if (!auth || !db) {
-      setError("Firebase Auth alebo Firestore nie je inicializovaný.");
-      setNotificationType('error');
+      setErrorMessage("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
     if (!email || !password || !confirmPassword || !firstName || !lastName) {
-      setError("Vyplňte prosím všetky polia.");
-      setNotificationType('error');
+      setErrorMessage("Vyplňte prosím všetky polia.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Heslá sa nezhodujú. Skontrolujte ich prosím.");
-      setNotificationType('error');
+      setErrorMessage("Heslá sa nezhodujú. Skontrolujte ich prosím.");
       return;
     }
 
     // ZMENA: Používame celkový stav platnosti z passwordValidationStatus
     if (!passwordValidationStatus.isValid) {
-      setError("Heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
-      setNotificationType('error');
+      setErrorMessage("Heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
       return;
     }
 
     const recaptchaToken = await getRecaptchaToken('admin_register');
     if (!recaptchaToken) {
-      setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
-      setNotificationType('error');
-      return null;
+      setErrorMessage("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
+      return; // Return here as there's an error
     }
     console.log("reCAPTCHA Token pre registráciu admina:", recaptchaToken);
 
     setFormSubmitting(true); // Show loading indicator for form submission
-    setError(''); // Clear previous errors
-    setNotificationType('info'); // Reset notification type
-    // ZMENA: Nastavíme správu, ktorá sa zobrazí na zelenej stránke úspechu
-    setMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
+    setErrorMessage(''); // Clear previous errors
+    setSuccessMessage(''); // Clear any previous success message
+
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
@@ -391,13 +372,11 @@ function App() {
           // Preto musíme predpokladať úspech, ak nedôjde k chybe siete.
           // Ak potrebujete overenie úspechu, je lepšie použiť CORS a správne nastaviť Apps Script.
           console.log("Odpoveď z Apps Script (registračný e-mail admina) s no-cors:", response);
-          // ZMENA: Nemeníme message, pretože sa zobrazí na zelenej stránke
-          // Ak by ste chceli spracovať odpoveď, musíte zvážiť odstránenie 'no-cors' a nastavenie CORS na Apps Script.
 
         } catch (emailError) {
           console.error("Chyba pri odosielaní registračného e-mailu admina cez Apps Script (chyba fetch):", emailError);
-          setError(`Nepodarilo sa odoslať e-mail s potvrdením: ${emailError.message}. Skontrolujte pripojenie a Apps Script.`);
-          setNotificationType('error');
+          // ZMENA: Nastavíme errorMessage pre túto sekundárnu chybu
+          setErrorMessage(`Registrácia úspešná, ale nepodarilo sa odoslať e-mail s potvrdením: ${emailError.message}. Skontrolujte pripojenie a Apps Script.`);
         }
 
         // --- Logika pre ukladanie notifikácie pre administrátorov ---
@@ -420,15 +399,14 @@ function App() {
 
       } catch (firestoreError) {
         console.error("Chyba pri ukladaní/aktualizácii Firestore:", firestoreError);
-        setError(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
-        setNotificationType('error');
+        setErrorMessage(`Chyba pri ukladaní/aktualizácii používateľa do databázy: ${firestoreError.message}. Skontrolujte bezpečnostné pravidlá Firebase.`);
         setFormSubmitting(false); // Reset formSubmitting on error
-        setMessage(''); // Clear message on error
         return;
       }
 
+      // ZMENA: Nastavíme successMessage až po všetkých úspešných krokoch
+      setSuccessMessage(`Administrátorský účet pre ${email} sa registruje. Na vašu e-mailovú adresu sme poslali potvrdenie o registrácii. Pre plnú aktiváciu počkajte prosím na schválenie od iného administrátora.`);
       setFormSubmitting(false); // Stop loading so the message is visible on the form
-      setNotificationType('success'); // Nastavenie typu notifikácie na úspech
 
       // Now sign out and redirect after a delay
       await auth.signOut();
@@ -442,17 +420,15 @@ function App() {
     } catch (e) {
       console.error("Chyba pri registrácii (Auth alebo iné):", e);
       if (e.code === 'auth/email-already-in-use') {
-        setError("E-mailová adresa už existuje. Vyberte prosím inú.");
+        setErrorMessage("E-mailová adresa už existuje. Vyberte prosím inú.");
       } else if (e.code === 'auth/weak-password') {
-        setError("Heslo je príliš slabé. " + e.message); // Použijeme správu z Firebase Auth
+        setErrorMessage("Heslo je príliš slabé. " + e.message); // Použijeme správu z Firebase Auth
       } else if (e.code === 'auth/invalid-email') {
-        setError("Neplatný formát e-mailovej adresy.");
+        setErrorMessage("Neplatný formát e-mailovej adresy.");
       } else {
-        setError(`Chyba pri registrácii: ${e.message}`);
+        setErrorMessage(`Chyba pri registrácii: ${e.message}`);
       }
-      setNotificationType('error');
       setFormSubmitting(false); // Reset formSubmitting on error
-      setMessage(''); // Clear message on error
     }
   };
 
@@ -465,9 +441,9 @@ function App() {
     );
   }
 
-  // Priority display of successful registration message
-  // ZMENA: Táto podmienka teraz zabezpečí, že sa zobrazí správa LEN ak je message nastavené A notificationType je 'success'
-  if (message && notificationType === 'success') { 
+  // Priority display of successful registration message (zelená stránka)
+  // ZMENA: Kontrolujeme 'successMessage' namiesto 'message' a 'notificationType'
+  if (successMessage) { 
     return React.createElement(
       'div',
       { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center font-inter overflow-y-auto' },
@@ -481,7 +457,7 @@ function App() {
           React.createElement(
             'p',
             { className: 'text-white' }, // Text zostáva biely pre kontrast
-            message
+            successMessage
           ),
           React.createElement('p', { className: 'text-gray-200 text-sm mt-4' }, 'Presmerovanie na prihlasovaciu stránku...')
         )
@@ -493,11 +469,11 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // Notifikačné okno sa zobrazí LEN pre chyby alebo informačné správy, NIE pre úspešnú registráciu
-    (message && notificationType !== 'success') && React.createElement(NotificationModal, {
-        message: message, // Use local message state for this modal
-        onClose: () => setMessage(''),
-        type: notificationType // Odovzdanie typu notifikácie
+    // Notifikačné okno sa zobrazí LEN pre chyby (errorMessage)
+    errorMessage && React.createElement(NotificationModal, {
+        message: errorMessage, // Používame errorMessage pre modálne okno
+        onClose: () => setErrorMessage(''), // Vymažeme errorMessage pri zatvorení modálu
+        type: 'error' // Typ je vždy 'error' pre túto notifikáciu
     }),
     React.createElement(
       'div',
@@ -505,10 +481,11 @@ function App() {
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
-        error && React.createElement(
+        // Červený alert box pre chyby (nad formulárom)
+        errorMessage && React.createElement(
           'div',
           { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
-          error
+          errorMessage
         ),
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' }, 'Registrácia administrátora'),
         React.createElement(
@@ -527,7 +504,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje meno',
               autoComplete: 'given-name',
-              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
+              disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
             })
           ),
           React.createElement(
@@ -543,7 +520,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoje priezvisko',
               autoComplete: 'family-name',
-              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
+              disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
             })
           ),
           React.createElement(
@@ -559,7 +536,7 @@ function App() {
               required: true,
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
-              disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
+              disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
             })
           ),
           React.createElement(PasswordInput, {
@@ -574,7 +551,7 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showPasswordReg,
             toggleShowPassword: () => setShowPasswordReg(!showPasswordReg),
-            disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
+            disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
             validationStatus: passwordValidationStatus // Odovzdanie detailného stavu validácie hesla
           }),
           React.createElement(PasswordInput, {
@@ -589,23 +566,14 @@ function App() {
             autoComplete: 'new-password',
             showPassword: showConfirmPasswordReg,
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
-            disabled: formSubmitting || (message && notificationType === 'success'), // Use formSubmitting
-            // ZMENA: validationStatus prop je teraz vynechaný, aby sa nezobrazoval zoznam požiadaviek
-            // validationStatus: {
-            //   isValid: isConfirmPasswordMatching && passwordValidationStatus.isValid,
-            //   minLength: passwordValidationStatus.minLength,
-            //   maxLength: passwordValidationStatus.maxLength,
-            //   hasUpperCase: passwordValidationStatus.hasUpperCase,
-            //   hasLowerCase: passwordValidationStatus.hasLowerCase,
-            //   hasNumber: passwordValidationStatus.hasNumber,
-            // }
+            disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
           }),
           React.createElement(
             'button',
             {
               type: 'submit',
               className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: formSubmitting || (message && notificationType === 'success') || !passwordValidationStatus.isValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné alebo sa nezhoduje
+              disabled: formSubmitting || successMessage || !passwordValidationStatus.isValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné alebo sa nezhoduje
             },
             formSubmitting ? ( // Use formSubmitting
               React.createElement(
