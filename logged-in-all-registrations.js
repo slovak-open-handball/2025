@@ -158,7 +158,7 @@ function AllRegistrationsApp() {
     const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Stav pre notifikácie
     const [allUsers, setAllUsers] = React.useState([]); // Všetci používatelia z Firestore
     const [filteredUsers, setFilteredUsers] = React.useState([]); // Filtrovaní používatelia
-    const [currentSort, setCurrentSort] = React.useState({ column: 'registeredAt', direction: 'desc' });
+    const [currentSort, setCurrentSort] = React.useState({ column: 'registeredDate', direction: 'desc' });
     const [filterModalOpen, setFilterModalOpen] = React.useState(false);
     const [filterColumn, setFilterColumn] = React.useState('');
     const [activeFilters, setActiveFilters] = React.useState({}); // { columnName: [value1, value2] }
@@ -376,9 +376,9 @@ function AllRegistrationsApp() {
             const valA = a[column] || '';
             const valB = b[column] || '';
 
-            if (column === 'registeredAt') {
-                const dateA = a.registeredAt ? a.registeredAt.toDate() : new Date(0);
-                const dateB = b.registeredAt ? b.registeredAt.toDate() : new Date(0);
+            if (column === 'registeredDate') {
+                const dateA = a.registeredDate ? a.registeredDate.toDate() : new Date(0);
+                const dateB = b.registeredDate ? b.registeredDate.toDate() : new Date(0);
                 return direction === 'asc' ? dateA - dateB : dateB - dateA;
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
@@ -407,7 +407,7 @@ function AllRegistrationsApp() {
         // Získanie unikátnych hodnôt pre daný stĺpec, prevedené na string a malé písmená pre konzistentnosť
         const values = [...new Set(allUsers.map(u => {
             let val = u[column];
-            if (column === 'registeredAt' && val && typeof val.toDate === 'function') {
+            if (column === 'registeredDate' && val && typeof val.toDate === 'function') {
                 val = val.toDate().toLocaleDateString('sk-SK'); // Formát dátumu pre zobrazenie
             } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
                 const parts = column.split('.');
@@ -455,8 +455,8 @@ function AllRegistrationsApp() {
             if (filterValues.length > 0) {
                 currentFiltered = currentFiltered.filter(user => {
                     let userValue;
-                    if (column === 'registeredAt' && user.registeredAt && typeof user.registeredAt.toDate === 'function') {
-                        userValue = user.registeredAt.toDate().toLocaleDateString('sk-SK').toLowerCase();
+                    if (column === 'registeredDate' && user.registeredDate && typeof user.registeredDate.toDate === 'function') {
+                        userValue = user.registeredDate.toDate().toLocaleDateString('sk-SK').toLowerCase();
                     } else if (column.includes('.')) {
                         const parts = column.split('.');
                         let nestedVal = user;
@@ -556,10 +556,10 @@ function AllRegistrationsApp() {
                             React.createElement(
                                 'tr',
                                 null,
-                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registeredAt') },
+                                React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registeredDate') },
                                     'Dátum registrácie',
-                                    currentSort.column === 'registeredAt' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registeredAt'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                                    currentSort.column === 'registeredDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
+                                    React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registeredDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
                                 ),
                                 React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('firstName') },
                                     'Meno',
@@ -657,7 +657,7 @@ function AllRegistrationsApp() {
                                     React.createElement(
                                         'tr',
                                         { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registeredAt ? u.registeredAt.toDate().toLocaleDateString('sk-SK') : '-'),
+                                        React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registeredDate ? u.registeredDate.toDate().toLocaleDateString('sk-SK') : '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
                                         React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email || '-'),
