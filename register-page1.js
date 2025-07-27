@@ -74,17 +74,16 @@ const countryCodes = [
   { code: 'SS', dialCode: '+211' }, { code: 'ST', dialCode: '+239' }, { code: 'SV', dialCode: '+503' },
   { code: 'SX', dialCode: '+1‑721' }, { code: 'SY', dialCode: '+963' }, { code: 'SZ', dialCode: '+268' },
   { code: 'TC', dialCode: '+1‑649' }, { code: 'TD', dialCode: '+235' }, { code: 'TG', dialCode: '+228' },
-  { code: 'TH', dialCode: '+66' }, { code: 'TJ', dialCode: '+992' }, { code: 'TK', dialCode: '+690' },
-  { code: 'TL', dialCode: '+670' }, { code: 'TM', dialCode: '+993' }, { code: 'TN', dialCode: '+216' },
-  { code: 'TO', dialCode: '+676' }, { code: 'TR', dialCode: '+90' }, { code: 'TT', dialCode: '+1‑868' },
-  { code: 'TV', dialCode: '+688' }, { code: 'TW', dialCode: '+886' }, { code: 'TZ', dialCode: '+255' },
-  { code: 'UA', dialCode: '+380' }, { code: 'UG', dialCode: '+256' }, { code: 'US', dialCode: '+1' },
-  { code: 'UY', dialCode: '+598' }, { code: 'UZ', dialCode: '+998' }, { code: 'VA', dialCode: '+379' },
-  { code: 'VC', dialCode: '+1‑784' }, { code: 'VE', dialCode: '+58' }, { code: 'VG', dialCode: '+1‑284' },
-  { code: 'VI', dialCode: '+1‑340' }, { code: 'VN', dialCode: '+84' }, { code: 'VU', dialCode: '+678' },
-  { code: 'WF', dialCode: '+681' }, { code: 'WS', dialCode: '+685' }, { code: 'YE', dialCode: '+967' },
-  { code: 'YT', dialCode: '+262' }, { code: 'ZA', dialCode: '+27' }, { code: 'ZM', dialCode: '+260' },
-  { code: 'ZW', dialCode: '+263' },
+  { code: 'TH', dialCode: '+66' }, { code: 'TJ', dialCode: '+992' }, { code: 'TL', dialCode: '+670' },
+  { code: 'TM', dialCode: '+993' }, { code: 'TN', dialCode: '+216' }, { code: 'TO', dialCode: '+676' },
+  { code: 'TR', dialCode: '+90' }, { code: 'TT', dialCode: '+1‑868' }, { code: 'TV', dialCode: '+688' },
+  { code: 'TW', dialCode: '+886' }, { code: 'TZ', dialCode: '+255' }, { code: 'UA', dialCode: '+380' },
+  { code: 'UG', dialCode: '+256' }, { code: 'US', dialCode: '+1' }, { code: 'UY', dialCode: '+598' },
+  { code: 'UZ', dialCode: '+998' }, { code: 'VA', dialCode: '+379' }, { code: 'VC', dialCode: '+1‑784' },
+  { code: 'VE', dialCode: '+58' }, { code: 'VG', dialCode: '+1‑284' }, { code: 'VI', dialCode: '+1‑340' },
+  { code: 'VN', dialCode: '+84' }, { code: 'VU', dialCode: '+678' }, { code: 'WF', dialCode: '+681' },
+  { code: 'WS', dialCode: '+685' }, { code: 'YE', dialCode: '+967' }, { code: 'YT', dialCode: '+262' },
+  { code: 'ZA', dialCode: '+27' }, { code: 'ZM', dialCode: '+260' }, { code: 'ZW', dialCode: '+263' },
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
@@ -116,7 +115,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white pr-10 border-none rounded-none',
+        className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none',
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -312,6 +311,27 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
   // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
+  // Kontrola, či sú všetky povinné polia vyplnené
+  const isFormValid = formData.firstName.trim() !== '' &&
+                      formData.lastName.trim() !== '' &&
+                      formData.email.trim() !== '' &&
+                      formData.contactPhoneNumber.trim() !== '' &&
+                      formData.password.length >= 10 && // Základná kontrola dĺžky hesla
+                      /[a-z]/.test(formData.password) &&
+                      /[A-Z]/.test(formData.password) &&
+                      /\d/.test(formData.password) &&
+                      formData.password === formData.confirmPassword &&
+                      isRegistrationOpen &&
+                      isRecaptchaReady;
+
+  // Dynamické triedy pre tlačidlo "Ďalej"
+  const nextButtonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${!isFormValid
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
 
   return React.createElement(
     'div',
@@ -503,14 +523,14 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             'button',
             {
               type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
+              className: nextButtonClasses, // Použitie dynamických tried
+              disabled: !isFormValid, // Tlačidlo je zakázané, ak formulár nie je platný
               tabIndex: 8
             },
             loading ? React.createElement(
               'div',
               { className: 'flex items-center justify-center' },
-              React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-white', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+              React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Farba spinneru zmenená na modrú
                 React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                 React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
               ),
