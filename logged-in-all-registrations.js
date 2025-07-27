@@ -504,9 +504,9 @@ function AllRegistrationsApp() {
         }
         let loadingMessage = 'Načítavam...';
         if (isAuthReady && user && !userProfileData) {
-            loadingMessage = 'Načítavam používateľský profil...';
+            loadingMessage = 'Načítavam...';
         } else if (loading) {
-            loadingMessage = 'Načítavam údaje používateľov...';
+            loadingMessage = 'Načítavam...';
         }
 
         return React.createElement(
