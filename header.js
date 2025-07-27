@@ -25,6 +25,8 @@ function stringToHash(str) {
 // Funkcia na zobrazenie push-up notifikácie
 // Teraz prijíma aj parameter displayNotificationsEnabled
 function showPushNotification(message, notificationId, displayNotificationsEnabled) {
+    console.log(`Header.js: showPushNotification volaná. Správa: "${message}", ID: "${notificationId}", Notifikácie povolené (param): ${displayNotificationsEnabled}`);
+
     // Ak sú notifikácie vypnuté v profile používateľa, nezobrazuj ich
     if (!displayNotificationsEnabled) {
         console.log(`Header.js: Notifikácia s ID ${notificationId} nebola zobrazená, pretože používateľ má notifikácie vypnuté.`);
@@ -33,8 +35,10 @@ function showPushNotification(message, notificationId, displayNotificationsEnabl
 
     const notificationArea = document.getElementById('header-notification-area');
     if (!notificationArea) {
-        console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený.");
+        console.error("Header.js: Element s ID 'header-notification-area' nebol nájdený. Notifikácia sa nezobrazí.");
         return;
+    } else {
+        console.log("Header.js: Element 'header-notification-area' bol nájdený.", notificationArea);
     }
 
     // Skontrolujeme, či táto notifikácia už bola zobrazená v tejto relácii (používame localStorage)
@@ -172,7 +176,7 @@ async function initializeHeaderLogic() {
             }
 
             // Reset nastavenia notifikácií používateľa
-            userDisplayNotificationsSetting = false;
+            userDisplayNotificationsSetting = false; // Reset na false pred načítaním
 
             if (currentHeaderUser) {
                 try {
@@ -183,6 +187,7 @@ async function initializeHeaderLogic() {
                         const userRole = userData.role;
                         const userApproved = userData.approved;
                         userDisplayNotificationsSetting = userData.displayNotifications === true; // Aktualizácia globálnej premennej
+                        console.log(`Header.js: userDisplayNotificationsSetting nastavené na: ${userDisplayNotificationsSetting} pre UID: ${currentHeaderUser.uid}`);
 
 
                         // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
@@ -202,6 +207,7 @@ async function initializeHeaderLogic() {
                                 .where('recipientId', 'in', [currentHeaderUser.uid, 'all_admins'])
                                 .where('read', '==', false) // Len neprečítané notifikácie
                                 .onSnapshot(snapshot => {
+                                    console.log("Header.js: onSnapshot pre adminNotifications spustený.");
                                     if (!initialNotificationsLoadComplete) {
                                         // Pri prvom načítaní len naplníme cache a nastavíme flag
                                         snapshot.docs.forEach(doc => {
@@ -223,6 +229,8 @@ async function initializeHeaderLogic() {
                                             const message = notificationData.message;
                                             if (message) {
                                                 // Odovzdaj nastavenie notifikácií používateľa funkcii showPushNotification
+                                                // Používame aktuálnu hodnotu userDisplayNotificationsSetting
+                                                console.log(`Header.js: Volám showPushNotification s message: "${message}", ID: "${notificationId}", displayNotificationsEnabled: ${userDisplayNotificationsSetting}`);
                                                 showPushNotification(message, notificationId, userDisplayNotificationsSetting);
                                                 // Označíme notifikáciu ako prečítanú vo Firestore, aby sa už neopakovala
                                                 try {
