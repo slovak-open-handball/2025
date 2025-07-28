@@ -47,6 +47,12 @@
             flex-grow: 1;
             box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
         }
+        /* NOVINKA: Odsadenie pre ľavé menu na väčších obrazovkách */
+        @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
+            #main-content-area {
+                margin-left: 256px; /* Šírka ľavého menu */
+            }
+        }
         @media (max-width: 768px) {
             #main-content-area {
                 padding-left: 1rem; 
