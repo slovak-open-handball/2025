@@ -43,7 +43,6 @@ function NotificationModal({ message, onClose }) {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
   }, [message, onClose]);
@@ -87,6 +86,19 @@ function ChangeNameApp() {
   const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
+
+  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  const isDataEditingAllowed = React.useMemo(() => {
+    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    const now = new Date();
+    const deadline = new Date(dataEditDeadline);
+    return now <= deadline;
+  }, [settingsLoaded, dataEditDeadline]);
+
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -267,6 +279,50 @@ function ChangeNameApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
+  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        console.log("ChangeNameApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+        return;
+      }
+      try {
+          console.log("ChangeNameApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("ChangeNameApp: onSnapshot pre nastavenia registrácie spustený.");
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                console.log("ChangeNameApp: Nastavenia registrácie existujú, dáta:", data);
+                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : null);
+            } else {
+                console.log("ChangeNameApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                setDataEditDeadline(null);
+            }
+            setSettingsLoaded(true);
+            console.log("ChangeNameApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+          }, error => {
+            console.error("ChangeNameApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+          });
+
+          return () => {
+            if (unsubscribeSettings) {
+                console.log("ChangeNameApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                unsubscribeSettings();
+            }
+          };
+      } catch (e) {
+          console.error("ChangeNameApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]);
+
   // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`ChangeNameApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
@@ -323,6 +379,12 @@ function ChangeNameApp() {
 
   const handleUpdateName = async (e) => {
     e.preventDefault();
+    // NOVINKA: Kontrola povolenia úprav dát
+    if (!isDataEditingAllowed) {
+      setError("Úpravy mena a priezviska sú po uzávierke zakázané.");
+      return;
+    }
+
     if (!db || !user || !userProfileData) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
@@ -381,17 +443,19 @@ function ChangeNameApp() {
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
         console.log("ChangeNameApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Ukladám zmeny...';
     }
 
     return React.createElement(
@@ -415,6 +479,12 @@ function ChangeNameApp() {
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
+      ),
+      // NOVINKA: Správa o uzávierke úprav
+      !isDataEditingAllowed && React.createElement(
+        'div',
+        { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+        `Úpravy mena a priezviska sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
       ),
       React.createElement(
         'div',
@@ -441,7 +511,7 @@ function ChangeNameApp() {
                 value: firstName,
                 onChange: (e) => setFirstName(e.target.value),
                 required: true,
-                disabled: loading,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
               })
             ),
             React.createElement(
@@ -455,7 +525,7 @@ function ChangeNameApp() {
                 value: lastName,
                 onChange: (e) => setLastName(e.target.value),
                 required: true,
-                disabled: loading,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
               })
             ),
             React.createElement(
@@ -463,7 +533,7 @@ function ChangeNameApp() {
               {
                 type: 'submit',
                 className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
