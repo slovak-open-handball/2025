@@ -23,7 +23,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií
+    // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií a je správa
     if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
@@ -46,23 +46,24 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [message, onClose, displayNotificationsEnabled]); // ZÁVISLOSŤ: Pridaný displayNotificationsEnabled
+  }, [message, onClose, displayNotificationsEnabled]);
 
-  // Nevykresľuje sa, ak nie je zobrazené alebo ak sú notifikácie vypnuté
-  if (!show && !message || !displayNotificationsEnabled) return null;
+  // Nevykresľuje sa, ak nie je zobrazené, nie je správa ALEBO ak sú notifikácie vypnuté
+  if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
     'div',
     {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
+      // ZMENA: Triedy pre pozíciu v pravom hornom rohu
+      className: `fixed top-4 right-4 z-50 flex justify-end p-4 transition-transform duration-500 ease-out ${
+        show ? 'translate-x-0' : 'translate-x-full' // Animácia z pravej strany
       }`,
-      style: { pointerEvents: 'none' }
+      style: { pointerEvents: 'none', maxWidth: 'calc(100% - 32px)' } // Obmedzenie šírky pre menšie obrazovky
     },
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-xs w-full text-center', // ZMENA: max-w-xs pre menšiu šírku
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -178,6 +179,170 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 }
 
 
+// NOVÝ KOMPONENT: GlobalNotificationHandler pre zobrazenie pop-up notifikácií
+function GlobalNotificationHandler() {
+  const [app, setApp] = React.useState(null);
+  const [auth, setAuth] = React.useState(null);
+  const [db, setDb] = React.useState(null);
+  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
+  const [currentNotificationMessage, setCurrentNotificationMessage] = React.useState('');
+  const [displayNotificationsEnabled, setDisplayNotificationsEnabled] = React.useState(true); // Získané z userProfileData
+  const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
+
+  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  React.useEffect(() => {
+    let unsubscribeAuth;
+    let firestoreInstance;
+
+    try {
+      if (typeof firebase === 'undefined') {
+        console.error("GlobalNotificationHandler: Firebase SDK nie je načítané.");
+        return;
+      }
+
+      let firebaseApp;
+      // Skontrolujte, či už existuje predvolená aplikácia Firebase
+      if (firebase.apps.length === 0) {
+        // Používame globálne firebaseConfig a initialAuthToken
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+      } else {
+        // Ak už predvolená aplikácia existuje, použite ju
+        firebaseApp = firebase.app();
+      }
+      setApp(firebaseApp);
+
+      const authInstance = firebase.auth(firebaseApp);
+      setAuth(authInstance);
+      firestoreInstance = firebase.firestore(firebaseApp);
+      setDb(firestoreInstance);
+
+      const signIn = async () => {
+        try {
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
+          }
+        } catch (e) {
+          console.error("GlobalNotificationHandler: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+        }
+      };
+
+      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
+        setUser(currentUser);
+        setIsAuthReady(true);
+      });
+
+      signIn();
+
+      return () => {
+        if (unsubscribeAuth) {
+          unsubscribeAuth();
+        }
+      };
+    } catch (e) {
+      console.error("GlobalNotificationHandler: Nepodarilo sa inicializovať Firebase:", e);
+    }
+  }, []);
+
+  // Effect for fetching userProfileData (including displayNotifications)
+  React.useEffect(() => {
+    let unsubscribeUserDoc;
+
+    if (isAuthReady && db && user) {
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            setUserProfileData(userData);
+            setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+          }
+        }, error => {
+          console.error("GlobalNotificationHandler: Chyba pri načítaní používateľských dát z Firestore:", error);
+        });
+      } catch (e) {
+        console.error("GlobalNotificationHandler: Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
+      }
+    }
+
+    return () => {
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+      }
+    };
+  }, [isAuthReady, db, user]);
+
+  // Effect for listening to new notifications
+  React.useEffect(() => {
+    let unsubscribeNotifications;
+    const appId = 'default-app-id'; // Predpokladáme, že toto je konzistentné
+
+    if (db && user && userProfileData && userProfileData.displayNotifications) {
+      // Načítaj posledný timestamp zobrazenej notifikácie z localStorage
+      const storedLastTimestamp = localStorage.getItem(`lastNotificationTimestamp_${user.uid}`);
+      if (storedLastTimestamp) {
+          setLastNotificationTimestamp(parseInt(storedLastTimestamp, 10));
+      }
+
+      // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
+      unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
+        .where('recipientId', 'in', [user.uid, 'all_admins'])
+        .where('read', '==', false) // Len neprečítané
+        .orderBy('timestamp', 'desc') // Najnovšie prvé
+        .limit(1) // Zaujíma nás len jedna najnovšia pre pop-up
+        .onSnapshot(snapshot => {
+          if (!snapshot.empty) {
+            const latestUnreadNotification = snapshot.docs[0];
+            const notificationData = latestUnreadNotification.data();
+            const notificationTimestamp = notificationData.timestamp ? notificationData.timestamp.toDate().getTime() : 0;
+
+            // Zobraz notifikáciu len ak je novšia ako posledná zobrazená
+            if (notificationTimestamp > lastNotificationTimestamp) {
+              const isDeletedForCurrentUser = notificationData.deletedFor && notificationData.deletedFor.includes(user.uid);
+              if (!isDeletedForCurrentUser) {
+                setCurrentNotificationMessage(notificationData.message);
+                setLastNotificationTimestamp(notificationTimestamp); // Aktualizuj timestamp poslednej zobrazenej
+                localStorage.setItem(`lastNotificationTimestamp_${user.uid}`, notificationTimestamp.toString()); // Ulož do localStorage
+              }
+            }
+          }
+        }, error => {
+          console.error("GlobalNotificationHandler: Chyba pri načítaní notifikácií pre pop-up:", error);
+        });
+    }
+
+    return () => {
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+    };
+  }, [db, user, userProfileData, lastNotificationTimestamp]); // Závisí aj od lastNotificationTimestamp
+
+  return React.createElement(NotificationModal, {
+    message: currentNotificationMessage,
+    onClose: () => setCurrentNotificationMessage(''),
+    displayNotificationsEnabled: displayNotificationsEnabled
+  });
+}
+
+// Render GlobalNotificationHandler do špecifického DOM elementu
+// Vytvoríme koreňový element pre React komponent, ak ešte neexistuje
+let notificationRoot = document.getElementById('global-notification-root');
+if (!notificationRoot) {
+  notificationRoot = document.createElement('div');
+  notificationRoot.id = 'global-notification-root';
+  document.body.appendChild(notificationRoot);
+}
+
+// Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
+ReactDOM.render(
+  React.createElement(GlobalNotificationHandler),
+  notificationRoot
+);
+
+
+// Pôvodný kód pre UsersManagementApp a jeho globálne sprístupnenie zostáva nezmenený
 // Main React component for the logged-in-users.html page
 // ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
@@ -473,7 +638,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot.");
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní používateľov: ${error.message}`);
+          setError(`Chyba pri načítaní používateľov: ${e.message}`);
           setLoading(false);
         });
       } catch (e) {
