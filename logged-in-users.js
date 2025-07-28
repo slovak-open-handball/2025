@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl mx-auto overflow-x-auto' }, // ODSTRÁNENÉ: max-w-6xl
+        { className: 'mx-auto overflow-x-auto' }, // ODSTRÁNENÉ: bg-white p-8 rounded-lg shadow-xl
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -694,18 +694,18 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto ako zálohu
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md' }, // ODSTRÁNENÉ: min-w-full
+                    { className: '' }, // ODSTRÁNENÉ: bg-white rounded-lg shadow-md
                     React.createElement(
                         'thead',
                         null,
                         React.createElement(
                             'tr',
                             { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'E-mail'), // ODSTRÁNENÉ: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Meno'), // ODSTRÁNENÉ: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Rola'), // ODSTRÁNENÉ: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Schválený'), // ODSTRÁNENÉ: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie') // ODSTRÁNENÉ: min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'E-mail'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Meno'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Rola'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Schválený'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
                     React.createElement(
@@ -715,16 +715,16 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email), // Ponechané overflow-hidden text-ellipsis
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // Ponechané whitespace-nowrap
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role), // Pridané whitespace-nowrap
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'), // Pridané whitespace-nowrap
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // Ponechané flex-nowrap tu
+                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' },
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
@@ -733,7 +733,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // Pridané whitespace-nowrap
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap',
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -743,7 +743,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // Pridané whitespace-nowrap
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`,
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
@@ -752,7 +752,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // Pridané whitespace-nowrap
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap',
                                                   disabled: loading,
                                                 },
                                                 'Zmazať'
