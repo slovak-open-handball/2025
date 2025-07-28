@@ -370,7 +370,7 @@ function MyDataApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-md mt-20 mb-10 p-4' }, {/* ZMENA: max-w-4xl na max-w-md */}
+      { className: 'w-full max-w-md mt-20 mb-10 p-4' },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
