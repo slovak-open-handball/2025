@@ -732,7 +732,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: pridané py-3 px-6
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: pridané py-3 px-6
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: pridané py-3 px-6
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[380px]' }, 'Akcie') // ZMENA: pridané py-3 px-6, min-w na 380px
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[600px]' }, 'Akcie') // ZMENA: pridané py-3 px-6, min-w na 380px
                         )
                     ),
                     React.createElement(
