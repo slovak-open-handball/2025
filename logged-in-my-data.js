@@ -4,15 +4,15 @@
 
 // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Pridaný prop 'displayNotificationsEnabled'
@@ -396,7 +396,7 @@ function MyDataApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-md mt-20 mb-10 p-4' },
+      { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -404,7 +404,7 @@ function MyDataApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-full overflow-x-auto' }, // Pridané overflow-x-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Moje údaje' // Zmenený hlavný nadpis
         ),
@@ -421,7 +421,7 @@ function MyDataApp() {
                 null,
                 React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
                     ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 )
@@ -432,7 +432,7 @@ function MyDataApp() {
               null,
               React.createElement(
                 'p',
-                { className: 'text-gray-800 text-lg' },
+                { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                 React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                 ` ${userProfileData.contactPhoneNumber || ''}`
               )
@@ -442,7 +442,7 @@ function MyDataApp() {
               null,
               React.createElement(
                 'p',
-                { className: 'text-gray-800 text-lg' },
+                { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                 React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                 ` ${userProfileData.email || user.email || ''}`
               )
@@ -462,7 +462,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'), // Zmena: Názov spoločnosti na Názov klubu
                     ` ${userProfileData.billing.clubName}`
                   )
@@ -473,7 +473,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
                     ` ${fullAddress}`
                   )
@@ -483,7 +483,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'IČO:'),
                     ` ${userProfileData.billing.ico}`
                   )
@@ -493,7 +493,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                     ` ${userProfileData.billing.dic}`
                   )
@@ -503,7 +503,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                     React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                     ` ${userProfileData.billing.icDph}`
                   )
