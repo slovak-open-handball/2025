@@ -89,8 +89,8 @@
         </div>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (TournamentSettingsApp) -->
-    <script src="logged-in-tournament-settings.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (mySettingsApp) -->
+    <script src="logged-in-my-settings.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -159,15 +159,15 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            if (typeof TournamentSettingsApp === 'undefined') {
-                console.error("Chyba: Komponent TournamentSettingsApp nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
+            if (typeof mySettingsApp === 'undefined') {
+                console.error("Chyba: Komponent mySettingsApp nie je definovaný. Skontrolujte logged-in-my-settings.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(TournamentSettingsApp, null));
-            console.log("logged-in-tournament-settings.html: React App vykreslená.");
+            root.render(React.createElement(mySettingsApp, null));
+            console.log("logged-in-my-settings.html: React App vykreslená.");
         };
     </script>
 </body>
