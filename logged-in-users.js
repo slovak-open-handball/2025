@@ -537,6 +537,14 @@ function UsersManagementApp() {
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
       closeRoleEditModal();
 
+      // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
+      if (user && user.uid === userId && newRole === 'admin' && approvedStatus === false) {
+          console.log("UsersManagementApp: Rola používateľa zmenená na neschváleného admina. Odhlasujem.");
+          await auth.signOut();
+          window.location.href = 'login.html';
+          return; // Zastav ďalšie spracovanie
+      }
+
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${approvedStatus ? 'Áno' : 'Nie'}.`,
@@ -694,7 +702,7 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex item-center justify-center space-x-2' },
+                                        { className: 'flex item-center justify-center space-x-2 min-w-[200px]' }, // ZMENA: Pridaná min-w pre kontajner tlačidiel
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
