@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl max-w-full mx-auto' }, // ZMENA: odstránené w-full, pridané max-w-full a mx-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl max-w-full mx-auto overflow-x-auto' }, // ZMENA: pridané overflow-x-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -701,11 +701,11 @@ function UsersManagementApp() {
                         React.createElement(
                             'tr',
                             { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[180px]' }, 'E-mail'), // ZMENA: Pridaná min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: Pridaná min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: Pridaná min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: Pridaná min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[320px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
                         )
                     ),
                     React.createElement(
@@ -715,8 +715,8 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email), // Ponechané overflow-hidden text-ellipsis
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // Odstránené overflow-hidden text-ellipsis
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
