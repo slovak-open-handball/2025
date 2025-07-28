@@ -3,7 +3,7 @@
 // sú globálne definované v <head> login.html.
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-// const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+//const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
@@ -197,7 +197,6 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
   );
 }
 
-
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 //const formatToDatetimeLocal = (date) => {
 //  if (!date) return '';
@@ -208,6 +207,7 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 //  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
+
 
 // Main React component for the login.html page
 function App() {
@@ -323,6 +323,16 @@ function App() {
                     } else {
                         // Timestamps match, alebo localStorage je novší, aktualizujeme localStorage pre istotu
                         localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                    }
+
+                    // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený, okamžite ho odhlásiť
+                    if (userData.role === 'admin' && userData.approved === false) {
+                        console.log("LoginApp: onAuthStateChanged - Používateľ je admin a nie je schválený. Odhlasujem.");
+                        await authInstance.signOut();
+                        localStorage.removeItem(`passwordLastChanged_${currentUser.uid}`); // Vyčistiť local storage
+                        setUserNotificationMessage("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
+                        // Nenasmerovať, nechať zobraziť chybovú správu
+                        return; // Zastaviť ďalšie spracovanie v tomto callbacku
                     }
 
                     // Ak je používateľ prihlásený a všetky kontroly prejdú, presmerujeme ho
@@ -502,6 +512,7 @@ function App() {
       if (!userDoc.exists) {
         setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
         await auth.signOut(); // Odhlásiť, ak chýba dokument používateľa
+        setUser(null); // Explicitne nastaviť user na null
         setLoading(false);
         return;
       }
@@ -539,6 +550,7 @@ function App() {
         }
 
         await auth.signOut(); // Odhlásiť používateľa
+        setUser(null); // Explicitne nastaviť user na null, aby sa predišlo presmerovaniu
         setLoading(false);
         return; // Zastav ďalšie spracovanie prihlásenia
       }
@@ -553,6 +565,7 @@ function App() {
       if (!updatedUserDoc.exists) {
         setError("Účet sa nenašiel v databáze po aktualizácii timestampu. Kontaktujte podporu.");
         await auth.signOut();
+        setUser(null); // Explicitne nastaviť user na null
         setLoading(false);
         return;
       }
@@ -564,7 +577,8 @@ function App() {
       } else {
         console.error("Prihlásenie: Nepodarilo sa získať platný passwordLastChanged z Firestore po aktualizácii.");
         await auth.signOut();
-        window.location.href = 'login.html';
+        setUser(null); // Explicitne nastaviť user na null
+        window.location.href = 'login.html'; // Presmerovať na login, ak je problém s timestampom
         return;
       }
 
