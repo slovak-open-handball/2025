@@ -122,7 +122,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   if (!show || !user) return null;
 
   const handleSave = () => {
-    // ZMENA: Používame user.id namiesto user.uid
+    // Používame user.id namiesto user.uid
     onSave(user.id, selectedRole, isApproved); 
   };
 
@@ -150,8 +150,8 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           React.createElement('option', { value: 'admin' }, 'Administrátor')
         )
       ),
-      // Checkbox pre schválenie sa zobrazí len ak je rola 'admin'
-      selectedRole === 'admin' && React.createElement(
+      // ZMENA: Checkbox pre schválenie sa zobrazí len ak je rola 'user'
+      selectedRole === 'user' && React.createElement(
         'div',
         { className: 'mb-4 flex items-center' },
         React.createElement('input', {
@@ -162,7 +162,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           onChange: (e) => setIsApproved(e.target.checked),
           disabled: loading,
         }),
-        React.createElement('label', { className: 'text-gray-700 text-sm', htmlFor: 'is-approved-checkbox' }, 'Schválený administrátor')
+        React.createElement('label', { className: 'text-gray-700 text-sm', htmlFor: 'is-approved-checkbox' }, 'Schválený používateľ') // ZMENA popisu
       ),
       React.createElement(
         'div',
@@ -539,8 +539,10 @@ function UsersManagementApp() {
       const userDocRef = db.collection('users').doc(userId);
       
       // NOVINKA: Ak sa rola mení na 'user', approved sa vždy nastaví na false.
-      // Ak sa rola mení na 'admin', použije sa hodnota z newIsApproved (checkbox).
-      const approvedStatus = (newRole === 'user') ? false : newIsApproved;
+      // Ak sa rola mení na 'admin', approved sa nastaví na true.
+      // Checkbox pre schválenie v modale sa už nezobrazuje pre admina,
+      // takže ho nastavíme automaticky na true, ak je rola admin.
+      const approvedStatus = (newRole === 'user') ? false : true; // ZMENA: Ak je admin, automaticky schválený
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
@@ -704,7 +706,7 @@ function UsersManagementApp() {
                                     React.createElement(
                                         'div',
                                         { className: 'flex item-center justify-center space-x-2' },
-                                        // ZMENA: Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
+                                        // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
                                             null,
@@ -717,12 +719,12 @@ function UsersManagementApp() {
                                                 },
                                                 'Upraviť rolu'
                                             ),
-                                            // Tlačidlo Schváliť sa zobrazí len pre adminov, ktorí nie sú schválení
+                                            // NOVINKA: Modré tlačidlo Schváliť
                                             u.role === 'admin' && !u.approved && React.createElement(
                                                 'button',
                                                 {
                                                   onClick: () => handleApproveUser(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  className: 'bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
                                                 'Schváliť'
