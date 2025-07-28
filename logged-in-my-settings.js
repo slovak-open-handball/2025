@@ -36,7 +36,6 @@ function NotificationModal({ message, onClose }) {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
   }, [message, onClose]);
@@ -151,6 +150,14 @@ function MySettingsApp() {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               console.log("MySettingsApp: Používateľský dokument existuje, dáta:", userData);
+
+              // *** NOVÁ LOGIKA PRE OBMEDZENIE PRÍSTUPU PRE ROLU 'user' ***
+              if (userData.role === 'user') {
+                  console.log("MySettingsApp: Používateľ má rolu 'user'. Presmerovávam na logged-in-my-data.html.");
+                  window.location.href = 'logged-in-my-data.html';
+                  return; // Zastaviť ďalšie spracovanie
+              }
+              // *** KONIEC NOVEJ LOGIKY ***
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
