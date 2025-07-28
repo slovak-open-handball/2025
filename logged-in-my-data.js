@@ -14,59 +14,8 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
-// Pridaný prop 'displayNotificationsEnabled'
-function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
-
-  React.useEffect(() => {
-    // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
-    if (message && displayNotificationsEnabled) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
-
-  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
-  if ((!show && !message) || !displayNotificationsEnabled) return null;
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
+// ZMENA: Odstránený lokálny komponent NotificationModal.
+// Notifikácie sú teraz riadené globálne cez header.js.
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
@@ -79,7 +28,8 @@ function MyDataApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  // ZMENA: userNotificationMessage sa už nepoužíva priamo pre lokálny modal, ale pre globálny
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); 
 
   // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
   // Removed contactPhoneNumber, email states as they are no longer editable here
@@ -99,6 +49,7 @@ function MyDataApp() {
         return;
       }
 
+      // Získanie predvolenej Firebase aplikácie. Predpokladá sa, že je inicializovaná v HTML.
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
@@ -109,7 +60,8 @@ function MyDataApp() {
 
       const signIn = async () => {
         try {
-          if (initialAuthToken) {
+          // ZMENA: Používame globálnu premennú initialAuthToken
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           }
           // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
@@ -123,7 +75,7 @@ function MyDataApp() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
+        setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
       });
 
       signIn();
@@ -260,7 +212,7 @@ function MyDataApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -324,7 +276,12 @@ function MyDataApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
+      // ZMENA: Používame globálnu funkciu pre notifikácie
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Úspešne odhlásený.");
+      } else {
+        console.warn("MyDataApp: window.showGlobalNotification nie je definovaná.");
+      }
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -389,11 +346,8 @@ function MyDataApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage(''),
-        displayNotificationsEnabled: userProfileData?.displayNotifications // Odovzdanie propu
-    }),
+    // ZMENA: Odstránené volanie lokálneho NotificationModal.
+    // Globálny NotificationModal je vykreslený v header.js.
     React.createElement(
       'div',
       { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
