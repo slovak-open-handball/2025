@@ -197,7 +197,7 @@ function App() {
             console.error("Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
           }
         }
-        setLoading(false); // Auth state checked, stop loading
+        // setLoading(false); // Presunuté nižšie, aby sa čakalo aj na settingsLoaded
       });
 
       signIn();
@@ -233,12 +233,17 @@ function App() {
                 setRegistrationEndDate('');
             }
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
+            // Nastav loading na false až keď sú pripravené aj auth aj settings
+            if (isAuthReady) {
+              setLoading(false);
+            }
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
-            // setLoading(false); // Moved to authStateChanged
+            if (isAuthReady) {
+              setLoading(false);
+            }
           });
 
           return () => unsubscribeSettings();
@@ -246,12 +251,14 @@ function App() {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
-          // setLoading(false); // Moved to authStateChanged
+          if (isAuthReady) {
+            setLoading(false);
+          }
       }
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db, isAuthReady]); // Závisí od db a isAuthReady
 
   // Effect for countdown (runs when registrationStartDate changes)
   React.useEffect(() => {
@@ -346,10 +353,6 @@ function App() {
 
   // Display loading state
   if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
-    // ODSTRÁNENÁ ZMENA: Pôvodný blok, ktorý spôsoboval, že sa nič nevykreslilo pre prihláseného používateľa
-    // if (user) {
-    //     return null;
-    // }
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
