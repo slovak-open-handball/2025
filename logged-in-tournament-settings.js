@@ -84,6 +84,7 @@ function TournamentSettingsApp() {
   // States for date and time settings
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav dát
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
   // New state for countdown
@@ -323,10 +324,12 @@ function TournamentSettingsApp() {
                 console.log("TournamentSettingsApp: Nastavenia registrácie existujú, dáta:", data);
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); // NOVINKA: Načítanie dátumu uzávierky úprav
             } else {
                 console.log("TournamentSettingsApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
+                setDataEditDeadline(''); // NOVINKA: Nastavenie prázdnej hodnoty
             }
             setSettingsLoaded(true);
             console.log("TournamentSettingsApp: Načítanie nastavení dokončené, settingsLoaded: true.");
@@ -456,17 +459,26 @@ function TournamentSettingsApp() {
     try {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
       const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+      const dataEditDead = dataEditDeadline ? new Date(dataEditDeadline) : null; // NOVINKA: Prevod na Date objekt
 
       if (regStart && regEnd && regStart >= regEnd) {
         setError("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.");
         setLoading(false);
         return;
       }
+      // NOVINKA: Validácia dátumu uzávierky úprav
+      if (dataEditDead && regEnd && dataEditDead < regEnd) {
+        setError("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.");
+        setLoading(false);
+        return;
+      }
+
 
       const settingsDocRef = db.collection('settings').doc('registration');
       await settingsDocRef.set({
         registrationStartDate: regStart ? firebase.firestore.Timestamp.fromDate(regStart) : null,
         registrationEndDate: regEnd ? firebase.firestore.Timestamp.fromDate(regEnd) : null,
+        dataEditDeadline: dataEditDead ? firebase.firestore.Timestamp.fromDate(dataEditDead) : null, // NOVINKA: Uloženie dátumu uzávierky úprav
       });
       setUserNotificationMessage("Nastavenia registrácie úspešne aktualizované!");
 
@@ -474,7 +486,7 @@ function TournamentSettingsApp() {
       try {
           // Používame pevne zadanú premennú appId z vonkajšieho scope
           await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-              message: `Nastavenia registrácie boli aktualizované. Začiatok: ${regStart ? regStart.toLocaleDateString('sk-SK') + ' ' + regStart.toLocaleTimeString('sk-SK') : 'N/A'}, Koniec: ${regEnd ? regEnd.toLocaleDateString('sk-SK') + ' ' + regEnd.toLocaleTimeString('sk-SK') : 'N/A'}.`,
+              message: `Nastavenia registrácie boli aktualizované. Začiatok: ${regStart ? regStart.toLocaleDateString('sk-SK') + ' ' + regStart.toLocaleTimeString('sk-SK') : 'N/A'}, Koniec: ${regEnd ? regEnd.toLocaleDateString('sk-SK') + ' ' + regEnd.toLocaleTimeString('sk-SK') : 'N/A'}. Uzávierka úprav dát: ${dataEditDead ? dataEditDead.toLocaleDateString('sk-SK') + ' ' + dataEditDead.toLocaleTimeString('sk-SK') : 'N/A'}.`,
               timestamp: firebase.firestore.FieldValue.serverTimestamp(),
               recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
               read: false
@@ -576,6 +588,20 @@ function TournamentSettingsApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
               value: registrationEndDate,
               onChange: (e) => setRegistrationEndDate(e.target.value),
+              disabled: loading,
+            })
+          ),
+          // NOVINKA: Pole pre dátum uzávierky úprav dát
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-deadline' }, 'Dátum a čas uzávierky úprav používateľských dát'),
+            React.createElement('input', {
+              type: 'datetime-local',
+              id: 'data-edit-deadline',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+              value: dataEditDeadline,
+              onChange: (e) => setDataEditDeadline(e.target.value),
               disabled: loading,
             })
           ),
