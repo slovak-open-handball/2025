@@ -5,15 +5,18 @@
 // Všetky komponenty a logika pre správu používateľov sú teraz v tomto súbore.
 
 // Helper funkcia na formátovanie dátumu (používaná v iných súboroch, ale ponechaná pre konzistenciu)
-// const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+// ODSTRÁNENÉ: Táto funkcia je teraz očakávaná z header.js alebo iného globálneho zdroja.
+/*
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+*/
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
@@ -58,7 +61,7 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        className: 'bg-white text-gray-800 px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center', // ZMENA: bg-white a text-gray-800
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -565,11 +568,14 @@ function UsersManagementApp() {
     setLoading(true);
     setError('');
     // Používame globálnu funkciu pre centrálnu notifikáciu
+    // ODSTRÁNENÉ: window.showGlobalNotification tu už nebude volané pre túto správu
+    /*
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
+    */
 
     try {
       const userDocRef = db.collection('users').doc(userId);
@@ -579,12 +585,10 @@ function UsersManagementApp() {
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
-      // Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      
+      // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu
+      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
+      
       closeRoleEditModal();
 
       // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
