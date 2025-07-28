@@ -1,8 +1,18 @@
 // logged-in-change-billing-data.js
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-cahnge-billing-data.html.
+// Tento súbor predpokladá, že Firebase je už inicializované v logged-in-change-billing-data.html
+// a že __app_id a __initial_auth_token sú globálne dostupné z prostredia Canvas.
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
@@ -56,11 +66,11 @@ function NotificationModal({ message, onClose }) {
 }
 
 // Main React component for the logged-in-change-billing-data.html page
-function BillingDataApp() {
+function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp na ChangeBillingDataApp
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined);
+  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -73,40 +83,44 @@ function BillingDataApp() {
   const [dic, setDic] = React.useState('');
   const [icDph, setIcDph] = React.useState('');
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // Effect for Firebase instance retrieval and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
-    let firestoreInstance;
 
     try {
       if (typeof firebase === 'undefined') {
-        console.error("BillingDataApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-billing-data.html.");
+        console.error("ChangeBillingDataApp: Firebase SDK nie je načítané."); // ZMENA: Console log
+        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-billing-data.html."); // ZMENA: Error správa
         setLoading(false);
         return;
       }
-
+      
+      // Získame už inicializovanú Firebase aplikáciu
       const firebaseApp = firebase.app();
       setApp(firebaseApp);
 
       const authInstance = firebase.auth(firebaseApp);
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
+      const firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
       const signIn = async () => {
         try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+          // Používame globálne poskytnutý __initial_auth_token
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authInstance.signInWithCustomToken(__initial_auth_token);
+          } else {
+            // Prihlásenie anonymne, ak nie je poskytnutý custom token (pre testovanie v Canvas)
+            await authInstance.signInAnonymously();
           }
         } catch (e) {
-          console.error("BillingDataApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+          console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e); // ZMENA: Console log
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("BillingDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+        console.log("ChangeBillingDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null"); // ZMENA: Console log
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -119,7 +133,7 @@ function BillingDataApp() {
         }
       };
     } catch (e) {
-      console.error("BillingDataApp: Nepodarilo sa inicializovať Firebase:", e);
+      console.error("ChangeBillingDataApp: Nepodarilo sa získať Firebase inštancie:", e); // ZMENA: Console log
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
@@ -131,13 +145,13 @@ function BillingDataApp() {
 
     if (isAuthReady && db && user !== undefined) {
       if (user === null) {
-        console.log("BillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // ZMENA: Console log
         window.location.href = 'login.html';
         return;
       }
 
       if (user) {
-        console.log(`BillingDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        console.log(`ChangeBillingDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // ZMENA: Console log
         setLoading(true);
 
         try {
@@ -145,12 +159,12 @@ function BillingDataApp() {
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("BillingDataApp: Používateľský dokument existuje, dáta:", userData);
+              console.log("ChangeBillingDataApp: Používateľský dokument existuje, dáta:", userData); // ZMENA: Console log
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("BillingDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("BillingDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  console.error("ChangeBillingDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // ZMENA: Console log
+                  console.log("ChangeBillingDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // ZMENA: Console log
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
@@ -161,31 +175,31 @@ function BillingDataApp() {
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`BillingDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+              console.log(`ChangeBillingDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // ZMENA: Console log
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("BillingDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                  console.log("ChangeBillingDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // ZMENA: Console log
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("BillingDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                  console.log("ChangeBillingDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // ZMENA: Console log
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("BillingDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  console.warn("ChangeBillingDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // ZMENA: Console log
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("BillingDataApp: Timestampy sú rovnaké, aktualizujem localStorage.");
+                  console.log("ChangeBillingDataApp: Timestampy sú rovnaké, aktualizujem localStorage."); // ZMENA: Console log
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
               setUserProfileData(userData);
-
+              
               // Set billing data states
               setClubName(userData.billing?.clubName || '');
               setIco(userData.billing?.ico || '');
@@ -199,14 +213,14 @@ function BillingDataApp() {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("BillingDataApp: Načítanie používateľských dát dokončené, loading: false");
+              console.log("ChangeBillingDataApp: Načítanie používateľských dát dokončené, loading: false"); // ZMENA: Console log
             } else {
-              console.warn("BillingDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+              console.warn("ChangeBillingDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // ZMENA: Console log
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
             }
           }, error => {
-            console.error("BillingDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+            console.error("ChangeBillingDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error); // ZMENA: Console log
             if (error.code === 'permission-denied') {
                 setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
             } else if (error.code === 'unavailable') {
@@ -221,23 +235,23 @@ function BillingDataApp() {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
-            console.log("BillingDataApp: Načítanie používateľských dát zlyhalo, loading: false");
+            console.log("ChangeBillingDataApp: Načítanie používateľských dát zlyhalo, loading: false"); // ZMENA: Console log
           });
         } catch (e) {
-          console.error("BillingDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+          console.error("ChangeBillingDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // ZMENA: Console log
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
         }
       }
     } else if (isAuthReady && user === undefined) {
-        console.log("BillingDataApp: Auth ready, user undefined. Nastavujem loading na false.");
+        console.log("ChangeBillingDataApp: Auth ready, user undefined. Nastavujem loading na false."); // ZMENA: Console log
         setLoading(false);
     }
 
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("BillingDataApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("ChangeBillingDataApp: Ruším odber onSnapshot pre používateľský dokument."); // ZMENA: Console log
         unsubscribeUserDoc();
       }
     };
@@ -245,7 +259,7 @@ function BillingDataApp() {
 
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`BillingDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`ChangeBillingDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // ZMENA: Console log
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -257,13 +271,13 @@ function BillingDataApp() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
-        console.log("BillingDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+        console.log("ChangeBillingDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // ZMENA: Console log
       } else {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         registerLink && registerLink.classList.remove('hidden'); 
-        console.log("BillingDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+        console.log("ChangeBillingDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // ZMENA: Console log
       }
     }
   }, [user]);
@@ -277,7 +291,7 @@ function BillingDataApp() {
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("BillingDataApp: Chyba pri odhlásení:", e);
+      console.error("ChangeBillingDataApp: Chyba pri odhlásení:", e); // ZMENA: Console log
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -319,7 +333,7 @@ function BillingDataApp() {
       });
       setUserNotificationMessage("Fakturačné údaje úspešne aktualizované!");
     } catch (e) {
-      console.error("BillingDataApp: Chyba pri aktualizácii fakturačných údajov:", e);
+      console.error("ChangeBillingDataApp: Chyba pri aktualizácii fakturačných údajov:", e); // ZMENA: Console log
       setError(`Chyba pri aktualizácii fakturačných údajov: ${e.message}`);
     } finally {
       setLoading(false);
@@ -329,7 +343,7 @@ function BillingDataApp() {
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("BillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // ZMENA: Console log
         window.location.href = 'login.html';
         return null;
     }
@@ -349,7 +363,7 @@ function BillingDataApp() {
 
   // Redirect if user is not 'user' role
   if (userProfileData && userProfileData.role !== 'user') {
-      console.log("BillingDataApp: Používateľ nemá rolu 'user'. Presmerovávam na logged-in-my-data.html.");
+      console.log("ChangeBillingDataApp: Používateľ nemá rolu 'user'. Presmerovávam na logged-in-my-data.html."); // ZMENA: Console log
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
@@ -446,4 +460,4 @@ function BillingDataApp() {
 }
 
 // Explicitne sprístupniť komponent globálne
-window.BillingDataApp = BillingDataApp;
+window.ChangeBillingDataApp = ChangeBillingDataApp; // ZMENA: Názov komponentu
