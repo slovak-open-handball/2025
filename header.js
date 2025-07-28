@@ -537,7 +537,7 @@ function UsersManagementApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Tento stav sa teraz bude používať pre centrálnu notifikáciu
+  // ZMENA: userNotificationMessage stav bol odstránený, pretože sa používa globálna funkcia
 
   const [users, setUsers] = React.useState([]);
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
@@ -546,7 +546,7 @@ function UsersManagementApp() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
   // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-  const appId = 'default-app-id'; 
+  const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // ZMENA: Používame skutočné appId
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -1046,12 +1046,8 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
-    React.createElement(TopRightNotificationModal, { // ZMENA: Používa TopRightNotificationModal
-        message: userNotificationMessage, // Tento stav sa už nepoužíva pre centrálnu notifikáciu
-        onClose: () => setUserNotificationMessage(''),
-        displayNotificationsEnabled: userProfileData.displayNotifications // Pridaný prop
-    }),
+    // ZMENA: Odstránené vykresľovanie TopRightNotificationModal z UsersManagementApp
+    // React.createElement(TopRightNotificationModal, { ... }), // TOTO BOLO ODSTRÁNENÉ
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
