@@ -122,7 +122,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   if (!show || !user) return null;
 
   const handleSave = () => {
-    onSave(user.uid, selectedRole, isApproved);
+    onSave(user.id, selectedRole, isApproved);
   };
 
   return React.createElement(
@@ -253,7 +253,7 @@ function UsersManagementApp() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.id : "null");
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -284,11 +284,11 @@ function UsersManagementApp() {
       }
 
       if (user) {
-        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.id}`);
         setLoading(true);
 
         try {
-          const userDocRef = db.collection('users').doc(user.uid);
+          const userDocRef = db.collection('users').doc(user.id);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
@@ -301,12 +301,12 @@ function UsersManagementApp() {
                   console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
                   auth.signOut();
                   window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  localStorage.removeItem(`passwordLastChanged_${user.id}`);
                   return;
               }
 
               const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              const localStorageKey = `passwordLastChanged_${user.id}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
               console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
@@ -342,7 +342,7 @@ function UsersManagementApp() {
 
               console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
-              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.id);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
             }
@@ -385,7 +385,7 @@ function UsersManagementApp() {
 
   // Effect for updating header link visibility
   React.useEffect(() => {
-    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.id : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -706,7 +706,7 @@ function UsersManagementApp() {
                                         'div',
                                         { className: 'flex item-center justify-center space-x-2' },
                                         // ZMENA: Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
-                                        user && u.id !== user.uid && React.createElement(
+                                        user && u.id !== user.id && React.createElement(
                                             React.Fragment,
                                             null,
                                             React.createElement(
