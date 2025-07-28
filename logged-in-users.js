@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 block mx-auto' }, // ZMENA: flex justify-center na block mx-auto
+      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: flex justify-center na block mx-auto
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl inline-block max-w-full mx-auto' }, // ZMENA: Pridané max-w-full a mx-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-max max-w-full mx-auto' }, // ZMENA: inline-block na w-max, pridané max-w-full a mx-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -715,8 +715,8 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, `${u.firstName || ''} ${u.lastName || ''}`),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
