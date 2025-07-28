@@ -527,6 +527,7 @@ function UsersManagementApp() {
   };
 
   const handleSaveRole = async (userId, newRole, newIsApproved) => {
+    console.log("handleSaveRole volaná pre userId:", userId);
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu roly používateľa.");
       return;
