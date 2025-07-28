@@ -744,7 +744,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: min-w
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: min-w
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[320px]' }, 'Akcie') // ZMENA: Zvýšená min-w na 320px
                         )
                     ),
                     React.createElement(
