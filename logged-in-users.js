@@ -150,20 +150,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           React.createElement('option', { value: 'admin' }, 'Administrátor')
         )
       ),
-      // ZMENA: Checkbox pre schválenie sa zobrazí len ak je rola 'user'
-      selectedRole === 'user' && React.createElement(
-        'div',
-        { className: 'mb-4 flex items-center' },
-        React.createElement('input', {
-          type: 'checkbox',
-          id: 'is-approved-checkbox',
-          className: 'mr-2 leading-tight',
-          checked: isApproved,
-          onChange: (e) => setIsApproved(e.target.checked),
-          disabled: loading,
-        }),
-        React.createElement('label', { className: 'text-gray-700 text-sm', htmlFor: 'is-approved-checkbox' }, 'Schválený používateľ') // ZMENA popisu
-      ),
+      // ODSTRÁNENÉ: Checkbox pre schválenie sa už nezobrazuje
       React.createElement(
         'div',
         { className: 'flex justify-end space-x-4' },
@@ -538,8 +525,7 @@ function UsersManagementApp() {
     try {
       const userDocRef = db.collection('users').doc(userId);
       
-      // ZMENA: Ak sa rola mení na 'user', approved sa vždy nastaví na true.
-      // Ak sa rola mení na 'admin', approved sa tiež nastaví na true.
+      // ZMENA: approved sa vždy nastaví na true, ak je rola 'user' alebo 'admin'
       const approvedStatus = true; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
@@ -717,7 +703,7 @@ function UsersManagementApp() {
                                                 },
                                                 'Upraviť rolu'
                                             ),
-                                            // NOVINKA: Modré tlačidlo Schváliť
+                                            // NOVINKA: Modré tlačidlo Schváliť (zobrazí sa len pre neschválených adminov)
                                             u.role === 'admin' && !u.approved && React.createElement(
                                                 'button',
                                                 {
