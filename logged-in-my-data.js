@@ -407,7 +407,7 @@ function MyDataApp() {
               React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
+                React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                 ` ${userProfileData.contactPhoneNumber || ''}`
               )
             ),
