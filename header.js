@@ -191,6 +191,7 @@ async function initializeHeaderLogic() {
 
 
                         // KĽÚČOVÁ ZMENA: Kontrola neschválených administrátorov
+                        // Ak je používateľ admin a nie je schválený, odhlásiť ho
                         if (userRole === 'admin' && userApproved === false) {
                             console.warn("Header.js: Neschválený administrátor sa pokúsil o prístup. Odhlasujem.");
                             // Zobrazí notifikáciu len ak je povolená v profile používateľa (čo v tomto prípade asi nebude)
