@@ -407,7 +407,8 @@ function GlobalNotificationHandler() {
   // Effect for listening to new notifications (only for top-right notifications)
   React.useEffect(() => {
     let unsubscribeNotifications;
-    const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Používame globálne definovaný appId
+    // ZMENA: appId nastavené na 'default-app-id'
+    const appId = 'default-app-id'; 
     console.log("GNH: Spúšťam useEffect pre top-right notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayTopRightNotificationsEnabled:", displayTopRightNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
@@ -545,8 +546,8 @@ function UsersManagementApp() {
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
-  // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-  const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // ZMENA: Používame skutočné appId
+  // ZMENA: appId nastavené na 'default-app-id'
+  const appId = 'default-app-id'; 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
