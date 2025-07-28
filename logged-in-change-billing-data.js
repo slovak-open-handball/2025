@@ -123,8 +123,11 @@ function ChangeBillingDataApp() {
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await authInstance.signInWithCustomToken(__initial_auth_token);
           } else {
-            // Prihlásenie anonymne, ak nie je poskytnutý custom token (pre testovanie v Canvas)
-            await authInstance.signInAnonymously();
+            // Ak nie je poskytnutý custom token, presmerujeme na prihlasovaciu stránku.
+            // Anonymné prihlásenie nie je vhodné pre stránky vyžadujúce používateľský profil.
+            console.log("ChangeBillingDataApp: __initial_auth_token nie je k dispozícii. Presmerovávam na login.html.");
+            window.location.href = 'login.html';
+            return; // Dôležité, aby sa zabránilo ďalšiemu kódu
           }
         } catch (e) {
           console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e);
@@ -237,7 +240,10 @@ function ChangeBillingDataApp() {
               console.log("ChangeBillingDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
               console.warn("ChangeBillingDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+              // Ak sa profil nenašiel pre prihláseného používateľa, presmerujeme na prihlásenie
+              setError("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.");
+              auth.signOut(); // Odhlásenie používateľa
+              window.location.href = 'login.html'; // Presmerovanie na prihlasovaciu stránku
               setLoading(false);
             }
           }, error => {
