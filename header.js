@@ -287,9 +287,15 @@ function GlobalNotificationHandler() {
             const userData = docSnapshot.data();
             console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
-            // Ak displayNotifications nie je definované, predpokladáme true
-            setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-            console.log("GNH: displayNotificationsEnabled nastavené na:", userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+            // ZMENA: Ak je rola 'user', nastaviť displayNotificationsEnabled na false
+            if (userData.role === 'user') {
+                setDisplayNotificationsEnabled(false);
+                console.log("GNH: Používateľ je typu 'user', displayNotificationsEnabled nastavené na false.");
+            } else {
+                // Ak displayNotifications nie je definované, predpokladáme true
+                setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+                console.log("GNH: displayNotificationsEnabled nastavené na:", userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+            }
           } else {
             console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
             // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené (predvolené správanie)
@@ -364,7 +370,8 @@ function GlobalNotificationHandler() {
                 console.log("GNH: Zobrazujem novú notifikáciu a aktualizujem timestamp.");
 
                 // ZMENA: Označ notifikáciu ako prečítanú, ak sa zobrazila A používateľ má povolené notifikácie
-                if (displayNotificationsEnabled) { // Opakovaná kontrola pre istotu
+                // TOTO SA UŽ NEBUDE DIAŤ PRE ROLU 'USER', KEĎŽE displayNotificationsEnabled BUDE FALSE
+                if (userProfileData.role === 'admin' && displayNotificationsEnabled) { // Označí ako prečítané len pre adminov s povolenými notifikáciami
                   console.log("GNH: Označujem notifikáciu ako prečítanú (read: true). ID:", latestUnreadNotification.id);
                   db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(latestUnreadNotification.id).update({
                     read: true
@@ -602,7 +609,7 @@ function UsersManagementApp() {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
+              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false."); // Zmena logu
             } else {
               console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
@@ -628,7 +635,7 @@ function UsersManagementApp() {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
-            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
+            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false."); // Zmena logu
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
@@ -888,7 +895,7 @@ function UsersManagementApp() {
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html."); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
