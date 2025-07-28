@@ -753,37 +753,33 @@ function UsersManagementApp() {
                                         'div',
                                         { className: 'flex items-center justify-center space-x-1 flex-nowrap' }, // ZMENA: space-x-1 pre menšie medzery
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
-                                        user && u.id !== user.uid && React.createElement(
-                                            React.Fragment,
-                                            null,
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap', // ZMENA: text-xs
-                                                  disabled: loading,
-                                                },
-                                                'Upraviť rolu'
-                                            ),
-                                            // NOVINKA: Tlačidlo na schválenie/odobratie prístupu pre adminov
-                                            u.role === 'admin' && React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap`, // ZMENA: text-xs
-                                                  disabled: loading,
-                                                },
-                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
-                                            ),
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap', // ZMENA: text-xs
-                                                  disabled: loading,
-                                                },
-                                                'Zmazať'
-                                            )
+                                        React.createElement( // Tlačidlo Upraviť rolu
+                                            'button',
+                                            {
+                                                onClick: () => openRoleEditModal(u),
+                                                className: 'bg-green-500 hover:bg-green-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap',
+                                                disabled: loading || (user && u.id === user.uid), // Vždy zobrazené, ale disabled pre aktuálneho používateľa
+                                            },
+                                            'Upraviť rolu'
+                                        ),
+                                        // Tlačidlo na schválenie/odobratie prístupu pre adminov
+                                        u.role === 'admin' && React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => handleToggleAdminApproval(u),
+                                                className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap`,
+                                                disabled: loading || (user && u.id === user.uid), // Vždy zobrazené, ale disabled pre aktuálneho používateľa
+                                            },
+                                            u.approved ? 'Odobrať prístup' : 'Schváliť'
+                                        ),
+                                        React.createElement( // Tlačidlo Zmazať
+                                            'button',
+                                            {
+                                                onClick: () => openConfirmationModal(u),
+                                                className: 'bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap',
+                                                disabled: loading || (user && u.id === user.uid), // Vždy zobrazené, ale disabled pre aktuálneho používateľa
+                                            },
+                                            'Zmazať'
                                         )
                                     )
                                 )
