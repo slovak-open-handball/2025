@@ -17,58 +17,56 @@
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 // };
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
+// ODSTRÁNENÉ: NotificationModal Component bol odstránený, pretože sa bude používať globálna notifikácia z header.js
+// function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
+//   const [show, setShow] = React.useState(false);
+//   const timerRef = React.useRef(null);
 
-  React.useEffect(() => {
-    // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií
-    if (message && displayNotificationsEnabled) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
+//   React.useEffect(() => {
+//     if (message && displayNotificationsEnabled) {
+//       setShow(true);
+//       if (timerRef.current) {
+//         clearTimeout(timerRef.current);
+//       }
+//       timerRef.current = setTimeout(() => {
+//         setShow(false);
+//         setTimeout(onClose, 500);
+//       }, 10000);
+//     } else {
+//       setShow(false);
+//       if (timerRef.current) {
+//         clearTimeout(timerRef.current);
+//         timerRef.current = null;
+//       }
+//     }
 
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose, displayNotificationsEnabled]); // ZÁVISLOSŤ: Pridaný displayNotificationsEnabled
+//     return () => {
+//       if (timerRef.current) {
+//         clearTimeout(timerRef.current);
+//       }
+//     };
+//   }, [message, onClose, displayNotificationsEnabled]);
 
-  // Nevykresľuje sa, ak nie je zobrazené alebo ak sú notifikácie vypnuté
-  if (!show && !message || !displayNotificationsEnabled) return null;
+//   if (!show && !message || !displayNotificationsEnabled) return null;
 
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
+//   return React.createElement(
+//     'div',
+//     {
+//       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+//         show ? 'translate-y-0' : '-translate-y-full'
+//       }`,
+//       style: { pointerEvents: 'none' }
+//     },
+//     React.createElement(
+//       'div',
+//       {
+//         className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+//         style: { pointerEvents: 'auto' }
+//       },
+//       React.createElement('p', { className: 'font-semibold' }, message)
+//     )
+//   );
+// }
 
 // ConfirmationModal Component (converted to React.createElement)
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
@@ -190,7 +188,7 @@ function UsersManagementApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // NOVINKA: Stav pre notifikačnú správu
+  // ZMENA: userNotificationMessage stav bol odstránený, pretože sa používa globálna funkcia
 
   const [users, setUsers] = React.useState([]);
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
@@ -425,8 +423,12 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      // ZMENA: Používame lokálny stav pre notifikáciu
-      setUserNotificationMessage("Úspešne odhlásený.");
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Úspešne odhlásený.");
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -518,7 +520,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
     
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
@@ -526,7 +533,12 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
-      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -552,7 +564,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
 
     try {
       const userDocRef = db.collection('users').doc(userId);
@@ -562,7 +579,12 @@ function UsersManagementApp() {
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
-      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       closeRoleEditModal();
 
       // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
@@ -599,7 +621,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
 
     try {
       // 1. Zmazať používateľa z Firestore
@@ -607,7 +634,12 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
-      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       closeConfirmationModal();
 
       // Otvoriť novú záložku s Firebase Console
@@ -661,12 +693,12 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // NOVINKA: Vykresľovanie NotificationModal
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage(''),
-        displayNotificationsEnabled: true // Vždy povolené pre túto stránku
-    }),
+    // ODSTRÁNENÉ: Lokálny NotificationModal bol odstránený
+    // React.createElement(NotificationModal, {
+    //     message: userNotificationMessage,
+    //     onClose: () => setUserNotificationMessage(''),
+    //     displayNotificationsEnabled: true // Vždy povolené pre túto stránku
+    // }),
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
