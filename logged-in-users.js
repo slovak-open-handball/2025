@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené inline-block
+        { className: 'bg-white p-8 rounded-lg shadow-xl inline-block' }, // ZMENA: Pridané inline-block
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
