@@ -147,7 +147,7 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-change-name': ['admin', 'user'],
         'menu-change-phone': ['user'],
         'menu-change-password': ['admin', 'user'],
-        'menu-my-settings': ['admin', 'user'],
+        'menu-my-settings': ['admin'],
         'menu-notifications': ['admin'],
         'menu-soh-chat': ['admin'],
         'menu-users': ['admin'],
