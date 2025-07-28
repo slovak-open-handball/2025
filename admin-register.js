@@ -310,7 +310,7 @@ function App() {
       return;
     }
     if (!validateEmail(email)) {
-      setErrorMessage("Zadajte platnú e-mailovú adresu (musí obsahovať '@' a '.' po '@').");
+      setErrorMessage("Zadajte platnú e-mailovú adresu.");
       return;
     }
     if (password !== confirmPassword) {
@@ -579,7 +579,7 @@ function App() {
             React.createElement(
               'p',
               { className: 'text-red-500 text-xs italic mt-1' },
-              'Zadajte platnú e-mailovú adresu (musí obsahovať \'@\' a \'.\' po \'@\').'
+              'Zadajte platnú e-mailovú adresu.'
             )
           ),
           React.createElement(PasswordInput, {
