@@ -1,13 +1,10 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-users.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
+// logged-in-users.js
+// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
+// sú globálne definované v <head> logged-in-users.html.
 
 // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-// const formatToDatetimeLocal = (date) => {
+//const formatToDatetimeLocal = (date) => {
 //  if (!date) return '';
 //  const year = date.getFullYear();
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -15,189 +12,95 @@
 //  const hours = date.getHours().toString().padStart(2, '0');
 //  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
-// };
+//};
 
-// ODSTRÁNENÉ: NotificationModal Component bol odstránený, pretože sa bude používať globálna notifikácia z header.js
-// function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
-//   const [show, setShow] = React.useState(false);
-//   const timerRef = React.useRef(null);
-
-//   React.useEffect(() => {
-//     if (message && displayNotificationsEnabled) {
-//       setShow(true);
-//       if (timerRef.current) {
-//         clearTimeout(timerRef.current);
-//       }
-//       timerRef.current = setTimeout(() => {
-//         setShow(false);
-//         setTimeout(onClose, 500);
-//       }, 10000);
-//     } else {
-//       setShow(false);
-//       if (timerRef.current) {
-//         clearTimeout(timerRef.current);
-//         timerRef.current = null;
-//       }
-//     }
-
-//     return () => {
-//       if (timerRef.current) {
-//         clearTimeout(timerRef.current);
-//       }
-//     };
-//   }, [message, onClose, displayNotificationsEnabled]);
-
-//   if (!show && !message || !displayNotificationsEnabled) return null;
-
-//   return React.createElement(
-//     'div',
-//     {
-//       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-//         show ? 'translate-y-0' : '-translate-y-full'
-//       }`,
-//       style: { pointerEvents: 'none' }
-//     },
-//     React.createElement(
-//       'div',
-//       {
-//         className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
-//         style: { pointerEvents: 'auto' }
-//       },
-//       React.createElement('p', { className: 'font-semibold' }, message)
-//     )
-//   );
-// }
-
-// ConfirmationModal Component (converted to React.createElement)
-function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
-  if (!show) return null;
-
-  return React.createElement(
-    'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
-    React.createElement(
-      'div',
-      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center' },
-      React.createElement('p', { className: 'text-lg font-semibold mb-4' }, message),
-      React.createElement(
-        'div',
-        { className: 'flex justify-center space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onCancel,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: onConfirm,
-            className: 'bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
-          },
-          loading ? 'Potvrdzujem...' : 'Potvrdiť'
-        )
-      )
-    )
-  );
-}
-
-// RoleEditModal Component (converted to React.createElement)
-function RoleEditModal({ show, user, onClose, onSave, loading }) {
-  const [selectedRole, setSelectedRole] = React.useState(user ? user.role : 'user');
-  const [isApproved, setIsApproved] = React.useState(user ? user.approved : false);
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+function NotificationModal({ message, onClose }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (user) {
-      setSelectedRole(user.role);
-      setIsApproved(user.approved);
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
-  }, [user]);
 
-  if (!show || !user) return null;
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
 
-  const handleSave = () => {
-    // Používame user.id namiesto user.uid
-    onSave(user.id, selectedRole, isApproved);
-  };
+  if (!show && !message) return null;
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50' },
+    {
+      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+        show ? 'translate-y-0' : '-translate-y-full'
+      }`,
+      style: { pointerEvents: 'none' }
+    },
     React.createElement(
       'div',
-      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
-      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Upraviť rolu pre ${user.email}`),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'role-select' }, 'Rola'),
-        React.createElement(
-          'select',
-          {
-            id: 'role-select',
-            className: 'shadow border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: selectedRole,
-            onChange: (e) => setSelectedRole(e.target.value),
-            disabled: loading,
-          },
-          React.createElement('option', { value: 'user' }, 'Používateľ'),
-          React.createElement('option', { value: 'admin' }, 'Administrátor')
-        )
-      ),
-      // ODSTRÁNENÉ: Checkbox pre schválenie sa už nezobrazuje
-      React.createElement(
-        'div',
-        { className: 'flex justify-end space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onClose,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: handleSave,
-            className: 'bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
-          },
-          loading ? 'Ukladám...' : 'Uložiť'
-        )
-      )
+      {
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        style: { pointerEvents: 'auto' }
+      },
+      React.createElement('p', { className: 'font-semibold' }, message)
     )
   );
 }
 
-
 // Main React component for the logged-in-users.html page
-// ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
-// a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  const [userProfileData, setUserProfileData] = React.useState(null);
+  const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  // ZMENA: userNotificationMessage stav bol odstránený, pretože sa používa globálna funkcia
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  const [users, setUsers] = React.useState([]);
-  const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
-  const [userToDelete, setUserToDelete] = React.useState(null);
-  const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
-  const [userToEditRole, setUserToEditRole] = React.useState(null);
+  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
+  const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
+  const [role, setRole] = React.useState('');
+  const [isApproved, setIsApproved] = React.useState(false);
 
-  // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-  const appId = 'default-app-id';
+  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  const isDataEditingAllowed = React.useMemo(() => {
+    // Ak je používateľ admin, vždy povoliť úpravy
+    if (userProfileData && userProfileData.role === 'admin') {
+      return true;
+    }
+    // Inak platí pôvodná logika pre dátum uzávierky
+    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    const now = new Date();
+    const deadline = new Date(dataEditDeadline);
+    return now <= deadline;
+  }, [settingsLoaded, dataEditDeadline, userProfileData]); // Pridaný userProfileData do závislostí
+
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -213,11 +116,12 @@ function UsersManagementApp() {
       }
 
       let firebaseApp;
-      // ZMENA: Používame globálnu premennú firebaseConfig namiesto __firebase_config
+      // Skontrolujte, či už existuje predvolená aplikácia Firebase
       if (firebase.apps.length === 0) {
+        // Používame globálne firebaseConfig
         firebaseApp = firebase.initializeApp(firebaseConfig);
       } else {
-        firebaseApp = firebase.app();
+        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
       }
       setApp(firebaseApp);
 
@@ -228,20 +132,19 @@ function UsersManagementApp() {
 
       const signIn = async () => {
         try {
-          // ZMENA: Používame globálnu premennú initialAuthToken namiesto __initial_auth_token
           if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
           }
         } catch (e) {
-          console.error("UsersManagementApp: Chyba pri počiatočnom prihlásení Firebase:", e);
+          console.error("UsersManagementApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser);
-        setIsAuthReady(true);
+        setUser(currentUser); // Nastaví Firebase User objekt
+        setIsAuthReady(true); // Mark auth as ready after the first check
       });
 
       signIn();
@@ -307,15 +210,20 @@ function UsersManagementApp() {
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                   console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("UsersManagementApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -330,7 +238,14 @@ function UsersManagementApp() {
               }
 
               setUserProfileData(userData);
-
+              
+              // Aktualizujeme lokálne stavy z userProfileData
+              setFirstName(userData.firstName || '');
+              setLastName(userData.lastName || '');
+              setEmail(userData.email || user.email || '');
+              setRole(userData.role || 'user');
+              setIsApproved(userData.approved || false);
+              
               setLoading(false);
               setError('');
 
@@ -375,14 +290,12 @@ function UsersManagementApp() {
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
-      } else { // Ak user nie je null ani undefined, ale je false (napr. po odhlásení)
-          setLoading(false);
-          setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
       }
     } else if (isAuthReady && user === undefined) {
         console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false.");
         setLoading(false);
     }
+
 
     return () => {
       if (unsubscribeUserDoc) {
@@ -392,7 +305,51 @@ function UsersManagementApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Effect for updating header link visibility
+  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        console.log("UsersManagementApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+        return;
+      }
+      try {
+          console.log("UsersManagementApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("UsersManagementApp: onSnapshot pre nastavenia registrácie spustený.");
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                console.log("UsersManagementApp: Nastavenia registrácie existujú, dáta:", data);
+                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Používame ISO string pre konzistentnosť
+            } else {
+                console.log("UsersManagementApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                setDataEditDeadline(null);
+            }
+            setSettingsLoaded(true);
+            console.log("UsersManagementApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+          }, error => {
+            console.error("UsersManagementApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+          });
+
+          return () => {
+            if (unsubscribeSettings) {
+                console.log("UsersManagementApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                unsubscribeSettings();
+            }
+          };
+      } catch (e) {
+          console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]);
+
+  // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
@@ -411,7 +368,7 @@ function UsersManagementApp() {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden');
+        registerLink && registerLink.classList.remove('hidden'); 
         console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
@@ -423,12 +380,7 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -453,227 +405,94 @@ function UsersManagementApp() {
     };
   }, [handleLogout]);
 
-  // Effect for fetching users (runs after DB and userProfileData are ready and user is admin)
-  React.useEffect(() => {
-    let unsubscribeUsers;
+  const handleUpdateName = async (e) => {
+    e.preventDefault();
+    // NOVINKA: Kontrola povolenia úprav dát
+    if (!isDataEditingAllowed) {
+      setError("Úpravy mena a priezviska sú po uzávierke zakázané.");
+      return;
+    }
 
-    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-      console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov.");
-      setLoading(true);
+    // NOVINKA: Kontrola, či sú polia prázdne pred odoslaním
+    if (firstName.trim() === '' || lastName.trim() === '') {
+        setError("Meno a priezvisko nesmú byť prázdne.");
+        return;
+    }
+
+    if (!db || !user || !userProfileData) {
+      setError("Databáza alebo používateľ nie je k dispozícii.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setUserNotificationMessage('');
+
+    try {
+      const userDocRef = db.collection('users').doc(user.uid);
+      await userDocRef.update({
+        firstName: firstName,
+        lastName: lastName,
+      });
+      await user.updateProfile({ displayName: `${firstName} ${lastName}` });
+      setUserNotificationMessage("Meno a priezvisko úspešne aktualizované!");
+
+      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      // Notifikáciu uložíme pre všetkých adminov, ak zmenu vykonal bežný používateľ.
+      // Ak zmenu vykonal admin, notifikácia je pre neho.
       try {
-        unsubscribeUsers = db.collection('users').onSnapshot(snapshot => {
-          const fetchedUsers = [];
-          snapshot.forEach(doc => {
-            fetchedUsers.push({ id: doc.id, ...doc.data() });
-          });
-          setUsers(fetchedUsers);
-          setLoading(false);
-          setError('');
-          console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot.");
-        }, error => {
-          console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní používateľov: ${error.message}`);
-          setLoading(false);
-        });
+          // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+          const appId = 'default-app-id'; 
+          let notificationMessage = '';
+          let notificationRecipientId = '';
+
+          // Zmena tu: Konkrétna správa o zmene mena a priezviska
+          if (userProfileData.role === 'user') {
+              notificationMessage = `Používateľ ${userProfileData.email} si zmenil meno na ${firstName} a priezvisko na ${lastName}.`;
+              notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
+          } else if (userProfileData.role === 'admin') {
+              notificationMessage = `Administrátor ${userProfileData.email} si zmenil meno na ${firstName} a priezvisko na ${lastName}.`;
+              notificationRecipientId = user.uid; // Notifikácia pre tohto konkrétneho administrátora
+          }
+
+          if (notificationMessage) {
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                  message: notificationMessage,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  recipientId: notificationRecipientId,
+                  read: false
+              });
+              console.log("Notifikácia o zmene mena/priezviska úspešne uložená do Firestore.");
+          }
       } catch (e) {
-        console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre používateľov (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre používateľov: ${e.message}`);
-        setLoading(false);
+          console.error("UsersManagementApp: Chyba pri ukladaní notifikácie o zmene mena/priezviska:", e);
       }
-    } else {
-        setUsers([]); // Vyčisti používateľov, ak nie je admin
-    }
-
-    return () => {
-      if (unsubscribeUsers) {
-        console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľov.");
-        unsubscribeUsers();
-      }
-    };
-  }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
-
-  const openConfirmationModal = (user) => {
-    setUserToDelete(user);
-    setShowConfirmationModal(true);
-  };
-
-  const closeConfirmationModal = () => {
-    setUserToDelete(null);
-    setShowConfirmationModal(false);
-  };
-
-  const openRoleEditModal = (user) => {
-    setUserToEditRole(user);
-    setShowRoleEditModal(true);
-  };
-
-  const closeRoleEditModal = () => {
-    setUserToEditRole(null);
-    setShowRoleEditModal(false);
-  };
-
-  // NOVÁ FUNKCIA: Prepnúť stav schválenia administrátora
-  const handleToggleAdminApproval = async (userToToggle) => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmenu stavu schválenia.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
-    
-    try {
-      const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
-      const userDocRef = db.collection('users').doc(userToToggle.id);
-      await userDocRef.update({ approved: newApprovedStatus });
-
-      const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log(`Notifikácia o ${actionMessage} používateľa úspešne uložená do Firestore.`);
+      // --- Koniec logiky pre ukladania notifikácie ---
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri zmene stavu schválenia:", e);
-      setError(`Chyba pri zmene stavu schválenia: ${e.message}`);
+      console.error("UsersManagementApp: Chyba pri aktualizácii mena a priezviska:", e);
+      setError(`Chyba pri aktualizácii mena a priezviska: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveRole = async (userId, newRole, newIsApproved) => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmenu roly používateľa.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
-
-    try {
-      const userDocRef = db.collection('users').doc(userId);
-      
-      // Ak sa rola mení na 'user', approved sa nastaví na true.
-      // Ak sa rola mení na 'admin', approved sa nastaví na false.
-      const approvedStatus = (newRole === 'user') ? true : false; 
-
-      await userDocRef.update({ role: newRole, approved: approvedStatus });
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-      closeRoleEditModal();
-
-      // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
-      if (user && user.uid === userId && newRole === 'admin' && approvedStatus === false) {
-          console.log("UsersManagementApp: Rola používateľa zmenená na neschváleného admina. Odhlasujem.");
-          await auth.signOut();
-          window.location.href = 'login.html';
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          return; // Zastav ďalšie spracovanie
-      }
-
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${approvedStatus ? 'Áno' : 'Nie'}.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log("Notifikácia o zmene roly používateľa úspešne uložená do Firestore.");
-
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri ukladaní roly:", e);
-      setError(`Chyba pri ukladaní roly: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async () => {
-    if (!db || !userToDelete || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmazanie používateľa.");
-      return;
-    }
-    setLoading(true);
-    setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
-
-    try {
-      // 1. Zmazať používateľa z Firestore
-      await db.collection('users').doc(userToDelete.id).delete();
-      console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
-
-      // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-      closeConfirmationModal();
-
-      // Otvoriť novú záložku s Firebase Console
-      window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
-
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
-
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
-      setError(`Chyba pri mazaní používateľa: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // NOVINKA: Kontrola, či je formulár platný pre povolenie tlačidla
+  const isFormValid = firstName.trim() !== '' && lastName.trim() !== '';
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
-        loadingMessage = 'Načítavam...';
+    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+        loadingMessage = 'Načítavam profilové dáta...';
+    } else if (loading) {
+        loadingMessage = 'Ukladám zmeny...';
     }
 
     return React.createElement(
@@ -683,129 +502,89 @@ function UsersManagementApp() {
     );
   }
 
-  // If user is not admin, redirect
-  if (userProfileData && userProfileData.role !== 'admin') {
-    console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam.");
-    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
-    return null;
-  }
+  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  const buttonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${loading || !isDataEditingAllowed || !isFormValid // ZMENA: Pridaná kontrola isFormValid
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
 
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ODSTRÁNENÉ: Lokálny NotificationModal bol odstránený
-    // React.createElement(NotificationModal, {
-    //     message: userNotificationMessage,
-    //     onClose: () => setUserNotificationMessage(''),
-    //     displayNotificationsEnabled: true // Vždy povolené pre túto stránku
-    // }),
-    React.createElement(ConfirmationModal, {
-        show: showConfirmationModal,
-        message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
-        onConfirm: handleDeleteUser,
-        onCancel: closeConfirmationModal,
-        loading: loading,
-    }),
-    React.createElement(RoleEditModal, {
-        show: showRoleEditModal,
-        user: userToEditRole,
-        onClose: closeRoleEditModal,
-        onSave: handleSaveRole,
-        loading: loading,
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage('')
     }),
     React.createElement(
       'div',
-      { className: 'px-4 mt-20 mb-10 max-w-screen-xl mx-auto block overflow-hidden' }, // ZMENA: Odstránené w-full
+      { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
       ),
+      // NOVINKA: Správa o uzávierke úprav
+      // Zobrazí sa len, ak používateľ nie je admin a úpravy nie sú povolené
+      !isDataEditingAllowed && userProfileData && userProfileData.role !== 'admin' && React.createElement(
+        'div',
+        { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+        `Úpravy mena a priezviska sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
+      ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: mx-auto a w-full odstránené
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Správa používateľov'
+          'Zmeniť meno a priezvisko' // Hlavný nadpis
         ),
-        users.length === 0 && !loading ? (
-            React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadni používatelia na zobrazenie.')
-        ) : (
+        // Change Name Section
+        React.createElement(
+          React.Fragment,
+          null,
+          // Odstránený podnadpis h2
+          React.createElement(
+            'form',
+            { onSubmit: handleUpdateName, className: 'space-y-4' },
             React.createElement(
-                'div',
-                { className: 'overflow-x-auto' }, // Toto zabezpečí posuvník, ak je obsah príliš široký
-                React.createElement(
-                    'table',
-                    { className: 'min-w-full bg-white rounded-lg shadow-md' }, // ZMENA: min-w-full zabezpečí, že tabuľka bude vždy minimálne 100% šírky rodiča
-                    React.createElement(
-                        'thead',
-                        null,
-                        React.createElement(
-                            'tr',
-                            { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
-                        )
-                    ),
-                    React.createElement(
-                        'tbody',
-                        { className: 'text-gray-600 text-sm font-light' },
-                        users.map((u) => (
-                            React.createElement(
-                                'tr',
-                                { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
-                                React.createElement(
-                                    'td',
-                                    { className: 'py-3 px-6 text-center' },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // ZMENA: flex-nowrap
-                                        // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
-                                        user && u.id !== user.uid && React.createElement(
-                                            React.Fragment,
-                                            null,
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: whitespace-nowrap
-                                                  disabled: loading,
-                                                },
-                                                'Upraviť rolu'
-                                            ),
-                                            // NOVINKA: Tlačidlo na schválenie/odobratie prístupu pre adminov
-                                            u.role === 'admin' && React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // ZMENA: whitespace-nowrap
-                                                  disabled: loading,
-                                                },
-                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
-                                            ),
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: whitespace-nowrap
-                                                  disabled: loading,
-                                                },
-                                                'Zmazať'
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        ))
-                    )
-                )
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'first-name' }, 'Meno'),
+              React.createElement('input', {
+                type: 'text',
+                id: 'first-name',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                value: firstName,
+                onChange: (e) => setFirstName(e.target.value),
+                required: true,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+              })
+            ),
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'last-name' }, 'Priezvisko'),
+              React.createElement('input', {
+                type: 'text',
+                id: 'last-name',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                value: lastName,
+                onChange: (e) => setLastName(e.target.value),
+                required: true,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+              })
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'submit',
+                className: buttonClasses, // Použitie dynamických tried
+                disabled: loading || !isDataEditingAllowed || !isFormValid, // ZMENA: Disabled ak je po uzávierke alebo formulár nie je platný
+              },
+              loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
+          )
         )
       )
     )
