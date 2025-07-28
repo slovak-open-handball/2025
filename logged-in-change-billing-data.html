@@ -57,23 +57,28 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <script>
-        // Centralizovaná inicializácia Firebase pomocou globálnych premenných z Canvas prostredia
+        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
         // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const firebaseConfig = {
+          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+          projectId: "prihlasovanie-4f3f3",
+          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+          messagingSenderId: "26454452024",
+          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        // initialAuthToken by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             try {
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-                
-                if (!firebaseConfig.apiKey) {
-                    console.error("logged-in-change-billing-data.html: Chyba: Firebase konfiguračný objekt neobsahuje 'apiKey'.");
-                }
-
+                // Používame explicitne definovaný firebaseConfig
                 firebase.initializeApp(firebaseConfig);
                 console.log("logged-in-change-billing-data.html: Firebase inicializovaný globálne.");
             } catch (e) {
                 console.error("logged-in-change-billing-data.html: Chyba pri globálnej inicializácii Firebase:", e);
-                if (e instanceof SyntaxError) {
-                    console.error("logged-in-change-billing-data.html: Pravdepodobne neplatný JSON v __firebase_config.");
-                }
             }
         } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
             console.log("logged-in-change-billing-data.html: Firebase už bol inicializovaný.");
