@@ -13,6 +13,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -38,43 +39,76 @@
             width: 90%;
             text-align: left;
         }
+        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        #main-content-area {
+            margin-left: 256px; /* Šírka ľavého menu */
+            padding: 1rem;
+            flex-grow: 1;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+            display: flex;
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
+        }
+        @media (max-width: 768px) {
+            #main-content-area {
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
+            }
+        }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Globálne konštanty pre Firebase - MUSIA BYŤ DEFINOVANÉ PRED AKÝMKOĽVEK SKRIPTOM, KTORÝ ICH POUŽÍVA -->
     <script>
-        // Tieto konštanty by mali byť konzistentné v celej aplikácii
-        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-        const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-            projectId: "prihlasovanie-4f3f3",
-            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-            messagingSenderId: "26454452024",
-            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        });
-        const __initial_auth_token = null; // Token by mal byť poskytnutý z backendu, ak je potrebný
+        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
+        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const firebaseConfig = {
+          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+          projectId: "prihlasovanie-4f3f3",
+          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+          messagingSenderId: "26454452024",
+          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("logged-in-change-phone.html: Firebase inicializovaný globálne.");
+            } catch (e) {
+                console.error("logged-in-change-phone.html: Chyba pri globálnej inicializácii Firebase:", e);
+            }
+        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+            console.log("logged-in-change-phone.html: Firebase už bol inicializovaný.");
+        } else {
+            console.error("logged-in-change-phone.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+        }
     </script>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
-    <div class="flex">
+    <div class="flex flex-1">
         <!-- Ľavé menu sa načíta dynamicky -->
         <div id="left-menu-placeholder"></div>
 
         <!-- Hlavná oblasť obsahu pre React aplikáciu -->
-        <main id="main-content-area" class="flex-1 p-4 ml-64 mt-16">
+        <div id="main-content-area" class="flex-1 p-4">
             <div id="root">
                 <!-- React aplikácia sa tu vykreslí -->
             </div>
-        </main>
+        </div>
     </div>
 
     <!-- Načítanie skriptov pre hlavičku a ľavé menu -->
