@@ -123,7 +123,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 
   const handleSave = () => {
     // Používame user.id namiesto user.uid
-    onSave(user.id, selectedRole, isApproved); 
+    onSave(user.id, selectedRole, isApproved);
   };
 
   return React.createElement(
@@ -186,7 +186,7 @@ function UsersManagementApp() {
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [userProfileData, setUserProfileData] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -199,7 +199,7 @@ function UsersManagementApp() {
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
   // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-  const appId = 'default-app-id'; 
+  const appId = 'default-app-id';
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -332,7 +332,7 @@ function UsersManagementApp() {
               }
 
               setUserProfileData(userData);
-              
+
               setLoading(false);
               setError('');
 
@@ -410,7 +410,7 @@ function UsersManagementApp() {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
+        registerLink && registerLink.classList.remove('hidden');
         console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
@@ -550,10 +550,10 @@ function UsersManagementApp() {
     setUserNotificationMessage('');
     try {
       const userDocRef = db.collection('users').doc(userId);
-      
+
       // Ak sa rola mení na 'user', approved sa nastaví na true.
       // Ak sa rola mení na 'admin', approved sa nastaví na false.
-      const approvedStatus = (newRole === 'user') ? true : false; 
+      const approvedStatus = (newRole === 'user') ? true : false;
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
@@ -651,7 +651,7 @@ function UsersManagementApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto lg:pl-64' }, // ZMENA: Pridané lg:pl-64 a odstránené items-center
     // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: flex justify-center na block mx-auto
+      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: flex justify-center, nie block mx-auto
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-max max-w-full mx-auto' }, // ZMENA: inline-block na w-max, pridané max-w-full a mx-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-full' }, // ZMENA: w-max mx-auto na w-full max-w-full (bude centrované flexom rodiča)
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -694,13 +694,13 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto ako zálohu
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max' }, // ZMENA: Pridané min-w-max
+                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max w-full' }, // ZMENA: Pridané w-full
                     React.createElement(
                         'thead',
                         null,
                         React.createElement(
                             'tr',
-                            { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' }, // ZMENA: Odstránené w-full
+                            { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
@@ -724,7 +724,7 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // ZMENA: Pridané flex-nowrap
+                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' },
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
