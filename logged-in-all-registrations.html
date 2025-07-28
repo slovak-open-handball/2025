@@ -13,6 +13,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -40,13 +41,17 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
+            width: calc(100% - 256px); /* Zabezpečí, že zaberie zvyšok šírky */
+            box-sizing: border-box; /* Dôležité pre správne výpočty šírky */
+            overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
         }
         @media (max-width: 768px) {
             #main-content-area {
                 margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberie celú šírku */
             }
         }
         /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
