@@ -196,6 +196,14 @@ function MySettingsApp() {
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("MySettingsApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  return; // Zastav ďalšie spracovanie
+              }
+
               setUserProfileData(userData);
               
               // Aktualizujeme lokálne stavy z userProfileData
