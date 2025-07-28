@@ -13,8 +13,8 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            display: flex; /* NOVINKA: Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* NOVINKA: Usporiadanie ako stĺpec (hlavička, potom obsah) */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
             min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
@@ -43,13 +43,15 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            /* margin-left: 256px; */ /* ODSTRÁNENÉ: Toto bude riadené flexboxom */
-            padding: 1rem;
+            /* ODSTRÁNENÉ: padding-left bude riadený v logged-in-users.js na hlavnom kontajneri aplikácie */
+            padding: 1rem; /* Pôvodný p-4 */
             flex-grow: 1;
+            box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
         }
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                /* Na mobiloch sa menu nezobrazuje ako pevné vľavo, takže padding-left je štandardný */
+                padding-left: 1rem; 
             }
         }
     </style>
@@ -86,7 +88,7 @@
         <div id="left-menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1 p-4">
+        <div id="main-content-area" class="flex-1">
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
