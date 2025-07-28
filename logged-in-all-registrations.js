@@ -596,26 +596,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     );
   }
 
-  // Ak používateľ nie je admin alebo nie je schválený, zobrazíme mu chybu
+  // Ak používateľ nie je admin alebo nie je schválený, presmerujeme ho
   if (userProfileData.role !== 'admin' || userProfileData.approved === false) {
-      return React.createElement(
-          'div',
-          { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-          React.createElement(NotificationModal, {
-              message: userNotificationMessage,
-              onClose: () => setUserNotificationMessage(''),
-              displayNotificationsEnabled: userProfileData?.displayNotifications
-          }),
-          React.createElement(
-              'div',
-              { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-              React.createElement(
-                  'div',
-                  { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-                  error || "Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup."
-              )
-          )
-      );
+      console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Presmerovávam na logged-in-my-data.html.");
+      window.location.href = 'logged-in-my-data.html';
+      return null; // Zastaviť vykresľovanie
   }
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
