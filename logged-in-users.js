@@ -700,7 +700,7 @@ function UsersManagementApp() {
                         null,
                         React.createElement(
                             'tr',
-                            { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' }, // ZMENA: Odstránené w-full
+                            { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
