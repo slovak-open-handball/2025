@@ -108,8 +108,9 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
-                        if (typeof initializeHeaderLogic === 'function') {
-                            initializeHeaderLogic();
+                        // NOVINKA: Voláme globálnu funkciu na inicializáciu GNH
+                        if (typeof window.initializeGlobalNotificationHandler === 'function') {
+                            window.initializeGlobalNotificationHandler();
                         }
                     };
                     headerScript.onerror = (e) => {
