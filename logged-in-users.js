@@ -61,7 +61,8 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center', // ZMENA: bg-[#3A8D41] a text-white
+        // Tieto triedy už zabezpečujú zelené pozadie a biely text, ako je požadované.
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -674,8 +675,8 @@ function UsersManagementApp() {
     }
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
+        loadingMessage = 'Načítavam profilové dáta...';
+    } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
 
