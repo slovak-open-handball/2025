@@ -713,7 +713,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 max-w-7xl mx-auto' }, // ZMENA: max-w-7xl a mx-auto presunuté sem
+      { className: 'w-full px-4 mt-20 mb-10 max-w-screen-xl mx-auto' }, // ZMENA: max-w-screen-xl a mx-auto na tomto dive
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
