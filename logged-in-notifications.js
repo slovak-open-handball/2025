@@ -426,7 +426,7 @@ function NotificationsApp() {
 
   const handleDeleteNotification = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
-      setError("Nemáte oprávnenie na zmazanie notifikácie.");
+      setError("Nemáte oprávnenie na vymazanie notifikácie.");
       return;
     }
     setLoading(true);
@@ -438,7 +438,7 @@ function NotificationsApp() {
       // Načítaj aktuálny stav notifikácie
       const doc = await notificationRef.get();
       if (!doc.exists) {
-        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
+        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
         setLoading(false);
         return;
       }
@@ -451,22 +451,107 @@ function NotificationsApp() {
         deletedFor.push(user.uid);
       }
 
-      // Ak všetci administrátori "zmazali" túto notifikáciu, vymaž ju úplne
+      // Ak všetci administrátori "vymazali" túto notifikáciu, vymaž ju úplne
       if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
         await notificationRef.delete();
-        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
-        console.log(`Notifikácia ${notificationId} bola úplne zmazaná z databázy.`);
+        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
+        console.log(`Notifikácia ${notificationId} bola úplne vymazaná z databázy.`);
       } else {
         // Inak aktualizuj len pole 'deletedFor'
         await notificationRef.update({
           deletedFor: deletedFor
         });
-        setUserNotificationMessage("Notifikácia bola pre vás zmazaná."); // Updated message
+        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
         console.log(`Notifikácia ${notificationId} bola skrytá pre používateľa ${user.uid}.`);
       }
     } catch (e) {
-      console.error("NotificationsApp: Chyba pri mazaní notifikácie:", e);
-      setError(`Chyba pri mazaní notifikácie: ${e.message}`);
+      console.error("NotificationsApp: Chyba pri vymazávaní notifikácie:", e);
+      setError(`Chyba pri vymazávaní notifikácie: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NOVÁ FUNKCIA: Označiť všetky neprečítané notifikácie ako prečítané
+  const handleMarkAllAsRead = async () => {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
+      setError("Nemáte oprávnenie na označenie notifikácií ako prečítaných.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const appId = 'default-app-id';
+      const unreadNotifications = notifications.filter(n => !n.read);
+
+      if (unreadNotifications.length === 0) {
+        setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
+        setLoading(false);
+        return;
+      }
+
+      // Vytvorenie batch operácie pre efektívnejšie aktualizácie
+      const batch = db.batch();
+      unreadNotifications.forEach(notification => {
+        const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
+        batch.update(notificationRef, { read: true });
+      });
+
+      await batch.commit();
+      setUserNotificationMessage("Všetky neprečítané upozornenia boli označené ako prečítané.");
+    } catch (e) {
+      console.error("NotificationsApp: Chyba pri označovaní všetkých notifikácií ako prečítaných:", e);
+      setError(`Chyba pri označovaní všetkých notifikácií ako prečítaných: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NOVÁ FUNKCIA: Vymazať všetky notifikácie pre aktuálneho používateľa
+  const handleDeleteAllNotifications = async () => {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
+      setError("Nemáte oprávnenie na vymazanie všetkých notifikácií.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const appId = 'default-app-id';
+      
+      if (notifications.length === 0) {
+        setUserNotificationMessage("Žiadne upozornenia na vymazanie.");
+        setLoading(false);
+        return;
+      }
+
+      const batch = db.batch();
+      notifications.forEach(notification => {
+        const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
+        
+        // Získanie aktuálnych dát notifikácie (potrebné pre 'deletedFor' logiku)
+        // POZNÁMKA: V batch operácii nemôžeme čítať dáta. Toto je zjednodušenie.
+        // Ak by bol počet notifikácií veľmi veľký a táto logika by spôsobovala problémy,
+        // bolo by potrebné najprv načítať všetky notifikácie, spracovať ich a potom vykonať batch.
+        // Pre menší počet notifikácií (ako sa očakáva pre admin notifikácie) je to akceptovateľné.
+        
+        // Predpokladáme, že `notifications` stav je aktuálny a obsahuje `deletedFor` pole.
+        let deletedFor = notification.deletedFor || [];
+        if (!deletedFor.includes(user.uid)) {
+          deletedFor.push(user.uid);
+        }
+
+        if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
+          batch.delete(notificationRef); // Úplné vymazanie
+        } else {
+          batch.update(notificationRef, { deletedFor: deletedFor }); // Aktualizácia deletedFor
+        }
+      });
+
+      await batch.commit();
+      setUserNotificationMessage("Všetky upozornenia boli vymazané.");
+    } catch (e) {
+      console.error("NotificationsApp: Chyba pri vymazávaní všetkých notifikácií:", e);
+      setError(`Chyba pri vymazávaní všetkých notifikácií: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -501,6 +586,10 @@ function NotificationsApp() {
     return null;
   }
 
+  // Podmienky pre zobrazenie tlačidiel
+  const hasAtLeastTwoNotifications = notifications.length >= 2;
+  const hasAtLeastTwoUnreadNotifications = notifications.filter(n => !n.read).length >= 2;
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
@@ -521,6 +610,29 @@ function NotificationsApp() {
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
+        ),
+        // NOVINKA: Tlačidlá "Označiť všetky ako prečítané" a "Vymazať všetky"
+        (hasAtLeastTwoNotifications || hasAtLeastTwoUnreadNotifications) && React.createElement(
+          'div',
+          { className: 'flex justify-center space-x-4 mb-6' },
+          hasAtLeastTwoUnreadNotifications && React.createElement(
+            'button',
+            {
+              onClick: handleMarkAllAsRead,
+              className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+              disabled: loading,
+            },
+            'Označiť všetky ako prečítané'
+          ),
+          hasAtLeastTwoNotifications && React.createElement(
+            'button',
+            {
+              onClick: handleDeleteAllNotifications,
+              className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
+              disabled: loading,
+            },
+            'Vymazať všetky'
+          )
         ),
         notifications.length === 0 && !loading ? (
             React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadne upozornenia.')
@@ -562,7 +674,7 @@ function NotificationsApp() {
                                     className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                     disabled: loading,
                                 },
-                                'Zmazať'
+                                'Vymazať' // ZMENA: Text tlačidla
                             )
                         )
                     )
@@ -573,3 +685,6 @@ function NotificationsApp() {
     )
   );
 }
+
+// Explicitne sprístupniť komponent globálne
+window.NotificationsApp = NotificationsApp;
