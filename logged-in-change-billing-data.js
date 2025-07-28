@@ -222,7 +222,8 @@ function ChangeBillingDataApp() {
               setStreet(userData.street || '');
               setHouseNumber(userData.houseNumber || '');
               setCity(userData.city || '');
-              setPostalCode(userData.postalCode || '');
+              // Automaticky formátovať PSČ po načítaní
+              setPostalCode(formatAndValidatePostalCode(userData.postalCode || '').formattedValue);
               setCountry(userData.country || '');
 
 
@@ -528,7 +529,7 @@ function ChangeBillingDataApp() {
               },
               disabled: loading,
             }),
-            icoError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 break-words' }, icoError)
+            icoError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, icoError)
           ),
           // DIČ
           React.createElement(
@@ -548,7 +549,7 @@ function ChangeBillingDataApp() {
               },
               disabled: loading,
             }),
-            dicError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 break-words' }, dicError)
+            dicError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, dicError)
           ),
           // IČ DPH
           React.createElement(
@@ -582,7 +583,7 @@ function ChangeBillingDataApp() {
               },
               disabled: loading,
             }),
-            icDphError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 break-words' }, icDphError)
+            icDphError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, icDphError)
           ),
           // Ulica
           React.createElement(
@@ -644,7 +645,7 @@ function ChangeBillingDataApp() {
               maxLength: 6, // 5 číslic + 1 medzera
               disabled: loading,
             }),
-            postalCodeError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1 break-words' }, postalCodeError)
+            postalCodeError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, postalCodeError)
           ),
           // Štát
           React.createElement(
