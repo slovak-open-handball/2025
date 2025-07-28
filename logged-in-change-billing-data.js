@@ -82,12 +82,18 @@ function ChangeBillingDataApp() {
   const [ico, setIco] = React.useState('');
   const [dic, setDic] = React.useState('');
   const [icDph, setIcDph] = React.useState('');
-  // NOVÉ STAVY PRE ADRESU
+  // States for address
   const [street, setStreet] = React.useState('');
   const [houseNumber, setHouseNumber] = React.useState('');
   const [city, setCity] = React.useState('');
   const [postalCode, setPostalCode] = React.useState('');
   const [country, setCountry] = React.useState('');
+
+  // States for validation errors
+  const [icoError, setIcoError] = React.useState('');
+  const [dicError, setDicError] = React.useState('');
+  const [icDphError, setIcDphError] = React.useState('');
+  const [postalCodeError, setPostalCodeError] = React.useState('');
 
 
   // Effect for Firebase instance retrieval and Auth Listener setup (runs only once)
@@ -325,8 +331,70 @@ function ChangeBillingDataApp() {
     };
   }, [handleLogout]);
 
+  // VALIDATION FUNCTIONS
+  const validateIco = (value) => {
+    if (!/^\d+$/.test(value) && value !== '') {
+      return 'IČO môže obsahovať iba čísla.';
+    }
+    return '';
+  };
+
+  const validateDic = (value) => {
+    if (!/^\d+$/.test(value) && value !== '') {
+      return 'DIČ môže obsahovať iba čísla.';
+    }
+    return '';
+  };
+
+  const validateIcDph = (value) => {
+    // Prvé dva znaky veľké písmená bez diakritiky, potom len čísla
+    if (!/^[A-Z]{2}\d*$/.test(value) && value !== '') {
+      return 'IČ DPH musí začínať dvoma veľkými písmenami (bez diakritiky) nasledovanými číslami.';
+    }
+    return '';
+  };
+
+  const formatAndValidatePostalCode = (value) => {
+    // Odstránime všetky nečíselné znaky a medzery
+    let cleanedValue = value.replace(/\D/g, '');
+    let formattedValue = cleanedValue;
+    let errorMsg = '';
+
+    if (cleanedValue.length > 3) {
+      formattedValue = cleanedValue.substring(0, 3) + ' ' + cleanedValue.substring(3, 5);
+    }
+
+    // Validácia formátu XXXXX
+    if (cleanedValue.length > 0 && cleanedValue.length !== 5) {
+        errorMsg = 'PSČ musí mať presne 5 číslic.';
+    } else if (cleanedValue.length === 5 && !/^\d{5}$/.test(cleanedValue)) {
+        errorMsg = 'PSČ môže obsahovať iba čísla.';
+    }
+
+    return { formattedValue, errorMsg };
+  };
+
+
   const handleUpdateBillingData = async (e) => {
     e.preventDefault();
+
+    // Re-validate all fields before submission
+    const newIcoError = validateIco(ico);
+    const newDicError = validateDic(dic);
+    const newIcDphError = validateIcDph(icDph);
+    const { errorMsg: newPostalCodeError } = formatAndValidatePostalCode(postalCode); // Use the errorMsg from formatter
+
+    setIcoError(newIcoError);
+    setDicError(newDicError);
+    setIcDphError(newIcDphError);
+    setPostalCodeError(newPostalCodeError);
+
+    // If any validation error exists, prevent submission
+    if (newIcoError || newDicError || newIcDphError || newPostalCodeError) {
+      setUserNotificationMessage("Prosím, opravte chyby vo formulári.");
+      return;
+    }
+
     if (!db || !user) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
@@ -348,7 +416,7 @@ function ChangeBillingDataApp() {
         street: street,
         houseNumber: houseNumber,
         city: city,
-        postalCode: postalCode,
+        postalCode: postalCode.replace(/\s/g, ''), // Uložiť PSČ bez medzery
         country: country
       });
       setUserNotificationMessage("Fakturačné údaje úspešne aktualizované!");
@@ -412,10 +480,11 @@ function ChangeBillingDataApp() {
         React.createElement(
           'form',
           { onSubmit: handleUpdateBillingData, className: 'space-y-4' },
+          // Oficiálny názov klubu
           React.createElement(
             'div',
             null,
-            React.createElement('label', { htmlFor: 'clubName', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Názov klubu (ak je to relevantné)'),
+            React.createElement('label', { htmlFor: 'clubName', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Oficiálny názov klubu'),
             React.createElement('input', {
               type: 'text',
               id: 'clubName',
@@ -425,7 +494,61 @@ function ChangeBillingDataApp() {
               disabled: loading,
             })
           ),
-          // NOVÉ VSTUPNÉ POLIA PRE ADRESU
+          // IČO
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'ico',
+              className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 ${icoError ? 'border-red-500' : ''}`,
+              value: ico,
+              onChange: (e) => {
+                setIco(e.target.value);
+                setIcoError(validateIco(e.target.value));
+              },
+              disabled: loading,
+            }),
+            icoError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, icoError)
+          ),
+          // DIČ
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'dic',
+              className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 ${dicError ? 'border-red-500' : ''}`,
+              value: dic,
+              onChange: (e) => {
+                setDic(e.target.value);
+                setDicError(validateDic(e.target.value));
+              },
+              disabled: loading,
+            }),
+            dicError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, dicError)
+          ),
+          // IČ DPH
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'icDph',
+              className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 ${icDphError ? 'border-red-500' : ''}`,
+              value: icDph,
+              onChange: (e) => {
+                setIcDph(e.target.value.toUpperCase()); // Automaticky na veľké písmená pre IČ DPH
+                setIcDphError(validateIcDph(e.target.value.toUpperCase()));
+              },
+              disabled: loading,
+            }),
+            icDphError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, icDphError)
+          ),
+          // Ulica
           React.createElement(
             'div',
             null,
@@ -439,6 +562,7 @@ function ChangeBillingDataApp() {
               disabled: loading,
             })
           ),
+          // Popisné číslo
           React.createElement(
             'div',
             null,
@@ -452,6 +576,7 @@ function ChangeBillingDataApp() {
               disabled: loading,
             })
           ),
+          // Mesto
           React.createElement(
             'div',
             null,
@@ -465,6 +590,7 @@ function ChangeBillingDataApp() {
               disabled: loading,
             })
           ),
+          // PSČ
           React.createElement(
             'div',
             null,
@@ -472,12 +598,19 @@ function ChangeBillingDataApp() {
             React.createElement('input', {
               type: 'text',
               id: 'postalCode',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 ${postalCodeError ? 'border-red-500' : ''}`,
               value: postalCode,
-              onChange: (e) => setPostalCode(e.target.value),
+              onChange: (e) => {
+                const { formattedValue, errorMsg } = formatAndValidatePostalCode(e.target.value);
+                setPostalCode(formattedValue);
+                setPostalCodeError(errorMsg);
+              },
+              maxLength: 6, // 5 číslic + 1 medzera
               disabled: loading,
-            })
+            }),
+            postalCodeError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, postalCodeError)
           ),
+          // Štát
           React.createElement(
             'div',
             null,
@@ -488,46 +621,6 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: country,
               onChange: (e) => setCountry(e.target.value),
-              disabled: loading,
-            })
-          ),
-          // KONIEC NOVÝCH VSTUPNÝCH POLÍ
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
-            React.createElement('input', {
-              type: 'text',
-              id: 'ico',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
-              value: ico,
-              onChange: (e) => setIco(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
-            React.createElement('input', {
-              type: 'text',
-              id: 'dic',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
-              value: dic,
-              onChange: (e) => setDic(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
-            React.createElement('input', {
-              type: 'text',
-              id: 'icDph',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
-              value: icDph,
-              onChange: (e) => setIcDph(e.target.value),
               disabled: loading,
             })
           ),
