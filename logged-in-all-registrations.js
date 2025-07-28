@@ -658,7 +658,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-7xl mt-20 mb-10 p-4' }, // ODSTRÁNENÉ ml-64, bude riadené v HTML
+      { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
