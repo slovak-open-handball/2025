@@ -367,7 +367,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                 setAllUsers(usersData);
                 setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
                 setLoading(false);
-                setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Zobrazenie notifikácie
+//                setUserNotificationMessage("Dáta registrácie boli úspešne načítané!"); // Zobrazenie notifikácie
             }, error => {
                 console.error("AllRegistrationsApp: Chyba pri načítaní všetkých používateľov z Firestore:", error);
                 setError(`Chyba pri načítaní používateľov: ${error.message}`);
