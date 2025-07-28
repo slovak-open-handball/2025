@@ -128,7 +128,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50' },
     React.createElement(
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
@@ -651,7 +651,7 @@ function UsersManagementApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto lg:ml-64' }, // ZMENA: Pridané lg:ml-64 a odstránené items-center
+    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto' }, // ODSTRÁNENÉ: lg:ml-64
     // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl max-w-full mx-auto overflow-x-auto' }, // ZMENA: pridané overflow-x-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl max-w-6xl mx-auto overflow-x-auto' }, // ZMENA: max-w-full zmenené na max-w-6xl
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -705,7 +705,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: Pridaná min-w
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: Pridaná min-w
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: Pridaná min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[320px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[340px]' }, 'Akcie') // ZMENA: Pridaná min-w na th (zvýšená)
                         )
                     ),
                     React.createElement(
