@@ -62,8 +62,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
@@ -131,7 +131,12 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
-                        // initializeHeaderLogic() už nie je potrebné volať, logika je v React komponente
+                        // NOVINKA: Voláme funkciu z header.js na inicializáciu React komponentov v hlavičke
+                        if (typeof initializeHeaderReactComponents === 'function') {
+                            initializeHeaderReactComponents();
+                        } else {
+                            console.error("Chyba: Funkcia initializeHeaderReactComponents nie je definovaná v header.js.");
+                        }
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
