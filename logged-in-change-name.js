@@ -10,7 +10,7 @@
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
 //  const day = date.getDate().toString().padStart(2, '0');
 //  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
+//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
 
@@ -320,7 +320,7 @@ function ChangeNameApp() {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
                 console.log("ChangeNameApp: Nastavenia registrácie existujú, dáta:", data);
-                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : null);
+                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Používame ISO string pre konzistentnosť
             } else {
                 console.log("ChangeNameApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
                 setDataEditDeadline(null);
@@ -413,6 +413,12 @@ function ChangeNameApp() {
       return;
     }
 
+    // NOVINKA: Kontrola, či sú polia prázdne pred odoslaním
+    if (firstName.trim() === '' || lastName.trim() === '') {
+        setError("Meno a priezvisko nesmú byť prázdne.");
+        return;
+    }
+
     if (!db || !user || !userProfileData) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
@@ -470,6 +476,9 @@ function ChangeNameApp() {
     }
   };
 
+  // NOVINKA: Kontrola, či je formulár platný pre povolenie tlačidla
+  const isFormValid = firstName.trim() !== '' && lastName.trim() !== '';
+
   // Display loading state
   if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
@@ -492,6 +501,15 @@ function ChangeNameApp() {
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
     );
   }
+
+  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  const buttonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${loading || !isDataEditingAllowed || !isFormValid // ZMENA: Pridaná kontrola isFormValid
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
 
   return React.createElement(
     'div',
@@ -561,8 +579,8 @@ function ChangeNameApp() {
               'button',
               {
                 type: 'submit',
-                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+                className: buttonClasses, // Použitie dynamických tried
+                disabled: loading || !isDataEditingAllowed || !isFormValid, // ZMENA: Disabled ak je po uzávierke alebo formulár nie je platný
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
