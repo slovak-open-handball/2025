@@ -281,6 +281,8 @@ function ChangePasswordApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return; // Zastaviť ďalšie spracovanie
               }
 
@@ -302,6 +304,8 @@ function ChangePasswordApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey); // Vyčistiť localStorage po odhlásení
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                   // Toto by sa ideálne nemalo stať, ak je Firestore zdrojom pravdy
@@ -309,13 +313,24 @@ function ChangePasswordApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else {
                   // Časy sú rovnaké, zabezpečte, aby bol localStorage aktuálny
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("ChangePasswordApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
+
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("ChangePasswordApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastav ďalšie spracovanie
+              }
 
               setUserProfileData(userData); // Aktualizujeme stav userProfileData
               
@@ -334,6 +349,8 @@ function ChangePasswordApp() {
               console.warn("ChangePasswordApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setUser(null); // Explicitne nastaviť user na null
+              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
           }, error => {
             console.error("ChangePasswordApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -346,17 +363,23 @@ function ChangePasswordApp() {
                  if (auth) {
                     auth.signOut();
                     window.location.href = 'login.html';
+                    setUser(null); // Explicitne nastaviť user na null
+                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false); // Zastaví načítavanie aj pri chybe
             console.log("ChangePasswordApp: Načítanie používateľských dát zlyhalo, loading: false");
+            setUser(null); // Explicitne nastaviť user na null
+            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
         } catch (e) {
           console.error("ChangePasswordApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false); // Zastaví načítavanie aj pri chybe
+          setUser(null); // Explicitne nastaviť user na null
+          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -414,6 +437,8 @@ function ChangePasswordApp() {
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
       console.error("ChangePasswordApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
