@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-4xl px-4 mt-20 mb-10 mx-auto' },
+      { className: 'w-full px-4 mt-20 mb-10 mx-auto' }, // ZMENA: Odstránené max-w-4xl
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -691,10 +691,10 @@ function UsersManagementApp() {
         ) : (
             React.createElement(
                 'div',
-                { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto pre prípad, že by sa tabuľka aj tak nevmestila
+                { className: '' }, // ZMENA: Odstránené overflow-x-auto
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md table-auto w-full' }, // ZMENA: pridané table-auto a w-full
+                    { className: 'bg-white rounded-lg shadow-md table-auto w-full' }, 
                     React.createElement(
                         'thead',
                         null,
@@ -705,7 +705,7 @@ function UsersManagementApp() {
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Schválený'),
-                            React.createElement('th', { className: 'py-3 px-6 text-center whitespace-nowrap' }, 'Akcie') // Pridané whitespace-nowrap
+                            React.createElement('th', { className: 'py-3 px-6 text-center whitespace-nowrap' }, 'Akcie')
                         )
                     ),
                     React.createElement(
