@@ -299,39 +299,16 @@ function App() {
                 const userDoc = await userDocRef.get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
-                    const localStorageKey = `passwordLastChanged_${currentUser.uid}`;
-                    let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-                    // Kontrola zmeny hesla na inom zariadení/relácii
-                    if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                        console.warn("LoginApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                        await authInstance.signOut();
-                        localStorage.removeItem(localStorageKey);
-                        setUserNotificationMessage("Vaše heslo bolo zmenené na inom zariadení. Prihláste sa prosím znova.");
-                        return;
-                    } else if (firestorePasswordChangedTime === 0 && storedPasswordChangedTime === 0) {
-                        // Ak passwordLastChanged nebolo nikdy nastavené, nastavíme ho teraz
-                        await userDocRef.update({ passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() });
-                        const newTimestamp = (await userDocRef.get()).data().passwordLastChanged.toDate().getTime();
-                        localStorage.setItem(localStorageKey, newTimestamp.toString());
-                        console.log("LoginApp: passwordLastChanged inicializovaný vo Firestore a localStorage.");
-                    } else if (firestorePasswordChangedTime > 0 && storedPasswordChangedTime === 0) {
-                        // Ak Firestore má timestamp, ale localStorage nie (napr. prvé prihlásenie po implementácii)
-                        localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                        console.log("LoginApp: passwordLastChanged synchronizovaný z Firestore do localStorage.");
-                    } else {
-                        // Timestamps match, alebo localStorage je novší, aktualizujeme localStorage pre istotu
-                        localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                    }
-
+                    // ODSTRÁNENÁ KONTROLA passwordLastChanged Z onAuthStateChanged PRE LOGIN STRÁNKU
+                    // Táto logika je teraz riadená výlučne v handleLogin
+                    
                     // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený, okamžite ho odhlásiť
                     if (userData.role === 'admin' && userData.approved === false) {
                         console.log("LoginApp: onAuthStateChanged - Používateľ je admin a nie je schválený. Odhlasujem.");
                         await authInstance.signOut();
                         localStorage.removeItem(`passwordLastChanged_${currentUser.uid}`); // Vyčistiť local storage
                         setUserNotificationMessage("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
-                        // Nenasmerovať, nechať zobraziť chybovú správu
+                        setUser(null); // Zabezpečiť, aby bol stav user null
                         return; // Zastaviť ďalšie spracovanie v tomto callbacku
                     }
 
@@ -345,12 +322,17 @@ function App() {
                     console.warn("LoginApp: Používateľský dokument sa nenašiel pre UID:", currentUser.uid, ". Odhlasujem.");
                     await authInstance.signOut(); // Odhlásiť, ak chýba dokument používateľa
                     setUserNotificationMessage("Váš používateľský profil sa nenašiel. Prihláste sa prosím znova.");
+                    setUser(null); // Zabezpečiť, aby bol stav user null
                 }
             } catch (profileError) {
                 console.error("LoginApp: Chyba pri načítaní používateľského profilu alebo kontrole hesla:", profileError);
                 await authInstance.signOut(); // Odhlásiť pri akejkoľvek chybe profilu
                 setUserNotificationMessage("Chyba pri overovaní profilu. Prihláste sa prosím znova.");
+                setUser(null); // Zabezpečiť, aby bol stav user null
             }
+        } else {
+            // Ak currentUser je null (odhlasenie), zabezpečiť, že user stav je null
+            setUser(null);
         }
       });
 
@@ -389,7 +371,6 @@ function App() {
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            // Removed setShowNotification(true); and setNotificationType('error'); as NotificationModal is handled differently
             setSettingsLoaded(true);
           });
 
@@ -397,7 +378,6 @@ function App() {
       } catch (e) {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          // Removed setShowNotification(true); and setNotificationType('error'); as NotificationModal is handled differently
           setSettingsLoaded(true);
       }
     };
@@ -483,10 +463,12 @@ function App() {
     e.preventDefault();
     if (!auth || !db) {
       setError("Firebase Auth alebo Firestore nie je inicializovaný.");
+      setLoading(false); // Zabezpečiť vypnutie loading stavu
       return;
     }
     if (!email || !password) {
       setError("Zadajte prosím svoju e-mailovú adresu a heslo.");
+      setLoading(false); // Zabezpečiť vypnutie loading stavu
       return;
     }
 
@@ -498,7 +480,7 @@ function App() {
     if (!recaptchaToken) {
       setError("Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.");
       setLoading(false);
-      return null;
+      return; // Zmenené z null na return
     }
     console.log("reCAPTCHA Token pre prihlásenie:", recaptchaToken);
 
@@ -542,9 +524,6 @@ function App() {
             body: JSON.stringify(payload)
           });
           console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          // Vzhľadom na 'no-cors' mode, response.text() alebo .json() zlyhá.
-          // Ak potrebujeme odpoveď, musíme nastaviť CORS na Apps Script.
-          // Zatiaľ stačí, že požiadavka odíde.
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
         }
@@ -582,6 +561,7 @@ function App() {
         return;
       }
 
+      // Nastaviť stav používateľa a notifikačnú správu
       setUser(prevUser => ({
         ...prevUser,
         ...updatedUserData,
@@ -594,6 +574,7 @@ function App() {
       setEmail('');
       setPassword('');
       
+      // Presmerovanie až po krátkom oneskorení, aby sa stihla zobraziť notifikácia
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html';
       }, 5000);
@@ -605,7 +586,7 @@ function App() {
       } else {
         setError(`Zadali ste nesprávne prihlasovacie údaje`);
       }
-      setLoading(false);
+      setLoading(false); // Vypnúť loading aj pri chybe
     }
   };
 
