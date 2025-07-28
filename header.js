@@ -203,13 +203,6 @@ function GlobalNotificationHandler() {
   const [displayNotificationsEnabled, setDisplayNotificationsEnabled] = React.useState(true); // Získané z userProfileData
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
-  // NOVINKA: Kontrola URL pre zamedzenie pop-up okien na konkrétnej stránke
-  const isNotificationsPage = window.location.pathname.includes('logged-in-notifications.html');
-  if (isNotificationsPage) {
-    console.log("GNH: Na stránke upozornení. GlobalNotificationHandler sa nebude zobrazovať.");
-    return null; // Nevykreslí nič
-  }
-
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     console.log("GNH: Spúšťam inicializáciu Firebase...");
@@ -225,9 +218,9 @@ function GlobalNotificationHandler() {
       let firebaseApp;
       // Skontrolujte, či už existuje predvolená aplikácia Firebase
       if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config a __initial_auth_token
-        console.log("GNH: Inicializujem novú Firebase aplikáciu pomocou __firebase_config.");
-        firebaseApp = firebase.initializeApp(JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'));
+        // Používame globálne firebaseConfig a initialAuthToken
+        console.log("GNH: Inicializujem novú Firebase aplikáciu.");
+        firebaseApp = firebase.initializeApp(firebaseConfig);
       } else {
         // Ak už predvolená aplikácia existuje, použite ju
         firebaseApp = firebase.app();
@@ -243,11 +236,11 @@ function GlobalNotificationHandler() {
 
       const signIn = async () => {
         try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             console.log("GNH: Pokúšam sa prihlásiť s custom tokenom.");
-            await authInstance.signInWithCustomToken(__initial_auth_token);
+            await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            console.log("GNH: __initial_auth_token nie je k dispozícii alebo je prázdny.");
+            console.log("GNH: initialAuthToken nie je k dispozícii alebo je prázdny.");
           }
         } catch (e) {
           console.error("GNH: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
@@ -287,15 +280,9 @@ function GlobalNotificationHandler() {
             const userData = docSnapshot.data();
             console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
-            // ZMENA: Ak je rola 'user', nastaviť displayNotificationsEnabled na false
-            if (userData.role === 'user') {
-                setDisplayNotificationsEnabled(false);
-                console.log("GNH: Používateľ je typu 'user', displayNotificationsEnabled nastavené na false.");
-            } else {
-                // Ak displayNotifications nie je definované, predpokladáme true
-                setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-                console.log("GNH: displayNotificationsEnabled nastavené na:", userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-            }
+            // Ak displayNotifications nie je definované, predpokladáme true
+            setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+            console.log("GNH: displayNotificationsEnabled nastavené na:", userData.displayNotifications !== undefined ? userData.displayNotifications : true);
           } else {
             console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
             // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené (predvolené správanie)
@@ -329,8 +316,7 @@ function GlobalNotificationHandler() {
   // Effect for listening to new notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
-    // Používame globálne __app_id
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+    const appId = 'default-app-id'; // Predpokladáme, že toto je konzistentné
     console.log("GNH: Spúšťam useEffect pre notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayNotificationsEnabled:", displayNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
@@ -370,8 +356,7 @@ function GlobalNotificationHandler() {
                 console.log("GNH: Zobrazujem novú notifikáciu a aktualizujem timestamp.");
 
                 // ZMENA: Označ notifikáciu ako prečítanú, ak sa zobrazila A používateľ má povolené notifikácie
-                // TOTO SA UŽ NEBUDE DIAŤ PRE ROLU 'USER', KEĎŽE displayNotificationsEnabled BUDE FALSE
-                if (userProfileData.role === 'admin' && displayNotificationsEnabled) { // Označí ako prečítané len pre adminov s povolenými notifikáciami
+                if (displayNotificationsEnabled) { // Opakovaná kontrola pre istotu
                   console.log("GNH: Označujem notifikáciu ako prečítanú (read: true). ID:", latestUnreadNotification.id);
                   db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(latestUnreadNotification.id).update({
                     read: true
@@ -416,30 +401,28 @@ function GlobalNotificationHandler() {
   });
 }
 
-// NOVINKA: Globálna funkcia na inicializáciu GlobalNotificationHandler
-// Táto funkcia sa zavolá z window.onload v každom HTML súbore,
-// aby sa zabezpečilo, že ReactDOM je dostupný.
-window.initializeGlobalNotificationHandler = function() {
-  let notificationRoot = document.getElementById('global-notification-root');
-  if (!notificationRoot) {
-    notificationRoot = document.createElement('div');
-    notificationRoot.id = 'global-notification-root';
-    document.body.appendChild(notificationRoot);
-    console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
-  } else {
-    console.log("GNH: 'global-notification-root' div už existuje.");
-  }
+// Render GlobalNotificationHandler do špecifického DOM elementu
+// Vytvoríme koreňový element pre React komponent, ak ešte neexistuje
+let notificationRoot = document.getElementById('global-notification-root');
+if (!notificationRoot) {
+  notificationRoot = document.createElement('div');
+  notificationRoot.id = 'global-notification-root';
+  document.body.appendChild(notificationRoot);
+  console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
+} else {
+  console.log("GNH: 'global-notification-root' div už existuje.");
+}
 
-  try {
-    const root = ReactDOM.createRoot(notificationRoot);
-    root.render(
-      React.createElement(GlobalNotificationHandler)
-    );
-    console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
-  } catch (e) {
-    console.error("GNH: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
-  }
-};
+// Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
+try {
+  ReactDOM.render(
+    React.createElement(GlobalNotificationHandler),
+    notificationRoot
+  );
+  console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
+} catch (e) {
+  console.error("GNH: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
+}
 
 
 // Pôvodný kód pre UsersManagementApp a jeho globálne sprístupnenie zostáva nezmenený
@@ -482,8 +465,7 @@ function UsersManagementApp() {
       let firebaseApp;
       // ZMENA: Používame globálnu premennú firebaseConfig namiesto __firebase_config
       if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config
-        firebaseApp = firebase.initializeApp(JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'));
+        firebaseApp = firebase.initializeApp(firebaseConfig);
       } else {
         firebaseApp = firebase.app();
       }
@@ -496,9 +478,9 @@ function UsersManagementApp() {
 
       const signIn = async () => {
         try {
-          // ZMENA: Používame globálnu premennú __initial_auth_token namiesto initialAuthToken
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
+          // ZMENA: Používame globálnu premennú initialAuthToken namiesto __initial_auth_token
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
           }
         } catch (e) {
           console.error("UsersManagementApp: Chyba pri počiatočnom prihlásení Firebase:", e); // Zmena logu
@@ -547,7 +529,7 @@ function UsersManagementApp() {
             console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený."); // Zmena logu
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
+              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
@@ -610,7 +592,7 @@ function UsersManagementApp() {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false."); // Zmena logu
+              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
             } else {
               console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
@@ -636,7 +618,7 @@ function UsersManagementApp() {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
-            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false."); // Zmena logu
+            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
@@ -647,6 +629,9 @@ function UsersManagementApp() {
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
+      } else { // Ak user nie je null ani undefined, ale je false (napr. po odhlásení)
+          setLoading(false);
+          setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
       }
     } else if (isAuthReady && user === undefined) {
         console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false."); // Zmena logu
@@ -896,7 +881,7 @@ function UsersManagementApp() {
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html."); // Zmena logu
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
