@@ -272,12 +272,33 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
   );
 }
 
+// NOVINKA: Funkcia na validáciu emailu (presunutá z App komponentu)
+const validateEmail = (email) => {
+  // Kontrola pre '@'
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return false;
+
+  // Kontrola pre '.' po '@'
+  const domainPart = email.substring(atIndex + 1);
+  const dotIndexInDomain = domainPart.indexOf('.');
+  if (dotIndexInDomain === -1) return false;
+
+  // Kontrola pre aspoň dva znaky po poslednej bodke v doméne
+  const lastDotIndex = email.lastIndexOf('.');
+  if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; // Bodka musí byť po @
+  
+  const charsAfterLastDot = email.substring(lastDotIndex + 1);
+  return charsAfterLastDot.length >= 2;
+};
+
 // Page1Form Component
 export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady }) {
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   // NOVINKA: Stav pre sledovanie, či bol input "Potvrdiť heslo" aktivovaný
   const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
+  // NOVINKA: Stav pre sledovanie, či bol input "Email" aktivovaný
+  const [emailTouched, setEmailTouched] = React.useState(false);
 
 
   const toggleShowPassword = () => setShowPassword(prev => !prev);
@@ -323,6 +344,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   const isFormValid = formData.firstName.trim() !== '' &&
                       formData.lastName.trim() !== '' &&
                       formData.email.trim() !== '' &&
+                      validateEmail(formData.email) && // NOVINKA: Kontrola formátu emailu
                       formData.contactPhoneNumber.trim() !== '' &&
                       formData.password.length >= 10 && // Základná kontrola dĺžky hesla
                       /[a-z]/.test(formData.password) &&
@@ -453,15 +475,23 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               React.createElement('input', {
                 type: 'email',
                 id: 'email',
-                className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none',
+                className: `w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white border-none rounded-none ${emailTouched && formData.email.trim() !== '' && !validateEmail(formData.email) ? 'border-red-500' : ''}`, // NOVINKA: červený okraj pre neplatný email
                 value: formData.email,
                 onChange: handleChange,
+                onFocus: () => setEmailTouched(true), // NOVINKA: Nastaví touched stav
                 required: true,
                 placeholder: 'Zadajte svoju e-mailovú adresu',
                 autoComplete: 'email',
                 tabIndex: 3,
                 disabled: loading || !isRegistrationOpen || !isRecaptchaReady
               })
+            ),
+            // NOVINKA: Zobrazenie správy pre neplatný email
+            emailTouched && formData.email.trim() !== '' && !validateEmail(formData.email) &&
+            React.createElement(
+              'p',
+              { className: 'text-red-500 text-xs italic mt-1' },
+              'Zadajte platnú e-mailovú adresu.'
             )
           ),
           React.createElement(
