@@ -62,8 +62,9 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
@@ -93,9 +94,7 @@
             console.error("logged-in-users.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
         }
     </script>
-    <!-- Načítanie hlavných skriptov pre hlavičku a menu -->
-    <script src="header.js"></script>
-    <script src="left-menu.js"></script>
+    <!-- Odstránené priame načítanie header.js a left-menu.js z <head> -->
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
@@ -112,6 +111,9 @@
         </div>
     </div>
 
+    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
+    <script src="logged-in-users.js"></script>
+
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
         // Funkcia na načítanie hlavičky
@@ -124,8 +126,17 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
-                    // header.js je už načítaný v <head>, takže jeho logika sa spustí automaticky.
-                    // Odstránené volanie initializeHeaderLogic(), pretože už nie je potrebné.
+                    // Dynamické načítanie header.js
+                    const headerScript = document.createElement('script');
+                    headerScript.src = 'header.js';
+                    headerScript.onload = () => {
+                        console.log("header.js načítaný a spustený.");
+                        // initializeHeaderLogic() už nie je potrebné volať, logika je v React komponente
+                    };
+                    headerScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní header.js:", e);
+                    };
+                    document.body.appendChild(headerScript);
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
@@ -142,9 +153,17 @@
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
-                    // left-menu.js je už načítaný v <head>, takže jeho logika sa spustí automaticky.
-                    console.log("left-menu.js načítaný a spustený.");
-                    // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                    // Dynamické načítanie left-menu.js
+                    const menuScript = document.createElement('script');
+                    menuScript.src = 'left-menu.js';
+                    menuScript.onload = () => {
+                        console.log("left-menu.js načítaný a spustený.");
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                    };
+                    menuScript.onerror = (e) => {
+                        console.error("Chyba pri načítaní left-menu.js:", e);
+                    };
+                    document.body.appendChild(menuScript);
                 } catch (error) {
                     console.error("Chyba pri načítaní ľavého menu:", error);
                 }
@@ -174,7 +193,5 @@
             console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
         };
     </script>
-    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
-    <script src="logged-in-users.js"></script>
 </body>
 </html>
