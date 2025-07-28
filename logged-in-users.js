@@ -524,11 +524,14 @@ function UsersManagementApp() {
     setLoading(true);
     setError('');
     // Používame globálnu funkciu pre centrálnu notifikáciu
+    // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu namiesto window.showGlobalNotification
+    /*
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
+    */
     
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
@@ -536,12 +539,8 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
-      // Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu
+      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -626,11 +625,14 @@ function UsersManagementApp() {
     setLoading(true);
     setError('');
     // Používame globálnu funkciu pre centrálnu notifikáciu
+    // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu namiesto window.showGlobalNotification
+    /*
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
+    */
 
     try {
       // 1. Zmazať používateľa z Firestore
@@ -638,12 +640,9 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
-      // Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu
+      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      
       closeConfirmationModal();
 
       // Otvoriť novú záložku s Firebase Console
