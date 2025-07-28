@@ -345,13 +345,11 @@ function App() {
 
 
   // Display loading state
-  // ZMENA: Ak je user === undefined (ešte nebola skontrolovaná autentifikácia) alebo loading je true, zobraz loading.
-  // Ak je user objekt (prihlásený), presmeruj.
   if (user === undefined || loading || !isAuthReady || !settingsLoaded) {
-    if (user) { // Ak je user objekt, znamená to, že bol prihlásený, ale ešte sa načítava
-//        window.location.href = 'logged-in-my-data.html'; // ZMENA: Presmerovanie na logged-in-my-data.html
-        return null; // Nič nevykresľuj počas presmerovania
-    }
+    // ODSTRÁNENÁ ZMENA: Pôvodný blok, ktorý spôsoboval, že sa nič nevykreslilo pre prihláseného používateľa
+    // if (user) {
+    //     return null;
+    // }
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
