@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: Removed max-w-4xl, added px-4
+      { className: 'w-full max-w-4xl px-4 mt-20 mb-10 mx-auto' }, // ZMENA: Pridané max-w-4xl a mx-auto
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
