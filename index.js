@@ -41,7 +41,6 @@ function NotificationModal({ message, onClose }) {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
     };
   }, [message, onClose]);
@@ -390,14 +389,14 @@ function App() {
           React.createElement(
             React.Fragment,
             null,
-            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásení. Pre viac možností prejdite do svojej zóny.'),
+            React.createElement('p', { className: 'text-lg text-gray-600' }, 'Ste prihlásený. V sekcii "Moja zóna" máte možnosť upraviť údaje zadané pri registrácii vrátane informácií o súpiske hráčov v jednotlivých družstvách.'),
             React.createElement(
               'div',
               { className: 'mt-6 flex justify-center' },
               React.createElement(
                 'a',
                 {
-                  href: 'logged-in-my-data.html', // ZMENA: Odkaz na logged-in-my-data.html
+                  href: 'logged-in-my-data.html', // Odkaz na logged-in-my-data.html
                   className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
                 },
                 'Moja zóna'
