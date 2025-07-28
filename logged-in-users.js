@@ -694,18 +694,18 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto ako zálohu
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max' }, // ZMENA: odstránené w-full
+                    { className: 'bg-white rounded-lg shadow-md min-w-full' }, // ZMENA: min-w-full
                     React.createElement(
                         'thead',
                         null,
                         React.createElement(
                             'tr',
                             { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Schválený'),
-                            React.createElement('th', { className: 'py-3 px-6 text-center whitespace-nowrap' }, 'Akcie')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
                         )
                     ),
                     React.createElement(
@@ -715,16 +715,16 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
+                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
+                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' },
+                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // Ponechané flex-nowrap tu
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
@@ -733,7 +733,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap',
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -743,7 +743,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`,
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
@@ -752,7 +752,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap',
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
                                                 'Zmazať'
