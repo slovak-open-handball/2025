@@ -119,14 +119,8 @@ function ChangeBillingDataApp() {
 
       const signIn = async () => {
         try {
-          // Používame globálne poskytnutý __initial_auth_token
-          // Ak initialAuthToken nie je k dispozícii (napr. pri priamom načítaní stránky),
-          // spoliehame sa na pretrvávajúci stav prihlásenia alebo sa prihlásime anonymne.
           if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
-          } else {
-            // Prihlásenie anonymne, ak nie je poskytnutý custom token (pre testovanie v Canvas)
-            await authInstance.signInAnonymously();
           }
         } catch (e) {
           console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e);
