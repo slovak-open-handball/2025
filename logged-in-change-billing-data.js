@@ -1,9 +1,12 @@
-// logged-in-change-billing-data.js
-// Tento súbor predpokladá, že Firebase je už inicializované v logged-in-change-billing-data.html
-// a že __app_id a __initial_auth_token sú globálne dostupné z prostredia Canvas.
+// Global application ID and Firebase configuration (should be consistent across all React apps)
+// Tieto konštanty sú teraz definované v <head> logged-in-change-billing-data.html
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
+// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -95,6 +98,18 @@ function ChangeBillingDataApp() {
   const [icDphError, setIcDphError] = React.useState('');
   const [postalCodeError, setPostalCodeError] = React.useState('');
 
+  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  const isDataEditingAllowed = React.useMemo(() => {
+    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    const now = new Date();
+    const deadline = new Date(dataEditDeadline);
+    return now <= deadline;
+  }, [settingsLoaded, dataEditDeadline]);
+
 
   // Effect for Firebase instance retrieval and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -121,7 +136,7 @@ function ChangeBillingDataApp() {
         try {
           if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
-          }
+          } 
         } catch (e) {
           console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
@@ -274,6 +289,50 @@ function ChangeBillingDataApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
+  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        console.log("ChangeBillingDataApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+        return;
+      }
+      try {
+          console.log("ChangeBillingDataApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("ChangeBillingDataApp: onSnapshot pre nastavenia registrácie spustený.");
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                console.log("ChangeBillingDataApp: Nastavenia registrácie existujú, dáta:", data);
+                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : null);
+            } else {
+                console.log("ChangeBillingDataApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                setDataEditDeadline(null);
+            }
+            setSettingsLoaded(true);
+            console.log("ChangeBillingDataApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+          }, error => {
+            console.error("ChangeBillingDataApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+          });
+
+          return () => {
+            if (unsubscribeSettings) {
+                console.log("ChangeBillingDataApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                unsubscribeSettings();
+            }
+          };
+      } catch (e) {
+          console.error("ChangeBillingDataApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]);
+
   // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`ChangeBillingDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
@@ -407,6 +466,11 @@ function ChangeBillingDataApp() {
       setUserNotificationMessage("Prosím, opravte chyby vo formulári.");
       return;
     }
+    // NOVINKA: Kontrola povolenia úprav dát
+    if (!isDataEditingAllowed) {
+      setError("Úpravy fakturačných údajov sú po uzávierke zakázané.");
+      return;
+    }
 
     if (!db || !user) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
@@ -473,17 +537,19 @@ function ChangeBillingDataApp() {
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
         console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Ukladám zmeny...';
     }
 
     return React.createElement(
@@ -509,11 +575,17 @@ function ChangeBillingDataApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-md mt-20 mb-10 p-4' },
+      { className: 'w-full max-w-md mt-20 mb-10 p-4' }, {/* ZMENA: max-w-4xl na max-w-md */}
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
+      ),
+      // NOVINKA: Správa o uzávierke úprav
+      !isDataEditingAllowed && React.createElement(
+        'div',
+        { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+        `Úpravy fakturačných údajov sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
       ),
       React.createElement(
         'div',
@@ -535,7 +607,7 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: clubName,
               onChange: (e) => setClubName(e.target.value),
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             })
           ),
           // IČO
@@ -554,7 +626,7 @@ function ChangeBillingDataApp() {
                 setIco(numericValue);
                 setIcoError(validateIco(numericValue));
               },
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             }),
             icoError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, icoError)
           ),
@@ -574,7 +646,7 @@ function ChangeBillingDataApp() {
                 setDic(numericValue);
                 setDicError(validateDic(numericValue));
               },
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             }),
             dicError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, dicError)
           ),
@@ -608,7 +680,7 @@ function ChangeBillingDataApp() {
                 setIcDph(filteredValue);
                 setIcDphError(validateIcDph(filteredValue));
               },
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             }),
             icDphError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, icDphError)
           ),
@@ -623,7 +695,7 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: street,
               onChange: (e) => setStreet(e.target.value),
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             })
           ),
           // Popisné číslo
@@ -637,7 +709,7 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: houseNumber,
               onChange: (e) => setHouseNumber(e.target.value),
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             })
           ),
           // Mesto
@@ -651,7 +723,7 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: city,
               onChange: (e) => setCity(e.target.value),
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             })
           ),
           // PSČ
@@ -670,7 +742,7 @@ function ChangeBillingDataApp() {
                 setPostalCodeError(errorMsg);
               },
               maxLength: 6, // 5 číslic + 1 medzera
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             }),
             postalCodeError && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1', style: { wordBreak: 'break-all' } }, postalCodeError)
           ),
@@ -685,7 +757,7 @@ function ChangeBillingDataApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
               value: country,
               onChange: (e) => setCountry(e.target.value),
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             })
           ),
           React.createElement(
@@ -693,7 +765,7 @@ function ChangeBillingDataApp() {
             {
               type: 'submit',
               className: 'mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading,
+              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
             },
             loading ? 'Ukladám...' : 'Uložiť fakturačné údaje'
           )
