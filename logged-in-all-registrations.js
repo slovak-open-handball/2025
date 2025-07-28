@@ -603,7 +603,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html."); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
@@ -658,11 +658,10 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     }),
     React.createElement(
       // ZMENA: Upravené triedy pre umiestnenie pod ľavým menu
-      // Predpokladáme, že ľavé menu má šírku cca 256px (w-64) a header má výšku 64px (h-16 alebo p-4)
-      // Použijeme ml-64 pre odsadenie zľava a mt-16 pre odsadenie zhora (pod hlavičkou)
-      // max-w-7xl a p-4 zostávajú pre vnútorné odsadenie a šírku obsahu
+      // Odstránil som max-w-7xl, aby sa roztiahol na celú dostupnú šírku.
+      // ml-64 a mt-20 zostávajú pre odsadenie od menu a hlavičky.
       'div',
-      { className: 'w-full max-w-7xl mt-20 mb-10 p-4 ml-64' }, // Pridané ml-64
+      { className: 'w-full mt-20 mb-10 p-4 ml-64' }, // Odstránené max-w-7xl
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
