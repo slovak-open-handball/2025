@@ -13,6 +13,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -40,13 +41,21 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+            display: flex;
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
         @media (max-width: 768px) {
             #main-content-area {
                 margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
             }
         }
     </style>
@@ -59,6 +68,8 @@
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
+        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
+        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
         const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
         const firebaseConfig = {
           apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -68,10 +79,20 @@
           messagingSenderId: "26454452024",
           appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
-        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // NOVINKA: Inicializácia Firebase aplikácie globálne
-        firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("logged-in-change-name.html: Firebase inicializovaný globálne.");
+            } catch (e) {
+                console.error("logged-in-change-name.html: Chyba pri globálnej inicializácii Firebase:", e);
+            }
+        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+            console.log("logged-in-change-name.html: Firebase už bol inicializovaný.");
+        } else {
+            console.error("logged-in-change-name.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+        }
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
