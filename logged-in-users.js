@@ -15,7 +15,7 @@
 //  const hours = date.getHours().toString().padStart(2, '0');
 //  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+// };
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -713,7 +713,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 max-w-full' }, // ZMENA: max-w-full a px-4
+      { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: max-w-full a px-4 odstránené, aby sa mohla použiť širka na inner div
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -721,7 +721,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl mx-auto' }, // ZMENA: mx-auto pre centrovanie
+        { className: 'bg-white p-8 rounded-lg shadow-xl mx-auto max-w-7xl w-full' }, // ZMENA: max-w-7xl a w-full pre obmedzenie šírky a centrovanie
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -740,10 +740,10 @@ function UsersManagementApp() {
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: min-w
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: min-w
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
                         )
                     ),
