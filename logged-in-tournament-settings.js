@@ -556,11 +556,6 @@ function TournamentSettingsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
-        userProfileData && React.createElement(
-          'p',
-          { className: 'text-lg text-gray-600 text-center mb-4' },
-          `Vitajte, ${userProfileData.firstName || userProfileData.email}! Vaša rola: ${userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ'}.`
-        ),
         React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Nastavenia registrácie'),
         React.createElement(
           'form',
