@@ -290,6 +290,8 @@ function UsersManagementApp() {
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               }
 
@@ -319,6 +321,16 @@ function UsersManagementApp() {
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("UsersManagementApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastav ďalšie spracovanie
+              }
+
               setUserProfileData(userData);
               
               setLoading(false);
@@ -333,6 +345,8 @@ function UsersManagementApp() {
               console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
+              setUser(null); // Explicitne nastaviť user na null
+              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
           }, error => {
             console.error("UsersManagementApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -345,17 +359,23 @@ function UsersManagementApp() {
                  if (auth) {
                     auth.signOut();
                     window.location.href = 'login.html';
+                    setUser(null); // Explicitne nastaviť user na null
+                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
+            setUser(null); // Explicitne nastaviť user na null
+            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
         } catch (e) {
           console.error("UsersManagementApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
+          setUser(null); // Explicitne nastaviť user na null
+          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -404,6 +424,8 @@ function UsersManagementApp() {
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
@@ -621,8 +643,8 @@ function UsersManagementApp() {
   }
 
   // If user is not admin, redirect
-  if (userProfileData && userProfileData.role !== 'admin') {
-    console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam.");
+  if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
+    console.log("UsersManagementApp: Používateľ nie je schválený administrátor a snaží sa pristupovať k správe používateľov, presmerovávam.");
     window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
