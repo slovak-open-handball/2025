@@ -195,6 +195,8 @@ function App() {
   const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
   // NOVINKA: Stav pre sledovanie, či bol input "Potvrďte heslo" aktivovaný
   const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
+  // NOVINKA: Stav pre sledovanie, či bol input "Email" aktivovaný
+  const [emailTouched, setEmailTouched] = React.useState(false);
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -279,12 +281,20 @@ function App() {
     return status;
   };
 
+  // NOVINKA: Funkcia na validáciu emailu
+  const validateEmail = (email) => {
+    // Základná kontrola pre '@' a '.' po '@'
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return false;
+    const dotIndex = email.indexOf('.', atIndex);
+    return dotIndex > atIndex;
+  };
+
   // Effect pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
   React.useEffect(() => {
     const pwdStatus = validatePassword(password);
     setPasswordValidationStatus(pwdStatus);
 
-    // isConfirmPasswordMatching závisí aj od celkovej platnosti nového hesla
     setIsConfirmPasswordMatching(password === confirmPassword && password.length > 0 && pwdStatus.isValid);
   }, [password, confirmPassword]);
 
@@ -295,8 +305,12 @@ function App() {
       setErrorMessage("Firebase Auth alebo Firestore nie je inicializovaný.");
       return;
     }
-    if (!email || !password || !confirmPassword || !firstName || !lastName) {
-      setErrorMessage("Vyplňte prosím všetky polia.");
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
+      setErrorMessage("Vyplňte prosím všetky povinné polia.");
+      return;
+    }
+    if (!validateEmail(email)) {
+      setErrorMessage("Zadajte platnú e-mailovú adresu (musí obsahovať '@' a '.' po '@').");
       return;
     }
     if (password !== confirmPassword) {
@@ -436,6 +450,14 @@ function App() {
     }
   };
 
+  // NOVINKA: Kontrola celkovej platnosti formulára
+  const isFormValid = firstName.trim() !== '' &&
+                      lastName.trim() !== '' &&
+                      email.trim() !== '' &&
+                      validateEmail(email) && // Kontrola formátu emailu
+                      passwordValidationStatus.isValid &&
+                      isConfirmPasswordMatching;
+
   // Display initial page loading state
   if (pageLoading) {
     return React.createElement(
@@ -472,7 +494,7 @@ function App() {
   // Dynamické triedy pre tlačidlo na základe stavu disabled
   const buttonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
-    ${formSubmitting || successMessage || !passwordValidationStatus.isValid || !isConfirmPasswordMatching
+    ${formSubmitting || successMessage || !isFormValid // ZMENA: Používame isFormValid
       ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed' // Zakázaný stav
       : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
     }
@@ -543,14 +565,22 @@ function App() {
             React.createElement('input', {
               type: 'email',
               id: 'reg-email',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+              className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${emailTouched && email.trim() !== '' && !validateEmail(email) ? 'border-red-500' : ''}`, // ZMENA: červený okraj pre neplatný email
               value: email,
               onChange: (e) => setEmail(e.target.value),
+              onFocus: () => setEmailTouched(true), // NOVINKA: Nastaví touched stav
               required: true,
               placeholder: 'Zadajte svoju e-mailovú adresu',
               autoComplete: 'email',
               disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
-            })
+            }),
+            // NOVINKA: Zobrazenie správy pre neplatný email
+            emailTouched && email.trim() !== '' && !validateEmail(email) &&
+            React.createElement(
+              'p',
+              { className: 'text-red-500 text-xs italic mt-1' },
+              'Zadajte platnú e-mailovú adresu (musí obsahovať \'@\' a \'.\' po \'@\').'
+            )
           ),
           React.createElement(PasswordInput, {
             id: 'reg-password',
@@ -597,7 +627,7 @@ function App() {
             {
               type: 'submit',
               className: buttonClasses, // Použitie dynamických tried
-              disabled: formSubmitting || successMessage || !passwordValidationStatus.isValid || !isConfirmPasswordMatching, // Zakázať, ak heslo nie je platné alebo sa nezhoduje
+              disabled: formSubmitting || successMessage || !isFormValid, // ZMENA: Používame isFormValid
             },
             formSubmitting ? ( // Use formSubmitting
               React.createElement(
