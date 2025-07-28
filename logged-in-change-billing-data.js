@@ -120,8 +120,10 @@ function ChangeBillingDataApp() {
       const signIn = async () => {
         try {
           // Používame globálne poskytnutý __initial_auth_token
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
+          // Ak initialAuthToken nie je k dispozícii (napr. pri priamom načítaní stránky),
+          // spoliehame sa na pretrvávajúci stav prihlásenia alebo sa prihlásime anonymne.
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+            await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
             // Prihlásenie anonymne, ak nie je poskytnutý custom token (pre testovanie v Canvas)
             await authInstance.signInAnonymously();
@@ -437,6 +439,37 @@ function ChangeBillingDataApp() {
         country: country
       });
       setUserNotificationMessage("Fakturačné údaje úspešne aktualizované!");
+
+      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      try {
+          // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+          const appId = 'default-app-id'; 
+          let notificationMessage = '';
+          let notificationRecipientId = '';
+
+          // Konkrétna správa o zmene fakturačných údajov
+          if (userProfileData.role === 'user') {
+              notificationMessage = `Používateľ ${userProfileData.email} si zmenil fakturačné údaje (názov klubu: ${clubName}, IČO: ${ico}, DIČ: ${dic}, IČ DPH: ${icDph}, adresa: ${street} ${houseNumber}, ${postalCode} ${city}, ${country}).`;
+              notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
+          } else if (userProfileData.role === 'admin') {
+              notificationMessage = `Administrátor ${userProfileData.email} si zmenil fakturačné údaje (názov klubu: ${clubName}, IČO: ${ico}, DIČ: ${dic}, IČ DPH: ${icDph}, adresa: ${street} ${houseNumber}, ${postalCode} ${city}, ${country}).`;
+              notificationRecipientId = user.uid; // Notifikácia pre tohto konkrétneho administrátora
+          }
+
+          if (notificationMessage) {
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                  message: notificationMessage,
+                  timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                  recipientId: notificationRecipientId,
+                  read: false
+              });
+              console.log("Notifikácia o zmene fakturačných údajov úspešne uložená do Firestore.");
+          }
+      } catch (e) {
+          console.error("ChangeBillingDataApp: Chyba pri ukladaní notifikácie o zmene fakturačných údajov:", e);
+      }
+      // --- Koniec logiky pre ukladania notifikácie ---
+
     } catch (e) {
       console.error("ChangeBillingDataApp: Chyba pri aktualizácii fakturačných údajov:", e);
       setError(`Chyba pri aktualizácii fakturačných údajov: ${e.message}`);
