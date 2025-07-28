@@ -17,29 +17,29 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
+// ZMENA: Premenovaný komponent pre notifikácie v pravom hornom rohu
+function TopRightNotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
     // Diagnostický výpis: Sledujeme, kedy sa useEffect aktivuje a s akými hodnotami
-    console.log("NotificationModal (header.js): useEffect triggered. Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+    console.log("TopRightNotificationModal (header.js): useEffect triggered. Message:", message, "Display Enabled:", displayNotificationsEnabled); 
 
     // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií a je správa
     if (message && displayNotificationsEnabled) {
-      console.log("NotificationModal (header.js): Showing notification because message and display are enabled."); 
+      console.log("TopRightNotificationModal (header.js): Showing notification because message and display are enabled."); 
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       timerRef.current = setTimeout(() => {
-        console.log("NotificationModal (header.js): Hiding notification after timeout."); 
+        console.log("TopRightNotificationModal (header.js): Hiding notification after timeout."); 
         setShow(false);
         setTimeout(onClose, 500);
       }, 10000);
     } else {
-      console.log("NotificationModal (header.js): Hiding notification (either no message or display is disabled)."); 
+      console.log("TopRightNotificationModal (header.js): Hiding notification (either no message or display is disabled)."); 
       setShow(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -55,11 +55,11 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   }, [message, onClose, displayNotificationsEnabled]);
 
   // Diagnostický výpis: Sledujeme, kedy sa komponent vykresľuje a aký má stav
-  console.log("NotificationModal (header.js): render. Current show state:", show, "Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+  console.log("TopRightNotificationModal (header.js): render. Current show state:", show, "Message:", message, "Display Enabled:", displayNotificationsEnabled); 
 
   // Nevykresľuje sa, ak nie je zobrazené, nie je správa ALEBO ak sú notifikácie vypnuté
   if ((!show && !message) || !displayNotificationsEnabled) {
-    console.log("NotificationModal (header.js): Returning null (not rendering the UI)."); 
+    console.log("TopRightNotificationModal (header.js): Returning null (not rendering the UI)."); 
     return null;
   }
 
@@ -82,6 +82,63 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     )
   );
 }
+
+// NOVÝ KOMPONENT: CenterConfirmationModal pre pop-up notifikácie uprostred obrazovky
+function CenterConfirmationModal({ message, onClose }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    console.log("CenterConfirmationModal (header.js): useEffect triggered. Message:", message);
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        console.log("CenterConfirmationModal (header.js): Hiding notification after timeout.");
+        setShow(false);
+        setTimeout(onClose, 500); // Daj čas na animáciu pred resetom správy
+      }, 5000); // Zobrazí sa na 5 sekúnd
+    } else {
+      console.log("CenterConfirmationModal (header.js): Hiding notification (no message).");
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) {
+    console.log("CenterConfirmationModal (header.js): Returning null (not rendering the UI).");
+    return null;
+  }
+
+  return React.createElement(
+    'div',
+    {
+      className: `fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-500 ease-out ${
+        show ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`
+    },
+    React.createElement(
+      'div',
+      {
+        className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center transform transition-transform duration-500 ease-out ' +
+                   `${show ? 'scale-100' : 'scale-90'}`,
+        style: { pointerEvents: 'auto' } // Umožni kliknutie na modal
+      },
+      React.createElement('p', { className: 'font-semibold text-gray-800 text-lg' }, message)
+    )
+  );
+}
+
 
 // ConfirmationModal Component (converted to React.createElement)
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
@@ -199,18 +256,23 @@ function GlobalNotificationHandler() {
   const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [currentNotificationMessage, setCurrentNotificationMessage] = React.useState('');
-  const [displayNotificationsEnabled, setDisplayNotificationsEnabled] = React.useState(true); // Získané z userProfileData
+  
+  // ZMENA: Dva stavy pre rôzne typy notifikácií
+  const [currentTopRightMessage, setCurrentTopRightMessage] = React.useState('');
+  const [currentCenterMessage, setCurrentCenterMessage] = React.useState(''); // Nový stav pre centrálnu správu
+
+  const [displayTopRightNotificationsEnabled, setDisplayTopRightNotificationsEnabled] = React.useState(true); // Získané z userProfileData, pre top-right
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
+  // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
   React.useEffect(() => {
     window.showGlobalNotification = (message) => {
-      setCurrentNotificationMessage(message);
+      setCurrentCenterMessage(message); // Nastaví správu pre centrálnu notifikáciu
     };
     return () => {
       // Vyčisti globálnu funkciu pri odpojení komponentu
-      if (window.showGlobalNotification === setCurrentNotificationMessage) {
+      if (window.showGlobalNotification === setCurrentCenterMessage) {
         window.showGlobalNotification = (message) => {
           console.warn("Global notification function called after unmount:", message);
         };
@@ -296,39 +358,40 @@ function GlobalNotificationHandler() {
             console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
             
-            let notificationsEnabled = true; // Predvolene povolené
+            let topRightNotificationsEnabled = true; // Predvolene povolené
 
-            // ZMENA: Ak je rola 'user', notifikácie sa VŽDY vypnú.
-            // Pre ostatné roly sa rešpektuje nastavenie z Firestore.
+            // ZMENA: Ak je rola 'user', top-right notifikácie sa VŽDY vypnú.
+            // Pre ostatné roly sa rešpektuje nastavenie 'displayNotifications' z Firestore.
             if (userData.role === 'user') {
-                console.log("GNH: Používateľ je typu 'user', notifikácie budú vypnuté (prepisujem displayNotifications).");
-                notificationsEnabled = false;
+                console.log("GNH: Používateľ je typu 'user', top-right notifikácie budú vypnuté (prepisujem displayNotifications).");
+                topRightNotificationsEnabled = false;
             } else {
-                notificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
-                console.log(`GNH: Používateľ je typu '${userData.role}', displayNotificationsEnabled nastavené na:`, notificationsEnabled);
+                topRightNotificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
+                console.log(`GNH: Používateľ je typu '${userData.role}', displayTopRightNotificationsEnabled nastavené na:`, topRightNotificationsEnabled);
             }
             
-            setDisplayNotificationsEnabled(notificationsEnabled);
-            console.log("GNH: displayNotificationsEnabled nastavené na:", notificationsEnabled);
+            setDisplayTopRightNotificationsEnabled(topRightNotificationsEnabled);
+            console.log("GNH: displayTopRightNotificationsEnabled nastavené na:", topRightNotificationsEnabled);
           } else {
             console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
             // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené (predvolené správanie)
-            setDisplayNotificationsEnabled(true); 
+            setDisplayTopRightNotificationsEnabled(true); 
           }
         }, error => {
           console.error("GNH: Chyba pri načítaní používateľských dát z Firestore:", error);
           // V prípade chyby tiež predpokladáme, že notifikácie sú povolené, aby sa neblokovali
-          setDisplayNotificationsEnabled(true);
+          setDisplayTopRightNotificationsEnabled(true);
         });
       } catch (e) {
         console.error("GNH: Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
-        setDisplayNotificationsEnabled(true);
+        setDisplayTopRightNotificationsEnabled(true);
       }
     } else if (isAuthReady && user === null) {
       // Ak nie je používateľ prihlásený, notifikácie by sa nemali zobrazovať
-      console.log("GNH: Používateľ nie je prihlásený, nastavujem displayNotificationsEnabled na false.");
-      setDisplayNotificationsEnabled(false);
-      setCurrentNotificationMessage(''); // Vymaž aktuálnu správu, ak používateľ nie je prihlásený
+      console.log("GNH: Používateľ nie je prihlásený, nastavujem displayTopRightNotificationsEnabled na false.");
+      setDisplayTopRightNotificationsEnabled(false);
+      setCurrentTopRightMessage(''); // Vymaž aktuálnu správu, ak používateľ nie je prihlásený
+      setCurrentCenterMessage(''); // Vymaž aj centrálnu správu
       setUserProfileData(null); // Zabezpečiť, že userProfileData je null
     }
 
@@ -341,16 +404,16 @@ function GlobalNotificationHandler() {
     };
   }, [isAuthReady, db, user]);
 
-  // Effect for listening to new notifications
+  // Effect for listening to new notifications (only for top-right notifications)
   React.useEffect(() => {
     let unsubscribeNotifications;
     const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Používame globálne definovaný appId
-    console.log("GNH: Spúšťam useEffect pre notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayNotificationsEnabled:", displayNotificationsEnabled);
+    console.log("GNH: Spúšťam useEffect pre top-right notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayTopRightNotificationsEnabled:", displayTopRightNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
     // POZNÁMKA: Filtrujeme len neprečítané (`read: false`) notifikácie
-    if (db && user && userProfileData && displayNotificationsEnabled) { // ZMENA: Kontrolujeme displayNotificationsEnabled
-      console.log("GNH: Podmienky pre načítanie notifikácií splnené.");
+    if (db && user && userProfileData && displayTopRightNotificationsEnabled) { // ZMENA: Kontrolujeme displayTopRightNotificationsEnabled
+      console.log("GNH: Podmienky pre načítanie top-right notifikácií splnené.");
       // Načítaj posledný timestamp zobrazenej notifikácie z localStorage
       const storedLastTimestamp = localStorage.getItem(`lastNotificationTimestamp_${user.uid}`);
       if (storedLastTimestamp) {
@@ -374,17 +437,17 @@ function GlobalNotificationHandler() {
             console.log("GNH: Najnovšia neprečítaná notifikácia:", notificationData, "Timestamp:", notificationTimestamp, "Last shown:", lastNotificationTimestamp);
 
             // Zobraz notifikáciu len ak je novšia ako posledná zobrazená
-            // A ak má používateľ povolené zobrazovanie notifikácií
-            if (notificationTimestamp > lastNotificationTimestamp && displayNotificationsEnabled) { // ZMENA: Kontrola displayNotificationsEnabled
+            // A ak má používateľ povolené zobrazovanie top-right notifikácií
+            if (notificationTimestamp > lastNotificationTimestamp && displayTopRightNotificationsEnabled) { // ZMENA: Kontrola displayTopRightNotificationsEnabled
               const isDeletedForCurrentUser = notificationData.deletedFor && notificationData.deletedFor.includes(user.uid);
               if (!isDeletedForCurrentUser) {
-                setCurrentNotificationMessage(notificationData.message);
+                setCurrentTopRightMessage(notificationData.message); // ZMENA: Nastavuje top-right správu
                 setLastNotificationTimestamp(notificationTimestamp); // Aktualizuj timestamp poslednej zobrazenej
                 localStorage.setItem(`lastNotificationTimestamp_${user.uid}`, notificationTimestamp.toString()); // Ulož do localStorage
-                console.log("GNH: Zobrazujem novú notifikáciu a aktualizujem timestamp.");
+                console.log("GNH: Zobrazujem novú top-right notifikáciu a aktualizujem timestamp.");
 
                 // ZMENA: Označ notifikáciu ako prečítanú, ak sa zobrazila A používateľ má povolené notifikácie
-                if (displayNotificationsEnabled) { // Opakovaná kontrola pre istotu
+                if (displayTopRightNotificationsEnabled) { // Opakovaná kontrola pre istotu
                   console.log("GNH: Označujem notifikáciu ako prečítanú (read: true). ID:", latestUnreadNotification.id);
                   db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(latestUnreadNotification.id).update({
                     read: true
@@ -394,23 +457,23 @@ function GlobalNotificationHandler() {
                 console.log("GNH: Notifikácia je označená ako vymazaná pre aktuálneho používateľa, nezobrazujem.");
               }
             } else {
-              console.log("GNH: Notifikácia nie je novšia alebo notifikácie sú vypnuté, nezobrazujem pop-up.");
+              console.log("GNH: Notifikácia nie je novšia alebo top-right notifikácie sú vypnuté, nezobrazujem pop-up.");
             }
           } else {
-            console.log("GNH: Žiadne neprečítané notifikácie na zobrazenie.");
+            console.log("GNH: Žiadne neprečítané top-right notifikácie na zobrazenie.");
           }
         }, error => {
           console.error("GNH: Chyba pri načítaní notifikácií pre pop-up:", error);
         });
-    } else if (userProfileData && displayNotificationsEnabled === false) { // Ak sú notifikácie vypnuté
-        console.log("GNH: Notifikácie sú vypnuté v profile používateľa. Zrušujem odber a čistím správu.");
+    } else if (userProfileData && displayTopRightNotificationsEnabled === false) { // Ak sú notifikácie vypnuté
+        console.log("GNH: Top-right notifikácie sú vypnuté v profile používateľa. Zrušujem odber a čistím správu.");
         if (unsubscribeNotifications) {
             unsubscribeNotifications();
             unsubscribeNotifications = null;
         }
-        setCurrentNotificationMessage(''); // Vymaž aktuálnu správu, ak používateľ vypne notifikácie
+        setCurrentTopRightMessage(''); // Vymaž aktuálnu správu, ak používateľ vypne notifikácie
     } else {
-        console.log("GNH: Podmienky pre načítanie notifikácií nesplnené (napr. nie je prihlásený alebo chýbajú dáta profilu).");
+        console.log("GNH: Podmienky pre načítanie top-right notifikácií nesplnené (napr. nie je prihlásený alebo chýbajú dáta profilu).");
     }
 
 
@@ -420,13 +483,21 @@ function GlobalNotificationHandler() {
         unsubscribeNotifications();
       }
     };
-  }, [db, user, userProfileData, lastNotificationTimestamp, displayNotificationsEnabled]); // Závisí aj od lastNotificationTimestamp a displayNotificationsEnabled
+  }, [db, user, userProfileData, lastNotificationTimestamp, displayTopRightNotificationsEnabled]); // Závisí aj od lastNotificationTimestamp a displayTopRightNotificationsEnabled
 
-  return React.createElement(NotificationModal, {
-    message: currentNotificationMessage,
-    onClose: () => setCurrentNotificationMessage(''),
-    displayNotificationsEnabled: displayNotificationsEnabled
-  });
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(TopRightNotificationModal, {
+      message: currentTopRightMessage,
+      onClose: () => setCurrentTopRightMessage(''),
+      displayNotificationsEnabled: displayTopRightNotificationsEnabled // Prop pre top-right modal
+    }),
+    React.createElement(CenterConfirmationModal, { // NOVINKA: Vykresľuje centrálnu notifikáciu
+      message: currentCenterMessage,
+      onClose: () => setCurrentCenterMessage('')
+    })
+  );
 }
 
 // Render GlobalNotificationHandler do špecifického DOM elementu
@@ -466,7 +537,7 @@ function UsersManagementApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // Tento stav sa teraz bude používať pre centrálnu notifikáciu
 
   const [users, setUsers] = React.useState([]);
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
@@ -705,7 +776,12 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Úspešne odhlásený.");
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -797,16 +873,27 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
+    
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
       const userDocRef = db.collection('users').doc(userToToggle.id);
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
-      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
 
-      // Uložiť notifikáciu pre všetkých administrátorov
+      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -830,7 +917,13 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
+
     try {
       const userDocRef = db.collection('users').doc(userId);
       
@@ -839,7 +932,12 @@ function UsersManagementApp() {
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
-      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       closeRoleEditModal();
 
       // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
@@ -852,7 +950,7 @@ function UsersManagementApp() {
           return; // Zastav ďalšie spracovanie
       }
 
-      // Uložiť notifikáciu pre všetkých administrátorov
+      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${approvedStatus ? 'Áno' : 'Nie'}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -876,20 +974,31 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
+
     try {
       // 1. Zmazať používateľa z Firestore
       await db.collection('users').doc(userToDelete.id).delete();
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`); // Zmena logu
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
-      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       closeConfirmationModal();
 
       // Otvoriť novú záložku s Firebase Console
       window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
 
-      // Uložiť notifikáciu pre všetkých administrátorov
+      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Používateľ ${userToDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -938,8 +1047,8 @@ function UsersManagementApp() {
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
     // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
+    React.createElement(TopRightNotificationModal, { // ZMENA: Používa TopRightNotificationModal
+        message: userNotificationMessage, // Tento stav sa už nepoužíva pre centrálnu notifikáciu
         onClose: () => setUserNotificationMessage(''),
         displayNotificationsEnabled: userProfileData.displayNotifications // Pridaný prop
     }),
