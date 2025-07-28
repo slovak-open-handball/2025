@@ -122,7 +122,8 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   if (!show || !user) return null;
 
   const handleSave = () => {
-    onSave(user.id, selectedRole, isApproved);
+    // ZMENA: Používame user.id namiesto user.uid
+    onSave(user.id, selectedRole, isApproved); 
   };
 
   return React.createElement(
@@ -253,7 +254,7 @@ function UsersManagementApp() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.id : "null");
+        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -284,11 +285,11 @@ function UsersManagementApp() {
       }
 
       if (user) {
-        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.id}`);
+        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
         setLoading(true);
 
         try {
-          const userDocRef = db.collection('users').doc(user.id);
+          const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený.");
             if (docSnapshot.exists) {
@@ -301,12 +302,12 @@ function UsersManagementApp() {
                   console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
                   auth.signOut();
                   window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.id}`);
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
                   return;
               }
 
               const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.id}`;
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
               console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
@@ -342,7 +343,7 @@ function UsersManagementApp() {
 
               console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
-              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.id);
+              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
             }
@@ -385,7 +386,7 @@ function UsersManagementApp() {
 
   // Effect for updating header link visibility
   React.useEffect(() => {
-    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.id : 'null'}`);
+    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -527,7 +528,6 @@ function UsersManagementApp() {
   };
 
   const handleSaveRole = async (userId, newRole, newIsApproved) => {
-    console.log("handleSaveRole volaná pre userId:", userId);
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu roly používateľa.");
       return;
@@ -691,8 +691,7 @@ function UsersManagementApp() {
                         'tbody',
                         { className: 'text-gray-600 text-sm font-light' },
                         users.map((u) => (
-                          console.log("Vykresľujem používateľa:", u.email, "s ID:", u.id),  
-                          React.createElement(
+                            React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
@@ -706,16 +705,13 @@ function UsersManagementApp() {
                                         'div',
                                         { className: 'flex item-center justify-center space-x-2' },
                                         // ZMENA: Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
-                                        user && u.id !== user.id && React.createElement(
+                                        user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
                                             null,
                                             React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => {
-                                                    console.log("Kliknuté na Upraviť rolu pre ID:", u.id); // Ďalší log
-                                                    openRoleEditModal(u);
-                                                  },
+                                                  onClick: () => openRoleEditModal(u),
                                                   className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
