@@ -12,7 +12,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            padding-left: 256px; /* Odsadenie pre ľavé menu */
+            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, aby sa obsah neposúval celý doprava */
         }
         .modal {
             position: fixed;
@@ -39,13 +39,22 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+            display: flex; /* Použijeme flexbox */
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
+        /* Pre mobilné zariadenia - odstránime odsadenie a centrovanie */
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                margin-left: 0;
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
             }
         }
     </style>
