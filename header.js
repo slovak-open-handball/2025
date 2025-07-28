@@ -203,6 +203,21 @@ function GlobalNotificationHandler() {
   const [displayNotificationsEnabled, setDisplayNotificationsEnabled] = React.useState(true); // Získané z userProfileData
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
+  // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
+  React.useEffect(() => {
+    window.showGlobalNotification = (message) => {
+      setCurrentNotificationMessage(message);
+    };
+    return () => {
+      // Vyčisti globálnu funkciu pri odpojení komponentu
+      if (window.showGlobalNotification === setCurrentNotificationMessage) {
+        window.showGlobalNotification = (message) => {
+          console.warn("Global notification function called after unmount:", message);
+        };
+      }
+    };
+  }, []); // Spusti raz pri pripojení komponentu
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     console.log("GNH: Spúšťam inicializáciu Firebase...");
@@ -280,15 +295,19 @@ function GlobalNotificationHandler() {
             const userData = docSnapshot.data();
             console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
-            // Ak displayNotifications nie je definované, predpokladáme true
-            let notificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
             
-            // ZMENA: Ak je rola 'user', notifikácie sa nezobrazia
-            if (userData.role === 'user') {
-                console.log("GNH: Používateľ je typu 'user', notifikácie budú vypnuté.");
-                notificationsEnabled = false;
-            }
+            let notificationsEnabled = true; // Predvolene povolené
 
+            // ZMENA: Ak je rola 'user', notifikácie sa VŽDY vypnú.
+            // Pre ostatné roly sa rešpektuje nastavenie z Firestore.
+            if (userData.role === 'user') {
+                console.log("GNH: Používateľ je typu 'user', notifikácie budú vypnuté (prepisujem displayNotifications).");
+                notificationsEnabled = false;
+            } else {
+                notificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
+                console.log(`GNH: Používateľ je typu '${userData.role}', displayNotificationsEnabled nastavené na:`, notificationsEnabled);
+            }
+            
             setDisplayNotificationsEnabled(notificationsEnabled);
             console.log("GNH: displayNotificationsEnabled nastavené na:", notificationsEnabled);
           } else {
