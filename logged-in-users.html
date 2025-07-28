@@ -42,8 +42,9 @@
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
             padding: 1rem; /* Pôvodný p-4 */
-            flex-grow: 1;
+            /* ZMENA: Odstránené flex-grow: 1; */
             box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
+            width: 100%; /* Zabezpečí, že zaberie celú šírku rodiča */
         }
         /* NOVINKA: Odsadenie pre ľavé menu na väčších obrazovkách */
         @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
