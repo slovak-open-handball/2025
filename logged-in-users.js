@@ -690,7 +690,8 @@ function UsersManagementApp() {
                         'tbody',
                         { className: 'text-gray-600 text-sm font-light' },
                         users.map((u) => (
-                            React.createElement(
+                          console.log("Vykresľujem používateľa:", u.email, "s ID:", u.id),  
+                          React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
@@ -710,7 +711,10 @@ function UsersManagementApp() {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => openRoleEditModal(u),
+                                                  onClick: () => {
+                                                    console.log("Kliknuté na Upraviť rolu pre ID:", u.id); // Ďalší log
+                                                    openRoleEditModal(u);
+                                                  },
                                                   className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
