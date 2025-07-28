@@ -257,14 +257,24 @@ function GlobalNotificationHandler() {
             const userData = docSnapshot.data();
             setUserProfileData(userData);
             setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+          } else {
+            // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené
+            setDisplayNotificationsEnabled(true); 
           }
         }, error => {
           console.error("GlobalNotificationHandler: Chyba pri načítaní používateľských dát z Firestore:", error);
+          // V prípade chyby tiež predpokladáme, že notifikácie sú povolené, aby sa neblokovali
+          setDisplayNotificationsEnabled(true);
         });
       } catch (e) {
         console.error("GlobalNotificationHandler: Chyba pri nastavovaní onSnapshot pre používateľské dáta:", e);
+        setDisplayNotificationsEnabled(true);
       }
+    } else if (isAuthReady && user === null) {
+      // Ak nie je používateľ prihlásený, notifikácie by sa nemali zobrazovať
+      setDisplayNotificationsEnabled(false);
     }
+
 
     return () => {
       if (unsubscribeUserDoc) {
@@ -278,14 +288,15 @@ function GlobalNotificationHandler() {
     let unsubscribeNotifications;
     const appId = 'default-app-id'; // Predpokladáme, že toto je konzistentné
 
-    if (db && user && userProfileData && userProfileData.displayNotifications) {
+    // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
+    // POZNÁMKA: Filtrujeme len neprečítané (`read: false`) notifikácie
+    if (db && user && userProfileData && userProfileData.displayNotifications !== false) { // ZMENA: Kontrolujeme, či displayNotifications NIE JE false
       // Načítaj posledný timestamp zobrazenej notifikácie z localStorage
       const storedLastTimestamp = localStorage.getItem(`lastNotificationTimestamp_${user.uid}`);
       if (storedLastTimestamp) {
           setLastNotificationTimestamp(parseInt(storedLastTimestamp, 10));
       }
 
-      // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
       unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
         .where('recipientId', 'in', [user.uid, 'all_admins'])
         .where('read', '==', false) // Len neprečítané
@@ -298,26 +309,42 @@ function GlobalNotificationHandler() {
             const notificationTimestamp = notificationData.timestamp ? notificationData.timestamp.toDate().getTime() : 0;
 
             // Zobraz notifikáciu len ak je novšia ako posledná zobrazená
-            if (notificationTimestamp > lastNotificationTimestamp) {
+            // A ak má používateľ povolené zobrazovanie notifikácií
+            if (notificationTimestamp > lastNotificationTimestamp && userProfileData.displayNotifications !== false) { // ZMENA: Kontrola displayNotifications
               const isDeletedForCurrentUser = notificationData.deletedFor && notificationData.deletedFor.includes(user.uid);
               if (!isDeletedForCurrentUser) {
                 setCurrentNotificationMessage(notificationData.message);
                 setLastNotificationTimestamp(notificationTimestamp); // Aktualizuj timestamp poslednej zobrazenej
                 localStorage.setItem(`lastNotificationTimestamp_${user.uid}`, notificationTimestamp.toString()); // Ulož do localStorage
+
+                // ZMENA: Označ notifikáciu ako prečítanú, ak sa zobrazila A používateľ má povolené notifikácie
+                if (userProfileData.displayNotifications !== false) {
+                  db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(latestUnreadNotification.id).update({
+                    read: true
+                  }).catch(e => console.error("GlobalNotificationHandler: Chyba pri označovaní notifikácie ako prečítanej:", e));
+                }
               }
             }
           }
         }, error => {
           console.error("GlobalNotificationHandler: Chyba pri načítaní notifikácií pre pop-up:", error);
         });
+    } else if (userProfileData && userProfileData.displayNotifications === false) {
+        // Ak sú notifikácie vypnuté, zruš odber
+        if (unsubscribeNotifications) {
+            unsubscribeNotifications();
+            unsubscribeNotifications = null;
+        }
+        setCurrentNotificationMessage(''); // Vymaž aktuálnu správu, ak používateľ vypne notifikácie
     }
+
 
     return () => {
       if (unsubscribeNotifications) {
         unsubscribeNotifications();
       }
     };
-  }, [db, user, userProfileData, lastNotificationTimestamp]); // Závisí aj od lastNotificationTimestamp
+  }, [db, user, userProfileData, lastNotificationTimestamp]); // Závisí aj od lastNotificationTimestamp a userProfileData
 
   return React.createElement(NotificationModal, {
     message: currentNotificationMessage,
@@ -569,7 +596,7 @@ function UsersManagementApp() {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+    const registerLink = document = document.getElementById('register-link');
 
     if (authLink) {
       if (user) {
