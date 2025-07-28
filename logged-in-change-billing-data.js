@@ -66,7 +66,7 @@ function NotificationModal({ message, onClose }) {
 }
 
 // Main React component for the logged-in-change-billing-data.html page
-function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp na ChangeBillingDataApp
+function ChangeBillingDataApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
@@ -82,6 +82,13 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
   const [ico, setIco] = React.useState('');
   const [dic, setDic] = React.useState('');
   const [icDph, setIcDph] = React.useState('');
+  // NOVÉ STAVY PRE ADRESU
+  const [street, setStreet] = React.useState('');
+  const [houseNumber, setHouseNumber] = React.useState('');
+  const [city, setCity] = React.useState('');
+  const [postalCode, setPostalCode] = React.useState('');
+  const [country, setCountry] = React.useState('');
+
 
   // Effect for Firebase instance retrieval and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -89,8 +96,8 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
 
     try {
       if (typeof firebase === 'undefined') {
-        console.error("ChangeBillingDataApp: Firebase SDK nie je načítané."); // ZMENA: Console log
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-billing-data.html."); // ZMENA: Error správa
+        console.error("ChangeBillingDataApp: Firebase SDK nie je načítané.");
+        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-billing-data.html.");
         setLoading(false);
         return;
       }
@@ -114,13 +121,13 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
             await authInstance.signInAnonymously();
           }
         } catch (e) {
-          console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e); // ZMENA: Console log
+          console.error("ChangeBillingDataApp: Chyba pri počiatočnom prihlásení Firebase:", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
         }
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("ChangeBillingDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null"); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -133,7 +140,7 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
         }
       };
     } catch (e) {
-      console.error("ChangeBillingDataApp: Nepodarilo sa získať Firebase inštancie:", e); // ZMENA: Console log
+      console.error("ChangeBillingDataApp: Nepodarilo sa získať Firebase inštancie:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
@@ -145,13 +152,13 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
 
     if (isAuthReady && db && user !== undefined) {
       if (user === null) {
-        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
 
       if (user) {
-        console.log(`ChangeBillingDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // ZMENA: Console log
+        console.log(`ChangeBillingDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
         setLoading(true);
 
         try {
@@ -159,12 +166,12 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("ChangeBillingDataApp: Používateľský dokument existuje, dáta:", userData); // ZMENA: Console log
+              console.log("ChangeBillingDataApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("ChangeBillingDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // ZMENA: Console log
-                  console.log("ChangeBillingDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // ZMENA: Console log
+                  console.error("ChangeBillingDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                  console.log("ChangeBillingDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
@@ -175,26 +182,26 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`ChangeBillingDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // ZMENA: Console log
+              console.log(`ChangeBillingDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangeBillingDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // ZMENA: Console log
+                  console.log("ChangeBillingDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("ChangeBillingDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // ZMENA: Console log
+                  console.log("ChangeBillingDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("ChangeBillingDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // ZMENA: Console log
+                  console.warn("ChangeBillingDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
                   return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangeBillingDataApp: Timestampy sú rovnaké, aktualizujem localStorage."); // ZMENA: Console log
+                  console.log("ChangeBillingDataApp: Timestampy sú rovnaké, aktualizujem localStorage.");
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -205,6 +212,13 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
               setIco(userData.billing?.ico || '');
               setDic(userData.billing?.dic || '');
               setIcDph(userData.billing?.icDph || '');
+              // NAČÍTANIE HODNÔT ADRESY Z userProfileData
+              setStreet(userData.street || '');
+              setHouseNumber(userData.houseNumber || '');
+              setCity(userData.city || '');
+              setPostalCode(userData.postalCode || '');
+              setCountry(userData.country || '');
+
 
               setLoading(false);
               setError('');
@@ -213,14 +227,14 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              console.log("ChangeBillingDataApp: Načítanie používateľských dát dokončené, loading: false"); // ZMENA: Console log
+              console.log("ChangeBillingDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
-              console.warn("ChangeBillingDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // ZMENA: Console log
+              console.warn("ChangeBillingDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
             }
           }, error => {
-            console.error("ChangeBillingDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error); // ZMENA: Console log
+            console.error("ChangeBillingDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
             if (error.code === 'permission-denied') {
                 setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
             } else if (error.code === 'unavailable') {
@@ -235,23 +249,23 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
-            console.log("ChangeBillingDataApp: Načítanie používateľských dát zlyhalo, loading: false"); // ZMENA: Console log
+            console.log("ChangeBillingDataApp: Načítanie používateľských dát zlyhalo, loading: false");
           });
         } catch (e) {
-          console.error("ChangeBillingDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // ZMENA: Console log
+          console.error("ChangeBillingDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
         }
       }
     } else if (isAuthReady && user === undefined) {
-        console.log("ChangeBillingDataApp: Auth ready, user undefined. Nastavujem loading na false."); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Auth ready, user undefined. Nastavujem loading na false.");
         setLoading(false);
     }
 
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("ChangeBillingDataApp: Ruším odber onSnapshot pre používateľský dokument."); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
@@ -259,7 +273,7 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
 
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`ChangeBillingDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // ZMENA: Console log
+    console.log(`ChangeBillingDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -271,13 +285,13 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
-        console.log("ChangeBillingDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         registerLink && registerLink.classList.remove('hidden'); 
-        console.log("ChangeBillingDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
       }
     }
   }, [user]);
@@ -291,7 +305,7 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("ChangeBillingDataApp: Chyba pri odhlásení:", e); // ZMENA: Console log
+      console.error("ChangeBillingDataApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -329,11 +343,17 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
           ico: ico,
           dic: dic,
           icDph: icDph
-        }
+        },
+        // AKTUALIZÁCIA ADRESNÝCH ÚDAJOV PRIAMO V KORENI POUŽÍVATEĽSKÉHO DOKUMENTU
+        street: street,
+        houseNumber: houseNumber,
+        city: city,
+        postalCode: postalCode,
+        country: country
       });
       setUserNotificationMessage("Fakturačné údaje úspešne aktualizované!");
     } catch (e) {
-      console.error("ChangeBillingDataApp: Chyba pri aktualizácii fakturačných údajov:", e); // ZMENA: Console log
+      console.error("ChangeBillingDataApp: Chyba pri aktualizácii fakturačných údajov:", e);
       setError(`Chyba pri aktualizácii fakturačných údajov: ${e.message}`);
     } finally {
       setLoading(false);
@@ -343,7 +363,7 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // ZMENA: Console log
+        console.log("ChangeBillingDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
@@ -363,7 +383,7 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
 
   // Redirect if user is not 'user' role
   if (userProfileData && userProfileData.role !== 'user') {
-      console.log("ChangeBillingDataApp: Používateľ nemá rolu 'user'. Presmerovávam na logged-in-my-data.html."); // ZMENA: Console log
+      console.log("ChangeBillingDataApp: Používateľ nemá rolu 'user'. Presmerovávam na logged-in-my-data.html.");
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
@@ -405,6 +425,73 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
               disabled: loading,
             })
           ),
+          // NOVÉ VSTUPNÉ POLIA PRE ADRESU
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'street', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Ulica'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'street',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              value: street,
+              onChange: (e) => setStreet(e.target.value),
+              disabled: loading,
+            })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Popisné číslo'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'houseNumber',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              value: houseNumber,
+              onChange: (e) => setHouseNumber(e.target.value),
+              disabled: loading,
+            })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'city', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Mesto'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'city',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              value: city,
+              onChange: (e) => setCity(e.target.value),
+              disabled: loading,
+            })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'postalCode', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'PSČ'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'postalCode',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              value: postalCode,
+              onChange: (e) => setPostalCode(e.target.value),
+              disabled: loading,
+            })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { htmlFor: 'country', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Štát'),
+            React.createElement('input', {
+              type: 'text',
+              id: 'country',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200',
+              value: country,
+              onChange: (e) => setCountry(e.target.value),
+              disabled: loading,
+            })
+          ),
+          // KONIEC NOVÝCH VSTUPNÝCH POLÍ
           React.createElement(
             'div',
             null,
@@ -460,4 +547,4 @@ function ChangeBillingDataApp() { // ZMENA: Názov komponentu z BillingDataApp n
 }
 
 // Explicitne sprístupniť komponent globálne
-window.ChangeBillingDataApp = ChangeBillingDataApp; // ZMENA: Názov komponentu
+window.ChangeBillingDataApp = ChangeBillingDataApp;
