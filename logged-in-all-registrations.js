@@ -654,85 +654,117 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                     React.createElement(
                         'tr',
                         null,
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('role') },
-                            'Rola',
-                            currentSort.column === 'role' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('role') },
+                                'Rola',
+                                currentSort.column === 'role' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('approved') },
-                            'Schválený',
-                            currentSort.column === 'approved' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('approved') },
+                                'Schválený',
+                                currentSort.column === 'approved' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('registrationDate') },
-                            'Dátum registrácie',
-                            currentSort.column === 'registrationDate' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('registrationDate') },
+                                'Dátum registrácie',
+                                currentSort.column === 'registrationDate' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('firstName') },
-                            'Meno',
-                            currentSort.column === 'firstName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('firstName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('firstName') },
+                                'Meno',
+                                currentSort.column === 'firstName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('firstName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('lastName') },
-                            'Priezvisko',
-                            currentSort.column === 'lastName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('lastName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('lastName') },
+                                'Priezvisko',
+                                currentSort.column === 'lastName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('lastName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('email') },
-                            'Email',
-                            currentSort.column === 'email' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('email'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('email') },
+                                'Email',
+                                currentSort.column === 'email' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('email'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('contactPhoneNumber') },
-                            'Tel. číslo',
-                            currentSort.column === 'contactPhoneNumber' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('contactPhoneNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('contactPhoneNumber') },
+                                'Tel. číslo',
+                                currentSort.column === 'contactPhoneNumber' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('contactPhoneNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.clubName') },
-                            'Názov klubu',
-                            currentSort.column === 'billing.clubName' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.clubName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.clubName') },
+                                'Názov klubu',
+                                currentSort.column === 'billing.clubName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.clubName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.ico') },
-                            'IČO',
-                            currentSort.column === 'billing.ico' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.ico'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.ico') },
+                                'IČO',
+                                currentSort.column === 'billing.ico' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.ico'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.dic') },
-                            'DIČ',
-                            currentSort.column === 'billing.dic' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.dic'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.dic') },
+                                'DIČ',
+                                currentSort.column === 'billing.dic' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.dic'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('billing.icDph') },
-                            'IČ DPH',
-                            currentSort.column === 'billing.icDph' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.icDph'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.icDph') },
+                                'IČ DPH',
+                                currentSort.column === 'billing.icDph' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.icDph'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('street') },
-                            'Ulica',
-                            currentSort.column === 'street' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('street'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('street') },
+                                'Ulica',
+                                currentSort.column === 'street' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('street'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('houseNumber') },
-                            'Číslo domu',
-                            currentSort.column === 'houseNumber' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('houseNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('houseNumber') },
+                                'Číslo domu',
+                                currentSort.column === 'houseNumber' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('houseNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('city') },
-                            'Mesto',
-                            currentSort.column === 'city' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('city'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('city') },
+                                'Mesto',
+                                currentSort.column === 'city' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('city'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('postalCode') },
-                            'PSČ',
-                            currentSort.column === 'postalCode' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('postalCode'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('postalCode') },
+                                'PSČ',
+                                currentSort.column === 'postalCode' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('postalCode'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer', onClick: () => handleSort('country') },
-                            'Krajina',
-                            currentSort.column === 'country' && (currentSort.direction === 'asc' ? ' ▲' : ' ▼'),
-                            React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('country'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
+                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('country') },
+                                'Krajina',
+                                currentSort.column === 'country' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
+                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('country'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
+                            )
                         )
                     )
                 ),
