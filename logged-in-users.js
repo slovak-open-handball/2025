@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: Odstránené mx-auto, pridané flex justify-center
+      { className: 'w-full px-4 mt-20 mb-10 block mx-auto' }, // ZMENA: flex justify-center na block mx-auto
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené inline-block
+        { className: 'bg-white p-8 rounded-lg shadow-xl inline-block max-w-full mx-auto' }, // ZMENA: Pridané max-w-full a mx-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -700,7 +700,7 @@ function UsersManagementApp() {
                         null,
                         React.createElement(
                             'tr',
-                            { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
+                            { className: 'bg-gray-200 text-gray-600 uppercase text-sm leading-normal' }, // ZMENA: Odstránené w-full
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
                             React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
@@ -724,7 +724,7 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-center space-x-2' }, // ZMENA: Odstránené whitespace-nowrap z tohto divu, aby sa flex box mohol zalamovať ak je to nutné, ale tlačidlá si ho ponechajú.
+                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // ZMENA: Pridané flex-nowrap
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
