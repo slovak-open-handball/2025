@@ -483,7 +483,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot.");
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní používateľov: ${error.message}`);
+          setError(`Chyba pri načítaní používateľov: ${e.message}`);
           setLoading(false);
         });
       } catch (e) {
@@ -728,11 +728,11 @@ function UsersManagementApp() {
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[150px]' }, 'Meno'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[100px]' }, 'Rola'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[380px]' }, 'Akcie') // ZMENA: p-0, min-w na 380px
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: pridané py-3 px-6
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: pridané py-3 px-6
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: pridané py-3 px-6
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: pridané py-3 px-6
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[380px]' }, 'Akcie') // ZMENA: pridané py-3 px-6, min-w na 380px
                         )
                     ),
                     React.createElement(
@@ -742,13 +742,13 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email), // ZMENA: p-0
-                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // ZMENA: p-0
-                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, u.role), // ZMENA: p-0
-                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'), // ZMENA: p-0
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email), // ZMENA: pridané py-3 px-6
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // ZMENA: pridané py-3 px-6
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role), // ZMENA: pridané py-3 px-6
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'), // ZMENA: pridané py-3 px-6
                                 React.createElement(
                                     'td',
-                                    { className: 'p-0 text-center' }, // ZMENA: p-0
+                                    { className: 'py-3 px-6 text-center' }, // ZMENA: pridané py-3 px-6
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center justify-center space-x-1 flex-nowrap' }, // ZMENA: space-x-1 pre menšie medzery
