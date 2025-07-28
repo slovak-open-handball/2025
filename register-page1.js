@@ -87,7 +87,7 @@ const countryCodes = [
 ].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex, showValidationList = true }) { // Pridaný showValidationList prop
+export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex, showValidationList = true, onFocus }) { // Pridaný onFocus prop
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -128,7 +128,8 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
-        tabIndex: tabIndex
+        tabIndex: tabIndex,
+        onFocus: onFocus // Pridaný onFocus prop
       }),
       React.createElement(
         'button',
@@ -275,6 +276,9 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
 export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady }) {
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  // NOVINKA: Stav pre sledovanie, či bol input "Potvrdiť heslo" aktivovaný
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
+
 
   const toggleShowPassword = () => setShowPassword(prev => !prev);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(prev => !prev);
@@ -522,7 +526,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             id: 'confirmPassword',
             label: 'Potvrdiť heslo',
             value: formData.confirmPassword,
-            onChange: handleChange,
+            onChange: (e) => {
+                handleChange(e);
+                setConfirmPasswordTouched(true); // Nastaví touched stav
+            },
+            onFocus: () => setConfirmPasswordTouched(true), // Nastaví touched stav pri aktivácii
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
@@ -535,6 +543,13 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             toggleShowPassword: toggleShowConfirmPassword,
             showValidationList: false // Nezobrazovať zoznam pre toto pole
           }),
+          // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
+          formData.password !== formData.confirmPassword && formData.confirmPassword.length > 0 && confirmPasswordTouched &&
+          React.createElement(
+            'p',
+            { className: 'text-red-500 text-xs italic mt-1' },
+            'Heslá sa nezhodujú'
+          ),
           React.createElement(
             'div',
             { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlom
