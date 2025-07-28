@@ -425,6 +425,7 @@ function MyDataApp() {
                   )
                 ),
                 // Zmena: Prístup k adrese cez billingAddress
+                // Presunuté sem, aby sa zobrazovalo pod názvom klubu
                 billingAddress && (billingAddress.street || billingAddress.houseNumber || billingAddress.city || billingAddress.zipCode || billingAddress.country) && React.createElement(
                   'div',
                   null,
