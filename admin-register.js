@@ -283,11 +283,21 @@ function App() {
 
   // NOVINKA: Funkcia na validáciu emailu
   const validateEmail = (email) => {
-    // Základná kontrola pre '@' a '.' po '@'
+    // Kontrola pre '@'
     const atIndex = email.indexOf('@');
     if (atIndex === -1) return false;
-    const dotIndex = email.indexOf('.', atIndex);
-    return dotIndex > atIndex;
+
+    // Kontrola pre '.' po '@'
+    const domainPart = email.substring(atIndex + 1);
+    const dotIndexInDomain = domainPart.indexOf('.');
+    if (dotIndexInDomain === -1) return false;
+
+    // Kontrola pre aspoň dva znaky po poslednej bodke v doméne
+    const lastDotIndex = email.lastIndexOf('.');
+    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; // Bodka musí byť po @
+    
+    const charsAfterLastDot = email.substring(lastDotIndex + 1);
+    return charsAfterLastDot.length >= 2;
   };
 
   // Effect pre validáciu hesla pri zmene 'password' alebo 'confirmPassword'
@@ -310,7 +320,7 @@ function App() {
       return;
     }
     if (!validateEmail(email)) {
-      setErrorMessage("Zadajte platnú e-mailovú adresu.");
+      setErrorMessage("Zadajte platnú e-mailovú adresu (musí obsahovať '@', '.' po '@' a aspoň dva znaky po poslednej bodke).");
       return;
     }
     if (password !== confirmPassword) {
@@ -579,7 +589,7 @@ function App() {
             React.createElement(
               'p',
               { className: 'text-red-500 text-xs italic mt-1' },
-              'Zadajte platnú e-mailovú adresu.'
+              'Zadajte platnú e-mailovú adresu (musí obsahovať \'@\', \'.\' po \'@\' a aspoň dva znaky po poslednej bodke).'
             )
           ),
           React.createElement(PasswordInput, {
