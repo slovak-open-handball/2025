@@ -416,29 +416,30 @@ function GlobalNotificationHandler() {
   });
 }
 
-// Render GlobalNotificationHandler do špecifického DOM elementu
-// Vytvoríme koreňový element pre React komponent, ak ešte neexistuje
-let notificationRoot = document.getElementById('global-notification-root');
-if (!notificationRoot) {
-  notificationRoot = document.createElement('div');
-  notificationRoot.id = 'global-notification-root';
-  document.body.appendChild(notificationRoot);
-  console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
-} else {
-  console.log("GNH: 'global-notification-root' div už existuje.");
-}
+// NOVINKA: Globálna funkcia na inicializáciu GlobalNotificationHandler
+// Táto funkcia sa zavolá z window.onload v každom HTML súbore,
+// aby sa zabezpečilo, že ReactDOM je dostupný.
+window.initializeGlobalNotificationHandler = function() {
+  let notificationRoot = document.getElementById('global-notification-root');
+  if (!notificationRoot) {
+    notificationRoot = document.createElement('div');
+    notificationRoot.id = 'global-notification-root';
+    document.body.appendChild(notificationRoot);
+    console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
+  } else {
+    console.log("GNH: 'global-notification-root' div už existuje.");
+  }
 
-// Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
-// ZMENA: Použitie createRoot namiesto render
-try {
-  const root = ReactDOM.createRoot(notificationRoot);
-  root.render(
-    React.createElement(GlobalNotificationHandler)
-  );
-  console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
-} catch (e) {
-  console.error("GNH: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
-}
+  try {
+    const root = ReactDOM.createRoot(notificationRoot);
+    root.render(
+      React.createElement(GlobalNotificationHandler)
+    );
+    console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
+  } catch (e) {
+    console.error("GNH: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
+  }
+};
 
 
 // Pôvodný kód pre UsersManagementApp a jeho globálne sprístupnenie zostáva nezmenený
