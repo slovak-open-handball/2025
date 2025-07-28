@@ -44,7 +44,7 @@
             padding: 1rem; /* Pôvodný p-4 */
             /* ZMENA: Odstránené flex-grow: 1; */
             box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
-            width: 100%; /* Zabezpečí, že zaberie celú šírku rodiča */
+            /* ZMENA: Odstránené width: 100%; - necháme, aby sa prispôsobilo obsahu a margin-left */
         }
         /* NOVINKA: Odsadenie pre ľavé menu na väčších obrazovkách */
         @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
@@ -91,7 +91,7 @@
         <div id="left-menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1">
+        <div id="main-content-area"> <!-- ZMENA: Odstránené class="flex-1" -->
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
