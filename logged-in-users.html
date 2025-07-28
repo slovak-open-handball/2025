@@ -42,11 +42,15 @@
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
             padding: 1rem; /* Pôvodný p-4 */
-            /* ZMENA: Odstránené flex-grow: 1; */
             box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
-            /* ZMENA: Odstránené width: 100%; - necháme, aby sa prispôsobilo obsahu a margin-left */
+            /* ZMENA: Pridané flexbox pre centrovanie obsahu */
+            display: flex;
+            justify-content: center; /* Centruje obsah horizontálne */
+            align-items: flex-start; /* Zarovnáva položky na začiatok vertikálne */
+            /* Zabezpečí, že zaberie zvyšný priestor po ľavom menu */
+            flex-grow: 1; /* Ponechávame flex-grow, ale obsah v ňom bude centrovaný */
         }
-        /* NOVINKA: Odsadenie pre ľavé menu na väčších obrazovkách */
+        /* Odsadenie pre ľavé menu na väčších obrazovkách */
         @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
             #main-content-area {
                 margin-left: 256px; /* Šírka ľavého menu */
@@ -91,7 +95,7 @@
         <div id="left-menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area"> <!-- ZMENA: Odstránené class="flex-1" -->
+        <div id="main-content-area">
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
