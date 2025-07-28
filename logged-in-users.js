@@ -652,7 +652,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-4xl mt-20 mb-10 p-4' }, // Ponechávam max-w-4xl, ale tabuľka sa prispôsobí
+      { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: Removed max-w-4xl, added px-4
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -679,11 +679,11 @@ function UsersManagementApp() {
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'),
-                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Schválený'),
-                            React.createElement('th', { className: 'py-3 px-6 text-center' }, 'Akcie')
+                            React.createElement('th', { className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
                         )
                     ),
                     React.createElement(
@@ -694,7 +694,7 @@ function UsersManagementApp() {
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // ZMENA: Pridaný whitespace-nowrap
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
@@ -702,7 +702,7 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex item-center justify-center space-x-2 min-w-[200px]' }, // ZMENA: Pridaná min-w pre kontajner tlačidiel
+                                        { className: 'flex item-center justify-center space-x-2' }, // ZMENA: Odstránená min-w odtiaľto
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
@@ -711,7 +711,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200', // ZMENA: Zelené tlačidlo
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -721,7 +721,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`, // ZMENA: Žlté pre odobratie, modré pre schválenie
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
