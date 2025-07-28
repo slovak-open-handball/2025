@@ -13,9 +13,6 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -37,28 +34,27 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
             position: relative;
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            padding: 1rem; /* Pôvodný p-4 */
-            box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
-            /* ZMENA: Pridané flexbox pre centrovanie obsahu */
+            margin-left: 256px; /* Šírka ľavého menu */
+            padding: 1rem;
+            flex-grow: 1;
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
             display: flex;
-            justify-content: center; /* Centruje obsah horizontálne */
-            align-items: flex-start; /* Zarovnáva položky na začiatok vertikálne */
-            /* Zabezpečí, že zaberie zvyšný priestor po ľavom menu */
-            flex-grow: 1; /* Ponechávame flex-grow, ale obsah v ňom bude centrovaný */
-        }
-        /* Odsadenie pre ľavé menu na väčších obrazovkách */
-        @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
-            #main-content-area {
-                margin-left: 256px; /* Šírka ľavého menu */
-            }
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
         @media (max-width: 768px) {
             #main-content-area {
-                padding-left: 1rem; 
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
             }
         }
     </style>
@@ -71,6 +67,8 @@
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
+        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
+        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
         const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
         const firebaseConfig = {
           apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
@@ -80,11 +78,24 @@
           messagingSenderId: "26454452024",
           appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
-        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // NOVINKA: Inicializácia Firebase aplikácie globálne
-        firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("logged-in-change-name.html: Firebase inicializovaný globálne.");
+            } catch (e) {
+                console.error("logged-in-change-name.html: Chyba pri globálnej inicializácii Firebase:", e);
+            }
+        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+            console.log("logged-in-change-name.html: Firebase už bol inicializovaný.");
+        } else {
+            console.error("logged-in-change-name.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+        }
     </script>
+    <!-- Načítanie hlavných skriptov pre hlavičku a menu -->
+    <script src="header.js"></script>
+    <script src="left-menu.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
@@ -95,18 +106,15 @@
         <div id="left-menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area">
+        <div id="main-content-area" class="flex-1 p-4">
             <!-- React aplikácia sa vykreslí sem -->
-            <div id="root"></div>
+            <div id="users-management-root"></div>
         </div>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
-    <script src="logged-in-users.js"></script>
-
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
-        // Funkcia na načítanie hlavičky a jej JS súboru
+        // Funkcia na načítanie hlavičky
         async function loadHeader() {
             const headerPlaceholder = document.getElementById('header-placeholder');
             if (headerPlaceholder) {
@@ -116,31 +124,19 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
-                    return new Promise((resolve, reject) => {
-                        const headerScript = document.createElement('script');
-                        headerScript.src = 'header.js';
-                        headerScript.onload = () => {
-                            console.log("header.js načítaný a spustený.");
-                            if (typeof window.initializeGlobalNotificationHandler === 'function') {
-                                window.initializeGlobalNotificationHandler();
-                            }
-                            resolve(); // Vyrieši Promise po načítaní JS súboru
-                        };
-                        headerScript.onerror = (e) => {
-                            console.error("Chyba pri načítaní header.js:", e);
-                            reject(e); // Odmietne Promise pri chybe
-                        };
-                        document.body.appendChild(headerScript);
-                    });
+                    // header.js je už načítaný v <head>, stačí zavolať funkciu
+                    if (typeof initializeHeaderLogic === 'function') {
+                        initializeHeaderLogic();
+                    } else {
+                        console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná v header.js.");
+                    }
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
-                    return Promise.reject(error); // Vráti odmietnutú Promise
                 }
             }
-            return Promise.resolve(); // Ak placeholder neexistuje, vyrieši okamžite
         }
 
-        // Funkcia na načítanie ľavého menu a jeho JS súboru
+        // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
             const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
             if (leftMenuPlaceholder) {
@@ -150,52 +146,36 @@
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
-                    return new Promise((resolve, reject) => {
-                        const menuScript = document.createElement('script');
-                        menuScript.src = 'left-menu.js';
-                        menuScript.onload = () => {
-                            console.log("left-menu.js načítaný a spustený.");
-                            resolve(); // Vyrieši Promise po načítaní JS súboru
-                        };
-                        menuScript.onerror = (e) => {
-                            console.error("Chyba pri načítaní left-menu.js:", e);
-                            reject(e); // Odmietne Promise pri chybe
-                        };
-                        document.body.appendChild(menuScript);
-                    });
+                    // left-menu.js je už načítaný v <head>
+                    console.log("left-menu.js načítaný a spustený.");
+                    // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                 } catch (error) {
                     console.error("Chyba pri načítaní ľavého menu:", error);
-                    return Promise.reject(error); // Vráti odmietnutú Promise
                 }
             }
-            return Promise.resolve(); // Ak placeholder neexistuje, vyrieši okamžite
         }
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
-            try {
-                await loadHeader(); // Počká na načítanie HTML aj JS hlavičky
-                await loadLeftMenu(); // Počká na načítanie HTML aj JS ľavého menu
+            await loadHeader();
+            await loadLeftMenu();
 
-                // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                    return;
-                }
-                if (typeof UsersManagementApp === 'undefined') {
-                    console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte logged-in-users.js.");
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                    return;
-                }
-
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(UsersManagementApp, null));
-                console.log("logged-in-users.html: React App vykreslená.");
-            } catch (error) {
-                console.error("Chyba pri inicializácii stránky:", error);
-                document.getElementById('root').innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie: ${error.message}. Skúste to prosím neskôr.</div>`;
+            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
             }
+            // Zabezpečíme, že UsersManagementApp je definovaná (je v header.js)
+            if (typeof UsersManagementApp === 'undefined') {
+                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte header.js.");
+                document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
+            root.render(React.createElement(UsersManagementApp, null));
+            console.log("logged-in-change-name.html: React App (UsersManagementApp) vykreslená.");
         };
     </script>
 </body>
