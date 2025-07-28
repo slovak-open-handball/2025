@@ -13,6 +13,10 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -38,16 +42,80 @@
             width: 90%;
             position: relative;
         }
-        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
+        /* Kontajner pre hlavičku */
+        #header-placeholder {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 30; /* Vyšší z-index pre hlavičku */
+        }
+        /* Kontajner pre ľavé menu */
+        #left-menu-placeholder {
+            position: fixed;
+            top: 64px; /* Pod hlavičkou */
+            left: 0;
+            height: calc(100vh - 64px); /* Zaberá zvyšok výšky obrazovky */
+            z-index: 25; /* Vyšší z-index pre ľavé menu */
+        }
+
+        /* Hlavná oblasť pre obsah React aplikácie */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
+            /* ZMENA: Odstránime pevnú šírku a pridáme overflow-x-auto */
+            /* width: calc(100% - 256px); */ /* Toto už nebude potrebné, flex-grow to vyrieši */
+            box-sizing: border-box; /* Dôležité pre správne výpočty šírky */
+            display: flex; /* Použijeme flexbox pre centrovanie obsahu */
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
+            overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
+            position: relative; /* Zabezpečí správne vrstvenie */
+            z-index: 1; /* Nižší z-index ako menu a hlavička */
         }
+
+        /* Pre mobilné zariadenia */
         @media (max-width: 768px) {
             #main-content-area {
                 margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberie celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
             }
+        }
+        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
+        #header-notification-area {
+            position: fixed;
+            top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Notifikácie sa zarovnajú doprava */
+            max-width: 350px; /* Maximálna šírka kontajnera notifikácií */
+            pointer-events: none; /* Umožňuje klikanie cez kontajner */
+        }
+
+        /* Jednotlivá notifikácia */
+        .notification-item {
+            background-color: #3A8D41; /* Zelená farba */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px; /* Medzi notifikáciami */
+            opacity: 0;
+            transform: translateX(100%); /* Začína mimo obrazovky vpravo */
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            pointer-events: auto; /* Umožňuje interakciu s notifikáciou */
+            width: 100%; /* Vyplní max-width kontajnera */
+            box-sizing: border-box; /* Zabezpečí, že padding nepridá šírku */
+        }
+
+        .notification-item.show {
+            opacity: 1;
+            transform: translateX(0); /* Posunie sa na miesto */
         }
     </style>
     <!-- Firebase SDKs -->
@@ -74,7 +142,7 @@
         firebase.initializeApp(firebaseConfig);
     </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
@@ -83,7 +151,7 @@
         <div id="left-menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1 p-4">
+        <div id="main-content-area">
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
