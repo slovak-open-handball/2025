@@ -20,6 +20,7 @@
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // ZMENA: Odstránená závislosť na displayNotificationsEnabled, tento modal sa vždy zobrazí, ak je správa.
 // ZMENA: Upravené triedy pre správne zobrazenie hore uprostred s maximálnou šírkou md.
+// ZMENA: Zvýšený z-index na 60.
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -55,7 +56,7 @@ function NotificationModal({ message, onClose }) {
   return React.createElement(
     'div',
     {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+      className: `fixed top-0 left-0 right-0 z-60 flex justify-center p-4 transition-transform duration-500 ease-out ${ // ZMENA: z-index na z-60
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
       style: { pointerEvents: 'none' }
@@ -721,7 +722,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[150px]' }, 'Meno'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[100px]' }, 'Rola'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[380px]' }, 'Akcie') // ZMENA: p-0, min-w na 320px
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[380px]' }, 'Akcie') // ZMENA: p-0, min-w na 380px
                         )
                     ),
                     React.createElement(
