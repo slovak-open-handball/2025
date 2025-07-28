@@ -4,15 +4,15 @@
 
 // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Pridaný prop 'displayNotificationsEnabled'
@@ -404,7 +404,7 @@ function MyDataApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full overflow-x-auto' }, // Pridané overflow-x-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené w-full a overflow-x-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Moje údaje' // Zmenený hlavný nadpis
         ),
