@@ -686,7 +686,7 @@ function UsersManagementApp() {
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left' }, `${u.firstName || ''} ${u.lastName || ''}`),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // ZMENA: Pridaný whitespace-nowrap
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
