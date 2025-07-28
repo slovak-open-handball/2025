@@ -42,6 +42,56 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
+// NOVÝ KOMPONENT: ConfirmationModal pre potvrdzovanie akcií
+function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCheckbox, checkboxLabel, onCheckboxChange, checkboxChecked }) {
+  if (!show) return null;
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center' },
+      React.createElement('p', { className: 'text-lg font-semibold mb-4' }, message),
+      showCheckbox && React.createElement(
+        'div',
+        { className: 'flex items-center justify-center mb-4' },
+        React.createElement('input', {
+          type: 'checkbox',
+          id: 'confirm-checkbox',
+          checked: checkboxChecked,
+          onChange: onCheckboxChange,
+          className: 'mr-2'
+        }),
+        React.createElement('label', { htmlFor: 'confirm-checkbox', className: 'text-gray-700' }, checkboxLabel)
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-center space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onCancel,
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            className: 'bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          loading ? 'Potvrdzujem...' : 'Potvrdiť'
+        )
+      )
+    )
+  );
+}
+
+
 // Main React component for the logged-in-notifications.html page
 function NotificationsApp() {
   const [app, setApp] = React.useState(null);
@@ -56,6 +106,11 @@ function NotificationsApp() {
 
   const [notifications, setNotifications] = React.useState([]);
   const [allAdminUids, setAllAdminUids] = React.useState([]); // Nový stav pre ukladanie UID všetkých administrátorov
+
+  // NOVÉ STAVY PRE MODÁLNE OKNO VYMAZANIA VŠETKÝCH UPOZORNENÍ
+  const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
+  const [deleteUnreadToo, setDeleteUnreadToo] = React.useState(false);
+
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -507,8 +562,14 @@ function NotificationsApp() {
     }
   };
 
-  // NOVÁ FUNKCIA: Vymazať všetky notifikácie pre aktuálneho používateľa
-  const handleDeleteAllNotifications = async () => {
+  // Pôvodná funkcia handleDeleteAllNotifications, ktorá teraz otvorí modálne okno
+  const handleDeleteAllNotificationsClick = () => {
+    setShowDeleteAllConfirmationModal(true);
+    setDeleteUnreadToo(false); // Resetovať checkbox pri otvorení modalu
+  };
+
+  // NOVÁ FUNKCIA: Vymazať všetky notifikácie (potvrdená akcia)
+  const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
       setError("Nemáte oprávnenie na vymazanie všetkých notifikácií.");
       return;
@@ -518,23 +579,22 @@ function NotificationsApp() {
     try {
       const appId = 'default-app-id';
       
-      if (notifications.length === 0) {
+      let notificationsToProcess = notifications;
+      if (!deleteUnreadToo) {
+        notificationsToProcess = notifications.filter(n => n.read); // Vymazať len prečítané
+      }
+
+      if (notificationsToProcess.length === 0) {
         setUserNotificationMessage("Žiadne upozornenia na vymazanie.");
         setLoading(false);
+        setShowDeleteAllConfirmationModal(false);
         return;
       }
 
       const batch = db.batch();
-      notifications.forEach(notification => {
+      notificationsToProcess.forEach(notification => {
         const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
         
-        // Získanie aktuálnych dát notifikácie (potrebné pre 'deletedFor' logiku)
-        // POZNÁMKA: V batch operácii nemôžeme čítať dáta. Toto je zjednodušenie.
-        // Ak by bol počet notifikácií veľmi veľký a táto logika by spôsobovala problémy,
-        // bolo by potrebné najprv načítať všetky notifikácie, spracovať ich a potom vykonať batch.
-        // Pre menší počet notifikácií (ako sa očakáva pre admin notifikácie) je to akceptovateľné.
-        
-        // Predpokladáme, že `notifications` stav je aktuálny a obsahuje `deletedFor` pole.
         let deletedFor = notification.deletedFor || [];
         if (!deletedFor.includes(user.uid)) {
           deletedFor.push(user.uid);
@@ -548,7 +608,8 @@ function NotificationsApp() {
       });
 
       await batch.commit();
-      setUserNotificationMessage("Všetky upozornenia boli vymazané.");
+      setUserNotificationMessage("Všetky vybrané upozornenia boli vymazané.");
+      setShowDeleteAllConfirmationModal(false); // Zatvoriť modálne okno po úspešnej akcii
     } catch (e) {
       console.error("NotificationsApp: Chyba pri vymazávaní všetkých notifikácií:", e);
       setError(`Chyba pri vymazávaní všetkých notifikácií: ${e.message}`);
@@ -597,6 +658,17 @@ function NotificationsApp() {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage('')
     }),
+    React.createElement(ConfirmationModal, {
+        show: showDeleteAllConfirmationModal,
+        message: "Naozaj si prajete vymazať všetky upozornenia?",
+        onConfirm: confirmDeleteAllNotifications,
+        onCancel: () => setShowDeleteAllConfirmationModal(false),
+        loading: loading,
+        showCheckbox: notifications.some(n => !n.read), // Zobraziť checkbox len ak existujú neprečítané notifikácie
+        checkboxLabel: "Vymazať aj neprečítané upozornenia",
+        onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
+        checkboxChecked: deleteUnreadToo
+    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -627,7 +699,7 @@ function NotificationsApp() {
           hasAtLeastTwoNotifications && React.createElement(
             'button',
             {
-              onClick: handleDeleteAllNotifications,
+              onClick: handleDeleteAllNotificationsClick, // ZMENA: Volá novú funkciu pre otvorenie modalu
               className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
               disabled: loading,
             },
