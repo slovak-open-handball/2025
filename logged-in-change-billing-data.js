@@ -13,7 +13,7 @@
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
 //  const day = date.getDate().toString().padStart(2, '0');
 //  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
+//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
 
@@ -304,7 +304,7 @@ function ChangeBillingDataApp() {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
                 console.log("ChangeBillingDataApp: Nastavenia registrácie existujú, dáta:", data);
-                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : null);
+                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Používame ISO string pre konzistentnosť
             } else {
                 console.log("ChangeBillingDataApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
                 setDataEditDeadline(null);
@@ -461,11 +461,22 @@ function ChangeBillingDataApp() {
     setIcDphError(newIcDphError);
     setPostalCodeError(newPostalCodeError);
 
-    // If any validation error exists, prevent submission
-    if (newIcoError || newDicError || newIcDphError || newPostalCodeError) {
-      setUserNotificationMessage("Prosím, opravte chyby vo formulári.");
+    // NOVINKA: Kontrola, či je formulár platný pred odoslaním
+    const isFormCurrentlyValid = clubName.trim() !== '' &&
+                                 street.trim() !== '' &&
+                                 houseNumber.trim() !== '' &&
+                                 city.trim() !== '' &&
+                                 postalCode.replace(/\s/g, '').length === 5 && // Kontrola PSČ po odstránení medzier
+                                 country.trim() !== '' &&
+                                 (ico.trim() !== '' || dic.trim() !== '' || icDph.trim() !== '') && // Aspoň jedno z IČO/DIČ/IČ DPH
+                                 !newIcoError && !newDicError && !newIcDphError && !newPostalCodeError; // Žiadne validačné chyby
+
+
+    if (!isFormCurrentlyValid) {
+      setUserNotificationMessage("Prosím, vyplňte všetky povinné polia a opravte chyby vo formulári.");
       return;
     }
+
     // NOVINKA: Kontrola povolenia úprav dát
     if (!isDataEditingAllowed) {
       setError("Úpravy fakturačných údajov sú po uzávierke zakázané.");
@@ -536,6 +547,17 @@ function ChangeBillingDataApp() {
     }
   };
 
+  // NOVINKA: Kontrola, či je formulár platný pre povolenie tlačidla
+  const isFormValid = clubName.trim() !== '' &&
+                      street.trim() !== '' &&
+                      houseNumber.trim() !== '' &&
+                      city.trim() !== '' &&
+                      postalCode.replace(/\s/g, '').length === 5 && // PSČ musí mať presne 5 číslic (bez medzery)
+                      country.trim() !== '' &&
+                      (ico.trim() !== '' || dic.trim() !== '' || icDph.trim() !== '') && // Aspoň jedno z IČO/DIČ/IČ DPH musí byť vyplnené
+                      !icoError && !dicError && !icDphError && !postalCodeError; // Žiadne validačné chyby
+
+
   // Display loading state
   if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
@@ -565,6 +587,15 @@ function ChangeBillingDataApp() {
       window.location.href = 'logged-in-my-data.html';
       return null;
   }
+
+  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  const buttonClasses = `
+    mt-6 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${loading || !isDataEditingAllowed || !isFormValid // ZMENA: Pridaná kontrola isFormValid
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
 
   return React.createElement(
     'div',
@@ -764,8 +795,8 @@ function ChangeBillingDataApp() {
             'button',
             {
               type: 'submit',
-              className: 'mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+              className: buttonClasses, // Použitie dynamických tried
+              disabled: loading || !isDataEditingAllowed || !isFormValid, // ZMENA: Disabled ak je po uzávierke alebo formulár nie je platný
             },
             loading ? 'Ukladám...' : 'Uložiť fakturačné údaje'
           )
