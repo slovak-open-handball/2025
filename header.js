@@ -203,6 +203,13 @@ function GlobalNotificationHandler() {
   const [displayNotificationsEnabled, setDisplayNotificationsEnabled] = React.useState(true); // Získané z userProfileData
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
+  // NOVINKA: Kontrola URL pre zamedzenie pop-up okien na konkrétnej stránke
+  const isNotificationsPage = window.location.pathname.includes('logged-in-notifications.html');
+  if (isNotificationsPage) {
+    console.log("GNH: Na stránke upozornení. GlobalNotificationHandler sa nebude zobrazovať.");
+    return null; // Nevykreslí nič
+  }
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     console.log("GNH: Spúšťam inicializáciu Firebase...");
@@ -218,9 +225,9 @@ function GlobalNotificationHandler() {
       let firebaseApp;
       // Skontrolujte, či už existuje predvolená aplikácia Firebase
       if (firebase.apps.length === 0) {
-        // Používame globálne firebaseConfig a initialAuthToken
-        console.log("GNH: Inicializujem novú Firebase aplikáciu.");
-        firebaseApp = firebase.initializeApp(firebaseConfig);
+        // Používame globálne __firebase_config a __initial_auth_token
+        console.log("GNH: Inicializujem novú Firebase aplikáciu pomocou __firebase_config.");
+        firebaseApp = firebase.initializeApp(JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'));
       } else {
         // Ak už predvolená aplikácia existuje, použite ju
         firebaseApp = firebase.app();
@@ -236,11 +243,11 @@ function GlobalNotificationHandler() {
 
       const signIn = async () => {
         try {
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             console.log("GNH: Pokúšam sa prihlásiť s custom tokenom.");
-            await authInstance.signInWithCustomToken(initialAuthToken);
+            await authInstance.signInWithCustomToken(__initial_auth_token);
           } else {
-            console.log("GNH: initialAuthToken nie je k dispozícii alebo je prázdny.");
+            console.log("GNH: __initial_auth_token nie je k dispozícii alebo je prázdny.");
           }
         } catch (e) {
           console.error("GNH: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
@@ -316,7 +323,8 @@ function GlobalNotificationHandler() {
   // Effect for listening to new notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
-    const appId = 'default-app-id'; // Predpokladáme, že toto je konzistentné
+    // Používame globálne __app_id
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
     console.log("GNH: Spúšťam useEffect pre notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayNotificationsEnabled:", displayNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
@@ -414,10 +422,11 @@ if (!notificationRoot) {
 }
 
 // Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
+// ZMENA: Použitie createRoot namiesto render
 try {
-  ReactDOM.render(
-    React.createElement(GlobalNotificationHandler),
-    notificationRoot
+  const root = ReactDOM.createRoot(notificationRoot);
+  root.render(
+    React.createElement(GlobalNotificationHandler)
   );
   console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
 } catch (e) {
@@ -465,7 +474,8 @@ function UsersManagementApp() {
       let firebaseApp;
       // ZMENA: Používame globálnu premennú firebaseConfig namiesto __firebase_config
       if (firebase.apps.length === 0) {
-        firebaseApp = firebase.initializeApp(firebaseConfig);
+        // Používame globálne __firebase_config
+        firebaseApp = firebase.initializeApp(JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'));
       } else {
         firebaseApp = firebase.app();
       }
@@ -478,9 +488,9 @@ function UsersManagementApp() {
 
       const signIn = async () => {
         try {
-          // ZMENA: Používame globálnu premennú initialAuthToken namiesto __initial_auth_token
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
+          // ZMENA: Používame globálnu premennú __initial_auth_token namiesto initialAuthToken
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authInstance.signInWithCustomToken(__initial_auth_token);
           }
         } catch (e) {
           console.error("UsersManagementApp: Chyba pri počiatočnom prihlásení Firebase:", e); // Zmena logu
@@ -529,7 +539,7 @@ function UsersManagementApp() {
             console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený."); // Zmena logu
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
+              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
@@ -629,9 +639,6 @@ function UsersManagementApp() {
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
-      } else { // Ak user nie je null ani undefined, ale je false (napr. po odhlásení)
-          setLoading(false);
-          setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
       }
     } else if (isAuthReady && user === undefined) {
         console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false."); // Zmena logu
