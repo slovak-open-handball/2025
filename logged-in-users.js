@@ -190,7 +190,7 @@ function UsersManagementApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  // ZMENA: userNotificationMessage stav bol odstránený, pretože sa používa globálna funkcia
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); // NOVINKA: Stav pre notifikačnú správu
 
   const [users, setUsers] = React.useState([]);
   const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
@@ -425,12 +425,8 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používame lokálny stav pre notifikáciu
+      setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -522,12 +518,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
     
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
@@ -535,12 +526,7 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -566,12 +552,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       const userDocRef = db.collection('users').doc(userId);
@@ -581,12 +562,7 @@ function UsersManagementApp() {
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
       closeRoleEditModal();
 
       // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
@@ -623,12 +599,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       // 1. Zmazať používateľa z Firestore
@@ -636,12 +607,7 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       closeConfirmationModal();
 
       // Otvoriť novú záložku s Firebase Console
@@ -695,8 +661,12 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Odstránené vykresľovanie TopRightNotificationModal z UsersManagementApp
-    // React.createElement(TopRightNotificationModal, { ... }), // TOTO BOLO ODSTRÁNENÉ
+    // NOVINKA: Vykresľovanie NotificationModal
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage(''),
+        displayNotificationsEnabled: true // Vždy povolené pre túto stránku
+    }),
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
