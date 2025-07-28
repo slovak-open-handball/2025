@@ -281,8 +281,16 @@ function GlobalNotificationHandler() {
             console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
             // Ak displayNotifications nie je definované, predpokladáme true
-            setDisplayNotificationsEnabled(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
-            console.log("GNH: displayNotificationsEnabled nastavené na:", userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+            let notificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
+            
+            // ZMENA: Ak je rola 'user', notifikácie sa nezobrazia
+            if (userData.role === 'user') {
+                console.log("GNH: Používateľ je typu 'user', notifikácie budú vypnuté.");
+                notificationsEnabled = false;
+            }
+
+            setDisplayNotificationsEnabled(notificationsEnabled);
+            console.log("GNH: displayNotificationsEnabled nastavené na:", notificationsEnabled);
           } else {
             console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
             // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené (predvolené správanie)
@@ -301,6 +309,7 @@ function GlobalNotificationHandler() {
       // Ak nie je používateľ prihlásený, notifikácie by sa nemali zobrazovať
       console.log("GNH: Používateľ nie je prihlásený, nastavujem displayNotificationsEnabled na false.");
       setDisplayNotificationsEnabled(false);
+      setCurrentNotificationMessage(''); // Vymaž aktuálnu správu, ak používateľ nie je prihlásený
       setUserProfileData(null); // Zabezpečiť, že userProfileData je null
     }
 
@@ -316,7 +325,7 @@ function GlobalNotificationHandler() {
   // Effect for listening to new notifications
   React.useEffect(() => {
     let unsubscribeNotifications;
-    const appId = 'default-app-id'; // Predpokladáme, že toto je konzistentné
+    const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd'; // Používame globálne definovaný appId
     console.log("GNH: Spúšťam useEffect pre notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayNotificationsEnabled:", displayNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
