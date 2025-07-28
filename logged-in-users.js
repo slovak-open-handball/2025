@@ -13,7 +13,7 @@
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
 //  const day = date.getDate().toString().padStart(2, '0');
 //  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
+//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
 
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl inline-block' }, // ZMENA: Pridané inline-block
+        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené inline-block
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -694,7 +694,7 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto ako zálohu
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md table-auto' }, // ZMENA: Odstránené w-full
+                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max' }, // ZMENA: Pridané min-w-max
                     React.createElement(
                         'thead',
                         null,
@@ -724,7 +724,7 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex item-center justify-center space-x-2 whitespace-nowrap' },
+                                        { className: 'flex items-center justify-center space-x-2' }, // ZMENA: Odstránené whitespace-nowrap z tohto divu, aby sa flex box mohol zalamovať ak je to nutné, ale tlačidlá si ho ponechajú.
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
