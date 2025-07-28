@@ -13,6 +13,9 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
+            display: flex; /* NOVINKA: Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* NOVINKA: Usporiadanie ako stĺpec (hlavička, potom obsah) */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -40,7 +43,7 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu + nejaký padding */
+            /* margin-left: 256px; */ /* ODSTRÁNENÉ: Toto bude riadené flexboxom */
             padding: 1rem;
             flex-grow: 1;
         }
