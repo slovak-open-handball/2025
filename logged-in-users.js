@@ -19,6 +19,7 @@
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // ZMENA: Odstránená závislosť na displayNotificationsEnabled, tento modal sa vždy zobrazí, ak je správa.
+// ZMENA: Upravené triedy pre správne zobrazenie hore uprostred s maximálnou šírkou xl.
 function NotificationModal({ message, onClose }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -62,7 +63,7 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-xl w-full text-center', // ZMENA: max-w-xl
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -720,7 +721,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[150px]' }, 'Meno'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[100px]' }, 'Rola'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[400px]' }, 'Akcie') // ZMENA: p-0
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[350px]' }, 'Akcie') // ZMENA: p-0, min-w na 280px
                         )
                     ),
                     React.createElement(
@@ -739,7 +740,7 @@ function UsersManagementApp() {
                                     { className: 'p-0 text-center' }, // ZMENA: p-0
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // ZMENA: flex-nowrap
+                                        { className: 'flex items-center justify-center space-x-1 flex-nowrap' }, // ZMENA: space-x-1 pre menšie medzery
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
@@ -748,7 +749,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: whitespace-nowrap
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: py-0.5 px-1
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -758,7 +759,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // ZMENA: whitespace-nowrap
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // ZMENA: py-0.5 px-1
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
@@ -767,7 +768,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: whitespace-nowrap
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: py-0.5 px-1
                                                   disabled: loading,
                                                 },
                                                 'Zmazať'
