@@ -111,16 +111,16 @@
                 return;
             }
             if (typeof BillingDataApp === 'undefined') { // Predpokladáme, že hlavný komponent sa volá BillingDataApp
-                console.error("Chyba: Komponent BillingDataApp nie je definovaný. Skontrolujte logged-in-billing-data.js.");
+                console.error("Chyba: Komponent BillingDataApp nie je definovaný. Skontrolujte logged-in-change-billing-data.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(BillingDataApp, null));
-            console.log("logged-in-billing-data.html: React App vykreslená.");
+            console.log("logged-in-cahnge-billing-data.html: React App vykreslená.");
         };
     </script>
-    <script src="logged-in-billing-data.js"></script>
+    <script src="logged-in-change-billing-data.js"></script>
 </body>
 </html>
