@@ -4,6 +4,16 @@
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Pridaný prop 'displayNotificationsEnabled'
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -341,7 +351,14 @@ function MyDataApp() {
   }
 
   // Ak je userProfileData.billing.address definované, vytvoríme si premennú pre zjednodušenie
-  const billingAddress = userProfileData.billing ? userProfileData.billing.address : null;
+  // ZMENA: Adresa sa načíta priamo z userProfileData, nie z userProfileData.billing.address
+  const street = userProfileData.street || '';
+  const houseNumber = userProfileData.houseNumber || '';
+  const city = userProfileData.city || '';
+  const postalCode = userProfileData.postalCode || '';
+  const country = userProfileData.country || '';
+
+  const fullAddress = `${street} ${houseNumber}, ${postalCode} ${city}, ${country}`.trim();
 
   return React.createElement(
     'div',
@@ -424,16 +441,15 @@ function MyDataApp() {
                     ` ${userProfileData.billing.clubName}`
                   )
                 ),
-                // Zmena: Prístup k adrese cez billingAddress
-                // Presunuté sem, aby sa zobrazovalo pod názvom klubu
-                billingAddress && (billingAddress.street || billingAddress.houseNumber || billingAddress.city || billingAddress.zipCode || billingAddress.country) && React.createElement(
+                // ZMENA: Zobrazenie adresy z hlavného objektu userProfileData
+                fullAddress && React.createElement(
                   'div',
                   null,
                   React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                    ` ${billingAddress.street || ''} ${billingAddress.houseNumber || ''}, ${billingAddress.zipCode || ''} ${billingAddress.city || ''}, ${billingAddress.country || ''}`
+                    ` ${fullAddress}`
                   )
                 ),
                 userProfileData.billing.ico && React.createElement(
