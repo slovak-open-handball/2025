@@ -15,7 +15,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 // Pridaný prop 'validationStatus' pre detailnú vizuálnu indikáciu platnosti hesla
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) { // Pridaný onFocus prop
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
@@ -56,6 +56,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
+        onFocus: onFocus // Pridaný onFocus prop
       }),
       React.createElement(
         'button',
@@ -192,6 +193,8 @@ function App() {
     isValid: false, // Celková platnosť hesla
   });
   const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
+  // NOVINKA: Stav pre sledovanie, či bol input "Potvrďte heslo" aktivovaný
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -281,6 +284,7 @@ function App() {
     const pwdStatus = validatePassword(password);
     setPasswordValidationStatus(pwdStatus);
 
+    // isConfirmPasswordMatching závisí aj od celkovej platnosti nového hesla
     setIsConfirmPasswordMatching(password === confirmPassword && password.length > 0 && pwdStatus.isValid);
   }, [password, confirmPassword]);
 
@@ -567,7 +571,11 @@ function App() {
             id: 'reg-confirm-password',
             label: 'Potvrdiť heslo',
             value: confirmPassword,
-            onChange: (e) => setConfirmPassword(e.target.value),
+            onChange: (e) => {
+                setConfirmPassword(e.target.value);
+                setConfirmPasswordTouched(true); // Nastaví touched stav
+            },
+            onFocus: () => setConfirmPasswordTouched(true), // Nastaví touched stav pri aktivácii
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
@@ -577,6 +585,13 @@ function App() {
             toggleShowPassword: () => setShowConfirmPasswordReg(!showConfirmPasswordReg),
             disabled: formSubmitting || successMessage, // Zakázať, ak sa formulár odosiela alebo je zobrazená správa o úspechu
           }),
+          // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
+          !isConfirmPasswordMatching && confirmPassword.length > 0 && confirmPasswordTouched &&
+          React.createElement(
+            'p',
+            { className: 'text-red-500 text-xs italic mt-1' },
+            'Heslá sa nezhodujú'
+          ),
           React.createElement(
             'button',
             {
