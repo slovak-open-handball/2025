@@ -644,7 +644,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
+      { className: 'w-full max-w-4xl mt-20 mb-10 p-4' }, // Ponechávam max-w-4xl, ale tabuľka sa prispôsobí
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -661,10 +661,10 @@ function UsersManagementApp() {
         ) : (
             React.createElement(
                 'div',
-                { className: 'overflow-x-auto' },
+                { className: 'overflow-x-auto' }, // Toto zabezpečí posuvník, ak je obsah príliš široký
                 React.createElement(
                     'table',
-                    { className: 'min-w-full bg-white rounded-lg shadow-md' },
+                    { className: 'min-w-full bg-white rounded-lg shadow-md' }, // ZMENA: min-w-full zabezpečí, že tabuľka bude vždy minimálne 100% šírky rodiča
                     React.createElement(
                         'thead',
                         null,
