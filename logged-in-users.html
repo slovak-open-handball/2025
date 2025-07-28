@@ -37,145 +37,122 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        /* Štýly pre prepínač notifikácií */
+        .toggle-switch {
             position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
         }
-        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
-        #main-content-area {
-            padding: 1rem; /* Pôvodný p-4 */
-            box-sizing: border-box; /* Zabezpečí, že padding sa započíta do šírky */
-            /* ZMENA: Pridané flexbox pre centrovanie obsahu */
-            display: flex;
-            justify-content: center; /* Centruje obsah horizontálne */
-            align-items: flex-start; /* Zarovnáva položky na začiatok vertikálne */
-            /* Zabezpečí, že zaberie zvyšný priestor po ľavom menu */
-            flex-grow: 1; /* Ponechávame flex-grow, ale obsah v ňom bude centrovaný */
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
-        /* Odsadenie pre ľavé menu na väčších obrazovkách */
-        @media (min-width: 1024px) { /* Tailwind's 'lg' breakpoint */
-            #main-content-area {
-                margin-left: 256px; /* Šírka ľavého menu */
-            }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
         }
-        @media (max-width: 768px) {
-            #main-content-area {
-                padding-left: 1rem; 
-            }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
     </style>
+
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <!-- React and ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
+    <!-- Global constants for Firebase (replace with actual values if available) -->
     <script>
-        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const appId = 'default-app-id'; // Nahraďte skutočným ID aplikácie
         const firebaseConfig = {
-          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-          projectId: "prihlasovanie-4f3f3",
-          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-          messagingSenderId: "26454452024",
-          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: appId
         };
-        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
-        
-        // NOVINKA: Inicializácia Firebase aplikácie globálne
-        firebase.initializeApp(firebaseConfig);
+        const initialAuthToken = null; // Token bude nastavený prostredím Canvas
     </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička sa načíta dynamicky -->
+<body>
+    <!-- Placeholder pre hlavičku -->
     <div id="header-placeholder"></div>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
+        <!-- Placeholder pre ľavé menu -->
         <div id="left-menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area">
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="root"></div>
-        </div>
+
+        <!-- Hlavný obsah stránky -->
+        <main class="flex-1 p-4 ml-64 mt-16">
+            <div id="root">
+                <!-- React aplikácia sa načíta sem -->
+                <div class="flex items-center justify-center min-h-screen bg-gray-100">
+                    <div class="text-xl font-semibold text-gray-700">Načítavam aplikáciu...</div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
+    <!-- Načítanie hlavných JS súborov -->
+    <script src="header.js"></script>
+    <script src="left-menu.js"></script>
     <script src="logged-in-users.js"></script>
 
-    <!-- Načítanie hlavičky a logiky menu -->
     <script>
-        // Funkcia na načítanie hlavičky a jej JS súboru
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
-
-                    return new Promise((resolve, reject) => {
-                        const headerScript = document.createElement('script');
-                        headerScript.src = 'header.js';
-                        headerScript.onload = () => {
-                            console.log("header.js načítaný a spustený.");
-                            if (typeof window.initializeGlobalNotificationHandler === 'function') {
-                                window.initializeGlobalNotificationHandler();
-                            }
-                            resolve(); // Vyrieši Promise po načítaní JS súboru
-                        };
-                        headerScript.onerror = (e) => {
-                            console.error("Chyba pri načítaní header.js:", e);
-                            reject(e); // Odmietne Promise pri chybe
-                        };
-                        document.body.appendChild(headerScript);
-                    });
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                    return Promise.reject(error); // Vráti odmietnutú Promise
+        // Funkcia na dynamické načítanie HTML obsahu
+        async function loadHtmlContent(url, elementId) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                const html = await response.text();
+                document.getElementById(elementId).innerHTML = html;
+            } catch (error) {
+                console.error(`Chyba pri načítaní ${url}:`, error);
+                document.getElementById(elementId).innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní obsahu: ${error.message}</div>`;
             }
-            return Promise.resolve(); // Ak placeholder neexistuje, vyrieši okamžite
-        }
-
-        // Funkcia na načítanie ľavého menu a jeho JS súboru
-        async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
-                try {
-                    const response = await fetch('left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
-
-                    return new Promise((resolve, reject) => {
-                        const menuScript = document.createElement('script');
-                        menuScript.src = 'left-menu.js';
-                        menuScript.onload = () => {
-                            console.log("left-menu.js načítaný a spustený.");
-                            resolve(); // Vyrieši Promise po načítaní JS súboru
-                        };
-                        menuScript.onerror = (e) => {
-                            console.error("Chyba pri načítaní left-menu.js:", e);
-                            reject(e); // Odmietne Promise pri chybe
-                        };
-                        document.body.appendChild(menuScript);
-                    });
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
-                    return Promise.reject(error); // Vráti odmietnutú Promise
-                }
-            }
-            return Promise.resolve(); // Ak placeholder neexistuje, vyrieši okamžite
         }
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
             try {
-                await loadHeader(); // Počká na načítanie HTML aj JS hlavičky
-                await loadLeftMenu(); // Počká na načítanie HTML aj JS ľavého menu
+                await loadHtmlContent('header.html', 'header-placeholder');
+                await loadHtmlContent('left-menu.html', 'left-menu-placeholder');
 
                 // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
