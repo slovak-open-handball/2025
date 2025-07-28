@@ -379,8 +379,7 @@ function App() {
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
             setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            setShowNotification(true); // Ak je chyba, zobraz notifikáciu
-            setNotificationType('error'); // Nastav typ notifikácie na chybu
+            // Removed setShowNotification(true); and setNotificationType('error'); as NotificationModal is handled differently
             setSettingsLoaded(true);
           });
 
@@ -388,8 +387,7 @@ function App() {
       } catch (e) {
           console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          setShowNotification(true); // Ak je chyba, zobraz notifikáciu
-          setNotificationType('error'); // Nastav typ notifikácie na chybu
+          // Removed setShowNotification(true); and setNotificationType('error'); as NotificationModal is handled differently
           setSettingsLoaded(true);
       }
     };
@@ -499,7 +497,53 @@ function App() {
       const currentUser = userCredential.user;
 
       const userDocRef = db.collection('users').doc(currentUser.uid);
-      
+      const userDoc = await userDocRef.get(); // Načítame dáta používateľa hneď po prihlásení
+
+      if (!userDoc.exists) {
+        setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
+        await auth.signOut(); // Odhlásiť, ak chýba dokument používateľa
+        setLoading(false);
+        return;
+      }
+      const userData = userDoc.data();
+
+      // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený
+      if (userData.role === 'admin' && userData.approved === false) {
+        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
+        console.log("LoginApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+        
+        // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
+        try {
+          const payload = {
+            action: 'sendAdminApprovalReminder',
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            isAdmin: true
+          };
+          console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+          console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+          // Vzhľadom na 'no-cors' mode, response.text() alebo .json() zlyhá.
+          // Ak potrebujeme odpoveď, musíme nastaviť CORS na Apps Script.
+          // Zatiaľ stačí, že požiadavka odíde.
+        } catch (emailError) {
+          console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
+        }
+
+        await auth.signOut(); // Odhlásiť používateľa
+        setLoading(false);
+        return; // Zastav ďalšie spracovanie prihlásenia
+      }
+
+      // Ak používateľ nie je neschválený admin, pokračuj s prihlásením
       await userDocRef.update({
         passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -521,42 +565,6 @@ function App() {
         console.error("Prihlásenie: Nepodarilo sa získať platný passwordLastChanged z Firestore po aktualizácii.");
         await auth.signOut();
         window.location.href = 'login.html';
-        return;
-      }
-
-      if (updatedUserData.role === 'admin' && updatedUserData.approved === false) {
-        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
-
-        try {
-          const payload = {
-            action: 'sendAdminApprovalReminder',
-            email: updatedUserData.email,
-            firstName: updatedUserData.firstName,
-            lastName: updatedUserData.lastName,
-            isAdmin: true
-          };
-          console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-          });
-          console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          try {
-            const responseData = await response.text();
-            console.log("Odpoveď z Apps Script (fetch - pripomienka schválenia admina) ako text:", responseData);
-          } catch (jsonError) {
-            console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
-          }
-        } catch (emailError) {
-          console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
-        }
-
-        await auth.signOut();
-        setLoading(false);
         return;
       }
 
