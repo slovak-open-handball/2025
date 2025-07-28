@@ -721,7 +721,7 @@ function UsersManagementApp() {
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[150px]' }, 'Meno'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[100px]' }, 'Rola'), // ZMENA: p-0
                             React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: p-0
-                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[320px]' }, 'Akcie') // ZMENA: p-0, min-w na 320px
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[380px]' }, 'Akcie') // ZMENA: p-0, min-w na 320px
                         )
                     ),
                     React.createElement(
