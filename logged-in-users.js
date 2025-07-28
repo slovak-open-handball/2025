@@ -651,7 +651,7 @@ function UsersManagementApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto lg:pl-64' }, // ZMENA: Pridané lg:pl-64 a odstránené items-center
+    { className: 'min-h-screen bg-gray-100 flex flex-col font-inter overflow-y-auto lg:ml-64' }, // ZMENA: Pridané lg:ml-64 a odstránené items-center
     // ZMENA: Odovzdávame displayNotificationsEnabled z userProfileData
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
@@ -674,7 +674,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: flex justify-center, nie block mx-auto
+      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -682,7 +682,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-full' }, // ZMENA: w-max mx-auto na w-full max-w-full (bude centrované flexom rodiča)
+        { className: 'bg-white p-8 rounded-lg shadow-xl max-w-full mx-auto' }, // ZMENA: odstránené w-full, pridané max-w-full a mx-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -694,7 +694,7 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Ponecháme overflow-x-auto ako zálohu
                 React.createElement(
                     'table',
-                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max w-full' }, // ZMENA: Pridané w-full
+                    { className: 'bg-white rounded-lg shadow-md table-auto min-w-max' }, // ZMENA: odstránené w-full
                     React.createElement(
                         'thead',
                         null,
