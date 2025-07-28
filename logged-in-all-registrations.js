@@ -245,7 +245,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
+              console.log("AllRegistrationsApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
@@ -603,7 +603,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html."); // Zmena logu
+        console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
@@ -657,11 +657,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         uniqueColumnValues: uniqueColumnValues
     }),
     React.createElement(
-      // ZMENA: Upravené triedy pre umiestnenie pod ľavým menu
-      // Odstránil som max-w-7xl, aby sa roztiahol na celú dostupnú šírku.
-      // ml-64 a mt-20 zostávajú pre odsadenie od menu a hlavičky.
       'div',
-      { className: 'w-full mt-20 mb-10 p-4 ml-64' }, // Odstránené max-w-7xl
+      { className: 'w-full max-w-7xl mt-20 mb-10 p-4' }, // ODSTRÁNENÉ ml-64, bude riadené v HTML
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
