@@ -560,10 +560,10 @@ function UsersManagementApp() {
 
     try {
       const userDocRef = db.collection('users').doc(userId);
-
+      
       // Ak sa rola mení na 'user', approved sa nastaví na true.
       // Ak sa rola mení na 'admin', approved sa nastaví na false.
-      const approvedStatus = (newRole === 'user') ? true : false;
+      const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       // ZMENA: Používame lokálnu notifikačnú správu
@@ -716,11 +716,11 @@ function UsersManagementApp() {
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[150px]' }, 'Meno'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[100px]' }, 'Rola'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: min-w
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[400px]' }, 'Akcie') // ZMENA: Zvýšená min-w na 400px pre tlačidlá
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[200px]' }, 'E-mail'), // ZMENA: p-0
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[150px]' }, 'Meno'), // ZMENA: p-0
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[100px]' }, 'Rola'), // ZMENA: p-0
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-left min-w-[120px]' }, 'Schválený'), // ZMENA: p-0
+                            React.createElement('th', { scope: 'col', className: 'p-0 text-center min-w-[400px]' }, 'Akcie') // ZMENA: p-0
                         )
                     ),
                     React.createElement(
@@ -730,13 +730,13 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
+                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap overflow-hidden text-ellipsis' }, u.email), // ZMENA: p-0
+                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`), // ZMENA: p-0
+                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, u.role), // ZMENA: p-0
+                                React.createElement('td', { className: 'p-0 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'), // ZMENA: p-0
                                 React.createElement(
                                     'td',
-                                    { className: 'py-3 px-6 text-center' },
+                                    { className: 'p-0 text-center' }, // ZMENA: p-0
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center justify-center space-x-2 flex-nowrap' }, // ZMENA: flex-nowrap
