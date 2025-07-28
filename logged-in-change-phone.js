@@ -951,3 +951,6 @@ function ChangePhoneApp() {
     })
   );
 }
+
+// Explicitne sprístupniť komponent globálne
+window.ChangePhoneApp = ChangePhoneApp;
