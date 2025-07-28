@@ -83,14 +83,14 @@
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             try {
                 firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-change-name.html: Firebase inicializovaný globálne.");
+                console.log("logged-in-users.html: Firebase inicializovaný globálne.");
             } catch (e) {
-                console.error("logged-in-change-name.html: Chyba pri globálnej inicializácii Firebase:", e);
+                console.error("logged-in-users.html: Chyba pri globálnej inicializácii Firebase:", e);
             }
         } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-change-name.html: Firebase už bol inicializovaný.");
+            console.log("logged-in-users.html: Firebase už bol inicializovaný.");
         } else {
-            console.error("logged-in-change-name.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+            console.error("logged-in-users.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
         }
     </script>
     <!-- Načítanie hlavných skriptov pre hlavičku a menu -->
@@ -166,17 +166,19 @@
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Zabezpečíme, že UsersManagementApp je definovaná (je v header.js)
+            // Zabezpečíme, že UsersManagementApp je definovaná (je v logged-in-users.js)
             if (typeof UsersManagementApp === 'undefined') {
-                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte header.js.");
+                console.error("Chyba: Komponent UsersManagementApp nie je definovaný. Skontrolujte logged-in-users.js.");
                 document.getElementById('users-management-root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('users-management-root'));
             root.render(React.createElement(UsersManagementApp, null));
-            console.log("logged-in-change-name.html: React App (UsersManagementApp) vykreslená.");
+            console.log("logged-in-users.html: React App (UsersManagementApp) vykreslená.");
         };
     </script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
+    <script src="logged-in-users.js"></script>
 </body>
 </html>
