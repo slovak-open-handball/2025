@@ -713,7 +713,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: max-w-full a px-4 odstránené, aby sa mohla použiť širka na inner div
+      { className: 'w-full px-4 mt-20 mb-10 max-w-7xl mx-auto' }, // ZMENA: max-w-7xl a mx-auto presunuté sem
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -721,7 +721,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl mx-auto max-w-7xl w-full' }, // ZMENA: max-w-7xl a w-full pre obmedzenie šírky a centrovanie
+        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: mx-auto a w-full odstránené
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
