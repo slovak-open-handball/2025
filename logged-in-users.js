@@ -538,11 +538,9 @@ function UsersManagementApp() {
     try {
       const userDocRef = db.collection('users').doc(userId);
       
-      // NOVINKA: Ak sa rola mení na 'user', approved sa vždy nastaví na false.
-      // Ak sa rola mení na 'admin', approved sa nastaví na true.
-      // Checkbox pre schválenie v modale sa už nezobrazuje pre admina,
-      // takže ho nastavíme automaticky na true, ak je rola admin.
-      const approvedStatus = (newRole === 'user') ? false : true; // ZMENA: Ak je admin, automaticky schválený
+      // ZMENA: Ak sa rola mení na 'user', approved sa vždy nastaví na true.
+      // Ak sa rola mení na 'admin', approved sa tiež nastaví na true.
+      const approvedStatus = true; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
