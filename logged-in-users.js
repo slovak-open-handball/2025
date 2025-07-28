@@ -484,31 +484,35 @@ function UsersManagementApp() {
     setShowRoleEditModal(false);
   };
 
-  const handleApproveUser = async (userToApprove) => {
+  // NOVÁ FUNKCIA: Prepnúť stav schválenia administrátora
+  const handleToggleAdminApproval = async (userToToggle) => {
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na schválenie používateľa.");
+      setError("Nemáte oprávnenie na zmenu stavu schválenia.");
       return;
     }
     setLoading(true);
     setError('');
     setUserNotificationMessage('');
     try {
-      const userDocRef = db.collection('users').doc(userToApprove.id);
-      await userDocRef.update({ approved: true });
-      setUserNotificationMessage(`Používateľ ${userToApprove.email} bol schválený.`);
+      const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
+      const userDocRef = db.collection('users').doc(userToToggle.id);
+      await userDocRef.update({ approved: newApprovedStatus });
+
+      const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
+      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
 
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToApprove.email} bol schválené.`,
+        message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
       });
-      console.log("Notifikácia o schválení používateľa úspešne uložená do Firestore.");
+      console.log(`Notifikácia o ${actionMessage} používateľa úspešne uložená do Firestore.`);
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri schvaľovaní používateľa:", e);
-      setError(`Chyba pri schvaľovaní používateľa: ${e.message}`);
+      console.error("UsersManagementApp: Chyba pri zmene stavu schválenia:", e);
+      setError(`Chyba pri zmene stavu schválenia: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -525,8 +529,9 @@ function UsersManagementApp() {
     try {
       const userDocRef = db.collection('users').doc(userId);
       
-      // ZMENA: approved sa vždy nastaví na true, ak je rola 'user' alebo 'admin'
-      const approvedStatus = true; 
+      // ZMENA: Ak sa rola mení na 'user', approved sa nastaví na true.
+      // Ak sa rola mení na 'admin', approved sa nastaví na false.
+      const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
@@ -703,15 +708,15 @@ function UsersManagementApp() {
                                                 },
                                                 'Upraviť rolu'
                                             ),
-                                            // NOVINKA: Modré tlačidlo Schváliť (zobrazí sa len pre neschválených adminov)
-                                            u.role === 'admin' && !u.approved && React.createElement(
+                                            // NOVINKA: Tlačidlo na schválenie/odobratie prístupu pre adminov
+                                            u.role === 'admin' && React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => handleApproveUser(u),
-                                                  className: 'bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  onClick: () => handleToggleAdminApproval(u),
+                                                  className: `${u.approved ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
-                                                'Schváliť'
+                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
                                             ),
                                             React.createElement(
                                                 'button',
