@@ -733,7 +733,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // Pridané whitespace-nowrap
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -743,7 +743,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // Pridané whitespace-nowrap
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
@@ -752,7 +752,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // Pridané whitespace-nowrap
                                                   disabled: loading,
                                                 },
                                                 'Zmazať'
