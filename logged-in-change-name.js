@@ -90,11 +90,16 @@ function ChangeNameApp() {
 
   // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
   const isDataEditingAllowed = React.useMemo(() => {
+    // Ak je používateľ admin, vždy povoliť úpravy
+    if (userProfileData && userProfileData.role === 'admin') {
+      return true;
+    }
+    // Inak platí pôvodná logika pre dátum uzávierky
     if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
     const now = new Date();
     const deadline = new Date(dataEditDeadline);
     return now <= deadline;
-  }, [settingsLoaded, dataEditDeadline]);
+  }, [settingsLoaded, dataEditDeadline, userProfileData]); // Pridaný userProfileData do závislostí
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -504,7 +509,8 @@ function ChangeNameApp() {
         error
       ),
       // NOVINKA: Správa o uzávierke úprav
-      !isDataEditingAllowed && React.createElement(
+      // Zobrazí sa len, ak používateľ nie je admin a úpravy nie sú povolené
+      !isDataEditingAllowed && userProfileData && userProfileData.role !== 'admin' && React.createElement(
         'div',
         { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         `Úpravy mena a priezviska sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
