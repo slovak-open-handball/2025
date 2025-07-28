@@ -23,17 +23,23 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
+    // Diagnostický výpis: Sledujeme, kedy sa useEffect aktivuje a s akými hodnotami
+    console.log("NotificationModal (header.js): useEffect triggered. Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+
     // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií a je správa
     if (message && displayNotificationsEnabled) {
+      console.log("NotificationModal (header.js): Showing notification because message and display are enabled."); 
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       timerRef.current = setTimeout(() => {
+        console.log("NotificationModal (header.js): Hiding notification after timeout."); 
         setShow(false);
         setTimeout(onClose, 500);
       }, 10000);
     } else {
+      console.log("NotificationModal (header.js): Hiding notification (either no message or display is disabled)."); 
       setShow(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -48,8 +54,14 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
     };
   }, [message, onClose, displayNotificationsEnabled]);
 
+  // Diagnostický výpis: Sledujeme, kedy sa komponent vykresľuje a aký má stav
+  console.log("NotificationModal (header.js): render. Current show state:", show, "Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+
   // Nevykresľuje sa, ak nie je zobrazené, nie je správa ALEBO ak sú notifikácie vypnuté
-  if ((!show && !message) || !displayNotificationsEnabled) return null;
+  if ((!show && !message) || !displayNotificationsEnabled) {
+    console.log("NotificationModal (header.js): Returning null (not rendering the UI)."); 
+    return null;
+  }
 
   return React.createElement(
     'div',
