@@ -448,6 +448,19 @@ function ChangePhoneApp() {
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Default to Slovakia
 
+  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  const isDataEditingAllowed = React.useMemo(() => {
+    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    const now = new Date();
+    const deadline = new Date(dataEditDeadline);
+    return now <= deadline;
+  }, [settingsLoaded, dataEditDeadline]);
+
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
@@ -641,6 +654,50 @@ function ChangePhoneApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
+  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      if (!db || !isAuthReady) {
+        console.log("ChangePhoneApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+        return;
+      }
+      try {
+          console.log("ChangePhoneApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          const settingsDocRef = db.collection('settings').doc('registration');
+          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("ChangePhoneApp: onSnapshot pre nastavenia registrácie spustený.");
+            if (docSnapshot.exists) {
+                const data = docSnapshot.data();
+                console.log("ChangePhoneApp: Nastavenia registrácie existujú, dáta:", data);
+                setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : null);
+            } else {
+                console.log("ChangePhoneApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                setDataEditDeadline(null);
+            }
+            setSettingsLoaded(true);
+            console.log("ChangePhoneApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+          }, error => {
+            console.error("ChangePhoneApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setSettingsLoaded(true);
+          });
+
+          return () => {
+            if (unsubscribeSettings) {
+                console.log("ChangePhoneApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                unsubscribeSettings();
+            }
+          };
+      } catch (e) {
+          console.error("ChangePhoneApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
+          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          setSettingsLoaded(true);
+      }
+    };
+
+    fetchSettings();
+  }, [db, isAuthReady]);
+
   // useEffect for updating header link visibility
   React.useEffect(() => {
     console.log(`ChangePhoneApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
@@ -675,7 +732,7 @@ function ChangePhoneApp() {
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
     } catch (e) {
-      console.error("Chyba pri odhlásení:", e);
+      console.error("ChangePhoneApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
       setLoading(false);
@@ -697,6 +754,12 @@ function ChangePhoneApp() {
 
   const handleUpdatePhoneNumber = async (e) => {
     e.preventDefault();
+    // NOVINKA: Kontrola povolenia úprav dát
+    if (!isDataEditingAllowed) {
+      setError("Úpravy telefónneho čísla sú po uzávierke zakázané.");
+      return;
+    }
+
     if (!db || !user || !userProfileData) {
       setError("Databáza alebo používateľ nie je k dispozícii.");
       return;
@@ -754,17 +817,19 @@ function ChangePhoneApp() {
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
         console.log("ChangePhoneApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Ukladám zmeny...';
     }
 
     return React.createElement(
@@ -814,6 +879,12 @@ function ChangePhoneApp() {
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
       ),
+      // NOVINKA: Správa o uzávierke úprav
+      !isDataEditingAllowed && React.createElement(
+        'div',
+        { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
+        `Úpravy telefónneho čísla sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
+      ),
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
@@ -840,7 +911,7 @@ function ChangePhoneApp() {
                     type: 'button',
                     onClick: () => setIsCountryCodeModalOpen(true),
                     className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex-shrink-0 flex items-center', // Pridané flex items-center
-                    disabled: loading,
+                    disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
                   },
                   selectedCountryDialCode, // Zobrazí vybranú predvoľbu
                   ChevronDown // Pridanie ikony šípky
@@ -852,7 +923,7 @@ function ChangePhoneApp() {
                   value: contactPhoneNumber, // Už len samotné číslo
                   onChange: (e) => setContactPhoneNumber(e.target.value),
                   required: true,
-                  disabled: loading,
+                  disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
                   placeholder: 'Zadajte telefónne číslo'
                 })
               )
@@ -862,7 +933,7 @@ function ChangePhoneApp() {
               {
                 type: 'submit',
                 className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                disabled: loading,
+                disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
@@ -876,7 +947,7 @@ function ChangePhoneApp() {
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
-      disabled: loading, // Pass the loading state to disable buttons in modal
+      disabled: loading || !isDataEditingAllowed, // Pass the loading state to disable buttons in modal, NOVINKA: Disabled ak je po uzávierke
     })
   );
 }
