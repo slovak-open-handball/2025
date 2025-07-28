@@ -149,6 +149,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           React.createElement('option', { value: 'admin' }, 'Administrátor')
         )
       ),
+      // Checkbox pre schválenie sa zobrazí len ak je rola 'admin'
       selectedRole === 'admin' && React.createElement(
         'div',
         { className: 'mb-4 flex items-center' },
@@ -535,13 +536,18 @@ function UsersManagementApp() {
     setUserNotificationMessage('');
     try {
       const userDocRef = db.collection('users').doc(userId);
-      await userDocRef.update({ role: newRole, approved: newIsApproved });
+      
+      // NOVINKA: Ak sa rola mení na 'user', approved sa vždy nastaví na false.
+      // Ak sa rola mení na 'admin', použije sa hodnota z newIsApproved (checkbox).
+      const approvedStatus = (newRole === 'user') ? false : newIsApproved;
+
+      await userDocRef.update({ role: newRole, approved: approvedStatus });
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
       closeRoleEditModal();
 
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${newIsApproved ? 'Áno' : 'Nie'}.`,
+        message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${approvedStatus ? 'Áno' : 'Nie'}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
@@ -710,6 +716,7 @@ function UsersManagementApp() {
                                                 },
                                                 'Upraviť rolu'
                                             ),
+                                            // Tlačidlo Schváliť sa zobrazí len pre adminov, ktorí nie sú schválení
                                             u.role === 'admin' && !u.approved && React.createElement(
                                                 'button',
                                                 {
@@ -741,3 +748,6 @@ function UsersManagementApp() {
     )
   );
 }
+
+// Explicitne sprístupniť komponent globálne
+window.UsersManagementApp = UsersManagementApp;
