@@ -61,7 +61,7 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-white text-gray-800 px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center', // ZMENA: bg-white a text-gray-800
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center', // ZMENA: bg-[#3A8D41] a text-white
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
