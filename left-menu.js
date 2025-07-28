@@ -3,10 +3,10 @@
 
 // Funkcia na zvýraznenie aktívnej položky menu
 function highlightActiveMenuItem() {
-    // Odstránime zvýraznenie zo všetkých predtým aktívnych položiek
+    // Odstránime zvýraznenie a triedy pre neklikateľnosť zo všetkých predtým aktívnych položiek
     const allMenuItems = document.querySelectorAll('.w-64 a');
     allMenuItems.forEach(item => {
-        item.classList.remove('bg-blue-600', 'font-bold', 'text-white'); // Odstránime existujúce zvýraznenie
+        item.classList.remove('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
         item.classList.add('hover:bg-blue-600'); // Vrátime hover efekt
     });
 
@@ -19,9 +19,9 @@ function highlightActiveMenuItem() {
     const activeLink = document.querySelector(`.w-64 a[href$="${currentPage}"]`);
 
     if (activeLink) {
-        // Zvýrazníme aktívnu položku
+        // Zvýrazníme aktívnu položku a pridáme triedy pre neklikateľnosť
         activeLink.classList.remove('hover:bg-blue-600'); // Odstránime hover, aby sa nekolidoval so zvýraznením
-        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white'); // Pridáme triedy pre zvýraznenie
+        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // Pridáme triedy pre zvýraznenie a neklikateľnosť
     }
 }
 
@@ -66,8 +66,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangePhoneApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
-            } else if (jsFileName === 'logged-in-change-billing-data' && typeof BillingDataApp !== 'undefined') { 
-                rootComponent = BillingDataApp;
+            } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') { // Opravený názov komponentu
+                rootComponent = ChangeBillingDataApp;
             } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
@@ -110,8 +110,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangePhoneApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
-            } else if (jsFileName === 'logged-in-change-billing-data' && typeof BillingDataApp !== 'undefined') {
-                rootComponent = BillingDataApp;
+            } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') { // Opravený názov komponentu
+                rootComponent = ChangeBillingDataApp;
             } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
                 rootComponent = MySettingsApp;
             } else if (jsFileName === 'logged-in-notifications' && typeof NotificationsApp !== 'undefined') {
@@ -185,6 +185,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuLinks = document.querySelectorAll('.w-64 a'); // Všetky odkazy v navigačnom menu
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
+            // NOVINKA: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
+            if (link.classList.contains('bg-blue-600')) {
+                event.preventDefault();
+                console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
+                return; // Ukončíme funkciu, aby sa nenačítal obsah
+            }
+
             event.preventDefault(); // Zabrániť predvolenému správaniu odkazu
             const href = link.getAttribute('href');
             // Získame len názov súboru bez .html pre loadContent
@@ -196,8 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.error("loadContent funkcia nie je definovaná.");
             }
-            // Zvýrazníme aktívnu položku okamžite po kliknutí
-            highlightActiveMenuItem();
         });
     });
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky
