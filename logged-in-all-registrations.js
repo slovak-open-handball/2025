@@ -628,6 +628,16 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       return null; // Zastaviť vykresľovanie
   }
 
+  // Funkcia na formátovanie PSČ
+  const formatPostalCode = (postalCode) => {
+    if (!postalCode) return '-';
+    const cleaned = String(postalCode).replace(/\s/g, ''); // Odstráni existujúce medzery
+    if (cleaned.length === 5) {
+      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+    }
+    return postalCode; // Vráti pôvodné, ak nemá 5 číslic
+  };
+
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
   return React.createElement(
     'div',
@@ -636,6 +646,15 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage(''),
         displayNotificationsEnabled: userProfileData?.displayNotifications
+    }),
+    React.createElement(FilterModal, {
+        isOpen: filterModalOpen,
+        onClose: closeFilterModal,
+        columnName: filterColumn,
+        onApplyFilter: applyFilter,
+        initialFilterValues: activeFilters[filterColumn] || [],
+        onClearFilter: clearFilter,
+        uniqueColumnValues: uniqueColumnValues
     }),
     React.createElement(
       'div',
@@ -806,23 +825,14 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.street || '-'),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.houseNumber || '-'),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.city || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.postalCode || '-'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatPostalCode(u.postalCode)), // Použitie formátovacej funkcie
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.country || '-')
                             )
                         ))
                     )
                 )
             )
-        ),
-        React.createElement(FilterModal, {
-            isOpen: filterModalOpen,
-            onClose: closeFilterModal,
-            columnName: filterColumn,
-            onApplyFilter: applyFilter,
-            initialFilterValues: activeFilters[filterColumn] || [],
-            onClearFilter: clearFilter,
-            uniqueColumnValues: uniqueColumnValues
-        })
+        )
       )
     )
   );
