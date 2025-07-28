@@ -118,9 +118,16 @@ function ChangeBillingDataApp() {
       setDb(firestoreInstance);
 
       const signIn = async () => {
+        // Pokúšame sa prihlásiť len ak používateľ ešte nie je prihlásený
+        if (authInstance.currentUser) {
+            console.log("ChangeBillingDataApp: Používateľ už je prihlásený, preskakujem počiatočné prihlásenie.");
+            return;
+        }
+
         try {
           // Používame globálne poskytnutý __initial_auth_token
           if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            console.log("ChangeBillingDataApp: Pokúšam sa prihlásiť s __initial_auth_token.");
             await authInstance.signInWithCustomToken(__initial_auth_token);
           } else {
             // Ak nie je poskytnutý custom token, presmerujeme na prihlasovaciu stránku.
@@ -178,9 +185,17 @@ function ChangeBillingDataApp() {
               console.log("ChangeBillingDataApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+              if (!userData.passwordLastChanged) {
+                  console.error("ChangeBillingDataApp: passwordLastChanged je prázdne alebo nedefinované. Odhlasujem používateľa.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  return;
+              }
+              
+              if (typeof userData.passwordLastChanged.toDate !== 'function') {
                   console.error("ChangeBillingDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("ChangeBillingDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  console.log("ChangeBillingDataApp: Odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla (chýba toDate metóda).");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
