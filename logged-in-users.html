@@ -124,12 +124,8 @@
                     const headerHtml = await response.text();
                     headerPlaceholder.innerHTML = headerHtml;
 
-                    // header.js je už načítaný v <head>, stačí zavolať funkciu
-                    if (typeof initializeHeaderLogic === 'function') {
-                        initializeHeaderLogic();
-                    } else {
-                        console.error("Chyba: Funkcia initializeHeaderLogic nie je definovaná v header.js.");
-                    }
+                    // header.js je už načítaný v <head>, takže jeho logika sa spustí automaticky.
+                    // Odstránené volanie initializeHeaderLogic(), pretože už nie je potrebné.
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
@@ -146,7 +142,7 @@
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
-                    // left-menu.js je už načítaný v <head>
+                    // left-menu.js je už načítaný v <head>, takže jeho logika sa spustí automaticky.
                     console.log("left-menu.js načítaný a spustený.");
                     // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                 } catch (error) {
