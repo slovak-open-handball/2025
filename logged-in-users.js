@@ -70,7 +70,8 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// ConfirmationModal Component (converted to React.createElement)
+// ConfirmationModal Component (ODSTRÁNENÝ)
+/*
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
   if (!show) return null;
 
@@ -79,7 +80,10 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
     { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
     React.createElement(
       'div',
-      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center' },
+      { 
+        // ZMENA: Zelené pozadie a biely text pre ConfirmationModal
+        className: 'bg-[#3A8D41] text-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center' 
+      },
       React.createElement('p', { className: 'text-lg font-semibold mb-4' }, message),
       React.createElement(
         'div',
@@ -106,6 +110,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
     )
   );
 }
+*/
 
 // RoleEditModal Component (converted to React.createElement)
 function RoleEditModal({ show, user, onClose, onSave, loading }) {
@@ -191,8 +196,9 @@ function UsersManagementApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [users, setUsers] = React.useState([]);
-  const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
-  const [userToDelete, setUserToDelete] = React.useState(null);
+  // ODSTRÁNENÉ: showConfirmationModal a userToDelete stavy
+  // const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
+  // const [userToDelete, setUserToDelete] = React.useState(null);
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
@@ -496,6 +502,8 @@ function UsersManagementApp() {
     };
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
 
+  // ODSTRÁNENÉ: openConfirmationModal a closeConfirmationModal funkcie
+  /*
   const openConfirmationModal = (user) => {
     setUserToDelete(user);
     setShowConfirmationModal(true);
@@ -505,6 +513,7 @@ function UsersManagementApp() {
     setUserToDelete(null);
     setShowConfirmationModal(false);
   };
+  */
 
   const openRoleEditModal = (user) => {
     setUserToEditRole(user);
@@ -618,8 +627,9 @@ function UsersManagementApp() {
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (!db || !userToDelete || !userProfileData || userProfileData.role !== 'admin') {
+  // ZMENA: Funkcia handleDeleteUser teraz prijíma userId a userEmail priamo
+  const handleDeleteUser = async (userId, userEmail) => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmazanie používateľa.");
       return;
     }
@@ -637,21 +647,21 @@ function UsersManagementApp() {
 
     try {
       // 1. Zmazať používateľa z Firestore
-      await db.collection('users').doc(userToDelete.id).delete();
-      console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
+      await db.collection('users').doc(userId).delete();
+      console.log(`Používateľ ${userEmail} zmazaný z Firestore.`);
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
       // ZMENA: Používame setUserNotificationMessage pre internú notifikáciu
-      setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
+      setUserNotificationMessage(`Používateľ ${userEmail} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       
-      closeConfirmationModal();
+      // ODSTRÁNENÉ: closeConfirmationModal();
 
       // Otvoriť novú záložku s Firebase Console
       window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
+        message: `Používateľ ${userEmail} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
@@ -701,6 +711,8 @@ function UsersManagementApp() {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage('')
     }),
+    // ODSTRÁNENÉ: ConfirmationModal komponent
+    /*
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
@@ -708,6 +720,7 @@ function UsersManagementApp() {
         onCancel: closeConfirmationModal,
         loading: loading,
     }),
+    */
     React.createElement(RoleEditModal, {
         show: showRoleEditModal,
         user: userToEditRole,
@@ -794,7 +807,7 @@ function UsersManagementApp() {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => openConfirmationModal(u),
+                                                  onClick: () => handleDeleteUser(u.id, u.email), // ZMENA: Priame volanie handleDeleteUser
                                                   className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
