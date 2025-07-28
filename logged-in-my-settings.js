@@ -18,12 +18,14 @@ const formatToDatetimeLocal = (date) => {
 };
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose }) {
+// Pridaný prop 'displayNotificationsEnabled'
+function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
-    if (message) {
+    // Zobrazí notifikáciu len ak je správa A notifikácie sú povolené
+    if (message && displayNotificationsEnabled) {
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -45,9 +47,10 @@ function NotificationModal({ message, onClose }) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [message, onClose]);
+  }, [message, onClose, displayNotificationsEnabled]); // Závisí aj od displayNotificationsEnabled
 
-  if (!show && !message) return null;
+  // Nezobrazovať notifikáciu, ak nie je správa ALEBO ak sú notifikácie zakázané
+  if ((!show && !message) || !displayNotificationsEnabled) return null;
 
   return React.createElement(
     'div',
@@ -92,6 +95,9 @@ function TournamentSettingsApp() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   // New state variable for periodic update of isRegistrationOpen
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
+
+  // NOVÝ STAV: Nastavenie zobrazovania notifikácií pre aktuálneho používateľa
+  const [displayNotifications, setDisplayNotifications] = React.useState(true);
 
   // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
   const appId = 'default-app-id'; 
@@ -269,6 +275,9 @@ function TournamentSettingsApp() {
 
               setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
               
+              // Nastavíme stav displayNotifications z dát používateľa
+              setDisplayNotifications(userData.displayNotifications !== undefined ? userData.displayNotifications : true);
+
               setLoading(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
 
@@ -530,6 +539,31 @@ function TournamentSettingsApp() {
     }
   };
 
+  // NOVÁ FUNKCIA: Spracovanie aktualizácie nastavení notifikácií
+  const handleUpdateNotificationSettings = async (e) => {
+    e.preventDefault();
+    if (!db || !user || !userProfileData) {
+      setError("Používateľské dáta alebo databáza nie je k dispozícii. Skúste sa znova prihlásiť.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setUserNotificationMessage('');
+
+    try {
+      const userDocRef = db.collection('users').doc(user.uid);
+      await userDocRef.update({
+        displayNotifications: displayNotifications // Uloží nový stav prepínača
+      });
+      setUserNotificationMessage("Nastavenia notifikácií úspešne aktualizované!");
+    } catch (e) {
+      console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení notifikácií:", e);
+      setError(`Chyba pri aktualizácii nastavení notifikácií: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Display loading state
   if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
@@ -565,7 +599,8 @@ function TournamentSettingsApp() {
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage('')
+        onClose: () => setUserNotificationMessage(''),
+        displayNotificationsEnabled: displayNotifications // Používame nový stav
     }),
     React.createElement(
       'div',
@@ -638,6 +673,34 @@ function TournamentSettingsApp() {
               disabled: loading,
             },
             loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
+          )
+        ),
+        // NOVÁ SEKCIA: Osobné nastavenia notifikácií
+        React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Osobné nastavenia notifikácií'),
+        React.createElement(
+          'form',
+          { onSubmit: handleUpdateNotificationSettings, className: 'space-y-4' },
+          React.createElement(
+            'div',
+            { className: 'flex items-center' },
+            React.createElement('input', {
+              type: 'checkbox',
+              id: 'display-notifications',
+              className: 'h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded',
+              checked: displayNotifications,
+              onChange: (e) => setDisplayNotifications(e.target.checked),
+              disabled: loading,
+            }),
+            React.createElement('label', { className: 'ml-2 block text-gray-700 text-sm font-bold', htmlFor: 'display-notifications' }, 'Zobrazovať notifikácie na stránke')
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'submit',
+              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
+              disabled: loading,
+            },
+            loading ? 'Ukladám...' : 'Uložiť nastavenia notifikácií'
           )
         )
       )
