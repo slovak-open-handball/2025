@@ -556,7 +556,6 @@ function TournamentSettingsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
-        React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Nastavenia registrácie'),
         React.createElement(
           'form',
           { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4' },
