@@ -153,7 +153,7 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-change-password': ['admin', 'user'],
         'menu-change-billing-data': ['user'],
         'menu-my-settings': ['admin'], 
-        'menu-notifications': ['admin'], // ZMENA: Len pre admina
+        'menu-notifications': ['admin'],
         'menu-soh-chat': ['admin'],
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
