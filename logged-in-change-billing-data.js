@@ -1,6 +1,6 @@
-// logged-in-billing-data.js
+// logged-in-change-billing-data.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-billing-data.html.
+// sú globálne definované v <head> logged-in-cahnge-billing-data.html.
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
@@ -55,7 +55,7 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// Main React component for the logged-in-billing-data.html page
+// Main React component for the logged-in-change-billing-data.html page
 function BillingDataApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -81,7 +81,7 @@ function BillingDataApp() {
     try {
       if (typeof firebase === 'undefined') {
         console.error("BillingDataApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-billing-data.html.");
+        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-billing-data.html.");
         setLoading(false);
         return;
       }
