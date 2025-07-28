@@ -299,7 +299,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
               // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
               if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Odhlasujem."); // Zmena logu
                   auth.signOut();
                   window.location.href = 'login.html';
                   setUser(null); // Explicitne nastaviť user na null
@@ -657,8 +657,12 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         uniqueColumnValues: uniqueColumnValues
     }),
     React.createElement(
+      // ZMENA: Upravené triedy pre umiestnenie pod ľavým menu
+      // Predpokladáme, že ľavé menu má šírku cca 256px (w-64) a header má výšku 64px (h-16 alebo p-4)
+      // Použijeme ml-64 pre odsadenie zľava a mt-16 pre odsadenie zhora (pod hlavičkou)
+      // max-w-7xl a p-4 zostávajú pre vnútorné odsadenie a šírku obsahu
       'div',
-      { className: 'w-full max-w-7xl mt-20 mb-10 p-4' },
+      { className: 'w-full max-w-7xl mt-20 mb-10 p-4 ml-64' }, // Pridané ml-64
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
