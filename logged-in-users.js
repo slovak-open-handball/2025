@@ -694,18 +694,18 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Toto zabezpečí posuvník, ak je obsah príliš široký
                 React.createElement(
                     'table',
-                    { className: 'min-w-full bg-white rounded-lg shadow-md' }, // ZMENA: min-w-full zabezpečí, že tabuľka bude vždy minimálne 100% šírky rodiča
+                    { className: 'bg-white rounded-lg shadow-md w-auto' }, // ZMENA: Odstránené min-w-full, pridané w-auto
                     React.createElement(
                         'thead',
                         null,
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
+                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'E-mail'), // ZMENA: Odstránená pevná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Meno'), // ZMENA: Odstránená pevná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Rola'), // ZMENA: Odstránená pevná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Schválený'), // ZMENA: Odstránená pevná šírka
+                            React.createElement('th', { className: 'py-3 px-6 text-center' }, 'Akcie') // ZMENA: Odstránená min-w
                         )
                     ),
                     React.createElement(
@@ -717,14 +717,14 @@ function UsersManagementApp() {
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
-                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role), // Pridané whitespace-nowrap
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'), // Pridané whitespace-nowrap
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex item-center justify-center space-x-2' }, // ZMENA: Odstránená min-w odtiaľto
+                                        { className: 'flex item-center justify-center space-x-2 whitespace-nowrap' }, // Pridané whitespace-nowrap
                                         // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
