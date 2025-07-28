@@ -7,7 +7,7 @@
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
 //  const day = date.getDate().toString().padStart(2, '0');
 //  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
+//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
 
@@ -64,7 +64,7 @@ function NotificationModal({ message, onClose }) {
 
 // Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti
 // Akceptuje 'validationStatus' ako objekt pre detailnú vizuálnu indikáciu platnosti hesla
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus }) {
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo) - ZJEDNOTENÉ S ADMIN-REGISTER.JS
   const EyeIcon = React.createElement(
     'svg',
@@ -105,6 +105,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
+        onFocus: onFocus // Pridaný onFocus prop
       }),
       React.createElement(
         'button',
@@ -184,6 +185,8 @@ function ChangePasswordApp() {
     isValid: false, // Celková platnosť hesla
   });
   const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
+  // NOVINKA: Stav pre sledovanie, či bol input "Potvrďte nové heslo" aktivovaný
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
 
 
   // Efekt pre inicializáciu Firebase a nastavenie poslucháča autentifikácie (spustí sa len raz)
@@ -435,7 +438,12 @@ function ChangePasswordApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Úspešne odhlásený.");
+      } else {
+        console.warn("ChangePasswordApp: window.showGlobalNotification nie je definovaná.");
+      }
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -661,7 +669,11 @@ function ChangePasswordApp() {
             id: 'confirm-new-password',
             label: 'Potvrďte nové heslo',
             value: confirmNewPassword,
-            onChange: (e) => setConfirmNewPassword(e.target.value),
+            onChange: (e) => {
+                setConfirmNewPassword(e.target.value);
+                setConfirmPasswordTouched(true); // Nastaví touched stav
+            },
+            onFocus: () => setConfirmPasswordTouched(true), // Nastaví touched stav pri aktivácii
             onCopy: (e) => e.preventDefault(),
             onPaste: (e) => e.preventDefault(),
             onCut: (e) => e.preventDefault(),
@@ -671,6 +683,13 @@ function ChangePasswordApp() {
             toggleShowPassword: () => setShowConfirmNewPassword(!showConfirmNewPassword),
             disabled: loading,
           }),
+          // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
+          !isConfirmPasswordMatching && confirmNewPassword.length > 0 && confirmPasswordTouched &&
+          React.createElement(
+            'p',
+            { className: 'text-red-500 text-xs italic mt-1' },
+            'Heslá sa nezhodujú'
+          ),
           React.createElement(
             'button',
             {
