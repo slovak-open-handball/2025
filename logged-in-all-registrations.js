@@ -256,6 +256,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return; // Zastaviť ďalšie spracovanie
               }
 
@@ -277,6 +279,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                   // This should ideally not happen if Firestore is the source of truth
@@ -284,11 +288,23 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else {
                   // Times are equal, ensure localStorage is up-to-date
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("AllRegistrationsApp: Timestampy sú rovnaké, aktualizujem localStorage."); // Zmena logu
+              }
+
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("AllRegistrationsApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastav ďalšie spracovanie
               }
 
               setUserProfileData(userData); // Aktualizujeme stav userProfileData
@@ -307,6 +323,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
               console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setUser(null); // Explicitne nastaviť user na null
+              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
           }, error => {
             console.error("AllRegistrationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error); // Zmena logu
@@ -319,17 +337,23 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                  if (auth) {
                     auth.signOut();
                     window.location.href = 'login.html';
+                    setUser(null); // Explicitne nastaviť user na null
+                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
+            setUser(null); // Explicitne nastaviť user na null
+            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
         } catch (e) {
           console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // Zmena logu
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false); // Stop loading aj pri chybe
+          setUser(null); // Explicitne nastaviť user na null
+          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -553,6 +577,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
       console.error("AllRegistrationsApp: Chyba pri odhlásení:", e); // Zmena logu
       setError(`Chyba pri odhlásení: ${e.message}`);
