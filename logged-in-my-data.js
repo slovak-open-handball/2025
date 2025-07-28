@@ -174,6 +174,8 @@ function MyDataApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return; // Zastaviť ďalšie spracovanie
               }
 
@@ -195,6 +197,8 @@ function MyDataApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                   // This should ideally not happen if Firestore is the source of truth
@@ -202,11 +206,23 @@ function MyDataApp() {
                   auth.signOut(); // Používame auth z React stavu
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else {
                   // Times are equal, ensure localStorage is up-to-date
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("MyDataApp: Timestampy sú rovnaké, aktualizujem localStorage.");
+              }
+
+              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+              if (userData.role === 'admin' && userData.approved === false) {
+                  console.log("MyDataApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return; // Zastav ďalšie spracovanie
               }
 
               // Continue with setting user data if not logged out
@@ -226,6 +242,8 @@ function MyDataApp() {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setUser(null); // Explicitne nastaviť user na null
+              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
           }, error => {
             console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -238,17 +256,23 @@ function MyDataApp() {
                  if (auth) {
                     auth.signOut();
                     window.location.href = 'login.html';
+                    setUser(null); // Explicitne nastaviť user na null
+                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
+            setUser(null); // Explicitne nastaviť user na null
+            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
         } catch (e) {
           console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false); // Stop loading aj pri chybe
+          setUser(null); // Explicitne nastaviť user na null
+          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -264,7 +288,7 @@ function MyDataApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
   // useEffect for updating header link visibility
   // Removed isRegistrationOpen dependency as it's no longer in this file
@@ -302,6 +326,8 @@ function MyDataApp() {
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
       console.error("MyDataApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
