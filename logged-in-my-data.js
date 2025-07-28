@@ -10,7 +10,7 @@
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
 //  const day = date.getDate().toString().padStart(2, '0');
 //  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
+//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
 
@@ -308,6 +308,14 @@ function MyDataApp() {
 
   // Removed handleUpdateProfile as there are no input fields to update directly in this view
 
+  // Helper function to format postal code
+  const formatPostalCode = (code) => {
+    if (code && code.length === 5 && /^\d{5}$/.test(code)) {
+      return `${code.substring(0, 3)} ${code.substring(3, 5)}`;
+    }
+    return code; // Return original if not 5 digits or not numeric
+  };
+
   // Display loading state
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia),
   // alebo userProfileData je null (ešte neboli načítané dáta profilu), alebo loading je true, zobraz loading.
@@ -341,7 +349,10 @@ function MyDataApp() {
   const postalCode = userProfileData.postalCode || '';
   const country = userProfileData.country || '';
 
-  const fullAddress = `${street} ${houseNumber}, ${postalCode} ${city}, ${country}`.trim();
+  // Apply formatting to postalCode
+  const formattedPostalCode = formatPostalCode(postalCode);
+
+  const fullAddress = `${street} ${houseNumber}, ${formattedPostalCode} ${city}, ${country}`.trim();
 
   return React.createElement(
     'div',
