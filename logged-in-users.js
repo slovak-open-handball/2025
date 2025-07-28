@@ -73,16 +73,26 @@ function NotificationModal({ message, onClose }) {
 }
 
 // ConfirmationModal Component (converted to React.createElement)
+// ZMENA: Upravené triedy pre zobrazenie v hornej časti obrazovky so zeleným pozadím.
+// ZMENA: Zvýšený z-index na 70, aby bol nad NotificationModal.
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
   if (!show) return null;
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    {
+      className: `fixed top-0 left-0 right-0 z-70 flex justify-center p-4 transition-transform duration-500 ease-out ${ // ZMENA: z-index na z-70, pridaná animácia
+        show ? 'translate-y-0' : '-translate-y-full'
+      }`,
+      style: { pointerEvents: 'none' } // Umožňuje kliknutia cez pozadie
+    },
     React.createElement(
       'div',
-      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center' },
-      React.createElement('p', { className: 'text-lg font-semibold mb-4' }, message),
+      {
+        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center', // ZMENA: Zelené pozadie, max-width, centrovanie
+        style: { pointerEvents: 'auto' } // Umožňuje kliknutia na samotný modal
+      },
+      React.createElement('p', { className: 'font-semibold mb-4' }, message),
       React.createElement(
         'div',
         { className: 'flex justify-center space-x-4' },
@@ -750,7 +760,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: py-0.5 px-1
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap', // ZMENA: text-xs
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
@@ -760,7 +770,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap`, // ZMENA: py-0.5 px-1
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap`, // ZMENA: text-xs
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť'
@@ -769,7 +779,7 @@ function UsersManagementApp() {
                                                 'button',
                                                 {
                                                   onClick: () => openConfirmationModal(u),
-                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-lg text-sm transition-colors duration-200 whitespace-nowrap', // ZMENA: py-0.5 px-1
+                                                  className: 'bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-lg text-xs transition-colors duration-200 whitespace-nowrap', // ZMENA: text-xs
                                                   disabled: loading,
                                                 },
                                                 'Zmazať'
