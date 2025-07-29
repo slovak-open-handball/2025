@@ -500,7 +500,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -828,35 +828,18 @@ function UsersManagementApp() {
     }
 
     try {
-      // Pripravíme dáta pre Google Apps Script na zmazanie používateľa
-      // TOTO BUDE STÁLE VOLAŤ APPS SCRIPT, PRETOŽE MAZANIE INÝCH POUŽÍVATEĽOV VYŽADUJE ADMIN OPRÁVNENIA
-      const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYhxOSFBAw4N2hUts_1rWxVS0PzN8GKngWofEEfGtJtK3dnjeogcBY999We-UdoMd1w/exec"; // Používame URL pre Apps Script pre mazanie
-
-      const requestData = {
-        action: 'deleteUser', // Akcia, ktorú spracuje Apps Script
-        userId: userToConfirmDelete.id
-      };
-
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Stále 'no-cors' pre mazanie, ak nechcete riešiť CORS na serveri
-        body: JSON.stringify(requestData),
-      });
-
-      console.warn("UsersManagementApp: Fetch požiadavka na zmazanie bola odoslaná v režime 'no-cors'. Odpoveď bude opaqná a nebude možné ju prečítať. Predpokladáme úspech a zmažeme z Firestore.");
-
-      // Ak Apps Script úspešne zmazal používateľa z Auth, zmažeme ho aj z Firestore
+      // Zmažeme používateľa IBA z Firestore.
       await db.collection('users').doc(userToConfirmDelete.id).delete();
       console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
-      // Aktualizácia notifikačnej správy a otvorenie novej záložky
+      // Aktualizácia notifikačnej správy
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol (pravdepodobne) zmazaný.`, 'success');
+        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, manuálne ho zmažte aj vo Firebase Authentication Console.`, 'success');
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
       
-      // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
+      // Otvoriť Firebase Console Authentication v novej záložke pre manuálne zmazanie
       const projectId = firebaseConfig.projectId;
       if (projectId) {
           window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
@@ -866,7 +849,7 @@ function UsersManagementApp() {
 
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToConfirmDelete.email} bol (pravdepodobne) zmazaný.`,
+        message: `Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj vo Firebase Authentication Console.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
@@ -874,10 +857,10 @@ function UsersManagementApp() {
       console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri mazaní používateľa (fetch error):", e);
-      setError(`Chyba pri mazaní používateľa: ${e.message}. Skontrolujte logy Google Apps Scriptu a nastavenia CORS.`);
+      console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
+      setError(`Chyba pri mazaní používateľa z databázy: ${e.message}.`);
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri mazaní používateľa: ${e.message}.`, 'error');
+        window.showGlobalNotification(`Chyba pri mazaní používateľa z databázy: ${e.message}.`, 'error');
       }
     } finally {
       setLoading(false);
