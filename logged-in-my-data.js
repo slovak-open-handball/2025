@@ -129,19 +129,13 @@ function MyDataApp() {
 
               // NOVINKA: Prioritná kontrola pre čerstvo prihlásených používateľov
               if (justLoggedIn === 'true') {
-                  console.log("MyDataApp: Používateľ sa práve prihlásil. Obchádzam prísnu kontrolu passwordLastChanged pre túto reláciu.");
-                  // Ak je timestamp z Firestore platný, aktualizujeme localStorage.
-                  // Ak nie je, ponecháme localStorage tak, ako je (alebo ho nastavíme na 0, ak tam nič nie je).
-                  // Dôležité: NEODHLASUJEME hneď, dávame šancu na synchronizáciu.
-                  if (hasValidFirestoreTimestamp) {
-                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                      console.log("MyDataApp: localStorage passwordLastChanged aktualizovaný na základe Firestore timestampu (justLoggedIn).");
-                  } else {
-                      console.warn("MyDataApp: passwordLastChanged z Firestore je neplatný aj pri justLoggedIn. localStorage sa neaktualizuje z Firestore pre túto reláciu.");
-                      // Ak je neplatný, ale je justLoggedIn, neodhlasujeme.
-                      // Predpokladáme, že login.js už inicioval serverTimestamp() a onSnapshot ho čoskoro prinesie.
-                  }
+                  console.log("MyDataApp: Používateľ sa práve prihlásil. Nastavujem passwordLastChanged v localStorage na aktuálny čas klienta.");
+                  // Pre nového používateľa alebo pri prvom prihlásení po zmene hesla,
+                  // nastavíme localStorage na aktuálny čas klienta.
+                  // Toto obíde race condition s serverTimestamp().
+                  localStorage.setItem(localStorageKey, new Date().getTime().toString());
                   sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak
+                  // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA
               } else {
                   // Bežná bezpečnostná kontrola pre existujúcich používateľov
                   if (!hasValidFirestoreTimestamp) {
