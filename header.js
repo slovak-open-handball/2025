@@ -32,20 +32,10 @@ if (window.self !== window.top) {
 }
 
 // Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty by mali byť definované v <head> každej HTML stránky, ktorá používa tento skript.
-// Príklad:
-// <script>
-//     const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-//     const firebaseConfig = {
-//       apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-//       authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-//       projectId: "prihlasovanie-4f3f3",
-//       storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-//       messagingSenderId: "26454452024",
-//       appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-//     };
-//     const initialAuthToken = null;
-// </script>
+// Tieto konštanty sú teraz definované v <head> logged-in-users.html
+// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+// const firebaseConfig = { ... };
+// const initialAuthToken = null;
 
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
@@ -310,8 +300,8 @@ function GlobalNotificationHandler() {
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
   // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
   React.useEffect(() => {
-    window.showGlobalNotification = (message, type = 'info') => { // Pridaný parameter 'type'
-      setCurrentCenterMessage({ message, type }); // Nastaví správu a typ pre centrálnu notifikáciu
+    window.showGlobalNotification = (message) => {
+      setCurrentCenterMessage(message); // Nastaví správu pre centrálnu notifikáciu
     };
     return () => {
       // Vyčisti globálnu funkciu pri odpojení komponentu
@@ -538,9 +528,8 @@ function GlobalNotificationHandler() {
       displayNotificationsEnabled: displayTopRightNotificationsEnabled // Prop pre top-right modal
     }),
     React.createElement(CenterConfirmationModal, { // NOVINKA: Vykresľuje centrálnu notifikáciu
-      message: currentCenterMessage.message, // Prístup k message
-      onClose: () => setCurrentCenterMessage({ message: '', type: 'info' }), // Reset aj typu
-      type: currentCenterMessage.type // Odovzdanie typu
+      message: currentCenterMessage,
+      onClose: () => setCurrentCenterMessage('')
     })
   );
 }
@@ -569,13 +558,14 @@ try {
 }
 
 
-// Main React component for the logged-in-users.html page (or other pages)
-// Tento komponent by sa mal spúšťať len na stránkach, ktoré NIE SÚ logged-in-users.html
+// Pôvodný kód pre UsersManagementApp a jeho globálne sprístupnenie zostáva nezmenený
+// Main React component for the logged-in-users.html page
+// ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
+// a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
-  // Táto interná kontrola je tu ponechaná pre dodatočnú istotu,
-  // hoci primárna kontrola by mala byť na úrovni ReactDOM.render v header.js.
-  if (window.location.href.includes('logged-in-users.html')) {
-    console.error("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+  // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
+  if (window.location.pathname.includes('logged-in-users.html')) {
+    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
 
@@ -606,7 +596,7 @@ function UsersManagementApp() {
     try {
       if (typeof firebase === 'undefined') {
         console.error("UsersManagementApp: Firebase SDK nie je načítané."); // Zmena logu
-        setError("Firebase SDK nie je načítané. Skontrolujte HTML stránku."); // Zmena logu
+        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-users.html."); // Zmena logu
         setLoading(false);
         return;
       }
@@ -764,7 +754,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
@@ -801,7 +791,7 @@ function UsersManagementApp() {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link'); // Opravené preklep
+    const registerLink = document = document.getElementById('register-link');
 
     if (authLink) {
       if (user) {
@@ -828,7 +818,7 @@ function UsersManagementApp() {
       await auth.signOut();
       // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.", 'success'); // Pridaný typ 'success'
+        window.showGlobalNotification("Úspešne odhlásený.");
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
@@ -875,7 +865,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
-          setError(`Chyba pri načítaní používateľov: ${error.message}`); // Použitie error.message
+          setError(`Chyba pri načítaní používateľov: ${e.message}`);
           setLoading(false);
         });
       } catch (e) {
@@ -925,7 +915,7 @@ function UsersManagementApp() {
     setError('');
     // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification('', 'info'); // Vyčistíme predchádzajúcu správu
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
@@ -935,10 +925,10 @@ function UsersManagementApp() {
       const userDocRef = db.collection('users').doc(userToToggle.id);
       await userDocRef.update({ approved: newApprovedStatus });
 
-      const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
+      const actionMessage = newApprovedStatus ? 'schválený' : 'odstránený prístup';
       // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success'); // Pridaný typ 'success'
+        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
@@ -969,7 +959,7 @@ function UsersManagementApp() {
     setError('');
     // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification('', 'info'); // Vyčistíme predchádzajúcu správu
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
@@ -984,7 +974,7 @@ function UsersManagementApp() {
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success'); // Pridaný typ 'success'
+        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
@@ -1026,7 +1016,7 @@ function UsersManagementApp() {
     setError('');
     // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification('', 'info'); // Vyčistíme predchádzajúcu správu
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
@@ -1039,7 +1029,7 @@ function UsersManagementApp() {
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
       // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`, 'success'); // Pridaný typ 'success'
+        window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
@@ -1213,33 +1203,3 @@ function UsersManagementApp() {
 
 // Explicitne sprístupniť komponent globálne
 window.UsersManagementApp = UsersManagementApp;
-
-// NOVÝ KÓD: Podmienené vykresľovanie UsersManagementApp z header.js
-// Predpokladá sa, že na stránkach, kde sa má UsersManagementApp spustiť (okrem logged-in-users.html),
-// existuje HTML element s ID "main-content-root" alebo podobným, kde sa má komponent vykresliť.
-// Ak takýto element neexistuje, komponent sa nevykreslí viditeľne.
-if (!window.location.href.includes('logged-in-users.html')) {
-  console.log("header.js: Detekovaná iná stránka ako logged-in-users.html. Pokúšam sa vykresliť UsersManagementApp.");
-  let mainContentRoot = document.getElementById('main-content-root');
-  if (!mainContentRoot) {
-    mainContentRoot = document.createElement('div');
-    mainContentRoot.id = 'main-content-root';
-    document.body.appendChild(mainContentRoot);
-    console.log("header.js: Vytvoril som a pridal 'main-content-root' div do tela dokumentu pre UsersManagementApp.");
-  } else {
-    console.log("header.js: 'main-content-root' div už existuje.");
-  }
-
-  try {
-    // Vykreslíme UsersManagementApp do tohto koreňového elementu
-    ReactDOM.render(
-      React.createElement(UsersManagementApp),
-      mainContentRoot
-    );
-    console.log("header.js: UsersManagementApp úspešne vykreslený na inej stránke.");
-  } catch (e) {
-    console.error("header.js: Chyba pri vykresľovaní UsersManagementApp na inej stránke:", e);
-  }
-} else {
-  console.log("header.js: Detekovaná stránka logged-in-users.html. UsersManagementApp z header.js sa nebude vykresľovať.");
-}
