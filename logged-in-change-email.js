@@ -63,27 +63,32 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   );
 }
 
-// MyEmailChangeModal Component pre zmenu vlastného e-mailu (presunuté z logged-in-users.js)
-function MyEmailChangeModal({ show, currentEmail, onClose, onSave, loading, error: modalError, message: modalMessage }) {
+// Main React component for the logged-in-change-email.html page
+function ChangeEmailApp() {
+  const [app, setApp] = React.useState(null);
+  const [auth, setAuth] = React.useState(null);
+  const [db, setDb] = React.useState(null);
+  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+
+  // User Data States
+  const [currentEmail, setCurrentEmail] = React.useState('');
   const [newEmail, setNewEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+
+  // Validation States
   const [emailTouched, setEmailTouched] = React.useState(false);
   const [emailError, setEmailError] = React.useState('');
   const [passwordError, setPasswordError] = React.useState('');
 
-  React.useEffect(() => {
-    if (show) {
-      setNewEmail(currentEmail);
-      setPassword('');
-      setEmailTouched(false);
-      setEmailError('');
-      setPasswordError('');
-    }
-  }, [show, currentEmail]);
+  // Zabezpečíme, že appId je definované (používame globálnu premennú)
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  if (!show) return null;
-
-  // Funkcia na validáciu emailu
+  // Funkcia na validáciu emailu (presunutá sem)
   const validateEmail = (email) => {
     const atIndex = email.indexOf('@');
     if (atIndex === -1) return false;
@@ -98,152 +103,6 @@ function MyEmailChangeModal({ show, currentEmail, onClose, onSave, loading, erro
     const charsAfterLastDot = email.substring(lastDotIndex + 1);
     return charsAfterLastDot.length >= 2;
   };
-
-  const handleEmailChange = (e) => {
-    const emailValue = e.target.value;
-    setNewEmail(emailValue);
-    if (emailTouched && emailValue.trim() !== '' && !validateEmail(emailValue)) {
-      setEmailError('Zadajte platnú e-mailovú adresu.');
-    } else {
-      setEmailError('');
-    }
-  };
-
-  const handleFocusEmail = () => {
-    setEmailTouched(true);
-  };
-
-  const handlePasswordChange = (e) => {
-    setPassword(e.target.value);
-    setPasswordError(''); // Vyčisti chybu pri zmene hesla
-  };
-
-  const handleSave = async () => {
-    if (!validateEmail(newEmail)) {
-      setEmailError('Zadajte platnú e-mailovú adresu.');
-      return;
-    }
-    if (newEmail === currentEmail) {
-      setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
-      return;
-    }
-    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
-      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
-      return;
-    }
-    onSave(newEmail, password);
-  };
-
-  const isSaveDisabled = loading || !validateEmail(newEmail) || newEmail === currentEmail || password.length < 6;
-
-  return React.createElement(
-    'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
-    React.createElement(
-      'div',
-      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
-      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Zmeniť moju e-mailovú adresu`),
-      modalError && React.createElement( // Zobrazenie chýb z rodičovského komponentu
-        'p',
-        { className: 'text-red-500 text-xs italic mb-2' },
-        modalError
-      ),
-      modalMessage && React.createElement( // Zobrazenie správ z rodičovského komponentu
-        'p',
-        { className: 'text-green-600 text-xs italic mb-2' },
-        modalMessage
-      ),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'my-new-email' }, 'Nová e-mailová adresa'),
-        React.createElement('input', {
-          type: 'email',
-          id: 'my-new-email',
-          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${emailError ? 'border-red-500' : ''}`,
-          value: newEmail,
-          onChange: handleEmailChange,
-          onFocus: handleFocusEmail,
-          required: true,
-          placeholder: 'Zadajte novú e-mailovú adresu',
-          disabled: loading,
-        }),
-        emailError && React.createElement(
-          'p',
-          { className: 'text-red-500 text-xs italic mt-1' },
-          emailError
-        )
-      ),
-      React.createElement(
-        'div',
-        { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'my-current-password' }, 'Aktuálne heslo'),
-        React.createElement('input', {
-          type: 'password',
-          id: 'my-current-password',
-          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${passwordError ? 'border-red-500' : ''}`,
-          value: password,
-          onChange: handlePasswordChange,
-          required: true,
-          placeholder: 'Zadajte svoje aktuálne heslo',
-          disabled: loading,
-        }),
-        passwordError && React.createElement(
-          'p',
-          { className: 'text-red-500 text-xs italic mt-1' },
-          passwordError
-        )
-      ),
-      React.createElement(
-        'div',
-        { className: 'flex justify-end space-x-4' },
-        React.createElement(
-          'button',
-          {
-            onClick: onClose,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: loading,
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: handleSave,
-            className: 'bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: isSaveDisabled,
-          },
-          loading ? 'Ukladám...' : 'Zmeniť'
-        )
-      )
-    )
-  );
-}
-
-
-// Main React component for the logged-in-change-email.html page
-function ChangeEmailApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
-
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [currentEmail, setCurrentEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
-
-  // NOVINKA: Stavy pre MyEmailChangeModal
-  const [showMyEmailModal, setShowMyEmailModal] = React.useState(false);
-  const [myEmailModalError, setMyEmailModalError] = React.useState('');
-  const [myEmailModalMessage, setMyEmailModalMessage] = React.useState('');
-
-  // Zabezpečíme, že appId je definované (používame globálnu premennú)
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
-
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -304,7 +163,7 @@ function ChangeEmailApp() {
     }
   }, []);
 
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // Effect for loading user data from Firestore after Auth and DB are ready
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
@@ -393,6 +252,7 @@ function ChangeEmailApp() {
 
               setUserProfileData(userData);
               setCurrentEmail(user.email || ''); // Nastaví aktuálny e-mail z Firebase Auth
+              setNewEmail(user.email || ''); // Inicializovať nové pole s aktuálnym e-mailom
               
               setLoading(false);
               setError('');
@@ -516,30 +376,51 @@ function ChangeEmailApp() {
     };
   }, [handleLogout]);
 
-  // NOVÁ FUNKCIA: Otvorenie MyEmailChangeModal
-  const openMyEmailModal = () => {
-    setMyEmailModalError('');
-    setMyEmailModalMessage('');
-    setShowMyEmailModal(true);
+  // Handle for email input change
+  const handleNewEmailChange = (e) => {
+    const emailValue = e.target.value;
+    setNewEmail(emailValue);
+    if (emailTouched && emailValue.trim() !== '' && !validateEmail(emailValue)) {
+      setEmailError('Zadajte platnú e-mailovú adresu.');
+    } else {
+      setEmailError('');
+    }
   };
 
-  // NOVÁ FUNKCIA: Zatvorenie MyEmailChangeModal
-  const closeMyEmailModal = () => {
-    setShowMyEmailModal(false);
-    setMyEmailModalError('');
-    setMyEmailModalMessage('');
+  const handleFocusEmail = () => {
+    setEmailTouched(true);
   };
 
-  // NOVÁ FUNKCIA: handleSaveMyEmail - pre zmenu vlastného e-mailu (presunuté z logged-in-users.js)
-  const handleSaveMyEmail = async (newEmail, password) => {
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    setPasswordError(''); // Vyčisti chybu pri zmene hesla
+  };
+
+  // Handle form submission for email change
+  const handleSubmitEmailChange = async (e) => {
+    e.preventDefault();
+
     if (!auth || !auth.currentUser || !db) {
-      setMyEmailModalError("Chyba: Používateľ nie je prihlásený alebo databáza nie je dostupná.");
+      setError("Chyba: Používateľ nie je prihlásený alebo databáza nie je dostupná.");
+      return;
+    }
+
+    if (!validateEmail(newEmail)) {
+      setEmailError('Zadajte platnú e-mailovú adresu.');
+      return;
+    }
+    if (newEmail === currentEmail) {
+      setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
+      return;
+    }
+    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
       return;
     }
 
     setLoading(true);
-    setMyEmailModalError('');
-    setMyEmailModalMessage('');
+    setError('');
+    setUserNotificationMessage('');
 
     try {
       // Re-autentifikácia používateľa
@@ -548,21 +429,15 @@ function ChangeEmailApp() {
       console.log("ChangeEmailApp: Používateľ úspešne re-autentifikovaný.");
 
       // Zmena e-mailu vo Firebase Authentication
-      // Namiesto updateEmail voláme verifyBeforeUpdateEmail, ak je povolená ochrana pred enumeráciou e-mailov.
       await auth.currentUser.verifyBeforeUpdateEmail(newEmail);
       console.log("ChangeEmailApp: Overovací e-mail bol odoslaný na novú adresu.");
 
       // NEAKTUALIZUJEME FIRESTORE HNEĎ! Firestore sa aktualizuje až po overení e-mailu používateľom
-      // pomocou synchronizačnej logiky v useEffect, ktorá počúva zmeny v user.email.
+      // pomocou synchronizačnej logiky v useEffect, ktorá počúva zmeny v user.email (v logged-in-my-data.js, logged-in-users.js atď.)
 
-      setMyEmailModalMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, skontrolujte si schránku a overte e-mail.");
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Overovací e-mail bol odoslaný na novú adresu. Prosím, overte e-mail.", 'info');
-      }
-      // Po odoslaní overovacieho e-mailu môžete modál zavrieť po krátkej dobe
-      setTimeout(() => {
-        closeMyEmailModal();
-      }, 3000); // Dlhší čas, aby si používateľ prečítal správu
+      setUserNotificationMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, skontrolujte si schránku a overte e-mail.");
+      // Reset formulára po odoslaní
+      setPassword('');
 
     } catch (e) {
       console.error("ChangeEmailApp: Chyba pri zmene vlastného e-mailu:", e);
@@ -578,15 +453,23 @@ function ChangeEmailApp() {
       } else {
         errorMessage = `Chyba: ${e.message}`;
       }
-      setMyEmailModalError(errorMessage);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(errorMessage, 'error');
-      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Check if form is valid for button disabled state
+  const isFormValid = validateEmail(newEmail) && newEmail !== currentEmail && password.length >= 6;
+
+  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  const buttonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+    ${loading || !isFormValid
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
 
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
@@ -618,16 +501,6 @@ function ChangeEmailApp() {
         onClose: () => setUserNotificationMessage(''),
         type: error ? 'error' : 'success'
     }),
-    // NOVINKA: Vykreslenie MyEmailChangeModal pre vlastnú zmenu e-mailu
-    user && React.createElement(MyEmailChangeModal, {
-        show: showMyEmailModal,
-        currentEmail: currentEmail, // Používame aktuálny e-mail zo stavu
-        onClose: closeMyEmailModal,
-        onSave: handleSaveMyEmail,
-        loading: loading,
-        error: myEmailModalError,
-        message: myEmailModalMessage,
-    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-md mt-20 mb-10 p-4' },
@@ -642,24 +515,65 @@ function ChangeEmailApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Zmeniť e-mail'
         ),
-        // Tlačidlo pre zmenu vlastného e-mailu
-        React.createElement(
-            'div',
-            { className: 'flex justify-center mb-6' },
-            React.createElement(
-                'button',
-                {
-                    onClick: openMyEmailModal,
-                    className: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 shadow-md',
-                    disabled: loading,
-                },
-                'Zmeniť môj e-mail'
-            )
-        ),
         React.createElement(
             'p',
-            { className: 'text-center text-gray-600' },
+            { className: 'text-center text-gray-600 mb-6' },
             `Váš aktuálny e-mail: ${currentEmail}`
+        ),
+        React.createElement(
+            'form',
+            { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'new-email' }, 'Nová e-mailová adresa'),
+              React.createElement('input', {
+                type: 'email',
+                id: 'new-email',
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${emailError ? 'border-red-500' : ''}`,
+                value: newEmail,
+                onChange: handleNewEmailChange,
+                onFocus: handleFocusEmail,
+                required: true,
+                placeholder: 'Zadajte novú e-mailovú adresu',
+                disabled: loading,
+              }),
+              emailError && React.createElement(
+                'p',
+                { className: 'text-red-500 text-xs italic mt-1' },
+                emailError
+              )
+            ),
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'current-password' }, 'Aktuálne heslo'),
+              React.createElement('input', {
+                type: 'password',
+                id: 'current-password',
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${passwordError ? 'border-red-500' : ''}`,
+                value: password,
+                onChange: handlePasswordChange,
+                required: true,
+                placeholder: 'Zadajte svoje aktuálne heslo',
+                disabled: loading,
+              }),
+              passwordError && React.createElement(
+                'p',
+                { className: 'text-red-500 text-xs italic mt-1' },
+                passwordError
+              )
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'submit',
+                className: buttonClasses,
+                disabled: loading || !isFormValid,
+              },
+              loading ? 'Ukladám...' : 'Uložiť zmeny'
+            )
+          )
         )
       )
     )
