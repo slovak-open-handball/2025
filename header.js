@@ -300,8 +300,8 @@ function GlobalNotificationHandler() {
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
   // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
   React.useEffect(() => {
-    window.showGlobalNotification = (message) => {
-      setCurrentCenterMessage(message); // Nastaví správu pre centrálnu notifikáciu
+    window.showGlobalNotification = (message, type = 'info') => { // Pridaný parameter 'type'
+      setCurrentCenterMessage({ message, type }); // Nastaví správu a typ pre centrálnu notifikáciu
     };
     return () => {
       // Vyčisti globálnu funkciu pri odpojení komponentu
@@ -528,8 +528,9 @@ function GlobalNotificationHandler() {
       displayNotificationsEnabled: displayTopRightNotificationsEnabled // Prop pre top-right modal
     }),
     React.createElement(CenterConfirmationModal, { // NOVINKA: Vykresľuje centrálnu notifikáciu
-      message: currentCenterMessage,
-      onClose: () => setCurrentCenterMessage('')
+      message: currentCenterMessage.message, // Prístup k message
+      onClose: () => setCurrentCenterMessage({ message: '', type: 'info' }), // Reset aj typu
+      type: currentCenterMessage.type // Odovzdanie typu
     })
   );
 }
@@ -564,7 +565,8 @@ try {
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
   // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
-  if (window.location.pathname.includes('logged-in-users.html')) {
+  // ZMENA: Vylepšená detekcia stránky pomocou window.location.href
+  if (window.location.href.includes('logged-in-users.html')) {
     console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
