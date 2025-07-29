@@ -86,7 +86,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50' },
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
     React.createElement(
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
@@ -738,36 +738,42 @@ function UsersManagementApp() {
       // Toto sa používa len na obídenie CORS chýb, ale neposkytuje spätnú väzbu o úspechu/zlyhaní operácie na serveri.
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Nastavené na 'no-cors' podľa požiadavky
-        // headers: { 'Content-Type': 'application/json' }, // ODSTRÁNENÉ: Nie je povolené v režime 'no-cors'
+        mode: 'cors', // ZMENA: Naspäť na 'cors'
+        headers: { 'Content-Type': 'application/json' }, // ZMENA: Naspäť hlavička Content-Type
         body: JSON.stringify(requestData),
       });
 
-      // V režime 'no-cors' je odpoveď 'opaque', čo znamená, že nemôžeme čítať response.json() ani kontrolovať response.ok.
-      // Preto nemôžeme spoľahlivo zistiť, či bola operácia na serveri úspešná.
-      // Predpokladáme úspech a aktualizujeme Firestore.
-      console.warn("UsersManagementApp: Fetch požiadavka bola odoslaná v režime 'no-cors'. Odpoveď bude opaqná a nebude možné ju prečítať. Predpokladáme úspech a aktualizujeme Firestore.");
-      
-      // Aktualizujeme e-mail vo Firestore. Toto by sa malo stať až po potvrdení zo servera,
-      // ale v režime 'no-cors' nemáme takéto potvrdenie.
-      const userDocRef = db.collection('users').doc(userId);
-      await userDocRef.update({ email: newEmail });
+      // V režime 'cors' môžeme čítať odpoveď servera a kontrolovať response.ok.
+      const result = await response.json();
 
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol (pravdepodobne) úspešne zmenený na ${newEmail}.`, 'success');
+      if (response.ok && result.status === 'success') {
+        // Ak Apps Script úspešne zmenil e-mail v Auth, aktualizujeme aj Firestore
+        const userDocRef = db.collection('users').doc(userId);
+        await userDocRef.update({ email: newEmail });
+
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol úspešne zmenený na ${newEmail}.`, 'success');
+        } else {
+          console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        }
+        closeChangeEmailModal();
+
+        // Uložiť notifikáciu pre všetkých administrátorov
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+          message: `E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}.`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          recipientId: 'all_admins',
+          read: false
+        });
+        console.log("Notifikácia o zmene e-mailu používateľa úspešne uložená do Firestore.");
+
       } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        const errorMessage = result.message || 'Neznáma chyba pri zmene e-mailu.';
+        setError(`Chyba pri zmene e-mailu: ${errorMessage}. Skontrolujte logy Google Apps Scriptu.`);
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Chyba pri zmene e-mailu: ${errorMessage}.`, 'error');
+        }
       }
-      closeChangeEmailModal();
-
-      // Uložiť notifikáciu pre všetkých administrátorov
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `E-mail používateľa ${userToChangeEmail.email} bol (pravdepodobne) zmenený na ${newEmail}.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log("Notifikácia o zmene e-mailu používateľa úspešne uložená do Firestore.");
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri zmene e-mailu používateľa (fetch error):", e);
@@ -803,46 +809,52 @@ function UsersManagementApp() {
       };
 
       // Pošleme požiadavku na Google Apps Script
-      // Dôležité: V režime 'no-cors' nemôžeme čítať odpoveď servera ani posielať vlastné hlavičky Content-Type.
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Nastavené na 'no-cors' podľa požiadavky
-        // headers: { 'Content-Type': 'application/json' }, // ODSTRÁNENÉ: Nie je povolené v režime 'no-cors'
+        mode: 'cors', // ZMENA: Naspäť na 'cors'
+        headers: { 'Content-Type': 'application/json' }, // ZMENA: Naspäť hlavička Content-Type
         body: JSON.stringify(requestData),
       });
 
-      // V režime 'no-cors' je odpoveď 'opaque', čo znamená, že nemôžeme čítať response.json() ani kontrolovať response.ok.
-      // Preto nemôžeme spoľahlivo zistiť, či bola operácia na serveri úspešná.
-      // Predpokladáme úspech a zmažeme z Firestore.
-      console.warn("UsersManagementApp: Fetch požiadavka na zmazanie bola odoslaná v režime 'no-cors'. Odpoveď bude opaqná a nebude možné ju prečítať. Predpokladáme úspech a zmažeme z Firestore.");
+      // V režime 'cors' môžeme čítať odpoveď servera a kontrolovať response.ok.
+      const result = await response.json();
 
-      // Ak Apps Script úspešne zmazal používateľa z Auth, zmažeme ho aj z Firestore
-      await db.collection('users').doc(userToConfirmDelete.id).delete();
-      console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
+      if (response.ok && result.status === 'success') {
+        // Ak Apps Script úspešne zmazal používateľa z Auth, zmažeme ho aj z Firestore
+        await db.collection('users').doc(userToConfirmDelete.id).delete();
+        console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
-      // Aktualizácia notifikačnej správy a otvorenie novej záložky
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol (pravdepodobne) zmazaný.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+        // Aktualizácia notifikačnej správy a otvorenie novej záložky
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol úspešne zmazaný.`, 'success');
+        } else {
+          console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        }
       
-      // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
-      const projectId = firebaseConfig.projectId;
-      if (projectId) {
-          window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
-      } else {
-          console.error("Chyba: Project ID pre Firebase Console nie je definované.");
-      }
+        // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
+        const projectId = firebaseConfig.projectId;
+        if (projectId) {
+            window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
+        } else {
+            console.error("Chyba: Project ID pre Firebase Console nie je definované.");
+        }
 
-      // Uložiť notifikáciu pre všetkých administrátorov
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToConfirmDelete.email} bol (pravdepodobne) zmazaný.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
+        // Uložiť notifikáciu pre všetkých administrátorov
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+          message: `Používateľ ${userToConfirmDelete.email} bol zmazaný.`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          recipientId: 'all_admins',
+          read: false
+        });
+        console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
+
+      } else {
+        const errorMessage = result.message || 'Neznáma chyba pri mazaní používateľa.';
+        setError(`Chyba pri mazaní používateľa: ${errorMessage}. Skontrolujte logy Google Apps Scriptu.`);
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Chyba pri mazaní používateľa: ${errorMessage}.`, 'error');
+        }
+      }
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa (fetch error):", e);
