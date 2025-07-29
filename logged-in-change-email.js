@@ -284,7 +284,7 @@ function ChangeEmailApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("ChangeEmailApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -413,8 +413,8 @@ function ChangeEmailApp() {
       setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
       return;
     }
-    if (password.length < 10) 
-      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 10 znakov).');
+    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
       return;
     }
 
@@ -481,7 +481,7 @@ function ChangeEmailApp() {
 
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
@@ -587,6 +587,7 @@ function ChangeEmailApp() {
         )
       )
     );
+}
 
 // Explicitne sprístupniť komponent globálne
 window.ChangeEmailApp = ChangeEmailApp;
