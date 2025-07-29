@@ -781,6 +781,15 @@ function UsersManagementApp() {
       setError("Nemáte oprávnenie na zmenu e-mailovej adresy používateľa.");
       return;
     }
+
+    // NOVINKA: Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
+    if (auth.currentUser && userId === auth.currentUser.uid) {
+      setError("Nemôžete zmeniť vlastnú e-mailovú adresu prostredníctvom tejto funkcie. Použite prosím sekciu 'Môj profil' pre zmenu vlastného e-mailu.");
+      setLoading(false);
+      closeChangeEmailModal();
+      return;
+    }
+
     setLoading(true);
     setError('');
 
