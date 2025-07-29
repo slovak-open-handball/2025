@@ -1,5 +1,34 @@
+// Ochrana proti zobrazeniu stránky v iframe
+// Tento kód zabráni načítaniu obsahu stránky v iframe a namiesto toho zobrazí chybovú správu.
 if (window.self !== window.top) {
-    window.top.location.replace(window.self.location.href);
+    // Ak je stránka načítaná v iframe, zabránime jej zobrazeniu
+    document.body.innerHTML = ''; // Vymaže všetok existujúci obsah tela
+    document.body.style.margin = '0'; // Odstráni okraje tela
+    document.body.style.overflow = 'hidden'; // Zabraňuje posúvaniu
+
+    const errorMessageDiv = document.createElement('div');
+    errorMessageDiv.textContent = 'Túto webovú stránku nie je možné zobraziť.';
+    errorMessageDiv.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: red;
+        font-size: 2em;
+        font-weight: bold;
+        text-align: center;
+        z-index: 9999;
+        font-family: 'Inter', sans-serif; /* Používame font Inter pre konzistenciu */
+    `;
+    document.body.appendChild(errorMessageDiv);
+
+    // Zastavíme načítanie ďalších skriptov a obsahu, ak je to možné
+    throw new Error('Page cannot be displayed in an iframe.');
 }
 
 // Global application ID and Firebase configuration (should be consistent across all React apps)
