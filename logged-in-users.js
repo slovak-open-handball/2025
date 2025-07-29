@@ -271,12 +271,16 @@ function UsersManagementApp() {
   const [showChangeEmailModal, setShowChangeEmailModal] = React.useState(false);
   const [userToChangeEmail, setUserToChangeEmail] = React.useState(null);
 
-  // NOVINKA: Stav na dočasné vypnutie presmerovaní počas zmeny e-mailu iného používateľa
-  const [isChangingOtherUserEmail, setIsChangingOtherUserEmail] = React.useState(false);
+  // ODSTRÁNENÉ: isChangingOtherUserEmail už nie je potrebný s Apps Script prístupom
+  // const [isChangingOtherUserEmail, setIsChangingOtherUserEmail] = React.useState(false);
 
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+
+  // URL adresa Google Apps Scriptu, ktorú ste poskytli
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7oRQ3JN8fh6b1-07Aew2pAhY8uK7K7dxxfywwtzv6opOGcYcBfnUYc4XL6MRvTYKExw/exec";
+
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -342,17 +346,11 @@ function UsersManagementApp() {
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user !== undefined) {
-      // NOVINKA: Ak meníme e-mail iného používateľa, nepresmerovávame
-      if (user === null && !isChangingOtherUserEmail) { 
+      // ODSTRÁNENÉ: Logika pre isChangingOtherUserEmail a podmienené presmerovanie
+      if (user === null) { 
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
-      } else if (user === null && isChangingOtherUserEmail) {
-        console.log("UsersManagementApp: Používateľ je null, ale prebieha zmena e-mailu iného používateľa, nepresmerovávam.");
-        // Ak je user null, ale isChangingOtherUserEmail je true, znamená to, že sme sa odhlásili
-        // novovytvoreného používateľa a čakáme na opätovné prihlásenie admina.
-        // Nespúšťame loading, pretože to bude riadiť handleSaveEmail.
-        return; 
       }
 
       if (user) {
@@ -368,56 +366,45 @@ function UsersManagementApp() {
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
-              // Bypasujeme túto kontrolu, ak prebieha zmena e-mailu iného používateľa,
-              // aby sa predišlo nežiaducemu odhláseniu administrátora počas re-autentifikácie.
-              if (!isChangingOtherUserEmail) { // Vykonaj kontrolu len ak neprebieha zmena e-mailu iného používateľa
-                  if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                      console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                      console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                      auth.signOut();
-                      window.location.href = 'login.html';
-                      localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                      return;
-                  }
+              // Táto kontrola sa teraz vykonáva vždy, pretože zmena e-mailu je na serveri
+              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                  console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                  console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
+              }
 
-                  const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-                  const localStorageKey = `passwordLastChanged_${user.uid}`;
-                  let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-                  console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+              console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
-                  if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                      console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-                  } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                      console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                      auth.signOut();
-                      window.location.href = 'login.html';
-                      localStorage.removeItem(localStorageKey);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                      return;
-                  } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                      console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                      auth.signOut();
-                      window.location.href = 'login.html';
-                      localStorage.removeItem(localStorageKey);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                      return;
-                  } else {
-                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  }
+              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
+              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
               } else {
-                  console.log("UsersManagementApp: Bypasujem kontrolu passwordLastChanged, prebieha zmena e-mailu iného používateľa.");
-                  // Zabezpečte, aby sa localStorage aktualizoval aj keď je kontrola obídená
-                  if (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function') {
-                      const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-                      const localStorageKey = `passwordLastChanged_${user.uid}`;
-                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  }
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -492,7 +479,7 @@ function UsersManagementApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth, isChangingOtherUserEmail]); // Pridaná závislosť 'isChangingOtherUserEmail'
+  }, [isAuthReady, db, user, auth]); // ODSTRÁNENÁ závislosť 'isChangingOtherUserEmail'
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -715,14 +702,14 @@ function UsersManagementApp() {
     }
   };
 
-  // NOVÁ FUNKCIA: handleSaveEmail - VRÁTENÁ NA LOKÁLNU MANIPULÁCIU S AUTENTIFIKÁCIOU
+  // NOVÁ FUNKCIA: handleSaveEmail - teraz volá Google Apps Script
   const handleSaveEmail = async (userId, newEmail) => {
-    if (!db || !auth || !userProfileData || userProfileData.role !== 'admin') {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu e-mailovej adresy používateľa.");
       return;
     }
 
-    // Kontrola, či sa administrátor pokúša zmeniť vlastnú e-mailovú adresu
+    // Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
     if (auth.currentUser && userId === auth.currentUser.uid) {
       setError("Nemôžete zmeniť vlastnú e-mailovú adresu prostredníctvom tejto funkcie. Použite prosím sekciu 'Môj profil' pre zmenu vlastného e-mailu.");
       setLoading(false);
@@ -738,77 +725,41 @@ function UsersManagementApp() {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
 
-
-    let adminToken = null;
-    let originalAdminUser = auth.currentUser; // Uložíme referenciu na aktuálneho admina
-
     try {
-      // Nastavíme flag, aby sa predišlo nežiaducim presmerovaniam
-      setIsChangingOtherUserEmail(true);
+      // Pripravíme dáta pre Google Apps Script
+      const requestData = {
+        action: 'changeUserEmail',
+        userId: userId,
+        newEmail: newEmail
+      };
 
-      // Získame token aktuálneho admina PRED vytvorením nového používateľa
-      if (originalAdminUser) {
-        adminToken = await originalAdminUser.getIdToken();
-        console.log("Admin token získaný:", adminToken);
-      } else {
-        setError("Aktuálny administrátor nie je prihlásený. Prosím, prihláste sa znova.");
-        return; // Ukončíme funkciu
-      }
+      // Pošleme požiadavku na Google Apps Script
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors', // Dôležité pre CORS politiku
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
 
-      // 1. Vytvoriť nového používateľa s novým e-mailom v autentifikácii
-      // Táto operácia prihlási novo vytvoreného používateľa.
-      const newUserCredential = await auth.createUserWithEmailAndPassword(newEmail, 'TemporaryPassword123!');
-      const newUid = newUserCredential.user.uid;
-      console.log("Nový používateľ vytvorený s UID:", newUid);
+      const result = await response.json();
 
-      // 2. Skopírovať dáta pôvodného používateľa do nového dokumentu vo Firestore
-      const oldUserDocRef = db.collection('users').doc(userId);
-      const oldUserDoc = await oldUserDocRef.get();
+      if (response.ok && result.status === 'success') {
+        // Ak Apps Script úspešne zmenil e-mail v Auth, aktualizujeme aj Firestore
+        const userDocRef = db.collection('users').doc(userId);
+        await userDocRef.update({ email: newEmail });
 
-      if (oldUserDoc.exists) {
-        const oldUserData = oldUserDoc.data();
-        const newUserData = {
-          ...oldUserData,
-          uid: newUid, // Aktualizovať UID na nové UID
-          email: newEmail, // Aktualizovať email na nový email
-          passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Aktualizovať čas zmeny hesla
-        };
-        await db.collection('users').doc(newUid).set(newUserData);
-        console.log(`Používateľ ${oldUserData.email} skopírovaný na ${newEmail} vo Firestore (nový UID: ${newUid}).`);
-
-        // DÔLEŽITÉ: Po createUserWithEmailAndPassword je auth.currentUser teraz novým používateľom.
-        // Musíme odhlásiť tohto nového používateľa a prihlásiť pôvodného administrátora späť.
-
-        // Odhlásenie novo vytvoreného používateľa (ktorý je aktuálne prihlásený)
-        await auth.signOut();
-        console.log("Novo vytvorený používateľ odhlásený.");
-
-        // Opätovné prihlásenie pôvodného administrátora
-        await auth.signInWithCustomToken(adminToken);
-        console.log("Pôvodný administrátor opätovne prihlásený.");
-
-        // NOVINKA: Krátke oneskorenie pre stabilizáciu stavu Firebase Auth
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-
-        // 3. Aktualizovať notifikačnú správu
         if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}. Pôvodný používateľ (autentifikačný záznam) zostal zachovaný. Prosím, zmažte ho manuálne vo Firebase Console.`, 'success');
+          window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol úspešne zmenený na ${newEmail}.`, 'success');
         } else {
           console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
         }
         closeChangeEmailModal();
 
-        // Otvoriť Firebase Console v novej záložke
-        const projectId = firebaseConfig.projectId;
-        if (projectId) {
-            window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
-        } else {
-            console.error("Chyba: Project ID pre Firebase Console nie je definované.");
-        }
-
-        // 4. Uložiť notifikáciu pre všetkých administrátorov
+        // Uložiť notifikáciu pre všetkých administrátorov
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-          message: `E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}. Pôvodný záznam je potrebné manuálne zmazať.`,
+          message: `E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           recipientId: 'all_admins',
           read: false
@@ -816,37 +767,21 @@ function UsersManagementApp() {
         console.log("Notifikácia o zmene e-mailu používateľa úspešne uložená do Firestore.");
 
       } else {
-        setError("Pôvodný používateľský dokument sa nenašiel.");
-        // Opätovné prihlásenie admina aj v prípade, že sa starý dokument nenašiel
-        if (adminToken && !auth.currentUser) { // Skontrolujeme, či je admin stále odhlásený
-            await auth.signInWithCustomToken(adminToken);
-            console.log("Pôvodný administrátor opätovne prihlásený po nenájdení starého dokumentu.");
+        const errorMessage = result.message || 'Neznáma chyba pri zmene e-mailu.';
+        setError(`Chyba pri zmene e-mailu: ${errorMessage}`);
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Chyba pri zmene e-mailu: ${errorMessage}`, 'error');
         }
       }
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri zmene e-mailu používateľa:", e);
-      if (e.code === 'auth/email-already-in-use') {
-        setError("Zadaná e-mailová adresa už existuje.");
-      } else {
-        setError(`Chyba pri zmene e-mailu: ${e.message}`);
-      }
-      // Zabezpečíme, že admin je opätovne prihlásený aj v prípade chyby
-      if (adminToken && !auth.currentUser) { // Skontrolujeme, či je admin stále odhlásený
-          try {
-              await auth.signInWithCustomToken(adminToken);
-              console.log("Pôvodný administrátor opätovne prihlásený pri chybe.");
-          } catch (reauthError) {
-              console.error("Nepodarilo sa opätovne prihlásiť admina pri chybe:", reauthError);
-              setError(prev => prev + ` Chyba pri opätovnom prihlásení administrátora: ${reauthError.message}`);
-              // Ak opätovné prihlásenie zlyhá, vynútime presmerovanie na prihlasovaciu stránku
-              window.location.href = 'login.html';
-          }
+      console.error("UsersManagementApp: Chyba pri zmene e-mailu používateľa (fetch error):", e);
+      setError(`Chyba pri zmene e-mailu: ${e.message}`);
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri zmene e-mailu: ${e.message}`, 'error');
       }
     } finally {
       setLoading(false);
-      // Vždy resetujeme flag po dokončení operácie
-      setIsChangingOtherUserEmail(false); 
     }
   };
 
@@ -866,36 +801,63 @@ function UsersManagementApp() {
     }
 
     try {
-      // 1. Zmazať používateľa z Firestore
-      await db.collection('users').doc(userToConfirmDelete.id).delete();
-      console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
+      // Pripravíme dáta pre Google Apps Script na zmazanie používateľa
+      const requestData = {
+        action: 'deleteUser', // Akcia, ktorú spracuje Apps Script
+        userId: userToConfirmDelete.id
+      };
 
-      // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a otvorenie novej záložky
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-      
-      // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
-      const projectId = firebaseConfig.projectId;
-      if (projectId) {
-          window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
-      } else {
-          console.error("Chyba: Project ID pre Firebase Console nie je definované.");
-      }
-
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
+      // Pošleme požiadavku na Google Apps Script
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
       });
-      console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
+
+      const result = await response.json();
+
+      if (response.ok && result.status === 'success') {
+        // Ak Apps Script úspešne zmazal používateľa z Auth, zmažeme ho aj z Firestore
+        await db.collection('users').doc(userToConfirmDelete.id).delete();
+        console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
+
+        // Aktualizácia notifikačnej správy a otvorenie novej záložky
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol zmazaný.`, 'success');
+        } else {
+          console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        }
+        
+        // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
+        const projectId = firebaseConfig.projectId;
+        if (projectId) {
+            window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
+        } else {
+            console.error("Chyba: Project ID pre Firebase Console nie je definované.");
+        }
+
+        // Uložiť notifikáciu pre všetkých administrátorov
+        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+          message: `Používateľ ${userToConfirmDelete.email} bol zmazaný.`,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          recipientId: 'all_admins',
+          read: false
+        });
+        console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore.");
+
+      } else {
+        const errorMessage = result.message || 'Neznáma chyba pri mazaní používateľa.';
+        setError(`Chyba pri mazaní používateľa: ${errorMessage}`);
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Chyba pri mazaní používateľa: ${errorMessage}`, 'error');
+        }
+      }
 
     } catch (e) {
-      console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
+      console.error("UsersManagementApp: Chyba pri mazaní používateľa (fetch error):", e);
       setError(`Chyba pri mazaní používateľa: ${e.message}`);
     } finally {
       setLoading(false);
@@ -905,14 +867,10 @@ function UsersManagementApp() {
 
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    // NOVINKA: Ak prebieha zmena e-mailu iného používateľa a user je null, nepresmerovávame
-    if (isAuthReady && user === null && !isChangingOtherUserEmail) { 
+    if (isAuthReady && user === null) { 
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
-    } else if (isAuthReady && user === null && isChangingOtherUserEmail) {
-        console.log("UsersManagementApp: Používateľ je null, ale prebieha zmena e-mailu iného používateľa, nepresmerovávam.");
-        return null; // Nespúšťame loading spinner, kým sa admin neprihlási späť
     }
 
     let loadingMessage = 'Načítavam...';
