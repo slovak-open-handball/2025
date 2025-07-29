@@ -56,16 +56,23 @@ function TopRightNotificationModal({ message, onClose, displayNotificationsEnabl
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
+    // Diagnostický výpis: Sledujeme, kedy sa useEffect aktivuje a s akými hodnotami
+    console.log("TopRightNotificationModal (header.js): useEffect triggered. Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+
+    // Zobrazí notifikáciu len ak je povolené zobrazovanie notifikácií a je správa
     if (message && displayNotificationsEnabled) {
+      console.log("TopRightNotificationModal (header.js): Showing notification because message and display are enabled."); 
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       timerRef.current = setTimeout(() => {
+        console.log("TopRightNotificationModal (header.js): Hiding notification after timeout."); 
         setShow(false);
         setTimeout(onClose, 500);
       }, 10000);
     } else {
+      console.log("TopRightNotificationModal (header.js): Hiding notification (either no message or display is disabled)."); 
       setShow(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -79,13 +86,20 @@ function TopRightNotificationModal({ message, onClose, displayNotificationsEnabl
       }
     };
   }, [message, onClose, displayNotificationsEnabled]);
+
+  // Diagnostický výpis: Sledujeme, kedy sa komponent vykresľuje a aký má stav
+  console.log("TopRightNotificationModal (header.js): render. Current show state:", show, "Message:", message, "Display Enabled:", displayNotificationsEnabled); 
+
+  // Nevykresľuje sa, ak nie je zobrazené, nie je správa ALEBO ak sú notifikácie vypnuté
   if ((!show && !message) || !displayNotificationsEnabled) {
+    console.log("TopRightNotificationModal (header.js): Returning null (not rendering the UI)."); 
     return null;
   }
 
   return React.createElement(
     'div',
     {
+      // ZMENA: Triedy pre pozíciu v pravom hornom rohu
       className: `fixed top-4 right-4 z-50 flex justify-end p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-x-0' : 'translate-x-full' // Animácia z pravej strany
       }`,
@@ -108,16 +122,19 @@ function CenterConfirmationModal({ message, onClose }) {
   const timerRef = React.useRef(null);
 
   React.useEffect(() => {
+    console.log("CenterConfirmationModal (header.js): useEffect triggered. Message:", message);
     if (message) {
       setShow(true);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       timerRef.current = setTimeout(() => {
+        console.log("CenterConfirmationModal (header.js): Hiding notification after timeout.");
         setShow(false);
-        setTimeout(onClose, 500); 
-      }, 5000); 
+        setTimeout(onClose, 500); // Daj čas na animáciu pred resetom správy
+      }, 5000); // Zobrazí sa na 5 sekúnd
     } else {
+      console.log("CenterConfirmationModal (header.js): Hiding notification (no message).");
       setShow(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -132,6 +149,7 @@ function CenterConfirmationModal({ message, onClose }) {
   }, [message, onClose]);
 
   if (!show && !message) {
+    console.log("CenterConfirmationModal (header.js): Returning null (not rendering the UI).");
     return null;
   }
 
@@ -155,6 +173,7 @@ function CenterConfirmationModal({ message, onClose }) {
 }
 
 
+// ConfirmationModal Component (converted to React.createElement)
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
   if (!show) return null;
 
@@ -288,7 +307,7 @@ function GlobalNotificationHandler() {
       // Vyčisti globálnu funkciu pri odpojení komponentu
       if (window.showGlobalNotification === setCurrentCenterMessage) {
         window.showGlobalNotification = (message) => {
-          // console.warn("Global notification function called after unmount:", message);
+          console.warn("Global notification function called after unmount:", message);
         };
       }
     };
@@ -296,12 +315,13 @@ function GlobalNotificationHandler() {
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
+    console.log("GNH: Spúšťam inicializáciu Firebase...");
     let unsubscribeAuth;
     let firestoreInstance;
 
     try {
       if (typeof firebase === 'undefined') {
-        // console.error("GNH: Firebase SDK nie je načítané. Uistite sa, že firebase.js je načítaný pred header.js.");
+        console.error("GNH: Firebase SDK nie je načítané. Uistite sa, že firebase.js je načítaný pred header.js.");
         return;
       }
 
@@ -309,12 +329,12 @@ function GlobalNotificationHandler() {
       // Skontrolujte, či už existuje predvolená aplikácia Firebase
       if (firebase.apps.length === 0) {
         // Používame globálne firebaseConfig a initialAuthToken
-        // console.log("GNH: Inicializujem novú Firebase aplikáciu.");
+        console.log("GNH: Inicializujem novú Firebase aplikáciu.");
         firebaseApp = firebase.initializeApp(firebaseConfig);
       } else {
         // Ak už predvolená aplikácia existuje, použite ju
         firebaseApp = firebase.app();
-        // console.warn("GNH: Firebase App named '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
+        console.warn("GNH: Firebase App named '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
       }
       setApp(firebaseApp);
 
@@ -322,15 +342,15 @@ function GlobalNotificationHandler() {
       setAuth(authInstance);
       firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
-      // console.log("GNH: Firebase inicializované. Nastavujem Auth listener.");
+      console.log("GNH: Firebase inicializované. Nastavujem Auth listener.");
 
       const signIn = async () => {
         try {
           if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            // console.log("GNH: Pokúšam sa prihlásiť s custom tokenom.");
+            console.log("GNH: Pokúšam sa prihlásiť s custom tokenom.");
             await authInstance.signInWithCustomToken(initialAuthToken);
           } else {
-            // console.log("GNH: initialAuthToken nie je k dispozícii alebo je prázdny.");
+            console.log("GNH: initialAuthToken nie je k dispozícii alebo je prázdny.");
           }
         } catch (e) {
           console.error("GNH: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
@@ -338,7 +358,7 @@ function GlobalNotificationHandler() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        // console.log("GNH: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+        console.log("GNH: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -347,7 +367,7 @@ function GlobalNotificationHandler() {
 
       return () => {
         if (unsubscribeAuth) {
-          // console.log("GNH: Ruším odber onAuthStateChanged.");
+          console.log("GNH: Ruším odber onAuthStateChanged.");
           unsubscribeAuth();
         }
       };
@@ -359,72 +379,16 @@ function GlobalNotificationHandler() {
   // Effect for fetching userProfileData (including displayNotifications)
   React.useEffect(() => {
     let unsubscribeUserDoc;
-    // console.log("GNH: Spúšťam useEffect pre načítanie profilu používateľa. isAuthReady:", isAuthReady, "db:", !!db, "user:", !!user);
+    console.log("GNH: Spúšťam useEffect pre načítanie profilu používateľa. isAuthReady:", isAuthReady, "db:", !!db, "user:", !!user);
 
     if (isAuthReady && db && user) {
       try {
         const userDocRef = db.collection('users').doc(user.uid);
         unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-          // console.log("GNH: onSnapshot pre používateľský dokument spustený.");
+          console.log("GNH: onSnapshot pre používateľský dokument spustený.");
           if (docSnapshot.exists) {
             const userData = docSnapshot.data();
-            // console.log("GNH: Používateľský profil načítaný:", userData);
-
-            // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-            // console.log(`GNH Debug: Kontrola passwordLastChanged. Hodnota: ${userData.passwordLastChanged}`);
-            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                console.error("GNH Debug: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                // console.log("GNH Debug: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                auth.signOut();
-                window.location.href = 'login.html';
-                localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                setUser(null); // Explicitne nastaviť user na null
-                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                return;
-            }
-
-            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-            const localStorageKey = `passwordLastChanged_${user.uid}`;
-            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-            // console.log(`GNH Debug: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                // console.log("GNH Debug: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                // console.log("GNH Debug: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                auth.signOut();
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey);
-                setUser(null); // Explicitne nastaviť user na null
-                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                return;
-            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                // console.warn("GNH Debug: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                auth.signOut();
-                window.location.href = 'login.html';
-                localStorage.removeItem(localStorageKey);
-                setUser(null); // Explicitne nastaviť user na null
-                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                return;
-            } else {
-                // console.log("GNH Debug: Timestampy hesla sa zhodujú alebo sú konzistentné. Pokračujem.");
-                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-            }
-            // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-            // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-            // console.log(`GNH Debug: Kontrola roly a schválenia. Rola: ${userData.role}, Schválený: ${userData.approved}`);
-            if (userData.role === 'admin' && userData.approved === false) {
-                // console.log("GNH Debug: Používateľ je admin a nie je schválený. Odhlasujem.");
-                auth.signOut();
-                window.location.href = 'login.html';
-                setUser(null); // Explicitne nastaviť user na null
-                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                return; // Zastav ďalšie spracovanie
-            }
-
+            console.log("GNH: Používateľský profil načítaný:", userData);
             setUserProfileData(userData);
             
             let topRightNotificationsEnabled = true; // Predvolene povolené
@@ -432,17 +396,17 @@ function GlobalNotificationHandler() {
             // ZMENA: Ak je rola 'user', top-right notifikácie sa VŽDY vypnú.
             // Pre ostatné roly sa rešpektuje nastavenie 'displayNotifications' z Firestore.
             if (userData.role === 'user') {
-                // console.log("GNH: Používateľ je typu 'user', top-right notifikácie budú vypnuté (prepisujem displayNotifications).");
+                console.log("GNH: Používateľ je typu 'user', top-right notifikácie budú vypnuté (prepisujem displayNotifications).");
                 topRightNotificationsEnabled = false;
             } else {
                 topRightNotificationsEnabled = userData.displayNotifications !== undefined ? userData.displayNotifications : true;
-                // console.log(`GNH: Používateľ je typu '${userData.role}', displayTopRightNotificationsEnabled nastavené na:`, topRightNotificationsEnabled);
+                console.log(`GNH: Používateľ je typu '${userData.role}', displayTopRightNotificationsEnabled nastavené na:`, topRightNotificationsEnabled);
             }
             
             setDisplayTopRightNotificationsEnabled(topRightNotificationsEnabled);
-            // console.log("GNH: displayTopRightNotificationsEnabled nastavené na:", topRightNotificationsEnabled);
+            console.log("GNH: displayTopRightNotificationsEnabled nastavené na:", topRightNotificationsEnabled);
           } else {
-            // console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
+            console.warn("GNH: Používateľský profil sa nenašiel pre UID:", user.uid);
             // Ak sa profil nenájde, predpokladáme, že notifikácie sú povolené (predvolené správanie)
             setDisplayTopRightNotificationsEnabled(true); 
           }
@@ -457,7 +421,7 @@ function GlobalNotificationHandler() {
       }
     } else if (isAuthReady && user === null) {
       // Ak nie je používateľ prihlásený, notifikácie by sa nemali zobrazovať
-      // console.log("GNH: Používateľ nie je prihlásený, nastavujem displayTopRightNotificationsEnabled na false.");
+      console.log("GNH: Používateľ nie je prihlásený, nastavujem displayTopRightNotificationsEnabled na false.");
       setDisplayTopRightNotificationsEnabled(false);
       setCurrentTopRightMessage(''); // Vymaž aktuálnu správu, ak používateľ nie je prihlásený
       setCurrentCenterMessage(''); // Vymaž aj centrálnu správu
@@ -467,29 +431,30 @@ function GlobalNotificationHandler() {
 
     return () => {
       if (unsubscribeUserDoc) {
-        // console.log("GNH: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("GNH: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
+  }, [isAuthReady, db, user]);
 
   // Effect for listening to new notifications (only for top-right notifications)
   React.useEffect(() => {
     let unsubscribeNotifications;
     // ZMENA: appId nastavené na 'default-app-id'
     const appId = 'default-app-id'; 
-    // console.log("GNH: Spúšťam useEffect pre top-right notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayTopRightNotificationsEnabled:", displayTopRightNotificationsEnabled);
+    console.log("GNH: Spúšťam useEffect pre top-right notifikácie. db:", !!db, "user:", !!user, "userProfileData:", !!userProfileData, "displayTopRightNotificationsEnabled:", displayTopRightNotificationsEnabled);
 
     // Počúvaj na nové neprečítané notifikácie pre tohto používateľa alebo 'all_admins'
     // POZNÁMKA: Filtrujeme len neprečítané (`read: false`) notifikácie
     if (db && user && userProfileData && displayTopRightNotificationsEnabled) { // ZMENA: Kontrolujeme displayTopRightNotificationsEnabled
+      console.log("GNH: Podmienky pre načítanie top-right notifikácií splnené.");
       // Načítaj posledný timestamp zobrazenej notifikácie z localStorage
       const storedLastTimestamp = localStorage.getItem(`lastNotificationTimestamp_${user.uid}`);
       if (storedLastTimestamp) {
           setLastNotificationTimestamp(parseInt(storedLastTimestamp, 10));
-          // console.log("GNH: Načítaný lastNotificationTimestamp z localStorage:", storedLastTimestamp);
+          console.log("GNH: Načítaný lastNotificationTimestamp z localStorage:", storedLastTimestamp);
       } else {
-          // console.log("GNH: lastNotificationTimestamp v localStorage nenájdený, inicializujem na 0.");
+          console.log("GNH: lastNotificationTimestamp v localStorage nenájdený, inicializujem na 0.");
       }
 
       unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
@@ -498,12 +463,12 @@ function GlobalNotificationHandler() {
         .orderBy('timestamp', 'desc') // Najnovšie prvé
         .limit(1) // Zaujíma nás len jedna najnovšia pre pop-up
         .onSnapshot(snapshot => {
-          // console.log("GNH: onSnapshot pre adminNotifications spustený.");
+          console.log("GNH: onSnapshot pre adminNotifications spustený.");
           if (!snapshot.empty) {
             const latestUnreadNotification = snapshot.docs[0];
             const notificationData = latestUnreadNotification.data();
             const notificationTimestamp = notificationData.timestamp ? notificationData.timestamp.toDate().getTime() : 0;
-            // console.log("GNH: Najnovšia neprečítaná notifikácia:", notificationData, "Timestamp:", notificationTimestamp, "Last shown:", lastNotificationTimestamp);
+            console.log("GNH: Najnovšia neprečítaná notifikácia:", notificationData, "Timestamp:", notificationTimestamp, "Last shown:", lastNotificationTimestamp);
 
             // Zobraz notifikáciu len ak je novšia ako posledná zobrazená
             // A ak má používateľ povolené zobrazovanie top-right notifikácií
@@ -513,42 +478,42 @@ function GlobalNotificationHandler() {
                 setCurrentTopRightMessage(notificationData.message); // ZMENA: Nastavuje top-right správu
                 setLastNotificationTimestamp(notificationTimestamp); // Aktualizuj timestamp poslednej zobrazenej
                 localStorage.setItem(`lastNotificationTimestamp_${user.uid}`, notificationTimestamp.toString()); // Ulož do localStorage
-                // console.log("GNH: Zobrazujem novú top-right notifikáciu a aktualizujem timestamp.");
+                console.log("GNH: Zobrazujem novú top-right notifikáciu a aktualizujem timestamp.");
 
                 // ZMENA: Označ notifikáciu ako prečítanú, ak sa zobrazila A používateľ má povolené notifikácie
                 if (displayTopRightNotificationsEnabled) { // Opakovaná kontrola pre istotu
-                  // console.log("GNH: Označujem notifikáciu ako prečítanú (read: true). ID:", latestUnreadNotification.id);
+                  console.log("GNH: Označujem notifikáciu ako prečítanú (read: true). ID:", latestUnreadNotification.id);
                   db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(latestUnreadNotification.id).update({
                     read: true
                   }).catch(e => console.error("GNH: Chyba pri označovaní notifikácie ako prečítanej:", e));
                 }
               } else {
-                // console.log("GNH: Notifikácia je označená ako vymazaná pre aktuálneho používateľa, nezobrazujem.");
+                console.log("GNH: Notifikácia je označená ako vymazaná pre aktuálneho používateľa, nezobrazujem.");
               }
             } else {
-              // console.log("GNH: Notifikácia nie je novšia alebo top-right notifikácie sú vypnuté, nezobrazujem pop-up.");
+              console.log("GNH: Notifikácia nie je novšia alebo top-right notifikácie sú vypnuté, nezobrazujem pop-up.");
             }
           } else {
-            // console.log("GNH: Žiadne neprečítané top-right notifikácie na zobrazenie.");
+            console.log("GNH: Žiadne neprečítané top-right notifikácie na zobrazenie.");
           }
         }, error => {
           console.error("GNH: Chyba pri načítaní notifikácií pre pop-up:", error);
         });
     } else if (userProfileData && displayTopRightNotificationsEnabled === false) { // Ak sú notifikácie vypnuté
-        // console.log("GNH: Top-right notifikácie sú vypnuté v profile používateľa. Zrušujem odber a čistím správu.");
+        console.log("GNH: Top-right notifikácie sú vypnuté v profile používateľa. Zrušujem odber a čistím správu.");
         if (unsubscribeNotifications) {
             unsubscribeNotifications();
             unsubscribeNotifications = null;
         }
         setCurrentTopRightMessage(''); // Vymaž aktuálnu správu, ak používateľ vypne notifikácie
     } else {
-        // console.log("GNH: Podmienky pre načítanie top-right notifikácií nesplnené (napr. nie je prihlásený alebo chýbajú dáta profilu).");
+        console.log("GNH: Podmienky pre načítanie top-right notifikácií nesplnené (napr. nie je prihlásený alebo chýbajú dáta profilu).");
     }
 
 
     return () => {
       if (unsubscribeNotifications) {
-        // console.log("GNH: Ruším odber onSnapshot pre notifikácie.");
+        console.log("GNH: Ruším odber onSnapshot pre notifikácie.");
         unsubscribeNotifications();
       }
     };
@@ -576,9 +541,9 @@ if (!notificationRoot) {
   notificationRoot = document.createElement('div');
   notificationRoot.id = 'global-notification-root';
   document.body.appendChild(notificationRoot);
-  // console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
+  console.log("GNH: Vytvoril som a pridal 'global-notification-root' div do tela dokumentu.");
 } else {
-  // console.log("GNH: 'global-notification-root' div už existuje.");
+  console.log("GNH: 'global-notification-root' div už existuje.");
 }
 
 // Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
@@ -587,7 +552,7 @@ try {
     React.createElement(GlobalNotificationHandler),
     notificationRoot
   );
-  // console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
+  console.log("GNH: GlobalNotificationHandler úspešne vykreslený.");
 } catch (e) {
   console.error("GNH: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
 }
@@ -600,7 +565,7 @@ try {
 function UsersManagementApp() {
   // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
   if (window.location.pathname.includes('logged-in-users.html')) {
-    // console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
 
@@ -663,7 +628,7 @@ function UsersManagementApp() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        // console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null"); // Zmena logu
+        console.log("UsersManagementApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null"); // Zmena logu
         setUser(currentUser);
         setIsAuthReady(true);
       });
@@ -688,28 +653,27 @@ function UsersManagementApp() {
 
     if (isAuthReady && db && user !== undefined) {
       if (user === null) {
-        // console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
         window.location.href = 'login.html';
         return;
       }
 
       if (user) {
-        // console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // Zmena logu
+        console.log(`UsersManagementApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // Zmena logu
         setLoading(true);
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            // console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený."); // Zmena logu
+            console.log("UsersManagementApp: onSnapshot pre používateľský dokument spustený."); // Zmena logu
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              // console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
+              console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              // console.log(`UsersManagementApp Debug: Kontrola passwordLastChanged. Hodnota: ${userData.passwordLastChanged}`); // Zmena logu
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("UsersManagementApp Debug: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // Zmena logu
-                  // console.log("UsersManagementApp Debug: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // Zmena logu
+                  console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged); // Zmena logu
+                  console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla."); // Zmena logu
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(`passwordLastChanged_${user.uid}`);
@@ -722,13 +686,13 @@ function UsersManagementApp() {
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              // console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // Zmena logu
+              console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // Zmena logu
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  // console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // Zmena logu
+                  console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie)."); // Zmena logu
               } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  // console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // Zmena logu
+                  console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa."); // Zmena logu
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
@@ -736,7 +700,7 @@ function UsersManagementApp() {
                   setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  // console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // Zmena logu
+                  console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad)."); // Zmena logu
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
@@ -749,9 +713,8 @@ function UsersManagementApp() {
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
               // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              // console.log(`UsersManagementApp Debug: Kontrola roly a schválenia. Rola: ${userData.role}, Schválený: ${userData.approved}`);
               if (userData.role === 'admin' && userData.approved === false) {
-                  // console.log("UsersManagementApp Debug: Používateľ je admin a nie je schválený. Odhlasujem."); // Zmena logu
+                  console.log("UsersManagementApp: Používateľ je admin a nie je schválený. Odhlasujem."); // Zmena logu
                   auth.signOut();
                   window.location.href = 'login.html';
                   setUser(null); // Explicitne nastaviť user na null
@@ -768,9 +731,9 @@ function UsersManagementApp() {
                   window.updateMenuItemsVisibility(userData.role);
               }
 
-              // console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
+              console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
             } else {
-              // console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
+              console.warn("UsersManagementApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false);
               setUser(null); // Explicitne nastaviť user na null
@@ -794,7 +757,7 @@ function UsersManagementApp() {
                 setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
-            // console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
+            console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
@@ -810,13 +773,13 @@ function UsersManagementApp() {
           setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
       }
     } else if (isAuthReady && user === undefined) {
-        // console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false."); // Zmena logu
+        console.log("UsersManagementApp: Auth ready, user undefined. Nastavujem loading na false."); // Zmena logu
         setLoading(false);
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        // console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľský dokument."); // Zmena logu
+        console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľský dokument."); // Zmena logu
         unsubscribeUserDoc();
       }
     };
@@ -824,7 +787,7 @@ function UsersManagementApp() {
 
   // Effect for updating header link visibility
   React.useEffect(() => {
-    // console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
+    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -836,13 +799,13 @@ function UsersManagementApp() {
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
         registerLink && registerLink.classList.add('hidden');
-        // console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
+        console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
       } else {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
         registerLink && registerLink.classList.remove('hidden'); 
-        // console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
+        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
       }
     }
   }, [user]);
@@ -857,7 +820,7 @@ function UsersManagementApp() {
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification("Úspešne odhlásený.");
       } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
@@ -888,7 +851,7 @@ function UsersManagementApp() {
     let unsubscribeUsers;
 
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-      // console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov."); // Zmena logu
+      console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov."); // Zmena logu
       setLoading(true);
       try {
         unsubscribeUsers = db.collection('users').onSnapshot(snapshot => {
@@ -899,7 +862,7 @@ function UsersManagementApp() {
           setUsers(fetchedUsers);
           setLoading(false);
           setError('');
-          // console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
+          console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
           setError(`Chyba pri načítaní používateľov: ${e.message}`);
@@ -916,7 +879,7 @@ function UsersManagementApp() {
 
     return () => {
       if (unsubscribeUsers) {
-        // console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľov."); // Zmena logu
+        console.log("UsersManagementApp: Ruším odber onSnapshot pre používateľov."); // Zmena logu
         unsubscribeUsers();
       }
     };
@@ -954,7 +917,7 @@ function UsersManagementApp() {
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
     
     try {
@@ -967,7 +930,7 @@ function UsersManagementApp() {
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`);
       } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
@@ -977,7 +940,7 @@ function UsersManagementApp() {
         recipientId: 'all_admins',
         read: false
       });
-      // console.log(`Notifikácia o ${actionMessage} používateľa úspešne uložená do Firestore.`); // Zmena logu
+      console.log(`Notifikácia o ${actionMessage} používateľa úspešne uložená do Firestore.`); // Zmena logu
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri zmene stavu schválenia:", e); // Zmena logu
@@ -998,7 +961,7 @@ function UsersManagementApp() {
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
 
     try {
@@ -1013,13 +976,13 @@ function UsersManagementApp() {
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`);
       } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
       closeRoleEditModal();
 
       // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
       if (user && user.uid === userId && newRole === 'admin' && approvedStatus === false) {
-          // console.log("UsersManagementApp: Rola používateľa zmenená na neschváleného admina. Odhlasujem."); // Zmena logu
+          console.log("UsersManagementApp: Rola používateľa zmenená na neschváleného admina. Odhlasujem."); // Zmena logu
           await auth.signOut();
           window.location.href = 'login.html';
           setUser(null); // Explicitne nastaviť user na null
@@ -1034,7 +997,7 @@ function UsersManagementApp() {
         recipientId: 'all_admins',
         read: false
       });
-      // console.log("Notifikácia o zmene roly používateľa úspešne uložená do Firestore."); // Zmena logu
+      console.log("Notifikácia o zmene roly používateľa úspešne uložená do Firestore."); // Zmena logu
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri ukladaní roly:", e); // Zmena logu
@@ -1055,20 +1018,20 @@ function UsersManagementApp() {
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
     }
 
     try {
       // 1. Zmazať používateľa z Firestore
       await db.collection('users').doc(userToDelete.id).delete();
-      // console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`); // Zmena logu
+      console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`); // Zmena logu
 
       // 2. Aktualizácia notifikačnej správy a presmerovanie na Firebase Console
       // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       } else {
-        // console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
       closeConfirmationModal();
 
@@ -1082,7 +1045,7 @@ function UsersManagementApp() {
         recipientId: 'all_admins',
         read: false
       });
-      // console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore."); // Zmena logu
+      console.log("Notifikácia o zmazaní používateľa úspešne uložená do Firestore."); // Zmena logu
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e); // Zmena logu
@@ -1095,7 +1058,7 @@ function UsersManagementApp() {
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
-        // console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
+        console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
@@ -1115,7 +1078,7 @@ function UsersManagementApp() {
 
   // If user is not admin, redirect
   if (userProfileData && userProfileData.role !== 'admin') {
-    // console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam."); // Zmena logu
+    console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam."); // Zmena logu
     window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
