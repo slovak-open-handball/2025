@@ -413,8 +413,8 @@ function ChangeEmailApp() {
       setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
       return;
     }
-    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
-      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
+    if (password.length < 10) 
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 10 znakov).');
       return;
     }
 
