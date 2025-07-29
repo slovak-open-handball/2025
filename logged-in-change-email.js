@@ -191,7 +191,7 @@ function ChangeEmailApp() {
 
   // User Data States
   const [currentEmail, setCurrentEmail] = React.useState('');
-  const [newEmail, setNewEmail] = React.useState('');
+  const [newEmail, setNewEmail] = React.useState(''); // NOVINKA: Nebude sa predvypĺňať
   const [password, setPassword] = React.useState('');
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false); // Nový stav pre viditeľnosť aktuálneho hesla
 
@@ -314,14 +314,6 @@ function ChangeEmailApp() {
                   setUser(null); // Explicitne nastaviť user na null
                   setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("ChangeEmailApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
               }
@@ -339,7 +331,7 @@ function ChangeEmailApp() {
 
               setUserProfileData(userData);
               setCurrentEmail(user.email || ''); // Nastaví aktuálny e-mail z Firebase Auth
-              setNewEmail(user.email || ''); // Inicializovať nové pole s aktuálnym e-mailom
+              // setNewEmail(user.email || ''); // ODSTRÁNENÉ: Už sa nebude predvypĺňať
               
               setLoading(false);
               setError('');
@@ -602,14 +594,30 @@ function ChangeEmailApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Zmeniť e-mail'
         ),
-        React.createElement(
-            'p',
-            { className: 'text-center text-gray-600 mb-6' },
-            `Váš aktuálny e-mail: ${currentEmail}`
-        ),
+        // ODSTRÁNENÉ: Pôvodný text s aktuálnym e-mailom
+        // React.createElement(
+        //     'p',
+        //     { className: 'text-center text-gray-600 mb-6' },
+        //     `Váš aktuálny e-mail: ${currentEmail}`
+        // ),
         React.createElement(
             'form',
             { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
+            // NOVINKA: Input box pre aktuálnu e-mailovú adresu (zablokovaný)
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'current-email-display' }, 'Aktuálna e-mailová adresa'),
+              React.createElement('input', {
+                type: 'email',
+                id: 'current-email-display',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100 cursor-not-allowed',
+                value: currentEmail,
+                disabled: true, // Trvalo zablokovaný
+                readOnly: true, // Zabezpečí, že sa nedá meniť
+                style: { cursor: 'not-allowed' } // Zmena kurzora
+              })
+            ),
             React.createElement(
               'div',
               null,
@@ -660,7 +668,8 @@ function ChangeEmailApp() {
           )
         )
       )
-    );
+    )
+  );
 }
 
 // Explicitne sprístupniť komponent globálne
