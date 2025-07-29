@@ -298,9 +298,9 @@ function ChangeEmailApp() {
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
-      } else { // Ak user nie je null ani undefined, ale je false (napr. po odhlásení)
+      } else {
           setLoading(false);
-          setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
+          setUserProfileData(null); 
       }
     } else if (isAuthReady && user === undefined) {
         console.log("ChangeEmailApp: Auth ready, user undefined. Nastavujem loading na false.");
@@ -413,8 +413,8 @@ function ChangeEmailApp() {
       setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
       return;
     }
-    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
-      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
+    if (password.length < 10) { 
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 10 znakov).');
       return;
     }
 
