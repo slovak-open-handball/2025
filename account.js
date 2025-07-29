@@ -196,7 +196,8 @@ function ResetPasswordApp() {
                                 console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
                                 const userDocRef = db.collection('users').doc(currentUser.uid);
                                 try {
-                                    await userDocRef.update({ email: currentUser.email });
+                                    // ZMENA: Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
+                                    await userDocRef.set({ email: currentUser.email }, { merge: true });
                                     console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
                                     setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
                                 } catch (firestoreError) {
