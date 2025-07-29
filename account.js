@@ -70,7 +70,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   );
 }
 
-// Main React component for the reset password page
+// Main React component for the reset password / email verification page
 function ResetPasswordApp() {
     const [auth, setAuth] = React.useState(null);
     const [mode, setMode] = React.useState(null);
@@ -78,8 +78,8 @@ function ResetPasswordApp() {
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
     const [error, setError] = React.useState('');
-    const [message, setMessage] = React.useState(''); // Správa o overení kódu
-    const [successMessage, setSuccessMessage] = React.useState(''); // Správa o úspešnom resete hesla
+    const [message, setMessage] = React.useState(''); // Správa o overení kódu / e-mailu
+    const [successMessage, setSuccessMessage] = React.useState(''); // Správa o úspešnom resete hesla / overení e-mailu
     const [loading, setLoading] = React.useState(true);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
@@ -101,19 +101,41 @@ function ResetPasswordApp() {
             if (currentMode && currentOobCode) {
                 setMode(currentMode);
                 setOobCode(currentOobCode);
-                // Overenie oobCode a získanie e-mailu
-                authInstance.verifyPasswordResetCode(currentOobCode)
-                    .then(email => {
-                        setMessage(`Prosím, zadajte nové heslo pre ${email}.`); // Nastavíme informačnú správu
-                        setLoading(false);
-                    })
-                    .catch(e => {
-                        console.error("Chyba pri overovaní reset kódu:", e);
-                        setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
-                        setLoading(false);
-                    });
+
+                if (currentMode === 'resetPassword') {
+                    // Logika pre resetovanie hesla
+                    authInstance.verifyPasswordResetCode(currentOobCode)
+                        .then(email => {
+                            setMessage(`Prosím, zadajte nové heslo pre ${email}.`);
+                            setLoading(false);
+                        })
+                        .catch(e => {
+                            console.error("Chyba pri overovaní reset kódu:", e);
+                            setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
+                            setLoading(false);
+                        });
+                } else if (currentMode === 'verifyEmail') {
+                    // Logika pre overenie e-mailu
+                    authInstance.applyActionCode(currentOobCode)
+                        .then(() => {
+                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
+                            setLoading(false);
+                            // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
+                            setTimeout(() => {
+                                window.location.href = 'login.html';
+                            }, 3000);
+                        })
+                        .catch(e => {
+                            console.error("Chyba pri overovaní e-mailu:", e);
+                            setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
+                            setLoading(false);
+                        });
+                } else {
+                    setError("Neplatný režim akcie. Chýbajú parametre.");
+                    setLoading(false);
+                }
             } else {
-                setError("Neplatný odkaz na resetovanie hesla. Chýbajú parametre.");
+                setError("Neplatný odkaz. Chýbajú parametre.");
                 setLoading(false);
             }
         } catch (e) {
@@ -126,7 +148,7 @@ function ResetPasswordApp() {
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setError('');
-        setSuccessMessage(''); // Reset úspešnej správy
+        setSuccessMessage('');
 
         if (!auth || !oobCode) {
             setError("Chyba: Autentifikácia nie je pripravená alebo chýba kód.");
@@ -147,10 +169,9 @@ function ResetPasswordApp() {
         setLoading(true);
         try {
             await auth.confirmPasswordReset(oobCode, newPassword);
-            setSuccessMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku."); // Nastavíme úspešnú správu
-            setMessage(''); // Vyčistíme informačnú správu
+            setSuccessMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku.");
+            setMessage('');
             
-            // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
             setTimeout(() => {
                 window.location.href = 'login.html';
             }, 3000);
@@ -180,7 +201,7 @@ function ResetPasswordApp() {
         );
     }
 
-    if (error && !successMessage) { // Zobraz chybu, ak nie je úspešná správa
+    if (error && !successMessage) {
         return React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center' },
@@ -198,7 +219,7 @@ function ResetPasswordApp() {
         );
     }
 
-    if (successMessage) { // Zobraz úspešnú správu po resete hesla
+    if (successMessage) {
         return React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center' },
@@ -208,7 +229,7 @@ function ResetPasswordApp() {
                 { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
                 successMessage
             ),
-            !successMessage.includes("Budete presmerovaní") && React.createElement( // Zobraz odkaz, ak nie je automatické presmerovanie
+            !successMessage.includes("Budete presmerovaní") && React.createElement(
                 'a',
                 { href: 'login.html', className: 'text-blue-600 hover:underline mt-4 inline-block' },
                 'Späť na prihlásenie'
@@ -222,7 +243,7 @@ function ResetPasswordApp() {
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md' },
             React.createElement('h1', { className: 'text-2xl font-bold text-center text-gray-800 mb-6' }, 'Nastaviť nové heslo'),
-            message && React.createElement( // Zobraz informačnú správu nad formulárom
+            message && React.createElement(
                 'div',
                 { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
                 message
