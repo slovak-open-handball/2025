@@ -135,7 +135,7 @@ function MyDataApp() {
                   // Inicializujeme localStorage s aktuálnym časom klienta, aby sa obišla race condition
                   // pri serverTimestamp().
                   localStorage.setItem(localStorageKey, new Date().getTime().toString());
-                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak hneď po použití
+                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak hneď po použitie
                   console.log("MyDataApp: Príznak 'justLoggedIn' bol odstránený zo sessionStorage. localStorage inicializovaný.");
                   // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA, ani ak je timestamp neplatný.
                   // Dávame čas na synchronizáciu Firestore timestampu.
@@ -393,7 +393,7 @@ function MyDataApp() {
         React.createElement(
           React.Fragment,
           null,
-          // Odstránený nadpis h2 "Moje údaje"
+          // Odstránený nadpis h2
           React.createElement(
             'div', 
             { className: 'space-y-2' }, 
