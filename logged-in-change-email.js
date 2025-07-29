@@ -578,6 +578,7 @@ function ChangeEmailApp() {
       )
     )
   );
+}
 
 // Explicitne sprístupniť komponent globálne
 window.ChangeEmailApp = ChangeEmailApp;
