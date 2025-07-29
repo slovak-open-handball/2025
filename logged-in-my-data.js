@@ -300,7 +300,6 @@ function MyDataApp() {
         console.warn("MyDataApp: window.showGlobalNotification nie je definovaná.");
       }
       window.location.href = 'login.html';
-      sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak pri manuálnom odhlásení
       localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme aj localStorage
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
