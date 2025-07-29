@@ -65,8 +65,6 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   );
 }
 
-// ConfirmationModal Component - ODSTRÁNENÝ
-
 // RoleEditModal Component (converted to React.createElement)
 function RoleEditModal({ show, user, onClose, onSave, loading }) {
   const [selectedRole, setSelectedRole] = React.useState(user ? user.role : 'user');
@@ -110,7 +108,6 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           React.createElement('option', { value: 'admin' }, 'Administrátor')
         )
       ),
-      // ODSTRÁNENÉ: Checkbox pre schválenie sa už nezobrazuje
       React.createElement(
         'div',
         { className: 'flex justify-end space-x-4' },
@@ -137,58 +134,8 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   );
 }
 
-// New Modal Component for Firebase Authentication Console
-// POZNÁMKA: Tento komponent je ponechaný pre referenciu, ale nebude sa používať
-// na zobrazenie Firebase Console kvôli bezpečnostným obmedzeniam iframe.
-function FirebaseAuthModal({ show, url, onClose }) {
-    if (!show) return null;
-
-    return React.createElement(
-        'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
-        React.createElement(
-            'div',
-            { className: 'bg-white p-4 rounded-lg shadow-xl w-11/12 h-5/6 max-w-4xl flex flex-col' },
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h2', { className: 'text-xl font-bold text-gray-800' }, 'Firebase Authentication Console'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'text-gray-500 hover:text-gray-700 text-2xl font-bold',
-                    },
-                    '×'
-                )
-            ),
-            React.createElement(
-                'iframe',
-                {
-                    src: url,
-                    className: 'flex-grow w-full border rounded-lg',
-                    title: 'Firebase Authentication Console',
-                    style: { minHeight: '400px' } // Ensure a minimum height for the iframe
-                }
-            ),
-            React.createElement(
-                'div',
-                { className: 'mt-4 text-right' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
-                    },
-                    'Zavrieť'
-                )
-            )
-        )
-    );
-}
-
 // NOVÝ KOMPONENT: ChangeEmailModal
-function ChangeEmailModal({ show, user, onClose, onSave, loading, auth }) {
+function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
   const [newEmail, setNewEmail] = React.useState('');
   const [emailTouched, setEmailTouched] = React.useState(false);
   const [emailError, setEmailError] = React.useState('');
@@ -316,9 +263,6 @@ function UsersManagementApp() {
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [users, setUsers] = React.useState([]);
-  // ZMENA: Stavy pre ConfirmationModal sú odstránené
-  // const [showConfirmationModal, setShowConfirmationModal] = React.useState(false);
-  // const [userToDelete, setUserToDelete] = React.useState(null);
 
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
@@ -638,19 +582,9 @@ function UsersManagementApp() {
     };
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
 
-  // ZMENA: Funkcia na otvorenie ConfirmationModal je odstránená, jej text sa zobrazí v NotificationModal
-  // a akcia zmazania sa vykoná priamo pri kliknutí na tlačidlo.
   const openConfirmationModal = (user) => {
-    // Táto funkcia už nie je potrebná, pretože ConfirmationModal bol odstránený.
-    // Akcia zmazania sa vykonáva priamo cez confirmDeleteUser.
-    // Pre konzistenciu s predchádzajúcou implementáciou, ak by sa náhodou volala,
-    // môžeme tu zobraziť notifikáciu, ale ideálne by sa nemala volať.
     setUserNotificationMessage(`Používateľ ${user.email} bude zmazaný. Je potrebné ho manuálne zmazať aj vo Firebase Console.`, 'info');
-    // Následne by sa mala vykonať akcia zmazania, ktorá je teraz priamo v onClick.
   };
-
-  // ZMENA: Funkcia na zatvorenie ConfirmationModal je odstránená
-  // const closeConfirmationModal = () => { ... };
 
   const openRoleEditModal = (user) => {
     setUserToEditRole(user);
@@ -682,7 +616,6 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
@@ -695,14 +628,12 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
       } else {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
 
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -726,7 +657,6 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
@@ -736,13 +666,10 @@ function UsersManagementApp() {
     try {
       const userDocRef = db.collection('users').doc(userId);
       
-      // Ak sa rola mení na 'user', approved sa nastaví na true.
-      // Ak sa rola mení na 'admin', approved sa nastaví na false.
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       
-      // Používame setUserNotificationMessage pre internú notifikáciu (hore uprostred, zelená)
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
       } else {
@@ -751,17 +678,15 @@ function UsersManagementApp() {
       
       closeRoleEditModal();
 
-      // Ak sa používateľovi zmenila rola na admin a nie je schválený, odhlásime ho
       if (user && user.uid === userId && newRole === 'admin' && approvedStatus === false) {
           console.log("UsersManagementApp: Rola používateľa zmenená na neschváleného admina. Odhlasujem.");
           await auth.signOut();
           window.location.href = 'login.html';
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          return; // Zastav ďalšie spracovanie
+          setUser(null);
+          setUserProfileData(null);
+          return;
       }
 
-      // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}. Schválený: ${approvedStatus ? 'Áno' : 'Nie'}.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -778,14 +703,14 @@ function UsersManagementApp() {
     }
   };
 
-  // NOVÁ FUNKCIA: handleSaveEmail
+  // NOVÁ FUNKCIA: handleSaveEmail - VRÁTENÁ NA LOKÁLNU MANIPULÁCIU S AUTENTIFIKÁCIOU
   const handleSaveEmail = async (userId, newEmail) => {
     if (!db || !auth || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmenu e-mailovej adresy používateľa.");
       return;
     }
 
-    // NOVINKA: Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
+    // Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
     if (auth.currentUser && userId === auth.currentUser.uid) {
       setError("Nemôžete zmeniť vlastnú e-mailovú adresu prostredníctvom tejto funkcie. Použite prosím sekciu 'Môj profil' pre zmenu vlastného e-mailu.");
       setLoading(false);
@@ -795,7 +720,6 @@ function UsersManagementApp() {
 
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
@@ -853,15 +777,23 @@ function UsersManagementApp() {
 
         // 3. Aktualizovať notifikačnú správu
         if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`E-mail používateľa ${oldUserData.email} bol zmenený na ${newEmail}. Pôvodný používateľ zostal zachovaný.`, 'success');
+          window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}. Pôvodný používateľ (autentifikačný záznam) zostal zachovaný. Prosím, zmažte ho manuálne vo Firebase Console.`, 'success');
         } else {
           console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
         }
         closeChangeEmailModal();
 
+        // Otvoriť Firebase Console v novej záložke
+        const projectId = firebaseConfig.projectId;
+        if (projectId) {
+            window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
+        } else {
+            console.error("Chyba: Project ID pre Firebase Console nie je definované.");
+        }
+
         // 4. Uložiť notifikáciu pre všetkých administrátorov
         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-          message: `E-mail používateľa ${oldUserData.email} bol zmenený na ${newEmail}.`,
+          message: `E-mail používateľa ${userToChangeEmail.email} bol zmenený na ${newEmail}. Pôvodný záznam je potrebné manuálne zmazať.`,
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
           recipientId: 'all_admins',
           read: false
@@ -904,7 +836,7 @@ function UsersManagementApp() {
   };
 
 
-  // ZMENA: Funkcia confirmDeleteUser teraz prijíma používateľa priamo z onClick
+  // Funkcia confirmDeleteUser teraz prijíma používateľa priamo z onClick
   const confirmDeleteUser = async (userToConfirmDelete) => {
     if (!db || !userToConfirmDelete || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na zmazanie používateľa.");
@@ -912,7 +844,6 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
     if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
     } else {
@@ -931,8 +862,6 @@ function UsersManagementApp() {
         console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
       }
       
-      // closeConfirmationModal(); // ODSTRÁNENÉ
-
       // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
       const projectId = firebaseConfig.projectId;
       if (projectId) {
@@ -995,14 +924,11 @@ function UsersManagementApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: NotificationModal teraz prijíma aj typ správy
     React.createElement(NotificationModal, {
         message: userNotificationMessage,
         onClose: () => setUserNotificationMessage(''),
         type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
     }),
-    // ZMENA: ConfirmationModal je odstránený z vykresľovania
-    // React.createElement(ConfirmationModal, { ... }),
     React.createElement(RoleEditModal, {
         show: showRoleEditModal,
         user: userToEditRole,
@@ -1017,7 +943,6 @@ function UsersManagementApp() {
         onClose: closeChangeEmailModal,
         onSave: handleSaveEmail,
         loading: loading,
-        auth: auth // Odovzdáme auth inštanciu
     }),
     React.createElement(
       'div',
