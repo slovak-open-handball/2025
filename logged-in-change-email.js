@@ -160,6 +160,23 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   );
 }
 
+// Funkcia na validáciu emailu (presunutá sem, aby bola globálna)
+const validateEmail = (email) => {
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return false;
+
+  const domainPart = email.substring(atIndex + 1);
+  const dotIndexInDomain = domainPart.indexOf('.');
+  if (dotIndexInDomain === -1) return false;
+  
+  const lastDotIndex = email.lastIndexOf('.');
+  if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; 
+  
+  const charsAfterLastDot = email.substring(lastDotIndex + 1);
+  return charsAfterLastDot.length >= 2;
+};
+
+
 // Main React component for the logged-in-change-email.html page
 function ChangeEmailApp() {
   const [app, setApp] = React.useState(null);
@@ -185,22 +202,6 @@ function ChangeEmailApp() {
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
-
-  // Funkcia na validáciu emailu (presunutá sem)
-  const validateEmail = (email) => {
-    const atIndex = email.indexOf('@');
-    if (atIndex === -1) return false;
-
-    const domainPart = email.substring(atIndex + 1);
-    const dotIndexInDomain = domainPart.indexOf('.');
-    if (dotIndexInDomain === -1) return false;
-    
-    const lastDotIndex = email.lastIndexOf('.');
-    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; 
-    
-    const charsAfterLastDot = email.substring(lastDotIndex + 1);
-    return charsAfterLastDot.length >= 2;
-  };
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
@@ -482,22 +483,6 @@ function ChangeEmailApp() {
     setPasswordError(''); // Vyčisti chybu pri zmene hesla
   };
 
-  // Funkcia na validáciu emailu
-  const validateEmail = (email) => {
-    const atIndex = email.indexOf('@');
-    if (atIndex === -1) return false;
-
-    const domainPart = email.substring(atIndex + 1);
-    const dotIndexInDomain = domainPart.indexOf('.');
-    if (dotIndexInDomain === -1) return false;
-    
-    const lastDotIndex = email.lastIndexOf('.');
-    if (lastDotIndex === -1 || lastDotIndex < atIndex) return false; 
-    
-    const charsAfterLastDot = email.substring(lastDotIndex + 1);
-    return charsAfterLastDot.length >= 2;
-  };
-
   // Handle form submission for email change
   const handleSubmitEmailChange = async (e) => {
     e.preventDefault();
@@ -583,7 +568,7 @@ function ChangeEmailApp() {
 
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
