@@ -129,13 +129,15 @@ function MyDataApp() {
 
               // NOVINKA: Prioritná kontrola pre čerstvo prihlásených používateľov
               if (justLoggedIn === 'true') {
-                  console.log("MyDataApp: Používateľ sa práve prihlásil. Nastavujem passwordLastChanged v localStorage na aktuálny čas klienta.");
+                  console.log("MyDataApp: Používateľ sa práve prihlásil. Inicializujem localStorage s aktuálnym časom klienta.");
                   // Pre nového používateľa alebo pri prvom prihlásení po zmene hesla,
                   // nastavíme localStorage na aktuálny čas klienta.
                   // Toto obíde race condition s serverTimestamp().
                   localStorage.setItem(localStorageKey, new Date().getTime().toString());
-                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak
-                  // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA
+                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak hneď po použití
+                  console.log("MyDataApp: Príznak 'justLoggedIn' bol odstránený zo sessionStorage.");
+                  // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA, ani ak je timestamp neplatný.
+                  // Dávame čas na synchronizáciu Firestore timestampu.
               } else {
                   // Bežná bezpečnostná kontrola pre existujúcich používateľov
                   if (!hasValidFirestoreTimestamp) {
