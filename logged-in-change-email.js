@@ -513,7 +513,7 @@ function ChangeEmailApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Zmeniť e-mail'
+          'Zmeniť e-mailovú adresu'
         ),
         // Odstránený riadok s aktuálnym e-mailom
         React.createElement(
