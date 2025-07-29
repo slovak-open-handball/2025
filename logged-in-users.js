@@ -446,6 +446,18 @@ function UsersManagementApp() {
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
+              // NOVÁ LOGIKA: Synchronizácia e-mailu z Firebase Auth do Firestore
+              // Ak sa e-mail v Auth líši od e-mailu vo Firestore, aktualizuj Firestore
+              if (user.email && userData.email !== user.email) {
+                console.log(`UsersManagementApp: Detekovaná zmena e-mailu v Auth (${user.email}) oproti Firestore (${userData.email}). Aktualizujem Firestore.`);
+                userDocRef.update({ email: user.email })
+                  .then(() => console.log("UsersManagementApp: Firestore e-mail úspešne synchronizovaný s Auth."))
+                  .catch(syncError => console.error("UsersManagementApp: Chyba pri synchronizácii e-mailu s Firestore:", syncError));
+                // Aktualizujeme userData, aby sa predišlo opätovnému volaniu
+                userData.email = user.email;
+              }
+              // --- KONIEC LOGIKY SYNCHRONIZÁCIE ---
+
               // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
               if (userData.role === 'admin' && userData.approved === false) {
                   console.log("UsersManagementApp: Používateľ je admin a nie je schválený. Odhlasujem.");
@@ -665,22 +677,21 @@ function UsersManagementApp() {
       console.log("UsersManagementApp: Používateľ úspešne re-autentifikovaný.");
 
       // Zmena e-mailu vo Firebase Authentication
-      await auth.currentUser.updateEmail(newEmail);
-      console.log("UsersManagementApp: E-mail úspešne zmenený vo Firebase Authentication.");
+      // Namiesto updateEmail voláme verifyBeforeUpdateEmail, ak je povolená ochrana pred enumeráciou e-mailov.
+      await auth.currentUser.verifyBeforeUpdateEmail(newEmail);
+      console.log("UsersManagementApp: Overovací e-mail bol odoslaný na novú adresu.");
 
-      // Aktualizácia e-mailu vo Firestore
-      const userDocRef = db.collection('users').doc(auth.currentUser.uid);
-      await userDocRef.update({ email: newEmail });
-      console.log("UsersManagementApp: E-mail úspešne aktualizovaný vo Firestore.");
+      // NEAKTUALIZUJEME FIRESTORE HNEĎ! Firestore sa aktualizuje až po overení e-mailu používateľom
+      // pomocou synchronizačnej logiky v useEffect, ktorá počúva zmeny v user.email.
 
-      setMyEmailModalMessage("Vaša e-mailová adresa bola úspešne zmenená.");
+      setMyEmailModalMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, skontrolujte si schránku a overte e-mail.");
       if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Vaša e-mailová adresa bola úspešne zmenená.", 'success');
+        window.showGlobalNotification("Overovací e-mail bol odoslaný na novú adresu. Prosím, overte e-mail.", 'info'); // ZMENA typu na 'info'
       }
-      // Po úspešnej zmene a aktualizácii Firestore, môžete modál zavrieť po krátkej dobe
+      // Po odoslaní overovacieho e-mailu môžete modál zavrieť po krátkej dobe
       setTimeout(() => {
         closeMyEmailModal();
-      }, 1500);
+      }, 3000); // Dlhší čas, aby si používateľ prečítal správu
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri zmene vlastného e-mailu:", e);
