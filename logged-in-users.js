@@ -959,9 +959,9 @@ function UsersManagementApp() {
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
-                                React.createElement('td', { 
-                                    className: 'py-3 px-6 text-left whitespace-nowrap cursor-pointer text-blue-600 hover:text-blue-800', // NOVINKA: Triedy pre klikateľný email
-                                    onClick: () => openChangeEmailModal(u) // NOVINKA: onClick handler
+                                React.createElement('td', {
+                                    className: `py-3 px-6 text-left whitespace-nowrap ${user && u.id !== user.uid ? 'cursor-pointer text-blue-600 hover:text-blue-800' : 'text-gray-500'}`, // NOVINKA: Podmienené triedy
+                                    onClick: user && u.id !== user.uid ? () => openChangeEmailModal(u) : undefined // NOVINKA: Podmienený onClick handler
                                 }, u.email),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
