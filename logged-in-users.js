@@ -134,21 +134,25 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   );
 }
 
-// NOVÝ KOMPONENT: ChangeEmailModal
-function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
+// NOVÝ KOMPONENT: MyEmailChangeModal pre zmenu vlastného e-mailu
+function MyEmailChangeModal({ show, currentEmail, onClose, onSave, loading, error: modalError, message: modalMessage }) {
   const [newEmail, setNewEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [emailTouched, setEmailTouched] = React.useState(false);
   const [emailError, setEmailError] = React.useState('');
+  const [passwordError, setPasswordError] = React.useState('');
 
   React.useEffect(() => {
-    if (show && user) {
-      setNewEmail(user.email);
+    if (show) {
+      setNewEmail(currentEmail);
+      setPassword('');
       setEmailTouched(false);
       setEmailError('');
+      setPasswordError('');
     }
-  }, [show, user]);
+  }, [show, currentEmail]);
 
-  if (!show || !user) return null;
+  if (!show) return null;
 
   // Funkcia na validáciu emailu (skopírovaná z admin-register.js)
   const validateEmail = (email) => {
@@ -176,8 +180,13 @@ function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
     }
   };
 
-  const handleFocus = () => {
+  const handleFocusEmail = () => {
     setEmailTouched(true);
+  };
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    setPasswordError(''); // Vyčisti chybu pri zmene hesla
   };
 
   const handleSave = async () => {
@@ -185,15 +194,18 @@ function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
       setEmailError('Zadajte platnú e-mailovú adresu.');
       return;
     }
-    if (newEmail === user.email) {
+    if (newEmail === currentEmail) {
       setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
       return;
     }
-    onSave(user.id, newEmail);
+    if (password.length < 6) { // Firebase vyžaduje min. 6 znakov pre heslo
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 6 znakov).');
+      return;
+    }
+    onSave(newEmail, password);
   };
 
-  const isSaveDisabled = loading || !validateEmail(newEmail) || newEmail === user.email;
-
+  const isSaveDisabled = loading || !validateEmail(newEmail) || newEmail === currentEmail || password.length < 6;
 
   return React.createElement(
     'div',
@@ -201,18 +213,28 @@ function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
     React.createElement(
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
-      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Zmeniť e-mail pre ${user.email}`),
+      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Zmeniť moju e-mailovú adresu`),
+      modalError && React.createElement( // Zobrazenie chýb z rodičovského komponentu
+        'p',
+        { className: 'text-red-500 text-xs italic mb-2' },
+        modalError
+      ),
+      modalMessage && React.createElement( // Zobrazenie správ z rodičovského komponentu
+        'p',
+        { className: 'text-green-600 text-xs italic mb-2' },
+        modalMessage
+      ),
       React.createElement(
         'div',
         { className: 'mb-4' },
-        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'new-email' }, 'Nová e-mailová adresa'),
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'my-new-email' }, 'Nová e-mailová adresa'),
         React.createElement('input', {
           type: 'email',
-          id: 'new-email',
+          id: 'my-new-email',
           className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${emailError ? 'border-red-500' : ''}`,
           value: newEmail,
           onChange: handleEmailChange,
-          onFocus: handleFocus,
+          onFocus: handleFocusEmail,
           required: true,
           placeholder: 'Zadajte novú e-mailovú adresu',
           disabled: loading,
@@ -221,6 +243,26 @@ function ChangeEmailModal({ show, user, onClose, onSave, loading }) {
           'p',
           { className: 'text-red-500 text-xs italic mt-1' },
           emailError
+        )
+      ),
+      React.createElement(
+        'div',
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'my-current-password' }, 'Aktuálne heslo'),
+        React.createElement('input', {
+          type: 'password',
+          id: 'my-current-password',
+          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${passwordError ? 'border-red-500' : ''}`,
+          value: password,
+          onChange: handlePasswordChange,
+          required: true,
+          placeholder: 'Zadajte svoje aktuálne heslo',
+          disabled: loading,
+        }),
+        passwordError && React.createElement(
+          'p',
+          { className: 'text-red-500 text-xs italic mt-1' },
+          passwordError
         )
       ),
       React.createElement(
@@ -267,19 +309,17 @@ function UsersManagementApp() {
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
-  // NOVÉ STAVY: Pre ChangeEmailModal
-  const [showChangeEmailModal, setShowChangeEmailModal] = React.useState(false);
-  const [userToChangeEmail, setUserToChangeEmail] = React.useState(null);
+  // NOVÉ STAVY: Pre MyEmailChangeModal
+  const [showMyEmailModal, setShowMyEmailModal] = React.useState(false);
+  const [myEmailModalError, setMyEmailModalError] = React.useState('');
+  const [myEmailModalMessage, setMyEmailModalMessage] = React.useState('');
 
-  // ODSTRÁNENÉ: isChangingOtherUserEmail už nie je potrebný s Apps Script prístupom
-  // const [isChangingOtherUserEmail, setIsChangingOtherUserEmail] = React.useState(false);
+  // ODSTRÁNENÉ: GOOGLE_APPS_SCRIPT_URL už nie je potrebná pre zmenu vlastného e-mailu
+  // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYhxOSFBAw4N2hUts_1rWxVS0PzN8GKngWofEEfGtJtK3dnjeogcBY999We-UdoMd1w/exec";
 
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
-
-  // URL adresa Google Apps Scriptu, ktorú ste poskytli
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYhxOSFBAw4N2hUts_1rWxVS0PzN8GKngWofEEfGtJtK3dnjeogcBY999We-UdoMd1w/exec";
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -346,7 +386,6 @@ function UsersManagementApp() {
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user !== undefined) {
-      // ODSTRÁNENÉ: Logika pre isChangingOtherUserEmail a podmienené presmerovanie
       if (user === null) { 
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
@@ -366,7 +405,6 @@ function UsersManagementApp() {
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
-              // Táto kontrola sa teraz vykonáva vždy, pretože zmena e-mailu je na serveri
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                   console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
                   console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
@@ -479,7 +517,7 @@ function UsersManagementApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]); // ODSTRÁNENÁ závislosť 'isChangingOtherUserEmail'
+  }, [isAuthReady, db, user, auth]);
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -595,17 +633,78 @@ function UsersManagementApp() {
     setShowRoleEditModal(false);
   };
 
-  // NOVÁ FUNKCIA: Otvorenie ChangeEmailModal
-  const openChangeEmailModal = (user) => {
-    setUserToChangeEmail(user);
-    setShowChangeEmailModal(true);
+  // NOVÁ FUNKCIA: Otvorenie MyEmailChangeModal
+  const openMyEmailModal = () => {
+    setMyEmailModalError('');
+    setMyEmailModalMessage('');
+    setShowMyEmailModal(true);
   };
 
-  // NOVÁ FUNKCIA: Zatvorenie ChangeEmailModal
-  const closeChangeEmailModal = () => {
-    setUserToChangeEmail(null);
-    setShowChangeEmailModal(false);
+  // NOVÁ FUNKCIA: Zatvorenie MyEmailChangeModal
+  const closeMyEmailModal = () => {
+    setShowMyEmailModal(false);
+    setMyEmailModalError('');
+    setMyEmailModalMessage('');
   };
+
+  // NOVÁ FUNKCIA: handleSaveMyEmail - pre zmenu vlastného e-mailu
+  const handleSaveMyEmail = async (newEmail, password) => {
+    if (!auth || !auth.currentUser || !db) {
+      setMyEmailModalError("Chyba: Používateľ nie je prihlásený alebo databáza nie je dostupná.");
+      return;
+    }
+
+    setLoading(true);
+    setMyEmailModalError('');
+    setMyEmailModalMessage('');
+
+    try {
+      // Re-autentifikácia používateľa
+      const credential = firebase.auth.EmailAuthProvider.credential(auth.currentUser.email, password);
+      await auth.currentUser.reauthenticateWithCredential(credential);
+      console.log("UsersManagementApp: Používateľ úspešne re-autentifikovaný.");
+
+      // Zmena e-mailu vo Firebase Authentication
+      await auth.currentUser.updateEmail(newEmail);
+      console.log("UsersManagementApp: E-mail úspešne zmenený vo Firebase Authentication.");
+
+      // Aktualizácia e-mailu vo Firestore
+      const userDocRef = db.collection('users').doc(auth.currentUser.uid);
+      await userDocRef.update({ email: newEmail });
+      console.log("UsersManagementApp: E-mail úspešne aktualizovaný vo Firestore.");
+
+      setMyEmailModalMessage("Vaša e-mailová adresa bola úspešne zmenená.");
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Vaša e-mailová adresa bola úspešne zmenená.", 'success');
+      }
+      // Po úspešnej zmene a aktualizácii Firestore, môžete modál zavrieť po krátkej dobe
+      setTimeout(() => {
+        closeMyEmailModal();
+      }, 1500);
+
+    } catch (e) {
+      console.error("UsersManagementApp: Chyba pri zmene vlastného e-mailu:", e);
+      let errorMessage = "Chyba pri zmene e-mailu.";
+      if (e.code === 'auth/requires-recent-login') {
+        errorMessage = "Pre zmenu e-mailu sa musíte znova prihlásiť. Prosím, odhláste sa a prihláste sa znova.";
+      } else if (e.code === 'auth/wrong-password') {
+        errorMessage = "Zadané heslo je nesprávne.";
+      } else if (e.code === 'auth/invalid-email') {
+        errorMessage = "Zadaná e-mailová adresa je neplatná.";
+      } else if (e.code === 'auth/email-already-in-use') {
+        errorMessage = "Táto e-mailová adresa je už používaná iným účtom.";
+      } else {
+        errorMessage = `Chyba: ${e.message}`;
+      }
+      setMyEmailModalError(errorMessage);
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(errorMessage, 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // NOVÁ FUNKCIA: Prepnúť stav schválenia administrátora
   const handleToggleAdminApproval = async (userToToggle) => {
@@ -702,84 +801,6 @@ function UsersManagementApp() {
     }
   };
 
-  // NOVÁ FUNKCIA: handleSaveEmail - teraz volá Google Apps Script
-  const handleSaveEmail = async (userId, newEmail) => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmenu e-mailovej adresy používateľa.");
-      return;
-    }
-
-    // Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
-    if (auth.currentUser && userId === auth.currentUser.uid) {
-      setError("Nemôžete zmeniť vlastnú e-mailovú adresu prostredníctvom tejto funkcie. Použite prosím sekciu 'Môj profil' pre zmenu vlastného e-mailu.");
-      setLoading(false);
-      closeChangeEmailModal();
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
-
-    try {
-      // Pripravíme dáta pre Google Apps Script
-      const requestData = {
-        action: 'changeUserEmail',
-        userId: userId,
-        newEmail: newEmail
-      };
-
-      // Pošleme požiadavku na Google Apps Script
-      // Dôležité: V režime 'no-cors' nemôžeme čítať odpoveď servera ani posielať vlastné hlavičky Content-Type.
-      // Toto sa používa len na obídenie CORS chýb, ale neposkytuje spätnú väzbu o úspechu/zlyhaní operácie na serveri.
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors', // ZMENA: Naspäť na 'no-cors'
-        // headers: { 'Content-Type': 'application/json' }, // ODSTRÁNENÉ: Nie je povolené v režime 'no-cors'
-        body: JSON.stringify(requestData),
-      });
-
-      // V režime 'no-cors' je odpoveď 'opaque', čo znamená, že nemôžeme čítať response.json() ani kontrolovať response.ok.
-      // Preto nemôžeme spoľahlivo zistiť, či bola operácia na serveri úspešná.
-      // Predpokladáme úspech a aktualizujeme Firestore.
-      console.warn("UsersManagementApp: Fetch požiadavka bola odoslaná v režime 'no-cors'. Odpoveď bude opaqná a nebude možné ju prečítať. Predpokladáme úspech a aktualizujeme Firestore.");
-      
-      // Aktualizujeme e-mail vo Firestore. Toto by sa malo stať až po potvrdení zo servera,
-      // ale v režime 'no-cors' nemáme takéto potvrdenie.
-      const userDocRef = db.collection('users').doc(userId);
-      await userDocRef.update({ email: newEmail });
-
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`E-mail používateľa ${userToChangeEmail.email} bol (pravdepodobne) úspešne zmenený na ${newEmail}.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-      closeChangeEmailModal();
-
-      // Uložiť notifikáciu pre všetkých administrátorov
-      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `E-mail používateľa ${userToChangeEmail.email} bol (pravdepodobne) zmenený na ${newEmail}.`,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        recipientId: 'all_admins',
-        read: false
-      });
-      console.log("Notifikácia o zmene e-mailu používateľa úspešne uložená do Firestore.");
-
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri zmene e-mailu používateľa (fetch error):", e);
-      setError(`Chyba pri zmene e-mailu: ${e.message}. Skontrolujte logy Google Apps Scriptu a nastavenia CORS.`);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri zmene e-mailu: ${e.message}.`, 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
 
   // Funkcia confirmDeleteUser teraz prijíma používateľa priamo z onClick
   const confirmDeleteUser = async (userToConfirmDelete) => {
@@ -797,23 +818,20 @@ function UsersManagementApp() {
 
     try {
       // Pripravíme dáta pre Google Apps Script na zmazanie používateľa
+      // TOTO BUDE STÁLE VOLAŤ APPS SCRIPT, PRETOŽE MAZANIE INÝCH POUŽÍVATEĽOV VYŽADUJE ADMIN OPRÁVNENIA
+      const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYhxOSFBAw4N2hUts_1rWxVS0PzN8GKngWofEEfGtJtK3dnjeogcBY999We-UdoMd1w/exec"; // Používame URL pre Apps Script pre mazanie
+
       const requestData = {
         action: 'deleteUser', // Akcia, ktorú spracuje Apps Script
         userId: userToConfirmDelete.id
       };
 
-      // Pošleme požiadavku na Google Apps Script
-      // Dôležité: V režime 'no-cors' nemôžeme čítať odpoveď servera ani posielať vlastné hlavičky Content-Type.
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // ZMENA: Naspäť na 'no-cors'
-        // headers: { 'Content-Type': 'application/json' }, // ODSTRÁNENÉ: Nie je povolené v režime 'no-cors'
+        mode: 'no-cors', // Stále 'no-cors' pre mazanie, ak nechcete riešiť CORS na serveri
         body: JSON.stringify(requestData),
       });
 
-      // V režime 'no-cors' je odpoveď 'opaque', čo znamená, že nemôžeme čítať response.json() ani kontrolovať response.ok.
-      // Preto nemôžeme spoľahlivo zistiť, či bola operácia na serveri úspešná.
-      // Predpokladáme úspech a zmažeme z Firestore.
       console.warn("UsersManagementApp: Fetch požiadavka na zmazanie bola odoslaná v režime 'no-cors'. Odpoveď bude opaqná a nebude možné ju prečítať. Predpokladáme úspech a zmažeme z Firestore.");
 
       // Ak Apps Script úspešne zmazal používateľa z Auth, zmažeme ho aj z Firestore
@@ -900,13 +918,15 @@ function UsersManagementApp() {
         onSave: handleSaveRole,
         loading: loading,
     }),
-    // NOVINKA: Vykreslenie ChangeEmailModal
-    React.createElement(ChangeEmailModal, {
-        show: showChangeEmailModal,
-        user: userToChangeEmail,
-        onClose: closeChangeEmailModal,
-        onSave: handleSaveEmail,
+    // NOVINKA: Vykreslenie MyEmailChangeModal pre vlastnú zmenu e-mailu
+    user && userProfileData && userProfileData.role === 'admin' && React.createElement(MyEmailChangeModal, {
+        show: showMyEmailModal,
+        currentEmail: user.email,
+        onClose: closeMyEmailModal,
+        onSave: handleSaveMyEmail,
         loading: loading,
+        error: myEmailModalError,
+        message: myEmailModalMessage,
     }),
     React.createElement(
       'div',
@@ -921,6 +941,20 @@ function UsersManagementApp() {
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
+        ),
+        // NOVINKA: Tlačidlo pre zmenu vlastného e-mailu (iba pre admina)
+        user && userProfileData && userProfileData.role === 'admin' && React.createElement(
+            'div',
+            { className: 'flex justify-center mb-6' },
+            React.createElement(
+                'button',
+                {
+                    onClick: openMyEmailModal,
+                    className: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 shadow-md',
+                    disabled: loading,
+                },
+                'Zmeniť môj e-mail'
+            )
         ),
         users.length === 0 && !loading ? (
             React.createElement('p', { className: 'text-center text-gray-600' }, 'Žiadni používatelia na zobrazenie.')
@@ -952,8 +986,7 @@ function UsersManagementApp() {
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', {
-                                    className: `py-3 px-6 text-left whitespace-nowrap ${userProfileData && userProfileData.role === 'admin' && userProfileData.approved && user && u.id !== user.uid ? 'cursor-pointer text-blue-600 hover:text-blue-800' : 'text-gray-500'}`, // NOVINKA: Podmienené triedy
-                                    onClick: userProfileData && userProfileData.role === 'admin' && userProfileData.approved && user && u.id !== user.uid ? () => openChangeEmailModal(u) : undefined // NOVINKA: Podmienený onClick handler
+                                    className: `py-3 px-6 text-left whitespace-nowrap text-gray-500`, // ZMENA: Odstránený onClick pre zmenu e-mailu iných
                                 }, u.email),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
                                 React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
@@ -963,8 +996,8 @@ function UsersManagementApp() {
                                     { className: 'py-3 px-6 text-center' },
                                     React.createElement(
                                         'div',
-                                        { className: 'flex item-center justify-center space-x-2' }, // ZMENA: Odstránená min-w odtiaľto
-                                        // Podmienené vykresľovanie tlačidiel "Upraviť rolu" a "Zmazať"
+                                        { className: 'flex item-center justify-center space-x-2' },
+                                        // Tlačidlá "Upraviť rolu" a "Zmazať" sú stále pre iných používateľov
                                         user && u.id !== user.uid && React.createElement(
                                             React.Fragment,
                                             null,
@@ -977,7 +1010,7 @@ function UsersManagementApp() {
                                                 },
                                                 'Upraviť rolu'
                                             ),
-                                            // NOVINKA: Tlačidlo na schválenie/odobratie prístupu pre adminov
+                                            // Tlačidlo na schválenie/odobratie prístupu pre adminov
                                             u.role === 'admin' && React.createElement(
                                                 'button',
                                                 {
@@ -990,7 +1023,7 @@ function UsersManagementApp() {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => confirmDeleteUser(u), // ZMENA: Priamo volá confirmDeleteUser
+                                                  onClick: () => confirmDeleteUser(u),
                                                   className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
