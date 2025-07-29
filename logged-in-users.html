@@ -36,144 +36,166 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease-out;
             max-width: 500px;
             width: 90%;
-            position: relative;
         }
-        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
-        #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu */
-            padding: 1rem;
-            flex-grow: 1;
-            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Špecifické štýly pre modalAuthentication */
+        .modal-authentication {
+            position: fixed;
+            z-index: 1000; /* Vyššie ako iné modály */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7); /* Tmavšie pozadie */
             display: flex;
-            justify-content: center; /* Centrovanie horizontálne */
-            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
+            align-items: center;
+            justify-content: center;
         }
-        @media (max-width: 768px) {
-            #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberá celú šírku */
-                justify-content: center; /* Stále centrovať obsah */
-                align-items: flex-start;
-            }
+
+        .modal-authentication-content {
+            background-color: #fefefe;
+            padding: 0; /* Odstránime padding, aby iframe zaberal celú plochu */
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            width: 95%; /* Väčšia šírka */
+            height: 95%; /* Väčšia výška */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Skryjeme pretečenie, ak je iframe väčší */
+        }
+
+        .modal-authentication-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            background-color: #f9f9f9;
+        }
+
+        .modal-authentication-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .modal-authentication-close {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .modal-authentication-close:hover {
+            color: #333;
+        }
+
+        .modal-authentication-body {
+            flex-grow: 1; /* Zabezpečí, že zaberie zvyšný priestor */
+            display: flex;
+            overflow: hidden; /* Dôležité pre iframe */
+        }
+
+        .modal-authentication-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
-    <!-- Firebase SDKs -->
+</head>
+<body>
+    <!-- Hlavička - bude načítaná dynamicky -->
+    <div id="header-placeholder"></div>
+
+    <!-- Ľavé menu - bude načítané dynamicky -->
+    <div id="left-menu-placeholder"></div>
+
+    <!-- Hlavný obsah React aplikácie pre správu používateľov -->
+    <div id="users-management-root" class="flex-grow p-4 md:ml-64"></div>
+
+    <!-- Firebase SDKs (Compat mode pre header.js a logged-in-users.js) -->
+    <!-- Tieto musia byť načítané pred header.js a logged-in-users.js -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+    <!-- React a ReactDOM - ZMENENÉ PORADIE A VERZIA -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js" crossorigin></script>
 
-    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
-    <script>
-        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
-        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
-        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-        const firebaseConfig = {
-          apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-          authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-          projectId: "prihlasovanie-4f3f3",
-          storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-          messagingSenderId: "26454452024",
-          appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-users.html: Firebase inicializovaný globálne.");
-            } catch (e) {
-                console.error("logged-in-users.html: Chyba pri globálnej inicializácii Firebase:", e);
-            }
-        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-users.html: Firebase už bol inicializovaný.");
-        } else {
-            console.error("logged-in-users.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
-        }
+    <!-- Globálne premenné pre Firebase config (pre React aplikácie) -->
+    <script type="text/javascript">
+        // Tieto premenné sú definované globálne a budú použité v header.js a logged-in-users.js
+        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const __firebase_config = JSON.stringify({
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        });
+        const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
+        const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
     </script>
-    <!-- Odstránené priame načítanie header.js a left-menu.js z <head> -->
-</head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička sa načíta dynamicky -->
-    <div id="header-placeholder"></div>
 
-    <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="left-menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1 p-4">
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="users-management-root"></div>
-        </div>
-    </div>
+    <!-- Vlastné skripty - header.js musí byť type="text/javascript" pre globálne Firebase -->
+    <script src="header.js"></script>
+    <script src="left-menu.js"></script>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (UsersManagementApp) -->
-    <script src="logged-in-users.js"></script>
+    <!-- Načítanie hlavného App komponentu pre správu používateľov -->
+    <script type="module" src="logged-in-users.js"></script>
 
-    <!-- Načítanie hlavičky a logiky menu -->
-    <script>
+    <script type="text/javascript">
         // Funkcia na načítanie hlavičky
         async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
-
-                    // Dynamické načítanie header.js
-                    const headerScript = document.createElement('script');
-                    headerScript.src = 'header.js';
-                    headerScript.onload = () => {
-                        console.log("header.js načítaný a spustený.");
-                        // NOVINKA: Voláme funkciu z header.js na inicializáciu React komponentov v hlavičke
-                        if (typeof initializeHeaderReactComponents === 'function') {
-                            initializeHeaderReactComponents();
-                        } else {
-                            console.error("Chyba: Funkcia initializeHeaderReactComponents nie je definovaná v header.js.");
-                        }
-                    };
-                    headerScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní header.js:", e);
-                    };
-                    document.body.appendChild(headerScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                const headerHtml = await response.text();
+                document.getElementById('header-placeholder').innerHTML = headerHtml;
+                // Po načítaní hlavičky inicializovať jej logiku
+                if (typeof initializeHeaderLogic === 'function') {
+                    initializeHeaderLogic();
+                } else {
+                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js. Uistite sa, že header.js obsahuje túto funkciu.");
+                }
+            } catch (error) {
+                console.error("Chyba pri načítaní hlavičky:", error);
+                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
 
         // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
-                try {
-                    const response = await fetch('left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
-
-                    // Dynamické načítanie left-menu.js
-                    const menuScript = document.createElement('script');
-                    menuScript.src = 'left-menu.js';
-                    menuScript.onload = () => {
-                        console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
-                    };
-                    menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní left-menu.js:", e);
-                    };
-                    document.body.appendChild(menuScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
+            try {
+                const response = await fetch('left-menu.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                const menuHtml = await response.text();
+                document.getElementById('left-menu-placeholder').innerHTML = menuHtml;
+                 // Po načítaní menu inicializovať jeho logiku
+                if (typeof initializeLeftMenuLogic === 'function') {
+                    initializeLeftMenuLogic();
+                } else {
+                    console.warn("Funkcia initializeLeftMenuLogic nie je definovaná v left-menu.js. Uistite sa, že left-menu.js obsahuje túto funkciu.");
+                }
+            } catch (error) {
+                console.error("Chyba pri načítaní ľavého menu:", error);
+                document.getElementById('left-menu-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní menu.</div>';
             }
         }
 
