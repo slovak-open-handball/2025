@@ -125,6 +125,7 @@ const validatePassword = (pwd) => {
 // Main React component for the reset password / email verification page
 function ResetPasswordApp() {
     const [auth, setAuth] = React.useState(null);
+    const [db, setDb] = React.useState(null); // Pridaný stav pre Firestore
     const [mode, setMode] = React.useState(null);
     const [oobCode, setOobCode] = React.useState(null);
     const [newPassword, setNewPassword] = React.useState('');
@@ -151,13 +152,15 @@ function ResetPasswordApp() {
 
     React.useEffect(() => {
         try {
-            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
+            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined' || typeof firebase.firestore === 'undefined') {
                 setError("Firebase SDK nie je načítané. Skontrolujte account.html.");
                 setLoading(false);
                 return;
             }
             const authInstance = firebase.auth();
             setAuth(authInstance);
+            const dbInstance = firebase.firestore(); // Inicializácia Firestore
+            setDb(dbInstance);
 
             const params = getUrlParams();
             const currentMode = params.mode;
@@ -182,7 +185,18 @@ function ResetPasswordApp() {
                 } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
                     // Logika pre overenie e-mailu
                     authInstance.applyActionCode(currentOobCode)
-                        .then(() => {
+                        .then(async () => { // Zmena na async funkciu
+                            // Získanie aktuálne prihláseného používateľa
+                            const currentUser = authInstance.currentUser;
+                            if (currentUser && dbInstance) {
+                                // Aktualizácia e-mailovej adresy vo Firestore
+                                const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
+                                await userDocRef.update({ email: currentUser.email });
+                                console.log("Firestore email bol úspešne aktualizovaný po overení.");
+                            } else {
+                                console.warn("Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo db nie je dostupná.");
+                            }
+
                             setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
