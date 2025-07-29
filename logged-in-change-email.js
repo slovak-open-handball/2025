@@ -577,7 +577,7 @@ function ChangeEmailApp() {
         )
       )
     )
-  );
+  )
 }
 
 // Explicitne sprístupniť komponent globálne
