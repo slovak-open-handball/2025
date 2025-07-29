@@ -139,6 +139,7 @@ function MyDataApp() {
                   console.log("MyDataApp: Príznak 'justLoggedIn' bol odstránený zo sessionStorage. localStorage inicializovaný.");
                   // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA, ani ak je timestamp neplatný.
                   // Dávame čas na synchronizáciu Firestore timestampu.
+                  // Pokračujeme v spracovaní dát profilu
               } else {
                   // Bežná bezpečnostná kontrola pre existujúcich používateľov (keď 'justLoggedIn' nie je true)
                   if (!hasValidFirestoreTimestamp) {
@@ -149,7 +150,7 @@ function MyDataApp() {
                       localStorage.removeItem(localStorageKey);
                       setUser(null);
                       setUserProfileData(null);
-                      return;
+                      return; // Zastav ďalšie spracovanie
                   }
 
                   let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
@@ -163,7 +164,7 @@ function MyDataApp() {
                       localStorage.removeItem(localStorageKey);
                       setUser(null);
                       setUserProfileData(null);
-                      return;
+                      return; // Zastav ďalšie spracovanie
                   } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                       console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený (Firestore < LocalStorage). Odhlasujem používateľa (potenciálny nesúlad).");
                       auth.signOut();
@@ -171,7 +172,7 @@ function MyDataApp() {
                       localStorage.removeItem(localStorageKey);
                       setUser(null);
                       setUserProfileData(null);
-                      return;
+                      return; // Zastav ďalšie spracovanie
                   } else {
                       // Timestampy sú rovnaké alebo localStorage je 0 a Firestore nie je 0 (prvé načítanie)
                       // Vždy aktualizujeme localStorage, aby sme zabezpečili konzistenciu
