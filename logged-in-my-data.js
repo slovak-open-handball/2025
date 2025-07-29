@@ -129,15 +129,17 @@ function MyDataApp() {
 
               // NOVINKA: Prioritná kontrola pre čerstvo prihlásených používateľov
               if (justLoggedIn === 'true') {
-                  console.log("MyDataApp: Používateľ sa práve prihlásil. Obchádzam prísnu kontrolu passwordLastChanged.");
+                  console.log("MyDataApp: Používateľ sa práve prihlásil. Obchádzam prísnu kontrolu passwordLastChanged pre túto reláciu.");
                   // Ak je timestamp z Firestore platný, aktualizujeme localStorage.
                   // Ak nie je, ponecháme localStorage tak, ako je (alebo ho nastavíme na 0, ak tam nič nie je).
                   // Dôležité: NEODHLASUJEME hneď, dávame šancu na synchronizáciu.
                   if (hasValidFirestoreTimestamp) {
                       localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                      console.log("MyDataApp: localStorage passwordLastChanged aktualizovaný na základe Firestore timestampu.");
+                      console.log("MyDataApp: localStorage passwordLastChanged aktualizovaný na základe Firestore timestampu (justLoggedIn).");
                   } else {
-                      console.warn("MyDataApp: passwordLastChanged z Firestore je neplatný aj pri justLoggedIn. localStorage sa neaktualizuje z Firestore.");
+                      console.warn("MyDataApp: passwordLastChanged z Firestore je neplatný aj pri justLoggedIn. localStorage sa neaktualizuje z Firestore pre túto reláciu.");
+                      // Ak je neplatný, ale je justLoggedIn, neodhlasujeme.
+                      // Predpokladáme, že login.js už inicioval serverTimestamp() a onSnapshot ho čoskoro prinesie.
                   }
                   sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak
               } else {
