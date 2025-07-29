@@ -183,21 +183,31 @@ function ResetPasswordApp() {
                             setLoading(false);
                         });
                 } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
+                    console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     // Logika pre overenie e-mailu
                     authInstance.applyActionCode(currentOobCode)
                         .then(async () => { // Zmena na async funkciu
+                            console.log("account.js: applyActionCode úspešné. Pokúšam sa aktualizovať Firestore.");
                             // Získanie aktuálne prihláseného používateľa
                             const currentUser = authInstance.currentUser;
-                            if (currentUser && dbInstance) {
-                                // Aktualizácia e-mailovej adresy vo Firestore
-                                const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
-                                await userDocRef.update({ email: currentUser.email });
-                                console.log("Firestore email bol úspešne aktualizovaný po overení.");
+                            // Použite 'db' stav priamo, pretože by mal byť už inicializovaný.
+                            if (currentUser && db) { // Použite 'db' zo stavu
+                                console.log(`account.js: Aktuálny používateľ UID: ${currentUser.uid}, Email (po overení): ${currentUser.email}`);
+                                console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
+                                const userDocRef = db.collection('users').doc(currentUser.uid);
+                                try {
+                                    await userDocRef.update({ email: currentUser.email });
+                                    console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
+                                    setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
+                                } catch (firestoreError) {
+                                    console.error("account.js: Chyba pri aktualizácii Firestore emailu:", firestoreError);
+                                    setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
+                                }
                             } else {
-                                console.warn("Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo db nie je dostupná.");
+                                console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo db nie je dostupná.");
+                                setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
                             }
 
-                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
                             setTimeout(() => {
@@ -205,7 +215,7 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
-                            console.error("Chyba pri overovaní e-mailu:", e);
+                            console.error("account.js: Chyba pri overovaní e-mailu (applyActionCode zlyhalo):", e);
                             setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
                             setLoading(false);
                         });
