@@ -252,7 +252,7 @@ function ChangeEmailApp() {
 
               setUserProfileData(userData);
               setCurrentEmail(user.email || ''); // Nastaví aktuálny e-mail z Firebase Auth
-              setNewEmail(user.email || ''); // Inicializovať nové pole s aktuálnym e-mailom
+              setNewEmail(''); // Ponechať prázdne pre novú e-mailovú adresu
               
               setLoading(false);
               setError('');
