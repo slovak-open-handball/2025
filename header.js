@@ -567,7 +567,7 @@ function UsersManagementApp() {
   // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
   // ZMENA: Vylepšená detekcia stránky pomocou window.location.href
   if (window.location.href.includes('logged-in-users.html')) {
-    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+    console.error("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
 
