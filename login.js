@@ -370,7 +370,7 @@ function App() {
             setSettingsLoaded(true);
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
-            setError(`Chyba pri načítaní nastavení: ${e.message}`);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
             setSettingsLoaded(true);
           });
 
@@ -540,9 +540,6 @@ function App() {
       });
       console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
       
-      // Removed the immediate re-fetch of userDoc to avoid race condition with serverTimestamp()
-      // The logged-in-my-data.js will handle the initial localStorage setup.
-
       // NOVINKA: Nastavíme príznak, že používateľ sa práve prihlásil
       sessionStorage.setItem('justLoggedIn', 'true');
       console.log("Prihlásenie: Príznak 'justLoggedIn' nastavený v sessionStorage.");
