@@ -391,6 +391,7 @@ function GlobalNotificationHandler() {
             console.log("GNH: Používateľský profil načítaný:", userData);
 
             // NOVÁ LOGIKA: Odhlásenie, ak sa e-mail v Auth líši od e-mailu vo Firestore
+            // Ak sú e-maily rovnaké, systém NEODHLÁSI používateľa.
             if (user.email && userData.email !== user.email) {
               console.log(`GNH: Detekovaná zmena e-mailu v Auth (${user.email}) oproti Firestore (${userData.email}). Odhlasujem používateľa.`);
               auth.signOut();
@@ -733,6 +734,7 @@ function UsersManagementApp() {
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
 
               // NOVÁ LOGIKA: Odhlásenie, ak sa e-mail v Auth líši od e-mailu vo Firestore
+              // Ak sú e-maily rovnaké, systém NEODHLÁSI používateľa.
               if (user.email && userData.email !== user.email) {
                 console.log(`UsersManagementApp: Detekovaná zmena e-mailu v Auth (${user.email}) oproti Firestore (${userData.email}). Odhlasujem používateľa.`);
                 auth.signOut();
@@ -825,7 +827,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
@@ -936,7 +938,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
-          setError(`Chyba pri načítaní používateľov: ${e.message}`);
+          setError(`Chyba pri načítaní používateľov: ${error.message}`);
           setLoading(false);
         });
       } catch (e) {
