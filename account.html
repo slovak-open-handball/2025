@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOH 2025 - Účet</title> <!-- Predvolený titulok, bude dynamicky zmenený -->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -68,6 +69,20 @@
         } catch (e) {
             console.error("account.html: Chyba pri inicializácii Firebase App v head:", e);
         }
+
+        // Dynamické nastavenie titulku stránky na základe URL parametra 'mode'
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+
+            if (mode === 'resetPassword') {
+                document.title = 'SOH 2025 - Obnovenie hesla';
+            } else if (mode === 'verifyAndChangeEmail') {
+                document.title = 'SOH 2025 - Potvrdenie zmeny e-mailovej adresy';
+            } else {
+                document.title = 'SOH 2025 - Účet';
+            }
+        });
     </script>
 </head>
 <body class="bg-gray-100">
