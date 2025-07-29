@@ -516,11 +516,6 @@ function ChangeEmailApp() {
           'Zmeniť e-mail'
         ),
         React.createElement(
-            'p',
-            { className: 'text-center text-gray-600 mb-6' },
-            `Váš aktuálny e-mail: ${currentEmail}`
-        ),
-        React.createElement(
             'form',
             { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
             React.createElement(
