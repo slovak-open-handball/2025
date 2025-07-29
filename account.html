@@ -62,12 +62,12 @@
         try {
             if (!firebase.apps.length) {
                 firebase.initializeApp(JSON.parse(__firebase_config));
-                console.log("reset-password.html: Firebase App '[DEFAULT]' inicializovaná v head.");
+                console.log("account.html: Firebase App '[DEFAULT]' inicializovaná v head.");
             } else {
-                console.log("reset-password.html: Firebase App '[DEFAULT]' už existuje.");
+                console.log("account.html: Firebase App '[DEFAULT]' už existuje.");
             }
         } catch (e) {
-            console.error("reset-password.html: Chyba pri inicializácii Firebase App v head:", e);
+            console.error("account.html: Chyba pri inicializácii Firebase App v head:", e);
         }
     </script>
 </head>
@@ -83,7 +83,7 @@
     <!-- Načítanie Firebase a logiky hlavičky -->
     <script src="header.js"></script>
     <!-- Načítanie logiky resetovania hesla -->
-    <script src="reset-password.js"></script>
+    <script src="account.js"></script>
 
     <script>
         // Funkcia na načítanie hlavičky a jej JS
@@ -95,12 +95,12 @@
                 }
                 const headerHtml = await headerResponse.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
-                console.log("reset-password.html: header.html načítaný.");
+                console.log("account.html: header.html načítaný.");
 
                 const headerScript = document.createElement('script');
                 headerScript.src = 'header.js';
                 headerScript.onload = () => {
-                    console.log("reset-password.html: header.js načítaný a spustený.");
+                    console.log("account.html: header.js načítaný a spustený.");
                     if (typeof initializeHeaderLogic === 'function') {
                         initializeHeaderLogic();
                     } else {
@@ -113,17 +113,17 @@
                         return;
                     }
                     if (typeof ResetPasswordApp === 'undefined') {
-                        console.error("Chyba: Komponent ResetPasswordApp nie je definovaný. Skontrolujte reset-password.js.");
+                        console.error("Chyba: Komponent ResetPasswordApp nie je definovaný. Skontrolujte account.js.");
                         document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                         return;
                     }
 
                     const root = ReactDOM.createRoot(document.getElementById('root'));
                     root.render(React.createElement(ResetPasswordApp, null));
-                    console.log("reset-password.html: React App vykreslená.");
+                    console.log("account.html: React App vykreslená.");
                 };
                 headerScript.onerror = (e) => {
-                    console.error("reset-password.html: Chyba pri načítaní header.js:", e);
+                    console.error("account.html: Chyba pri načítaní header.js:", e);
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní skriptu hlavičky.</div>';
                 };
                 document.body.appendChild(headerScript);
