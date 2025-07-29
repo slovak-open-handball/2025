@@ -167,6 +167,8 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
 }
 
 // New Modal Component for Firebase Authentication Console
+// POZNÁMKA: Tento komponent je ponechaný pre referenciu, ale nebude sa používať
+// na zobrazenie Firebase Console kvôli bezpečnostným obmedzeniam iframe.
 function FirebaseAuthModal({ show, url, onClose }) {
     if (!show) return null;
 
@@ -235,9 +237,9 @@ function UsersManagementApp() {
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
 
-  // NOVÉ: Stavy pre FirebaseAuthModal
-  const [showFirebaseAuthModal, setShowFirebaseAuthModal] = React.useState(false);
-  const [firebaseAuthUrl, setFirebaseAuthUrl] = React.useState('');
+  // Pôvodné stavy pre FirebaseAuthModal sú odstránené, pretože sa iframe nebude používať
+  // const [showFirebaseAuthModal, setShowFirebaseAuthModal] = React.useState(false);
+  // const [firebaseAuthUrl, setFirebaseAuthUrl] = React.useState('');
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -408,7 +410,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -561,23 +563,6 @@ function UsersManagementApp() {
     setShowRoleEditModal(false);
   };
 
-  // NOVÉ: Funkcie pre otváranie a zatváranie FirebaseAuthModal
-  const openFirebaseAuthModal = () => {
-    // Používame globálne definovaný projectId z firebaseConfig
-    const projectId = firebaseConfig.projectId;
-    if (projectId) {
-        setFirebaseAuthUrl(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users`);
-        setShowFirebaseAuthModal(true);
-    } else {
-        setError("Chyba: Project ID pre Firebase Console nie je definované.");
-    }
-  };
-
-  const closeFirebaseAuthModal = () => {
-    setShowFirebaseAuthModal(false);
-    setFirebaseAuthUrl('');
-  };
-
   // NOVÁ FUNKCIA: Prepnúť stav schválenia administrátora
   const handleToggleAdminApproval = async (userToToggle) => {
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
@@ -676,13 +661,18 @@ function UsersManagementApp() {
       await db.collection('users').doc(userToDelete.id).delete();
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
 
-      // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a otvorenie modálneho okna
+      // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a otvorenie novej záložky
       setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       
       closeConfirmationModal(); // Zatvorí potvrdzovací modal
 
-      // Otvoriť Firebase Console v modálnom okne
-      openFirebaseAuthModal();
+      // Otvoriť Firebase Console v novej záložke (pôvodné riešenie)
+      const projectId = firebaseConfig.projectId;
+      if (projectId) {
+          window.open(`https://console.firebase.google.com/project/${projectId}/authentication/users`, '_blank');
+      } else {
+          console.error("Chyba: Project ID pre Firebase Console nie je definované.");
+      }
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -752,12 +742,7 @@ function UsersManagementApp() {
         onSave: handleSaveRole,
         loading: loading,
     }),
-    // NOVÉ: Vykreslenie FirebaseAuthModal
-    React.createElement(FirebaseAuthModal, {
-        show: showFirebaseAuthModal,
-        url: firebaseAuthUrl,
-        onClose: closeFirebaseAuthModal,
-    }),
+    {/* FirebaseAuthModal je odstránený z vykresľovania, pretože sa nebude používať */}
     React.createElement(
       'div',
       { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: Removed max-w-4xl, added px-4
