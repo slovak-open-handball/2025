@@ -138,7 +138,14 @@ function MyDataApp() {
 
               console.log(`MyDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+              // NOVINKA: Kontrola, či sa používateľ práve prihlásil
+              const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+
+              if (justLoggedIn === 'true') {
+                  console.log("MyDataApp: Používateľ sa práve prihlásil, obchádzam kontrolu passwordLastChanged a aktualizujem localStorage.");
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak
+              } else if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   // First load for this user/browser, initialize localStorage and do NOT logout
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("MyDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
