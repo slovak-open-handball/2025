@@ -118,10 +118,10 @@ function MyDataApp() {
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
               // ODSTRÁNENÁ LOGIKA: passwordLastChanged kontrola a odhlasovanie
-              // Táto logika by mala byť centralizovaná v header.js alebo inom globálnom mieste.
+              // Táto logika je teraz centralizovaná v header.js (GlobalNotificationHandler).
 
               // ODSTRÁNENÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              // Táto logika by mala byť centralizovaná v header.js alebo inom globálnom mieste.
+              // Táto logika je teraz centralizovaná v header.js (GlobalNotificationHandler).
 
               // Continue with setting user data if not logged out
               setUserProfileData(userData); // Aktualizujeme stav userProfileData
@@ -188,70 +188,11 @@ function MyDataApp() {
     };
   }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
-  // useEffect for updating header link visibility
-  // Removed isRegistrationOpen dependency as it's no longer in this file
-  React.useEffect(() => {
-    console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+  // ODSTRÁNENÝ useEffect pre aktualizáciu odkazov hlavičky
+  // Táto logika je teraz plne riadená v header.js
 
-    if (authLink) {
-      if (user) { // If user is logged in
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("MyDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else { // If user is not logged in
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        // Register link visibility will now be handled by register.js based on registration settings
-        // For logged-in-my-data.html, if not logged in, register link should be visible by default
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("MyDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      // ZMENA: Používame globálnu funkciu pre notifikácie
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("MyDataApp: window.showGlobalNotification nie je definovaná.");
-      }
-      window.location.href = 'login.html';
-      // ODSTRÁNENÁ LOGIKA: localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, user]); // Pridaná závislosť user pre localStorage.removeItem
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  // ODSTRÁNENÝ handleLogout a jeho pripojenie k tlačidlu
+  // Odhlásenie je teraz plne riadené v header.js
 
   // Removed handleUpdateProfile as there are no input fields to update directly in this view
 
