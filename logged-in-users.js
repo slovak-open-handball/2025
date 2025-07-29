@@ -279,7 +279,7 @@ function UsersManagementApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
   // URL adresa Google Apps Scriptu, ktorú ste poskytli
-  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7oRQ3JN8fh6b1-07Aew2pAhY8uK7K7dxxfywwtzv6opOGcYcBfnUYc4XL6MRvTYKExw/exec";
+  const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlYhxOSFBAw4N2hUts_1rWxVS0PzN8GKngWofEEfGtJtK3dnjeogcBY999We-UdoMd1w/exec";
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
