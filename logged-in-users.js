@@ -731,7 +731,7 @@ function UsersManagementApp() {
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}? Upozornenie: Používateľa je nutné zmazať aj manuálne v časti Autentifikácia vo Firebase Console.`,
-        onConfirm: confirmDeleteUser, // Voláme novú funkciu pre potvrdenie
+        onConfirm: confirmDeleteUser,
         onCancel: closeConfirmationModal,
         loading: loading,
     }),
@@ -742,10 +742,9 @@ function UsersManagementApp() {
         onSave: handleSaveRole,
         loading: loading,
     }),
-    {/* FirebaseAuthModal je odstránený z vykresľovania, pretože sa nebude používať */}
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' }, // ZMENA: Removed max-w-4xl, added px-4
+      { className: 'w-full px-4 mt-20 mb-10' },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
