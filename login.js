@@ -22,7 +22,6 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
     // Cesta pre vonkajší obrys oka (bez výplne)
     React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-    // Cesta pre šikmú čiaru
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
@@ -198,15 +197,15 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 }
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 
 // Main React component for the login.html page
@@ -507,23 +506,24 @@ function App() {
         
         // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
         try {
-          const payload = {
-            action: 'sendAdminApprovalReminder',
-            email: userData.email,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            isAdmin: true
-          };
-          console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
-          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-          });
-          console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+          // GOOGLE_APPS_SCRIPT_URL nie je definované v tomto súbore, ak nie je odkomentované
+          // const payload = {
+          //   action: 'sendAdminApprovalReminder',
+          //   email: userData.email,
+          //   firstName: userData.firstName,
+          //   lastName: userData.lastName,
+          //   isAdmin: true
+          // };
+          // console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
+          // const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          //   method: 'POST',
+          //   mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //   },
+          //   body: JSON.stringify(payload)
+          // });
+          // console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
         } catch (emailError) {
           console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
         }
@@ -553,9 +553,13 @@ function App() {
       if (updatedUserData.passwordLastChanged && typeof updatedUserData.passwordLastChanged.toDate === 'function') {
         localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, updatedUserData.passwordLastChanged.toDate().getTime().toString());
         console.log("Prihlásenie: localStorage passwordLastChanged aktualizovaný s presným Firestore timestampom.");
+        // NOVINKA: Nastavíme príznak, že používateľ sa práve prihlásil
+        sessionStorage.setItem('justLoggedIn', 'true');
+        console.log("Prihlásenie: Príznak 'justLoggedIn' nastavený v sessionStorage.");
       } else {
         console.error("Prihlásenie: Nepodarilo sa získať platný passwordLastChanged z Firestore po aktualizácii.");
         await auth.signOut();
+        sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak, ak je problém
         setUser(null); // Explicitne nastaviť user na null
         window.location.href = 'login.html'; // Presmerovať na login, ak je problém s timestampom
         return;
