@@ -13,7 +13,8 @@ function getUrlParams() {
 }
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
+// Akceptuje 'validationStatus' ako objekt pre detailnú vizuálnu indikáciu platnosti hesla
+function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, validationStatus, onFocus }) {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -33,9 +34,12 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
+  // Okraj inputu bude vždy predvolený (border-gray-300)
+  const borderClass = 'border-gray-300';
+
   return React.createElement(
     'div',
-    { className: 'mb-4' },
+    { className: 'mb-4' }, // Pridaná trieda mb-4 pre konzistentné medzery
     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id }, label),
     React.createElement(
       'div',
@@ -43,7 +47,8 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
       React.createElement('input', {
         type: showPassword ? 'text' : 'password',
         id: id,
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10',
+        // Používame len predvolenú triedu okraja
+        className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
         onCopy: onCopy,
@@ -53,7 +58,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         placeholder: placeholder,
         autoComplete: autoComplete,
         disabled: disabled,
-        tabIndex: tabIndex
+        onFocus: onFocus // Pridaný onFocus prop
       }),
       React.createElement(
         'button',
@@ -66,9 +71,56 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    description && React.createElement('div', { className: 'text-gray-600 text-xs italic mt-1' }, description)
+    // ZMENA: Podmienka pre zobrazenie popisu hesla - zobrazí sa len ak je validationStatus definovaný
+    validationStatus && React.createElement(
+      'div',
+      { className: `text-xs italic mt-1 text-gray-600` }, // Text "Heslo musí obsahovať" je vždy sivý
+      'Heslo musí obsahovať:',
+      React.createElement(
+        'ul',
+        { className: 'list-none pl-4' }, // Používame list-none a vlastné odrážky pre dynamiku
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+          'aspoň 10 znakov,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+          'aspoň jedno veľké písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+          'aspoň jedno malé písmeno,'
+        ),
+        React.createElement(
+          'li',
+          { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+          React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+          'aspoň jednu číslicu.'
+        )
+      )
+    )
   );
 }
+
+// Funkcia pre validáciu hesla (teraz presne zhodná s logged-in-change-password.js)
+const validatePassword = (pwd) => {
+    const status = {
+      minLength: pwd.length >= 10,
+      hasUpperCase: /[A-Z]/.test(pwd),
+      hasLowerCase: /[a-z]/.test(pwd),
+      hasNumber: /[0-9]/.test(pwd),
+    };
+    // Celková platnosť hesla
+    status.isValid = status.minLength && status.hasUpperCase && status.hasLowerCase && status.hasNumber;
+    return status;
+};
+
 
 // Main React component for the reset password / email verification page
 function ResetPasswordApp() {
@@ -83,6 +135,19 @@ function ResetPasswordApp() {
     const [loading, setLoading] = React.useState(true);
     const [showPassword, setShowPassword] = React.useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
+    // Stavy pre výsledky validácie nového hesla (ako v logged-in-change-password.js)
+    const [passwordValidationStatus, setPasswordValidationStatus] = React.useState({
+      minLength: false,
+      hasUpperCase: false,
+      hasLowerCase: false,
+      hasNumber: false,
+      isValid: false, // Celková platnosť hesla
+    });
+    const [isConfirmPasswordMatching, setIsConfirmPasswordMatching] = React.useState(false);
+    // NOVINKA: Stav pre sledovanie, či bol input "Potvrďte nové heslo" aktivovaný
+    const [confirmPasswordTouched, setConfirmPasswordTouched] = React.useState(false);
+
 
     React.useEffect(() => {
         try {
@@ -145,6 +210,16 @@ function ResetPasswordApp() {
         }
     }, []);
 
+    // Effect pre validáciu hesla pri zmene 'newPassword' alebo 'confirmNewPassword'
+    React.useEffect(() => {
+        const pwdStatus = validatePassword(newPassword);
+        setPasswordValidationStatus(pwdStatus);
+
+        // isConfirmPasswordMatching závisí aj od celkovej platnosti nového hesla
+        setIsConfirmPasswordMatching(newPassword === confirmNewPassword && newPassword.length > 0 && pwdStatus.isValid);
+    }, [newPassword, confirmNewPassword]);
+
+
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setError('');
@@ -160,9 +235,9 @@ function ResetPasswordApp() {
             return;
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
-            setError('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.');
+        // Používame celkový stav platnosti z passwordValidationStatus
+        if (!passwordValidationStatus.isValid) {
+            setError("Nové heslo nespĺňa všetky požiadavky. Skontrolujte prosím zoznam pod heslom.");
             return;
         }
 
@@ -184,7 +259,15 @@ function ResetPasswordApp() {
             } else if (e.code === 'auth/user-disabled') {
                 setError("Váš účet bol zakázaný. Kontaktujte podporu.");
             } else if (e.code === 'auth/weak-password') {
-                setError("Heslo je príliš slabé. Použite silnejšie heslo.");
+                // Použijeme validatePassword pre detailnejšiu správu o slabom hesle
+                const validationResults = validatePassword(newPassword);
+                const errors = [];
+                if (!validationResults.minLength) errors.push("aspoň 10 znakov");
+                if (!validationResults.hasLowerCase) errors.push("aspoň jedno malé písmeno");
+                if (!validationResults.hasUpperCase) errors.push("aspoň jedno veľké písmeno");
+                if (!validationResults.hasNumber) errors.push("aspoň jednu číslicu");
+                
+                setError("Heslo je príliš slabé. Heslo musí obsahovať:\n• " + errors.join("\n• ") + ".");
             } else {
                 setError(`Chyba pri resetovaní hesla: ${e.message}`);
             }
@@ -255,24 +338,17 @@ function ResetPasswordApp() {
                     id: 'newPassword',
                     label: 'Nové heslo',
                     value: newPassword,
-                    onChange: (e) => setNewPassword(e.target.value),
+                    onChange: (e) => {
+                        setNewPassword(e.target.value);
+                        // Okamžitá aktualizácia validácie
+                        setPasswordValidationStatus(validatePassword(e.target.value));
+                    },
                     onCopy: (e) => e.preventDefault(),
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
                     placeholder: 'Zadajte nové heslo',
                     autoComplete: 'new-password',
-                    description: React.createElement(
-                        React.Fragment,
-                        null,
-                        'Heslo musí obsahovať:',
-                        React.createElement(
-                            'ul',
-                            { className: 'list-disc list-inside ml-4' },
-                            React.createElement('li', null, 'aspoň jedno malé písmeno,'),
-                            React.createElement('li', null, 'aspoň jedno veľké písmeno,'),
-                            React.createElement('li', null, 'aspoň jednu číslicu.')
-                        )
-                    ),
+                    validationStatus: passwordValidationStatus, // Odovzdanie detailného stavu validácie hesla
                     disabled: loading,
                     showPassword: showPassword,
                     toggleShowPassword: () => setShowPassword(!showPassword)
@@ -281,7 +357,11 @@ function ResetPasswordApp() {
                     id: 'confirmNewPassword',
                     label: 'Potvrdiť nové heslo',
                     value: confirmNewPassword,
-                    onChange: (e) => setConfirmNewPassword(e.target.value),
+                    onChange: (e) => {
+                        setConfirmNewPassword(e.target.value);
+                        setConfirmPasswordTouched(true); // Nastaví touched stav
+                    },
+                    onFocus: () => setConfirmPasswordTouched(true), // Nastaví touched stav pri aktivácii
                     onCopy: (e) => e.preventDefault(),
                     onPaste: (e) => e.preventDefault(),
                     onCut: (e) => e.preventDefault(),
@@ -291,12 +371,22 @@ function ResetPasswordApp() {
                     showPassword: showConfirmPassword,
                     toggleShowPassword: () => setShowConfirmPassword(!showConfirmPassword)
                 }),
+                // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
+                !isConfirmPasswordMatching && confirmNewPassword.length > 0 && confirmPasswordTouched &&
+                React.createElement(
+                    'p',
+                    { className: 'text-red-500 text-xs italic mt-1' },
+                    'Heslá sa nezhodujú'
+                ),
                 React.createElement(
                     'button',
                     {
                         type: 'submit',
-                        className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-                        disabled: loading || !newPassword || !confirmNewPassword,
+                        className: `bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
+                            ${loading || !newPassword || !confirmNewPassword || !passwordValidationStatus.isValid || !isConfirmPasswordMatching
+                                ? 'opacity-50 cursor-not-allowed' : '' // Zakázaný stav
+                            }`,
+                        disabled: loading || !newPassword || !confirmNewPassword || !passwordValidationStatus.isValid || !isConfirmPasswordMatching,
                     },
                     loading ? React.createElement(
                         'div',
