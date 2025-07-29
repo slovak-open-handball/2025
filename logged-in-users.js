@@ -327,6 +327,9 @@ function UsersManagementApp() {
   const [showChangeEmailModal, setShowChangeEmailModal] = React.useState(false);
   const [userToChangeEmail, setUserToChangeEmail] = React.useState(null);
 
+  // NOVINKA: Stav na dočasné vypnutie presmerovaní počas zmeny e-mailu iného používateľa
+  const [isChangingOtherUserEmail, setIsChangingOtherUserEmail] = React.useState(false);
+
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -395,10 +398,17 @@ function UsersManagementApp() {
     let unsubscribeUserDoc;
 
     if (isAuthReady && db && user !== undefined) {
-      if (user === null) {
+      // NOVINKA: Ak meníme e-mail iného používateľa, nepresmerovávame
+      if (user === null && !isChangingOtherUserEmail) { 
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
+      } else if (user === null && isChangingOtherUserEmail) {
+        console.log("UsersManagementApp: Používateľ je null, ale prebieha zmena e-mailu iného používateľa, nepresmerovávam.");
+        // Ak je user null, ale isChangingOtherUserEmail je true, znamená to, že sme sa odhlásili
+        // novovytvoreného používateľa a čakáme na opätovné prihlásenie admina.
+        // Nespúšťame loading, pretože to bude riadiť handleSaveEmail.
+        return; 
       }
 
       if (user) {
@@ -526,7 +536,7 @@ function UsersManagementApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [isAuthReady, db, user, auth, isChangingOtherUserEmail]); // Pridaná závislosť 'isChangingOtherUserEmail'
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -672,6 +682,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
     
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
@@ -679,8 +695,12 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
-      // Používame setUserNotificationMessage pre internú notifikáciu (hore uprostred, zelená)
-      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
+      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -706,6 +726,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
 
     try {
       const userDocRef = db.collection('users').doc(userId);
@@ -717,7 +743,11 @@ function UsersManagementApp() {
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       
       // Používame setUserNotificationMessage pre internú notifikáciu (hore uprostred, zelená)
-      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       
       closeRoleEditModal();
 
@@ -765,21 +795,28 @@ function UsersManagementApp() {
 
     setLoading(true);
     setError('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
+
 
     let adminToken = null;
     let originalAdminUser = auth.currentUser; // Uložíme referenciu na aktuálneho admina
 
     try {
+      // Nastavíme flag, aby sa predišlo nežiaducim presmerovaniam
+      setIsChangingOtherUserEmail(true);
+
       // Získame token aktuálneho admina PRED vytvorením nového používateľa
       if (originalAdminUser) {
         adminToken = await originalAdminUser.getIdToken();
         console.log("Admin token získaný:", adminToken);
       } else {
-        // Táto situácia by sa nemala stať, ak je admin prihlásený
         setError("Aktuálny administrátor nie je prihlásený. Prosím, prihláste sa znova.");
-        setLoading(false);
-        closeChangeEmailModal();
-        return;
+        return; // Ukončíme funkciu
       }
 
       // 1. Vytvoriť nového používateľa s novým e-mailom v autentifikácii
@@ -815,7 +852,11 @@ function UsersManagementApp() {
         console.log("Pôvodný administrátor opätovne prihlásený.");
 
         // 3. Aktualizovať notifikačnú správu
-        setUserNotificationMessage(`E-mail používateľa ${oldUserData.email} bol zmenený na ${newEmail}. Pôvodný používateľ zostal zachovaný.`, 'success');
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`E-mail používateľa ${oldUserData.email} bol zmenený na ${newEmail}. Pôvodný používateľ zostal zachovaný.`, 'success');
+        } else {
+          console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+        }
         closeChangeEmailModal();
 
         // 4. Uložiť notifikáciu pre všetkých administrátorov
@@ -857,6 +898,8 @@ function UsersManagementApp() {
       }
     } finally {
       setLoading(false);
+      // Vždy resetujeme flag po dokončení operácie
+      setIsChangingOtherUserEmail(false); 
     }
   };
 
@@ -869,6 +912,12 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
+    // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+    if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
+    } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+    }
 
     try {
       // 1. Zmazať používateľa z Firestore
@@ -876,7 +925,11 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
       // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a otvorenie novej záložky
-      setUserNotificationMessage(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`, 'success');
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`, 'success');
+      } else {
+        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+      }
       
       // closeConfirmationModal(); // ODSTRÁNENÉ
 
@@ -908,11 +961,16 @@ function UsersManagementApp() {
 
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
+    // NOVINKA: Ak prebieha zmena e-mailu iného používateľa a user je null, nepresmerovávame
+    if (isAuthReady && user === null && !isChangingOtherUserEmail) { 
         console.log("UsersManagementApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
+    } else if (isAuthReady && user === null && isChangingOtherUserEmail) {
+        console.log("UsersManagementApp: Používateľ je null, ale prebieha zmena e-mailu iného používateľa, nepresmerovávam.");
+        return null; // Nespúšťame loading spinner, kým sa admin neprihlási späť
     }
+
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
         loadingMessage = 'Načítavam profilové dáta...';
