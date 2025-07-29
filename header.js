@@ -1,3 +1,7 @@
+if (window.self !== window.top) {
+    window.top.location.replace(window.self.location.href);
+}
+
 // Global application ID and Firebase configuration (should be consistent across all React apps)
 // Tieto konštanty sú teraz definované v <head> logged-in-users.html
 // const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
