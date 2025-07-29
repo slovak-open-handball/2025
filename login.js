@@ -197,15 +197,15 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 }
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 
 // Main React component for the login.html page
@@ -491,86 +491,70 @@ function App() {
       const userDoc = await userDocRef.get(); // Načítame dáta používateľa hneď po prihlásení
 
       if (!userDoc.exists) {
-        setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
-        await auth.signOut(); // Odhlásiť, ak chýba dokument používateľa
-        setUser(null); // Explicitne nastaviť user na null
-        setLoading(false);
-        return;
-      }
-      const userData = userDoc.data();
+        // NOVINKA: Ak dokument neexistuje, vytvoríme ho s passwordLastChanged
+        console.log("LoginApp: Používateľský dokument neexistuje, vytváram nový s passwordLastChanged.");
+        await userDocRef.set({
+          email: currentUser.email,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          role: 'user', // Predvolená rola pre nového používateľa
+          approved: true, // Predvolene schválený
+          passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        const userData = userDoc.data();
 
-      // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený
-      if (userData.role === 'admin' && userData.approved === false) {
-        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
-        console.log("LoginApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-        
-        // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
-        try {
-          // GOOGLE_APPS_SCRIPT_URL nie je definované v tomto súbore, ak nie je odkomentované
-          // const payload = {
-          //   action: 'sendAdminApprovalReminder',
-          //   email: userData.email,
-          //   firstName: userData.firstName,
-          //   lastName: userData.lastName,
-          //   isAdmin: true
-          // };
-          // console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
-          // const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-          //   method: 'POST',
-          //   mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
-          //   headers: {
-          //     'Content-Type': 'application/json',
-          //   },
-          //   body: JSON.stringify(payload)
-          // });
-          // console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-        } catch (emailError) {
-          console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
+        // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený
+        if (userData.role === 'admin' && userData.approved === false) {
+          setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
+          console.log("LoginApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+          
+          // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
+          try {
+            // GOOGLE_APPS_SCRIPT_URL nie je definované v tomto súbore, ak nie je odkomentované
+            // const payload = {
+            //   action: 'sendAdminApprovalReminder',
+            //   email: userData.email,
+            //   firstName: userData.firstName,
+            //   lastName: userData.lastName,
+            //   isAdmin: true
+            // };
+            // console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
+            // const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            //   method: 'POST',
+            //   mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
+            //   headers: {
+            //     'Content-Type': 'application/json',
+            //   },
+            //   body: JSON.stringify(payload)
+            // });
+            // console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+          } catch (emailError) {
+            console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
+          }
+
+          await auth.signOut(); // Odhlásiť používateľa
+          setUser(null); // Explicitne nastaviť user na null, aby sa predišlo presmerovaniu
+          setLoading(false);
+          return; // Zastav ďalšie spracovanie prihlásenia
         }
 
-        await auth.signOut(); // Odhlásiť používateľa
-        setUser(null); // Explicitne nastaviť user na null, aby sa predišlo presmerovaniu
-        setLoading(false);
-        return; // Zastav ďalšie spracovanie prihlásenia
+        // Ak používateľ nie je neschválený admin, aktualizuj passwordLastChanged
+        await userDocRef.update({
+          passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
       }
 
-      // Ak používateľ nie je neschválený admin, pokračuj s prihlásením
-      await userDocRef.update({
-        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
-      
-      const updatedUserDoc = await userDocRef.get(); 
-      if (!updatedUserDoc.exists) {
-        setError("Účet sa nenašiel v databáze po aktualizácii timestampu. Kontaktujte podporu.");
-        await auth.signOut();
-        setUser(null); // Explicitne nastaviť user na null
-        setLoading(false);
-        return;
-      }
-      const updatedUserData = updatedUserDoc.data();
-
-      if (updatedUserData.passwordLastChanged && typeof updatedUserData.passwordLastChanged.toDate === 'function') {
-        localStorage.setItem(`passwordLastChanged_${currentUser.uid}`, updatedUserData.passwordLastChanged.toDate().getTime().toString());
-        console.log("Prihlásenie: localStorage passwordLastChanged aktualizovaný s presným Firestore timestampom.");
-        // NOVINKA: Nastavíme príznak, že používateľ sa práve prihlásil
-        sessionStorage.setItem('justLoggedIn', 'true');
-        console.log("Prihlásenie: Príznak 'justLoggedIn' nastavený v sessionStorage.");
-      } else {
-        console.error("Prihlásenie: Nepodarilo sa získať platný passwordLastChanged z Firestore po aktualizácii.");
-        await auth.signOut();
-        sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak, ak je problém
-        setUser(null); // Explicitne nastaviť user na null
-        window.location.href = 'login.html'; // Presmerovať na login, ak je problém s timestampom
-        return;
-      }
+      // NOVINKA: Nastavíme príznak, že používateľ sa práve prihlásil
+      sessionStorage.setItem('justLoggedIn', 'true');
+      console.log("Prihlásenie: Príznak 'justLoggedIn' nastavený v sessionStorage.");
 
       // Nastaviť stav používateľa a notifikačnú správu
       setUser(prevUser => ({
-        ...prevUser,
-        ...updatedUserData,
-        displayName: updatedUserData.firstName && updatedUserData.lastName ? `${updatedUserData.firstName} ${updatedUserData.lastName}` : updatedUserData.email,
-        displayNotifications: updatedUserData.displayNotifications !== undefined ? updatedUserData.displayNotifications : true
+        ...prevUser, // Zachová existujúce vlastnosti user objektu
+        uid: currentUser.uid, // Zabezpečiť UID
+        email: currentUser.email // Zabezpečiť email
+        // Ostatné dáta profilu budú načítané v logged-in-my-data.js
       }));
 
       setUserNotificationMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
@@ -581,7 +565,7 @@ function App() {
       // Presmerovanie až po krátkom oneskorení, aby sa stihla zobraziť notifikácia
       setTimeout(() => {
         window.location.href = 'logged-in-my-data.html';
-      }, 5000);
+      }, 1000); // Skrátené oneskorenie na 1 sekundu
 
     } catch (e) {
       console.error("Chyba pri prihlásení:", e);
@@ -591,6 +575,7 @@ function App() {
         setError(`Zadali ste nesprávne prihlasovacie údaje`);
       }
       setLoading(false); // Vypnúť loading aj pri chybe
+      sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak, ak prihlásenie zlyhalo
     }
   };
 
