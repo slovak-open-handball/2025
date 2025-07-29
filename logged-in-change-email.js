@@ -592,18 +592,11 @@ function ChangeEmailApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Zmeniť e-mail'
+          'Zmeniť e-mailovú adresu'
         ),
-        // ODSTRÁNENÉ: Pôvodný text s aktuálnym e-mailom
-        // React.createElement(
-        //     'p',
-        //     { className: 'text-center text-gray-600 mb-6' },
-        //     `Váš aktuálny e-mail: ${currentEmail}`
-        // ),
         React.createElement(
             'form',
             { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
-            // NOVINKA: Input box pre aktuálnu e-mailovú adresu (zablokovaný)
             React.createElement(
               'div',
               null,
