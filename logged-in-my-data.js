@@ -117,9 +117,6 @@ function MyDataApp() {
               const userData = docSnapshot.data();
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              const justLoggedIn = sessionStorage.getItem('justLoggedIn');
-
               // Získame Firestore timestamp
               let firestorePasswordChangedTime = 0;
               const hasValidFirestoreTimestamp = userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function';
@@ -127,22 +124,27 @@ function MyDataApp() {
                   firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
               }
 
-              // NOVINKA: Prioritná kontrola pre čerstvo prihlásených používateľov
-              if (justLoggedIn === 'true') {
-                  console.log("MyDataApp: Používateľ sa práve prihlásil. Inicializujem localStorage s aktuálnym časom klienta.");
-                  // Pre nového používateľa alebo pri prvom prihlásení po zmene hesla,
-                  // nastavíme localStorage na aktuálny čas klienta.
-                  // Toto obíde race condition s serverTimestamp().
-                  localStorage.setItem(localStorageKey, new Date().getTime().toString());
-                  sessionStorage.removeItem('justLoggedIn'); // Odstránime príznak hneď po použití
-                  console.log("MyDataApp: Príznak 'justLoggedIn' bol odstránený zo sessionStorage.");
-                  // Dôležité: NEODHLASUJEME TU POUŽÍVATEĽA, ani ak je timestamp neplatný.
-                  // Dávame čas na synchronizáciu Firestore timestampu.
-              } else {
-                  // Bežná bezpečnostná kontrola pre existujúcich používateľov
+              const localStorageKey = `passwordLastChanged_${user.uid}`;
+              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+              console.log(`MyDataApp: Kontrola passwordLastChanged. Firestore: ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+              // Case 1: First time loading for this user/browser OR passwordLastChanged was reset
+              // If stored time is 0, it means we haven't seen this user's passwordLastChanged in this browser yet.
+              // In this case, we initialize localStorage and do NOT log out, giving grace for serverTimestamp().
+              if (storedPasswordChangedTime === 0) {
+                  console.log("MyDataApp: passwordLastChanged v localStorage je 0. Inicializujem ho s Firestore timestampom (alebo aktuálnym časom ak Firestore je 0).");
+                  // Use Firestore's time if valid, otherwise use current client time for immediate grace.
+                  localStorage.setItem(localStorageKey, (firestorePasswordChangedTime || new Date().getTime()).toString());
+                  // Remove justLoggedIn flag if it exists, as its purpose is fulfilled here.
+                  sessionStorage.removeItem('justLoggedIn');
+                  // Do NOT return or logout here. Allow the app to load.
+              }
+              // Case 2: Stored time exists, now compare for security.
+              else {
                   if (!hasValidFirestoreTimestamp) {
                       console.error("MyDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                      console.log("MyDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla (nie je čerstvo prihlásený).");
+                      console.log("MyDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla (localStorage nie je 0).");
                       auth.signOut();
                       window.location.href = 'login.html';
                       localStorage.removeItem(localStorageKey);
@@ -150,10 +152,6 @@ function MyDataApp() {
                       setUserProfileData(null);
                       return;
                   }
-
-                  let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-                  console.log(`MyDataApp: Kontrola passwordLastChanged. Firestore: ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
                   if (firestorePasswordChangedTime > storedPasswordChangedTime) {
                       console.log("MyDataApp: Detekovaná zmena hesla na inom zariadení/relácii (Firestore > LocalStorage). Odhlasujem používateľa.");
@@ -172,10 +170,9 @@ function MyDataApp() {
                       setUserProfileData(null);
                       return;
                   } else {
-                      // Timestampy sú rovnaké alebo localStorage je 0 a Firestore nie je 0 (prvé načítanie)
-                      // Vždy aktualizujeme localStorage, aby sme zabezpečili konzistenciu
+                      // Timestampy sú rovnaké, zabezpečíme, že localStorage je aktuálne
                       localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                      console.log("MyDataApp: Timestampy sú rovnaké alebo inicializované. localStorage aktualizovaný.");
+                      console.log("MyDataApp: Timestampy sú rovnaké. localStorage aktualizovaný pre konzistenciu.");
                   }
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
