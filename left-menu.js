@@ -64,6 +64,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
+            } else if (jsFileName === 'logged-in-email' && typeof ChangeEmailApp !== 'undefined') {
+                rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
             } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') { // Opravený názov komponentu
@@ -108,6 +110,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
+            } else if (jsFileName === 'logged-in-change-email' && typeof ChangeEmailApp !== 'undefined') {
+                rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
             } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') {
@@ -150,6 +154,7 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-my-data': ['admin', 'user'],
         'menu-change-name': ['admin', 'user'],
         'menu-change-phone': ['user'],
+        'menu-change-email': ['admin', 'user'],
         'menu-change-password': ['admin', 'user'],
         'menu-change-billing-data': ['user'],
         'menu-my-settings': ['admin'], 
