@@ -563,6 +563,12 @@ try {
 // ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
+  // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
+  if (window.location.pathname.includes('logged-in-users.html')) {
+    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+    return null; // Nespúšťať komponent, ak je na správcovskej stránke
+  }
+
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
@@ -748,7 +754,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
