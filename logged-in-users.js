@@ -166,6 +166,54 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
   );
 }
 
+// New Modal Component for Firebase Authentication Console
+function FirebaseAuthModal({ show, url, onClose }) {
+    if (!show) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-4 rounded-lg shadow-xl w-11/12 h-5/6 max-w-4xl flex flex-col' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h2', { className: 'text-xl font-bold text-gray-800' }, 'Firebase Authentication Console'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700 text-2xl font-bold',
+                    },
+                    '×'
+                )
+            ),
+            React.createElement(
+                'iframe',
+                {
+                    src: url,
+                    className: 'flex-grow w-full border rounded-lg',
+                    title: 'Firebase Authentication Console',
+                    style: { minHeight: '400px' } // Ensure a minimum height for the iframe
+                }
+            ),
+            React.createElement(
+                'div',
+                { className: 'mt-4 text-right' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
+                    },
+                    'Zavrieť'
+                )
+            )
+        )
+    );
+}
+
 
 // Main React component for the logged-in-users.html page (now for user management)
 function UsersManagementApp() {
@@ -186,6 +234,10 @@ function UsersManagementApp() {
 
   const [showRoleEditModal, setShowRoleEditModal] = React.useState(false);
   const [userToEditRole, setUserToEditRole] = React.useState(null);
+
+  // NOVÉ: Stavy pre FirebaseAuthModal
+  const [showFirebaseAuthModal, setShowFirebaseAuthModal] = React.useState(false);
+  const [firebaseAuthUrl, setFirebaseAuthUrl] = React.useState('');
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -356,7 +408,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -509,6 +561,23 @@ function UsersManagementApp() {
     setShowRoleEditModal(false);
   };
 
+  // NOVÉ: Funkcie pre otváranie a zatváranie FirebaseAuthModal
+  const openFirebaseAuthModal = () => {
+    // Používame globálne definovaný projectId z firebaseConfig
+    const projectId = firebaseConfig.projectId;
+    if (projectId) {
+        setFirebaseAuthUrl(`https://console.firebase.google.com/project/${projectId}/authentication/users`);
+        setShowFirebaseAuthModal(true);
+    } else {
+        setError("Chyba: Project ID pre Firebase Console nie je definované.");
+    }
+  };
+
+  const closeFirebaseAuthModal = () => {
+    setShowFirebaseAuthModal(false);
+    setFirebaseAuthUrl('');
+  };
+
   // NOVÁ FUNKCIA: Prepnúť stav schválenia administrátora
   const handleToggleAdminApproval = async (userToToggle) => {
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
@@ -607,13 +676,13 @@ function UsersManagementApp() {
       await db.collection('users').doc(userToDelete.id).delete();
       console.log(`Používateľ ${userToDelete.email} zmazaný z Firestore.`);
 
-      // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a presmerovanie na Firebase Console
+      // 2. Aktualizácia notifikačnej správy (hore uprostred, zelená) a otvorenie modálneho okna
       setUserNotificationMessage(`Používateľ ${userToDelete.email} bol zmazaný z databázy. Prosím, zmažte ho aj manuálne vo Firebase Console.`);
       
       closeConfirmationModal(); // Zatvorí potvrdzovací modal
 
-      // Otvoriť novú záložku s Firebase Console
-      window.open('https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users', '_blank');
+      // Otvoriť Firebase Console v modálnom okne
+      openFirebaseAuthModal();
 
       // Uložiť notifikáciu pre všetkých administrátorov (toto pôjde do top-right pre adminov)
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
@@ -682,6 +751,12 @@ function UsersManagementApp() {
         onClose: closeRoleEditModal,
         onSave: handleSaveRole,
         loading: loading,
+    }),
+    // NOVÉ: Vykreslenie FirebaseAuthModal
+    React.createElement(FirebaseAuthModal, {
+        show: showFirebaseAuthModal,
+        url: firebaseAuthUrl,
+        onClose: closeFirebaseAuthModal,
     }),
     React.createElement(
       'div',
