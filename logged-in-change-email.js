@@ -2,7 +2,7 @@
 // Tento súbor obsahuje React komponent pre zmenu e-mailovej adresy prihláseného používateľa.
 // Predpokladá, že firebaseConfig, initialAuthToken a appId sú globálne definované v HTML súbore.
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+// Komponent NotificationModal pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -16,7 +16,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
       timerRef.current = setTimeout(() => {
         setShow(false);
         setTimeout(onClose, 500);
-      }, 10000);
+      }, 10000); // Zobraziť správu na 10 sekúnd
     } else {
       setShow(false);
       if (timerRef.current) {
@@ -37,11 +37,11 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   // Dynamické triedy pre farbu pozadia na základe typu správy
   let bgColorClass;
   if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Zelená
+    bgColorClass = 'bg-[#3A8D41]'; // Zelená pre úspech
   } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Červená
+    bgColorClass = 'bg-red-600'; // Červená pre chybu
   } else {
-    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre informácie
   }
 
   return React.createElement(
@@ -50,37 +50,37 @@ function NotificationModal({ message, onClose, type = 'info' }) {
       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
-      style: { pointerEvents: 'none' }
+      style: { pointerEvents: 'none' } // Zakáže interakciu s pozadím
     },
     React.createElement(
       'div',
       {
         className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
+        style: { pointerEvents: 'auto' } // Umožní interakciu so samotnou notifikáciou
       },
       React.createElement('p', { className: 'font-semibold' }, message)
     )
   );
 }
 
-// Main React component for the logged-in-change-email.html page
+// Hlavný React komponent pre stránku logged-in-change-email.html
 function ChangeEmailApp() {
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  const [user, setUser] = React.useState(undefined); // Objekt používateľa z onAuthStateChanged
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  // User Data States
+  // Stavy pre dáta používateľa
   const [currentEmail, setCurrentEmail] = React.useState('');
   const [newEmail, setNewEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
-  // Validation States
+  // Stavy pre validáciu formulára
   const [emailTouched, setEmailTouched] = React.useState(false);
   const [emailError, setEmailError] = React.useState('');
   const [passwordError, setPasswordError] = React.useState('');
@@ -88,7 +88,7 @@ function ChangeEmailApp() {
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // Funkcia na validáciu emailu (presunutá sem)
+  // Funkcia na validáciu e-mailu
   const validateEmail = (email) => {
     const atIndex = email.indexOf('@');
     if (atIndex === -1) return false;
@@ -104,7 +104,7 @@ function ChangeEmailApp() {
     return charsAfterLastDot.length >= 2;
   };
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // Efekt pre inicializáciu Firebase a nastavenie poslucháča autentifikácie (spustí sa iba raz)
   React.useEffect(() => {
     let unsubscribeAuth;
     let firestoreInstance;
@@ -146,7 +146,7 @@ function ChangeEmailApp() {
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("ChangeEmailApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
+        setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
       });
 
       signIn();
@@ -163,7 +163,7 @@ function ChangeEmailApp() {
     }
   }, []);
 
-  // Effect for loading user data from Firestore after Auth and DB are ready
+  // Efekt pre načítanie používateľských dát z Firestore po pripravenosti autentifikácie a databázy
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
@@ -315,7 +315,7 @@ function ChangeEmailApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Effect for updating header link visibility
+  // Efekt pre aktualizáciu viditeľnosti odkazov v hlavičke
   React.useEffect(() => {
     console.log(`ChangeEmailApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
     const authLink = document.getElementById('auth-link');
@@ -340,7 +340,7 @@ function ChangeEmailApp() {
     }
   }, [user]);
 
-  // Handle logout (needed for the header logout button)
+  // Spracovanie odhlásenia (potrebné pre tlačidlo odhlásenia v hlavičke)
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
@@ -363,7 +363,7 @@ function ChangeEmailApp() {
     }
   }, [auth]);
 
-  // Attach logout handler to the button in the header
+  // Pripojenie obsluhy odhlásenia k tlačidlu v hlavičke
   React.useEffect(() => {
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
@@ -376,7 +376,7 @@ function ChangeEmailApp() {
     };
   }, [handleLogout]);
 
-  // Handle for email input change
+  // Obsluha zmeny vstupu e-mailu
   const handleNewEmailChange = (e) => {
     const emailValue = e.target.value;
     setNewEmail(emailValue);
@@ -396,7 +396,7 @@ function ChangeEmailApp() {
     setPasswordError(''); // Vyčisti chybu pri zmene hesla
   };
 
-  // Handle form submission for email change
+  // Obsluha odoslania formulára pre zmenu e-mailu
   const handleSubmitEmailChange = async (e) => {
     e.preventDefault();
 
@@ -459,7 +459,7 @@ function ChangeEmailApp() {
     }
   };
 
-  // Check if form is valid for button disabled state
+  // Kontrola, či je formulár platný pre stav disabled tlačidla
   const isFormValid = validateEmail(newEmail) && newEmail !== currentEmail && password.length >= 6;
 
   // Dynamické triedy pre tlačidlo na základe stavu disabled
@@ -471,7 +471,7 @@ function ChangeEmailApp() {
     }
   `;
 
-  // Display loading state
+  // Zobrazenie stavu načítania
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) { 
         console.log("ChangeEmailApp: Auth je ready a používateľ je null, presmerovávam na login.html");
@@ -577,7 +577,7 @@ function ChangeEmailApp() {
         )
       )
     )
-  );
+  )
 }
 
 // Explicitne sprístupniť komponent globálne
