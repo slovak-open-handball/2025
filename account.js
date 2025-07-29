@@ -114,7 +114,7 @@ function ResetPasswordApp() {
                             setError("Neplatný alebo expirovaný odkaz na resetovanie hesla.");
                             setLoading(false);
                         });
-                } else if (currentMode === 'verifyEmail') {
+                } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
                     // Logika pre overenie e-mailu
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
