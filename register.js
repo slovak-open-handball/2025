@@ -503,7 +503,8 @@ function App() {
         billing: formData.billing,
         role: userRole, // Predvolená rola 'user'
         approved: true,
-        registrationDate: firebase.firestore.FieldValue.serverTimestamp(), // Použitie serverového časového údaja
+        registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp(),
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
