@@ -469,7 +469,7 @@ function ChangeEmailApp() {
       ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
       : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
     }
-  `; // <--- Toto je riadok, ktorý by mal byť 580 alebo blízko neho.
+  `;
 
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
@@ -581,6 +581,4 @@ function ChangeEmailApp() {
 }
 
 // Explicitne sprístupniť komponent globálne
-console.log("ChangeEmailApp: Skript sa chystá sprístupniť komponent globálne."); // DEBUG LOG
 window.ChangeEmailApp = ChangeEmailApp;
-console.log("ChangeEmailApp: Komponent ChangeEmailApp bol sprístupnený globálne."); // DEBUG LOG
