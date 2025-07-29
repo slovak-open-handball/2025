@@ -515,6 +515,7 @@ function ChangeEmailApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Zmeniť e-mail'
         ),
+        // Odstránený riadok s aktuálnym e-mailom
         React.createElement(
             'form',
             { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
@@ -572,6 +573,7 @@ function ChangeEmailApp() {
         )
       )
     )
+  );
 }
 
 // Explicitne sprístupniť komponent globálne
