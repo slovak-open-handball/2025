@@ -766,10 +766,27 @@ function UsersManagementApp() {
     setLoading(true);
     setError('');
 
+    let adminToken = null;
+    let originalAdminUser = auth.currentUser; // Uložíme referenciu na aktuálneho admina
+
     try {
+      // Získame token aktuálneho admina PRED vytvorením nového používateľa
+      if (originalAdminUser) {
+        adminToken = await originalAdminUser.getIdToken();
+        console.log("Admin token získaný:", adminToken);
+      } else {
+        // Táto situácia by sa nemala stať, ak je admin prihlásený
+        setError("Aktuálny administrátor nie je prihlásený. Prosím, prihláste sa znova.");
+        setLoading(false);
+        closeChangeEmailModal();
+        return;
+      }
+
       // 1. Vytvoriť nového používateľa s novým e-mailom v autentifikácii
-      const newUserCredential = await auth.createUserWithEmailAndPassword(newEmail, 'TemporaryPassword123!'); // Použijeme dočasné heslo
+      // Táto operácia prihlási novo vytvoreného používateľa.
+      const newUserCredential = await auth.createUserWithEmailAndPassword(newEmail, 'TemporaryPassword123!');
       const newUid = newUserCredential.user.uid;
+      console.log("Nový používateľ vytvorený s UID:", newUid);
 
       // 2. Skopírovať dáta pôvodného používateľa do nového dokumentu vo Firestore
       const oldUserDocRef = db.collection('users').doc(userId);
@@ -784,7 +801,18 @@ function UsersManagementApp() {
           passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp() // Aktualizovať čas zmeny hesla
         };
         await db.collection('users').doc(newUid).set(newUserData);
-        console.log(`Používateľ ${oldUserData.email} skopírovaný na ${newEmail} vo Firestore.`);
+        console.log(`Používateľ ${oldUserData.email} skopírovaný na ${newEmail} vo Firestore (nový UID: ${newUid}).`);
+
+        // DÔLEŽITÉ: Po createUserWithEmailAndPassword je auth.currentUser teraz novým používateľom.
+        // Musíme odhlásiť tohto nového používateľa a prihlásiť pôvodného administrátora späť.
+
+        // Odhlásenie novo vytvoreného používateľa (ktorý je aktuálne prihlásený)
+        await auth.signOut();
+        console.log("Novo vytvorený používateľ odhlásený.");
+
+        // Opätovné prihlásenie pôvodného administrátora
+        await auth.signInWithCustomToken(adminToken);
+        console.log("Pôvodný administrátor opätovne prihlásený.");
 
         // 3. Aktualizovať notifikačnú správu
         setUserNotificationMessage(`E-mail používateľa ${oldUserData.email} bol zmenený na ${newEmail}. Pôvodný používateľ zostal zachovaný.`, 'success');
@@ -801,6 +829,11 @@ function UsersManagementApp() {
 
       } else {
         setError("Pôvodný používateľský dokument sa nenašiel.");
+        // Opätovné prihlásenie admina aj v prípade, že sa starý dokument nenašiel
+        if (adminToken && !auth.currentUser) { // Skontrolujeme, či je admin stále odhlásený
+            await auth.signInWithCustomToken(adminToken);
+            console.log("Pôvodný administrátor opätovne prihlásený po nenájdení starého dokumentu.");
+        }
       }
 
     } catch (e) {
@@ -809,6 +842,18 @@ function UsersManagementApp() {
         setError("Zadaná e-mailová adresa už existuje.");
       } else {
         setError(`Chyba pri zmene e-mailu: ${e.message}`);
+      }
+      // Zabezpečíme, že admin je opätovne prihlásený aj v prípade chyby
+      if (adminToken && !auth.currentUser) { // Skontrolujeme, či je admin stále odhlásený
+          try {
+              await auth.signInWithCustomToken(adminToken);
+              console.log("Pôvodný administrátor opätovne prihlásený pri chybe.");
+          } catch (reauthError) {
+              console.error("Nepodarilo sa opätovne prihlásiť admina pri chybe:", reauthError);
+              setError(prev => prev + ` Chyba pri opätovnom prihlásení administrátora: ${reauthError.message}`);
+              // Ak opätovné prihlásenie zlyhá, vynútime presmerovanie na prihlasovaciu stránku
+              window.location.href = 'login.html';
+          }
       }
     } finally {
       setLoading(false);
