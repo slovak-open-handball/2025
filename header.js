@@ -389,6 +389,68 @@ function GlobalNotificationHandler() {
           if (docSnapshot.exists) {
             const userData = docSnapshot.data();
             console.log("GNH: Používateľský profil načítaný:", userData);
+
+            // NOVÁ LOGIKA: Odhlásenie, ak sa e-mail v Auth líši od e-mailu vo Firestore
+            if (user.email && userData.email !== user.email) {
+              console.log(`GNH: Detekovaná zmena e-mailu v Auth (${user.email}) oproti Firestore (${userData.email}). Odhlasujem používateľa.`);
+              auth.signOut();
+              window.location.href = 'login.html';
+              return; // Zastav ďalšie spracovanie
+            }
+            // --- KONIEC NOVEJ LOGIKY ---
+
+            // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("GNH: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                console.log("GNH: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return;
+            }
+
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`GNH: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("GNH: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                console.log("GNH: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                console.warn("GNH: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                auth.signOut();
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return;
+            } else {
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+            }
+            // --- KONIEC LOGIKY ODHLÁSENIA ---
+
+            // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("GNH: Používateľ je admin a nie je schválený. Odhlasujem.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return; // Zastav ďalšie spracovanie
+            }
+
             setUserProfileData(userData);
             
             let topRightNotificationsEnabled = true; // Predvolene povolené
@@ -435,7 +497,7 @@ function GlobalNotificationHandler() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user]);
+  }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
   // Effect for listening to new notifications (only for top-right notifications)
   React.useEffect(() => {
@@ -669,6 +731,15 @@ function UsersManagementApp() {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData); // Zmena logu
+
+              // NOVÁ LOGIKA: Odhlásenie, ak sa e-mail v Auth líši od e-mailu vo Firestore
+              if (user.email && userData.email !== user.email) {
+                console.log(`UsersManagementApp: Detekovaná zmena e-mailu v Auth (${user.email}) oproti Firestore (${userData.email}). Odhlasujem používateľa.`);
+                auth.signOut();
+                window.location.href = 'login.html';
+                return; // Zastav ďalšie spracovanie
+              }
+              // --- KONIEC NOVEJ LOGIKY ---
 
               // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
