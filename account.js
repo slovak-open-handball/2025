@@ -1,6 +1,6 @@
-// reset-password.js
+// account.js
 // Tento súbor predpokladá, že Firebase SDK je už načítané a inicializované
-// v reset-password.html.
+// v account.html.
 
 // Pomocná funkcia na získanie URL parametrov
 function getUrlParams() {
@@ -87,7 +87,7 @@ function ResetPasswordApp() {
     React.useEffect(() => {
         try {
             if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
-                setError("Firebase SDK nie je načítané. Skontrolujte reset-password.html.");
+                setError("Firebase SDK nie je načítané. Skontrolujte account.html.");
                 setLoading(false);
                 return;
             }
