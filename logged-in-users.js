@@ -367,45 +367,57 @@ function UsersManagementApp() {
               const userData = docSnapshot.data();
               console.log("UsersManagementApp: Používateľský dokument existuje, dáta:", userData);
 
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
+              // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
+              // Bypasujeme túto kontrolu, ak prebieha zmena e-mailu iného používateľa,
+              // aby sa predišlo nežiaducemu odhláseniu administrátora počas re-autentifikácie.
+              if (!isChangingOtherUserEmail) { // Vykonaj kontrolu len ak neprebieha zmena e-mailu iného používateľa
+                  if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                      console.error("UsersManagementApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                      console.log("UsersManagementApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  }
 
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+                  const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+                  const localStorageKey = `passwordLastChanged_${user.uid}`;
+                  let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+                  console.log(`UsersManagementApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
+                  if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                      console.log("UsersManagementApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                  } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                      console.log("UsersManagementApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(localStorageKey);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                      console.warn("UsersManagementApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(localStorageKey);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  } else {
+                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  }
               } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("UsersManagementApp: Bypasujem kontrolu passwordLastChanged, prebieha zmena e-mailu iného používateľa.");
+                  // Zabezpečte, aby sa localStorage aktualizoval aj keď je kontrola obídená
+                  if (userData.passwordLastChanged && typeof userData.passwordLastChanged.toDate === 'function') {
+                      const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+                      const localStorageKey = `passwordLastChanged_${user.uid}`;
+                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  }
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
@@ -710,7 +722,7 @@ function UsersManagementApp() {
       return;
     }
 
-    // Kontrola, či sa administrátor pokúša zmeniť vlastný e-mail
+    // Kontrola, či sa administrátor pokúša zmeniť vlastnú e-mailovú adresu
     if (auth.currentUser && userId === auth.currentUser.uid) {
       setError("Nemôžete zmeniť vlastnú e-mailovú adresu prostredníctvom tejto funkcie. Použite prosím sekciu 'Môj profil' pre zmenu vlastného e-mailu.");
       setLoading(false);
@@ -774,6 +786,9 @@ function UsersManagementApp() {
         // Opätovné prihlásenie pôvodného administrátora
         await auth.signInWithCustomToken(adminToken);
         console.log("Pôvodný administrátor opätovne prihlásený.");
+
+        // NOVINKA: Krátke oneskorenie pre stabilizáciu stavu Firebase Auth
+        await new Promise(resolve => setTimeout(resolve, 500)); 
 
         // 3. Aktualizovať notifikačnú správu
         if (typeof window.showGlobalNotification === 'function') {
