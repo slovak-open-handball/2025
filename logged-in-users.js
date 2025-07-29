@@ -566,7 +566,7 @@ function UsersManagementApp() {
     // Používame globálne definovaný projectId z firebaseConfig
     const projectId = firebaseConfig.projectId;
     if (projectId) {
-        setFirebaseAuthUrl(`https://console.firebase.google.com/project/${projectId}/authentication/users`);
+        setFirebaseAuthUrl(`https://console.firebase.google.com/project/prihlasovanie-4f3f3/authentication/users`);
         setShowFirebaseAuthModal(true);
     } else {
         setError("Chyba: Project ID pre Firebase Console nie je definované.");
