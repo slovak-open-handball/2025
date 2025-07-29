@@ -560,7 +560,7 @@ function ChangeEmailApp() {
 
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam profilové dáta...';
+        loadingMessage = 'Načítavam...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
