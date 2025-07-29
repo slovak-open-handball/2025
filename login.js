@@ -198,7 +198,7 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 }
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-// const formatToDatetimeLocal = (date) => {
+//const formatToDatetimeLocal = (date) => {
 //  if (!date) return '';
 //  const year = date.getFullYear();
 //  const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -207,6 +207,7 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 //  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 //};
+
 
 // Main React component for the login.html page
 function App() {
@@ -359,8 +360,9 @@ function App() {
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
-                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+                // formatToDatetimeLocal je zakomentovaný, takže ho nebudeme používať
+                setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate().toISOString() : '');
+                setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate().toISOString() : '');
             } else {
                 console.log("Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
