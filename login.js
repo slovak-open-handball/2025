@@ -22,6 +22,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
     // Cesta pre vonkajší obrys oka (bez výplne)
     React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    // Cesta pre šikmú čiaru
     React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
@@ -197,15 +198,15 @@ function ResetPasswordModal({ show, onClose, onSendResetEmail, loading, message,
 }
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 
 // Main React component for the login.html page
@@ -369,7 +370,7 @@ function App() {
             setSettingsLoaded(true);
           }, error => {
             console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            setError(`Chyba pri načítaní nastavení: ${e.message}`);
             setSettingsLoaded(true);
           });
 
@@ -491,71 +492,60 @@ function App() {
       const userDoc = await userDocRef.get(); // Načítame dáta používateľa hneď po prihlásení
 
       if (!userDoc.exists) {
-        // NOVINKA: Ak dokument neexistuje, vytvoríme ho s passwordLastChanged
-        console.log("LoginApp: Používateľský dokument neexistuje, vytváram nový s passwordLastChanged.");
-        await userDocRef.set({
-          email: currentUser.email,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          role: 'user', // Predvolená rola pre nového používateľa
-          approved: true, // Predvolene schválený
-          passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } else {
-        const userData = userDoc.data();
+        setError("Účet sa nenašiel v databáze. Kontaktujte podporu.");
+        await auth.signOut(); // Odhlásiť, ak chýba dokument používateľa
+        setUser(null); // Explicitne nastaviť user na null
+        setLoading(false);
+        return;
+      }
+      const userData = userDoc.data();
 
-        // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený
-        if (userData.role === 'admin' && userData.approved === false) {
-          setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
-          console.log("LoginApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-          
-          // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
-          try {
-            // GOOGLE_APPS_SCRIPT_URL nie je definované v tomto súbore, ak nie je odkomentované
-            // const payload = {
-            //   action: 'sendAdminApprovalReminder',
-            //   email: userData.email,
-            //   firstName: userData.firstName,
-            //   lastName: userData.lastName,
-            //   isAdmin: true
-            // };
-            // console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
-            // const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            //   method: 'POST',
-            //   mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
-            //   headers: {
-            //     'Content-Type': 'application/json',
-            //   },
-            //   body: JSON.stringify(payload)
-            // });
-            // console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
-          } catch (emailError) {
-            console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
-          }
-
-          await auth.signOut(); // Odhlásiť používateľa
-          setUser(null); // Explicitne nastaviť user na null, aby sa predišlo presmerovaniu
-          setLoading(false);
-          return; // Zastav ďalšie spracovanie prihlásenia
+      // NOVÁ KONTROLA: Ak je používateľ admin a nie je schválený
+      if (userData.role === 'admin' && userData.approved === false) {
+        setError("Pre plnú aktiváciu počkajte prosím na schválenie účtu iným administrátorom.");
+        console.log("LoginApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+        
+        // Pokus o odoslanie e-mailu adminovi o potrebe schválenia
+        try {
+          const payload = {
+            action: 'sendAdminApprovalReminder',
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            isAdmin: true
+          };
+          console.log("Odosielanie dát do Apps Script (pripomienka schválenia admina):", payload);
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Dôležité pre obchádzanie CORS, ak Apps Script neodpovedá s CORS hlavičkami
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+          });
+          console.log("Požiadavka na odoslanie e-mailu s pripomienkou schválenia admina odoslaná.");
+        } catch (emailError) {
+          console.error("Chyba pri odosielaní e-mailu s pripomienkou schválenia admina cez Apps Script (chyba fetch):", emailError);
         }
 
-        // Ak používateľ nie je neschválený admin, aktualizuj passwordLastChanged
-        await userDocRef.update({
-          passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
+        await auth.signOut(); // Odhlásiť používateľa
+        setUser(null); // Explicitne nastaviť user na null, aby sa predišlo presmerovaniu
+        setLoading(false);
+        return; // Zastav ďalšie spracovanie prihlásenia
       }
+
+      // Ak používateľ nie je neschválený admin, pokračuj s prihlásením
+      await userDocRef.update({
+        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("Prihlásenie: Timestamp passwordLastChanged aktualizovaný vo Firestore.");
+      
+      // Removed the immediate re-fetch of userDoc to avoid race condition with serverTimestamp()
+      // The logged-in-my-data.js will handle the initial localStorage setup.
 
       // NOVINKA: Nastavíme príznak, že používateľ sa práve prihlásil
       sessionStorage.setItem('justLoggedIn', 'true');
       console.log("Prihlásenie: Príznak 'justLoggedIn' nastavený v sessionStorage.");
-
-      // Nastaviť stav používateľa a notifikačnú správu
-      setUser(prevUser => ({
-        ...prevUser, // Zachová existujúce vlastnosti user objektu
-        uid: currentUser.uid, // Zabezpečiť UID
-        email: currentUser.email // Zabezpečiť email
-        // Ostatné dáta profilu budú načítané v logged-in-my-data.js
-      }));
 
       setUserNotificationMessage("Prihlásenie úspešné! Presmerovanie na profilovú stránku...");
       setError('');
