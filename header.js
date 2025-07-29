@@ -767,7 +767,7 @@ function UsersManagementApp() {
               const localStorageKey = `passwordLastChanged_${user.uid}`;
               let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              console.log(`UsersManagementApp Debug: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`); // Zmena logu
+              console.log(`UsersManagementApp Debug: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
               if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
