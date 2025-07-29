@@ -111,7 +111,7 @@
     </div>
 
     <!-- Načítanie hlavného skriptu pre túto stránku (ChangeNameApp) -->
-    <script src="logged-in-change-name.js"></script>
+    <script src="logged-in-template.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -181,7 +181,7 @@
                 return;
             }
             if (typeof ChangeNameApp === 'undefined') {
-                console.error("Chyba: Komponent ChangeNameApp nie je definovaný. Skontrolujte logged-in-change-name.js.");
+                console.error("Chyba: Komponent ChangeNameApp nie je definovaný. Skontrolujte logged-in-template.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
