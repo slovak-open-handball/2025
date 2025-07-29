@@ -284,7 +284,7 @@ function ChangeEmailApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
             }
             setLoading(false);
             console.log("ChangeEmailApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -481,7 +481,7 @@ function ChangeEmailApp() {
 
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
@@ -513,12 +513,25 @@ function ChangeEmailApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Zmeniť e-mailovú adresu'
+          'Zmeniť e-mail'
         ),
-        // Odstránený riadok s aktuálnym e-mailom
         React.createElement(
             'form',
             { onSubmit: handleSubmitEmailChange, className: 'space-y-4' },
+            // Nové pole pre aktuálnu e-mailovú adresu
+            React.createElement(
+              'div',
+              null,
+              React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'current-email' }, 'Aktuálna e-mailová adresa'),
+              React.createElement('input', {
+                type: 'email',
+                id: 'current-email',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100 cursor-not-allowed',
+                value: currentEmail,
+                disabled: true, // Zablokovaný input
+              })
+            ),
+            // Existujúce pole pre novú e-mailovú adresu
             React.createElement(
               'div',
               null,
@@ -540,6 +553,7 @@ function ChangeEmailApp() {
                 emailError
               )
             ),
+            // Existujúce pole pre aktuálne heslo
             React.createElement(
               'div',
               null,
