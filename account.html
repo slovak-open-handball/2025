@@ -58,28 +58,30 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Global Firebase config and token - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
+    <!-- Global Firebase config and initialization - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
     <script>
         // Použijeme pevne zadané parametre pre Firebase konfiguráciu
-        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
         const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // Uistite sa, že toto je váš správny API kľúč
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Initialize Firebase app only if it hasn't been initialized already
+        // Inicializácia Firebase aplikácie
         if (firebase.apps.length === 0) {
-            firebase.initializeApp(firebaseConfig);
+            window.firebaseApp = firebase.initializeApp(firebaseConfig);
             console.log("account.html: Firebase aplikácia inicializovaná s konfiguráciou:", firebaseConfig);
         } else {
+            window.firebaseApp = firebase.app();
             console.log("account.html: Firebase aplikácia už bola inicializovaná.");
         }
+
+        // Získanie inštancií Auth a Firestore a ich sprístupnenie globálne
+        window.auth = window.firebaseApp.auth();
+        window.db = window.firebaseApp.firestore();
+        console.log("account.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
 
         // Funkcia na získanie URL parametrov pre dynamický názov karty
         function getUrlParams() {
