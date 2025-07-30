@@ -409,7 +409,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
             // ZMENA: Nová cesta pre columnOrder
-            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+            const columnOrderDocRef = db.collection('users').doc(user.uid).doc('columnOrder');
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
@@ -721,7 +721,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
         // ZMENA: Nová cesta pre columnOrder
-        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+        const columnOrderDocRef = db.collection('users').doc(user.uid).doc('columnOrder');
         try {
             await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true }); // Používame merge: true
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
