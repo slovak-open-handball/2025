@@ -162,8 +162,8 @@
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
                     };
-                    // ZMENA: Pripojíme header.js k headerPlaceholder namiesto document.body
-                    headerPlaceholder.appendChild(headerScript); 
+                    // ZMENA: Pripojíme header.js k document.body namiesto headerPlaceholder
+                    document.body.appendChild(headerScript); 
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
