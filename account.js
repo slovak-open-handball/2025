@@ -185,12 +185,15 @@ function ResetPasswordApp() {
                 } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
                     console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // NOVINKA: Najprv skontrolujeme akčný kód, aby sme získali e-mail
+                    // NOVINKA: Najprv skontrolujeme akčný kód, aby sme získali e-mail A UID
                     let targetUserEmail = null;
+                    let targetUserUid = null; // Pridaná premenná pre UID
                     authInstance.checkActionCode(currentOobCode)
                         .then(actionCodeInfo => {
                             targetUserEmail = actionCodeInfo.data.email;
+                            targetUserUid = actionCodeInfo.data.uid; // Získanie UID
                             console.log(`account.js: Email z overovacieho kódu (cez checkActionCode): ${targetUserEmail}`);
+                            console.log(`account.js: UID z overovacieho kódu (cez checkActionCode): ${targetUserUid}`);
 
                             // Až potom aplikujeme akčný kód
                             return authInstance.applyActionCode(currentOobCode);
@@ -200,35 +203,33 @@ function ResetPasswordApp() {
                             
                             // NOVINKA: Pridanie oneskorenia pred pokusom o aktualizáciu Firestore
                             setTimeout(async () => {
-                                if (targetUserEmail && dbInstance) {
+                                if (targetUserUid && targetUserEmail && dbInstance) { // Kontrola, či máme UID aj email
                                     try {
-                                        // Vyhľadáme používateľa vo Firestore podľa e-mailu
-                                        // POZNÁMKA: Toto vyžaduje index na poli 'email' vo Firestore
-                                        const usersRef = dbInstance.collection('users');
-                                        const q = usersRef.where('email', '==', targetUserEmail);
-                                        const querySnapshot = await q.get();
+                                        // Vyhľadáme používateľa vo Firestore priamo pomocou UID
+                                        const userDocRef = dbInstance.collection('users').doc(targetUserUid);
+                                        const docSnap = await userDocRef.get(); // Získame dokument priamo
 
-                                        if (!querySnapshot.empty) {
-                                            const userDoc = querySnapshot.docs[0];
-                                            const userUid = userDoc.id; // Získame UID z ID dokumentu
-                                            console.log(`account.js: Nájdený používateľ vo Firestore s UID: ${userUid}`);
-
-                                            const userDocRef = dbInstance.collection('users').doc(userUid);
+                                        if (docSnap.exists) { // Ak dokument existuje
+                                            console.log(`account.js: Nájdený používateľ vo Firestore s UID: ${targetUserUid}`);
                                             // Aktualizujeme pole 'email' v dokumente používateľa
-                                            // DÔLEŽITÉ: Toto vyžaduje špecifické pravidlo vo Firestore Security Rules
+                                            // Použijeme set s merge: true, aby sa aktualizoval len email a ostatné polia zostali nedotknuté
                                             await userDocRef.set({ email: targetUserEmail }, { merge: true });
                                             console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
                                             setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a aktualizovaná vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
                                         } else {
-                                            console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore.");
-                                            setError("Chyba: Používateľ s overeným e-mailom sa nenašiel vo Firestore. Skúste to prosím znova.");
+                                            // Ak dokument používateľa neexistuje (čo by sa nemalo stať, ak používateľ existuje v Auth)
+                                            console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore pomocou UID. Vytváram nový záznam.");
+                                            // Môžeme voliteľne vytvoriť záznam, ak neexistuje (napr. ak bol používateľ vytvorený len v Auth)
+                                            await userDocRef.set({ email: targetUserEmail, uid: targetUserUid, role: 'user', approved: true, registrationDate: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                                            console.log("account.js: Nový záznam používateľa vytvorený vo Firestore.");
+                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a vytvorený záznam vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
                                         }
                                     } catch (firestoreError) {
-                                        console.error("account.js: Chyba pri aktualizácii Firestore emailu (po vyhľadaní):", firestoreError);
+                                        console.error("account.js: Chyba pri aktualizácii Firestore emailu (po vyhľadaní UID):", firestoreError);
                                         setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
                                     }
                                 } else {
-                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: targetUserEmail nie je dostupný alebo dbInstance nie je dostupná.");
+                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: targetUserUid alebo targetUserEmail nie je dostupný alebo dbInstance nie je dostupná.");
                                     setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
                                 }
                                 setLoading(false);
