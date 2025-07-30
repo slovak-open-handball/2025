@@ -193,7 +193,7 @@ function ResetPasswordApp() {
                             setTimeout(async () => {
                                 let targetUserEmail = null;
                                 try {
-                                    // ZMENA: Správne volanie verifyActionCode cez firebase.auth()
+                                    // Správne volanie verifyActionCode cez firebase.auth()
                                     targetUserEmail = await firebase.auth().verifyActionCode(currentOobCode);
                                     console.log(`account.js: Email z overovacieho kódu: ${targetUserEmail}`);
                                 } catch (e) {
