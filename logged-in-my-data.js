@@ -14,8 +14,8 @@
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 // };
 
-// ZMENA: NotificationModal Component pre zobrazovanie dočasných správ
-function NotificationModal({ message, onClose, type = 'info' }) {
+// ZMENA: NotificationModal Component pre zobrazovanie dočasných správ (teraz presne ako v logged-in-change-name.js)
+function NotificationModal({ message, onClose, type = 'info' }) { // Ponechávam 'type' pre flexibilitu, ale pre úspech bude rovnaká farba
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -49,7 +49,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   // Dynamické triedy pre farbu pozadia na základe typu správy
   let bgColorClass;
   if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Zelená
+    bgColorClass = 'bg-[#3A8D41]'; // Zelená (rovnaká ako v logged-in-change-name.js)
   } else if (type === 'error') {
     bgColorClass = 'bg-red-600'; // Červená
   } else {
@@ -59,8 +59,8 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   return React.createElement(
     'div',
     {
-      // ZMENA: Zvýšený z-index na 999
-      className: `fixed top-0 left-0 right-0 z-[999] flex justify-center p-4 transition-transform duration-500 ease-out ${
+      // ZMENA: Návrat k top-0 a z-50 pre zhodu s logged-in-change-name.js
+      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
       style: { pointerEvents: 'none' }
@@ -238,6 +238,7 @@ function MyDataApp() {
                 userDocRef.update({ email: user.email })
                   .then(async () => { // Zmena na async funkciu
                     console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
+                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu (pre aktuálneho používateľa)
                     setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
 
                     // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
