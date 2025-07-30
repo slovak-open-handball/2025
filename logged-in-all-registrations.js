@@ -184,8 +184,8 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
                                 onChange: () => handleToggleVisibility(col.id),
                             }),
                             React.createElement('span', { className: 'text-gray-700' }, col.label)
-                        ),
-                        React.createElement('span', { className: 'text-gray-500 text-sm' }, col.id)
+                        )
+                        // ODSTRÁNENÉ: React.createElement('span', { className: 'text-gray-500 text-sm' }, col.id)
                     )
                 )
             ),
@@ -795,7 +795,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
-    setColumnOrder(updatedColumns); // Aktualizujeme stav v Reactu
+    // setColumnOrder(updatedColumns); // ODSTRÁNENÉ: Už neaktualizujeme lokálny stav priamo
     if (db && user && user.uid) {
         const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
