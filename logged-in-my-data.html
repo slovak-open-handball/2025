@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Moja zóna</title>
+    <title>SOH 2025 - Moja Zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -184,7 +184,14 @@
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
+                        // NOVINKA: Pridanie poslucháča udalostí pre tlačidlo prepínania menu po načítaní left-menu.js
+                        const menuToggleButton = document.getElementById('menu-toggle-button');
+                        if (menuToggleButton) {
+                            menuToggleButton.addEventListener('click', toggleLeftMenu);
+                            console.log("Poslucháč udalostí pre menu-toggle-button priradený v loadLeftMenu.");
+                        } else {
+                            console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené po načítaní left-menu.js!");
+                        }
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
