@@ -838,7 +838,7 @@ function AddCategoriesApp() {
           'Vytvorenie kategórií' // Hlavný nadpis
         ),
         categories.length === 0 && !loading ? (
-            React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli pridané žiadne kategórie.')
+            React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli vytvorené žiadne kategórie.')
         ) : (
             React.createElement(
                 'div',
