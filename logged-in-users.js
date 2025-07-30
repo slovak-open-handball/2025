@@ -664,7 +664,7 @@ function UsersManagementApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' },
+      { className: 'w-full px-4 mt-20 mb-10 flex justify-center' }, // ZMENA: Pridaný flex justify-center na centrovanie obsahu
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -672,7 +672,7 @@ function UsersManagementApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránená w-full, aby sa prispôsobila obsahu
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Správa používateľov'
         ),
@@ -684,18 +684,18 @@ function UsersManagementApp() {
                 { className: 'overflow-x-auto' }, // Toto zabezpečí posuvník, ak je obsah príliš široký
                 React.createElement(
                     'table',
-                    { className: 'min-w-full bg-white rounded-lg shadow-md' }, // ZMENA: min-w-full zabezpečí, že tabuľka bude vždy minimálne 100% šírky rodiča
+                    { className: 'bg-white rounded-lg shadow-md' , style: { tableLayout: 'auto' }}, // ZMENA: Odstránená min-w-full, pridaný tableLayout: 'auto'
                     React.createElement(
                         'thead',
                         null,
                         React.createElement(
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-2/6' }, 'E-mail'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Meno'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Rola'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left w-1/6' }, 'Schválený'), // ZMENA: Pridaná šírka
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center min-w-[280px]' }, 'Akcie') // ZMENA: Pridaná min-w na th
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left whitespace-nowrap' }, 'E-mail'), // ZMENA: Odstránená šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Meno'), // ZMENA: Odstránená šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Rola'), // ZMENA: Odstránená šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left whitespace-nowrap' }, 'Schválený'), // ZMENA: Odstránená šírka
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center whitespace-nowrap' }, 'Akcie') // ZMENA: Odstránená min-w, pridaný whitespace-nowrap
                         )
                     ),
                     React.createElement(
@@ -706,11 +706,11 @@ function UsersManagementApp() {
                                 'tr',
                                 { key: u.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', {
-                                    className: `py-3 px-6 text-left whitespace-nowrap text-gray-500`, // ZMENA: Odstránený onClick pre zmenu e-mailu iných
+                                    className: `py-3 px-6 text-left whitespace-nowrap text-gray-500`, 
                                 }, u.email),
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, `${u.firstName || ''} ${u.lastName || ''}`),
-                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.role),
-                                React.createElement('td', { className: 'py-3 px-6 text-left' }, u.approved ? 'Áno' : 'Nie'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
