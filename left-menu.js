@@ -117,7 +117,7 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
-            } else if (jsFileName === 'logged-in-email' && typeof ChangeEmailApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-change-email' && typeof ChangeEmailApp !== 'undefined') {
                 rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
@@ -213,6 +213,7 @@ function toggleLeftMenu() {
             mainContentArea.classList.remove('ml-64');
             mainContentArea.classList.add('ml-0'); // Posunieme hlavný obsah úplne doľava
             localStorage.setItem('leftMenuHidden', 'true');
+            console.log("Menu je teraz skryté. leftMenuNav.style.left:", leftMenuNav.style.left);
         } else { // Menu je skryté, teraz ho zobrazíme (posunieme doprava)
             leftMenuNav.style.left = '0px'; // Posunieme menu späť na pôvodnú pozíciu
             menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
@@ -221,9 +222,13 @@ function toggleLeftMenu() {
             mainContentArea.classList.remove('ml-0');
             mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
             localStorage.setItem('leftMenuHidden', 'false');
+            console.log("Menu je teraz zobrazené. leftMenuNav.style.left:", leftMenuNav.style.left);
         }
         // Po zmene stavu menu aktualizujeme farbu ikonky
         highlightActiveMenuItem();
+    } else {
+        console.error("toggleLeftMenu: Niektoré elementy menu neboli nájdené.");
+        console.log("leftMenuNav:", !!leftMenuNav, "menuToggleIcon:", !!menuToggleIcon, "mainContentArea:", !!mainContentArea, "menuTitle:", !!menuTitle, "menuItemsList:", !!menuItemsList);
     }
 }
 
@@ -254,13 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // POSLÚCHÁČ PRE menu-toggle-button JE TERAZ PRIRADENÝ V logged-in-my-data.html PO NAČÍTANÍ left-menu.js
-    // const menuToggleButton = document.getElementById('menu-toggle-button');
-    // if (menuToggleButton) {
-    //     menuToggleButton.addEventListener('click', toggleLeftMenu);
-    //     console.log("Poslucháč udalostí pre menu-toggle-button priradený."); // Debugovací výpis
-    // } else {
-    //     console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené!");
-    // }
+    // Toto je dôležité, pretože zaručuje, že tlačidlo existuje v DOM.
 
     // Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
     // Toto zabezpečí, že DOM a CSS sú plne načítané a pripravené pred aplikovaním tried.
