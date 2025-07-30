@@ -522,7 +522,7 @@ function ChangeEmailApp() {
       // NEAKTUALIZUJEME FIRESTORE HNEĎ! Firestore sa aktualizuje až po overení e-mailu používateľom
       // pomocou synchronizačnej logiky v useEffect, ktorá počúva zmeny v user.email (v logged-in-my-data.js, logged-in-users.js atď.)
 
-      setUserNotificationMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, skontrolujte si schránku a overte e-mail.");
+      setUserNotificationMessage("Overovací e-mail bol odoslaný na novú e-mailovú adresu. Prosím, skontrolujte si soju e-mailovú achránku (vrátane spamu) a overte novú e-mailovú adresu.");
       // Reset formulára po odoslaní
       setPassword('');
 
