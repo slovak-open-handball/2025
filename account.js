@@ -190,6 +190,7 @@ function ResetPasswordApp() {
                     let targetUserUid = null; // Pridaná premenná pre UID
                     authInstance.checkActionCode(currentOobCode)
                         .then(actionCodeInfo => {
+                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo); // NOVÝ LOG
                             targetUserEmail = actionCodeInfo.data.email;
                             targetUserUid = actionCodeInfo.data.uid; // Získanie UID
                             console.log(`account.js: Email z overovacieho kódu (cez checkActionCode): ${targetUserEmail}`);
@@ -203,6 +204,10 @@ function ResetPasswordApp() {
                             
                             // NOVINKA: Pridanie oneskorenia pred pokusom o aktualizáciu Firestore
                             setTimeout(async () => {
+                                console.log("account.js: DEBUG - Inside setTimeout, targetUserUid:", targetUserUid); // NOVÝ LOG
+                                console.log("account.js: DEBUG - Inside setTimeout, targetUserEmail:", targetUserEmail); // NOVÝ LOG
+                                console.log("account.js: DEBUG - Inside setTimeout, dbInstance:", dbInstance); // NOVÝ LOG
+
                                 if (targetUserUid && targetUserEmail && dbInstance) { // Kontrola, či máme UID aj email
                                     try {
                                         // Vyhľadáme používateľa vo Firestore priamo pomocou UID
@@ -227,7 +232,7 @@ function ResetPasswordApp() {
                                         setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
                                     }
                                 } else {
-                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: targetUserUid alebo targetUserEmail nie je dostupný alebo dbInstance nie je dostupná.");
+                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: targetUserUid alebo targetUserEmail nie je dostupný alebo dbInstance nie je dostupná. (Detail: UID:", targetUserUid, ", Email:", targetUserEmail, ", DB:", dbInstance, ")"); // Detailnejší log
                                     setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
                                 }
                                 setLoading(false);
