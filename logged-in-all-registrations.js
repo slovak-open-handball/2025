@@ -828,24 +828,24 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                                 onMouseEnter: () => setHoveredColumn(col.id),
                                 onMouseLeave: () => setHoveredColumn(null)
                             },
-                                React.createElement('div', { className: 'flex items-center whitespace-nowrap justify-between' }, // Zmena na justify-between
+                                React.createElement('div', { className: 'flex flex-col items-center justify-center h-full' }, // ZMENA: flex-col a justify-center
+                                    React.createElement('div', { className: 'flex items-center space-x-1 mb-1' }, // ZMENA: Pridaný mb-1 pre medzeru pod ikonami
+                                        index > 0 && React.createElement('button', { // Šípka doľava
+                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
+                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
+                                        }, '←'),
+                                        React.createElement('button', { 
+                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
+                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
+                                        }, '⚙️'),
+                                        index < columnOrder.length - 1 && React.createElement('button', { // Šípka doprava
+                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
+                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
+                                        }, '→')
+                                    ),
                                     React.createElement('span', { onClick: () => handleSort(col.id) }, // Kliknutie na text pre triedenie
                                         col.label,
                                         currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
-                                    ),
-                                    React.createElement('div', { className: `flex items-center space-x-1 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` }, // Šípky a filter
-                                        index > 0 && React.createElement('button', { // Šípka doľava
-                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
-                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200'
-                                        }, '←'),
-                                        index < columnOrder.length - 1 && React.createElement('button', { // Šípka doprava
-                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
-                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200'
-                                        }, '→'),
-                                        React.createElement('button', { 
-                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
-                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200' 
-                                        }, '⚙️')
                                     )
                                 )
                             ))
