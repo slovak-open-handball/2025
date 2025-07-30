@@ -43,7 +43,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
-      style: { pointerEvents: 'none' }
+      style: { pointerEvents: 'none', zIndex: 1000 } // ZMENA: zIndex nastavený na 1000
     },
     React.createElement(
       'div',
