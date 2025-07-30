@@ -12,6 +12,10 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
+            /* ZMENA: Nastavenie body na flexbox pre centrovanie */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Zabezpečí, že body zaberá celú výšku viewportu */
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
         /* Základné štýly pre modálne okno, ak by sa použilo */
@@ -38,13 +42,21 @@
             width: 90%;
             text-align: center;
         }
+        /* ZMENA: Centrovanie obsahu v main-content-area */
+        #main-content-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center; /* Horizontálne centrovanie */
+            align-items: center;   /* Vertikálne centrovanie */
+            padding: 1rem;
+        }
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
 
     <!-- Global Firebase config and token - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
     <script>
@@ -87,7 +99,7 @@
     <!-- NOVINKA: Element pre globálne notifikácie z header.js -->
     <div id="global-notification-root"></div>
 
-    <div id="main-content-area" class="flex-1 p-4">
+    <div id="main-content-area"> <!-- Odstránené flex-1 p-4, presunuté do style -->
         <div id="root">
             <!-- React aplikácia sa vykreslí tu -->
         </div>
