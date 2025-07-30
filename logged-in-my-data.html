@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Moja Zóna</title>
+    <title>SOH 2025 - Moja zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -95,7 +95,7 @@
     <script>
         const appId = '1:572988314768:web:781e27eb035179fe34b415';
         const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkQcuWJ2ALpb5Z1alZYy4",
+          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
           authDomain: "soh2025-2s0o2h5.firebaseapp.com",
           projectId: "soh2025-2s0o2h5",
           storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
@@ -180,25 +180,11 @@
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
-                    // NOVINKA: Pridanie poslucháča udalostí pre tlačidlo prepínania menu po vložení HTML
-                    const menuToggleButton = document.getElementById('menu-toggle-button');
-                    if (menuToggleButton) {
-                        // Kontrola, či funkcia toggleLeftMenu existuje pred priradením
-                        if (typeof toggleLeftMenu === 'function') {
-                            menuToggleButton.addEventListener('click', toggleLeftMenu);
-                            console.log("Poslucháč udalostí pre menu-toggle-button priradený po vložení HTML.");
-                        } else {
-                            console.error("Funkcia toggleLeftMenu nie je definovaná pri pokuse o priradenie poslucháča!");
-                        }
-                    } else {
-                        console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené po vložení HTML!");
-                    }
-
                     const menuScript = document.createElement('script');
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // Poslucháč udalostí je už priradený vyššie, tu už netreba nič robiť.
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
