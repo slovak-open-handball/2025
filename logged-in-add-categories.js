@@ -193,6 +193,45 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
   );
 }
 
+// ConfirmationModal Component (nový komponent pre potvrdenie zmazania)
+function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
+  if (!show) return null;
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
+      React.createElement('h2', { className: 'text-xl font-bold mb-4 text-center' }, 'Potvrdenie'),
+      React.createElement('p', { className: 'mb-6 text-center' }, message),
+      React.createElement(
+        'div',
+        { className: 'flex justify-center space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onCancel,
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: onConfirm,
+            className: 'bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          loading ? 'Potvrdzujem...' : 'Potvrdiť'
+        )
+      )
+    )
+  );
+}
+
+
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
   const [app, setApp] = React.useState(null);
@@ -209,6 +248,8 @@ function AddCategoriesApp() {
   const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
   const [showEditCategoryModal, setShowEditCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna úpravy
   const [categoryToEdit, setCategoryToEdit] = React.useState(null); // Stav pre kategóriu, ktorá sa má upraviť
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false); // NOVINKA: Stav pre potvrdenie zmazania
+  const [categoryToDelete, setCategoryToDelete] = React.useState(null); // NOVINKA: Kategória na zmazanie
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -568,24 +609,28 @@ function AddCategoriesApp() {
     }
   };
 
-  // Funkcia na zmazanie kategórie
-  const handleDeleteCategory = async (categoryId, categoryName) => {
-    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na zmazanie kategórie.");
-      return;
-    }
+  // Funkcia na zobrazenie potvrdzovacieho modálu pred zmazaním
+  const confirmDeleteCategory = (category) => {
+    setCategoryToDelete(category);
+    setShowConfirmDeleteModal(true);
+  };
 
-    if (!window.confirm(`Naozaj chcete zmazať kategóriu "${categoryName}"? Táto akcia je nevratná.`)) {
-        return; // Ak používateľ zruší, nič nerobíme
+  // Funkcia na zmazanie kategórie (volaná z potvrdzovacieho modálu)
+  const handleDeleteCategory = async () => {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
+      setError("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
+      return;
     }
 
     setLoading(true);
     setError('');
     setUserNotificationMessage('');
+    setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
-      await db.collection('settings').doc('categories').collection('list').doc(categoryId).delete();
-      setUserNotificationMessage(`Kategória "${categoryName}" bola úspešne zmazaná!`);
+      await db.collection('settings').doc('categories').collection('list').doc(categoryToDelete.id).delete();
+      setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
+      setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
       setError(`Chyba pri mazaní kategórie: ${e.message}`);
@@ -648,6 +693,13 @@ function AddCategoriesApp() {
         error: error,
         notificationMessage: userNotificationMessage,
         setNotificationMessage: setUserNotificationMessage // Pre odovzdanie funkcie na reset notifikácie
+    }),
+    React.createElement(ConfirmationModal, { // NOVINKA: ConfirmationModal
+        show: showConfirmDeleteModal,
+        message: categoryToDelete ? `Naozaj chcete zmazať kategóriu "${categoryToDelete.name}"? Táto akcia je nevratná.` : '',
+        onConfirm: handleDeleteCategory,
+        onCancel: () => { setShowConfirmDeleteModal(false); setCategoryToDelete(null); },
+        loading: loading,
     }),
     React.createElement(
       'div',
@@ -712,7 +764,7 @@ function AddCategoriesApp() {
                                         React.createElement(
                                             'button',
                                             {
-                                              onClick: () => handleDeleteCategory(cat.id, cat.name),
+                                              onClick: () => confirmDeleteCategory(cat), // NOVINKA: Voláme confirmDeleteCategory
                                               className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                               disabled: loading,
                                             },
