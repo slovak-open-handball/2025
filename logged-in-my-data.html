@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Moja Zóna</title>
+    <title>SOH 2025 - Moja zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -13,11 +13,10 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            padding-left: 64px; /* Zohľadňuje šírku zbaleného menu */
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -49,7 +48,7 @@
             top: 0;
             left: 0;
             right: 0;
-            z-index: 30;
+            z-index: 30; /* Vyšší z-index pre hlavičku */
         }
         /* Kontajner pre ľavé menu */
         #left-menu-placeholder {
@@ -57,34 +56,33 @@
             top: 64px; /* Pod hlavičkou */
             left: 0;
             height: calc(100vh - 64px); /* Zaberá zvyšok výšky obrazovky */
-            z-index: 25;
+            z-index: 25; /* Vyšší z-index pre ľavé menu */
         }
 
         /* Hlavná oblasť pre obsah React aplikácie */
         #main-content-area {
-            /* Margin-left je teraz riadený priamo v left-menu.js pre posun menu,
-               tu nastavíme len základné paddingy a flexbox vlastnosti */
+            margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            overflow-x: auto;
+            box-sizing: border-box; /* Dôležité pre správne výpočty šírky */
+            display: flex; /* Použijeme flexbox pre centrovanie obsahu */
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
+            overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
+            /* ZMENA: Odstránené position: relative a z-index: 1, aby NotificationModal fungoval správne */
         }
 
         /* Pre mobilné zariadenia */
         @media (max-width: 768px) {
-            body {
-                padding-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-            }
             #main-content-area {
-                margin-left: 0;
-                width: 100%;
-                justify-content: center;
+                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                width: 100%; /* Na mobiloch zaberie celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
                 align-items: flex-start;
             }
         }
+        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
+        /* Tieto štýly sú teraz riadené priamo v header.js komponente NotificationModal */
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -104,8 +102,10 @@
           messagingSenderId: "572988314768",
           appId: "1:572988314768:web:781e27eb035179fe34b415"
         };
+        // ZMENA: Používame __initial_auth_token z prostredia, ak je definovaný
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
+        // Inicializácia Firebase aplikácie globálne
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             try {
                 firebase.initializeApp(firebaseConfig);
@@ -140,6 +140,7 @@
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
+        // Funkcia na načítanie hlavičky
         async function loadHeader() {
             const headerPlaceholder = document.getElementById('header-placeholder');
             if (headerPlaceholder) {
@@ -153,6 +154,7 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
+                        // NOVINKA: Volanie initializeHeaderLogic po načítaní header.js
                         if (typeof initializeHeaderLogic === 'function') {
                             initializeHeaderLogic();
                         }
@@ -160,6 +162,7 @@
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
                     };
+                    // ZMENA: Pripojíme header.js k document.body namiesto headerPlaceholder
                     document.body.appendChild(headerScript); 
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
@@ -167,6 +170,7 @@
             }
         }
 
+        // Funkcia na načítanie ľavého menu
         async function loadLeftMenu() {
             const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
             if (leftMenuPlaceholder) {
@@ -180,7 +184,7 @@
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // Poslucháč udalostí pre menu-toggle-button je teraz priradený priamo v left-menu.js
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
@@ -192,6 +196,7 @@
             }
         }
 
+        // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
             await loadHeader();
             await loadLeftMenu();
