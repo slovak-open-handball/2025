@@ -43,7 +43,7 @@ function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
-      style: { pointerEvents: 'none', zIndex: 10000 } // ZMENA: zIndex nastavený na 10000
+      style: { pointerEvents: 'none', zIndex: 1000 } // ZMENA: zIndex nastavený na 1000
     },
     React.createElement(
       'div',
@@ -613,7 +613,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       const sorted = [...filteredUsers].sort((a, b) => {
           // Find the column definition to get its type
           const columnDef = columnOrder.find(col => col.id === columnId);
-          const type = columnDef ? colDef.type : 'string'; // Default to string if type not found
+          // Log pre diagnostiku:
+          console.log(`handleSort: Sorting by columnId: ${columnId}, Direction: ${direction}`);
+          console.log(`handleSort: Found columnDef for ${columnId}:`, columnDef);
+
+          const type = columnDef ? columnDef.type : 'string'; // Default to string if type not found
 
           let valA, valB;
 
@@ -629,6 +633,10 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
               valA = a[columnId];
               valB = b[columnId];
           }
+
+          // Log hodnoty pred porovnaním
+          console.log(`handleSort: Comparing values for ${columnId} (type: ${type}): A=${valA}, B=${valB}`);
+
 
           // Convert to comparable types based on column type
           if (type === 'date') {
@@ -648,6 +656,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
           }
       });
       setFilteredUsers(sorted);
+      // Log prvých pár zoradených používateľov
+      console.log("handleSort: First 5 sorted users:", sorted.slice(0, 5).map(u => ({ id: u.id, [columnId]: getNestedValue(u, columnId) })));
   };
 
   // Filtering logic
