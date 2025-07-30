@@ -535,7 +535,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
                 setError(`Chyba pri načítaní používateľov: ${error.message}`);
                 setLoading(false); // Stop loading on error
-                setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`);
+                setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
             });
         } catch (e) {
             console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
@@ -778,7 +778,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     }
 
     newColumnOrder.splice(newIndex, 0, columnToMove);
-    setColumnOrder(newColumnOrder);
+    // setColumnOrder(newColumnOrder); // ODSTRÁNENÉ: Už neaktualizujeme lokálny stav priamo
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
