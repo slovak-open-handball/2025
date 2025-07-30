@@ -488,11 +488,11 @@ function ChangeNameApp() {
     }
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
-        loadingMessage = 'Načítavam nastavenia...';
+        loadingMessage = 'Načítavam...';
     } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
-        loadingMessage = 'Načítavam profilové dáta...';
+        loadingMessage = 'Načítavam...';
     } else if (loading) {
-        loadingMessage = 'Ukladám zmeny...';
+        loadingMessage = 'Načítavam...';
     }
 
     return React.createElement(
