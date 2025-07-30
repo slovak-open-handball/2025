@@ -215,7 +215,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   // Nový stav pre dáta používateľského profilu z Firestore
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loadingUsers, setLoadingUsers] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie používateľov
+  const [loadingColumnOrder, setLoadingColumnOrder] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie poradia stĺpcov
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
@@ -265,7 +266,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       if (typeof firebase === 'undefined') {
         console.error("AllRegistrationsApp: Firebase SDK nie je načítané."); // Zmena logu
         setError("Firebase SDK nie je načítané. Skontrolujte logged-in-all-registrations.html."); // Zmena logu
-        setLoading(false);
+        setLoadingUsers(false); // Nastavíme na false, ak Firebase nie je načítané
+        setLoadingColumnOrder(false); // Nastavíme na false, ak Firebase nie je načítané
         return;
       }
 
@@ -306,7 +308,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     } catch (e) {
       console.error("AllRegistrationsApp: Nepodarilo sa inicializovať Firebase:", e); // Zmena logu
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
+      setLoadingUsers(false); // Nastavíme na false aj pri chybe inicializácie
+      setLoadingColumnOrder(false); // Nastavíme na false aj pri chybe inicializácie
     }
   }, []);
 
@@ -326,7 +329,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       if (user) {
         console.log(`AllRegistrationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`); // Zmena logu
         // Nastavíme loading na true, pretože začíname načítavať profilové dáta
-        setLoading(true); // Nastavíme loading na true tu
+        setLoadingUsers(true); // Nastavíme loading na true tu
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
@@ -396,7 +399,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
               }
 
               setUserProfileData(userData); // Aktualizujeme stav userProfileData
-              setLoading(false); // Stop loading po načítaní používateľských dát
+              setLoadingUsers(false); // Stop loading po načítaní používateľských dát
               setError(''); // Vymazať chyby po úspešnom načítaní
 
               // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
@@ -406,11 +409,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                   console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná."); // Zmena logu
               }
 
-              console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
+              console.log("AllRegistrationsApp: Načítanie používateľských dát dokončené, loadingUsers: false"); // Zmena logu
             } else {
               console.warn("AllRegistrationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid); // Zmena logu
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              setLoadingUsers(false); // Zastaví načítavanie, aby sa zobrazila chyba
               setUser(null); // Explicitne nastaviť user na null
               setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
@@ -431,22 +434,22 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
-            setLoading(false); // Stop loading aj pri chybe
-            console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
+            setLoadingUsers(false); // Stop loading aj pri chybe
+            console.log("AllRegistrationsApp: Načítanie používateľských dát zlyhalo, loadingUsers: false"); // Zmena logu
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
         } catch (e) {
           console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e); // Zmena logu
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // Stop loading aj pri chybe
+          setLoadingUsers(false); // Stop loading aj pri chybe
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
       }
     } else if (isAuthReady && user === undefined) {
-        console.log("AllRegistrationsApp: Auth ready, user undefined. Nastavujem loading na false."); // Zmena logu
-        setLoading(false);
+        console.log("AllRegistrationsApp: Auth ready, user undefined. Nastavujem loadingUsers na false."); // Zmena logu
+        setLoadingUsers(false);
     }
 
 
@@ -472,7 +475,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
     if (db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions met: Approved Admin. Proceeding to fetch data.");
-        setLoading(true); // Indicate loading for this section
+        setLoadingUsers(true); // Indicate loading for users
+        setLoadingColumnOrder(true); // Indicate loading for column order
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
@@ -508,16 +512,18 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                     }).catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia stĺpcov (document did not exist):", e));
                     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje, používam predvolené.");
                 }
+                setLoadingColumnOrder(false); // Column order is loaded
             }, error => {
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní poradia stĺpcov z Firestore (onSnapshot error):", error);
                 setError(`Chyba pri načítaní poradia stĺpcov: ${error.message}`);
-                // V prípade chyby použijeme predvolené, aby sa aplikácia nezablokovala
                 setColumnOrder(defaultColumnOrder);
+                setLoadingColumnOrder(false); // Column order loading failed
             });
         } catch (e) {
             console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre poradie stĺpcov (try-catch):", e);
             setError(`Chyba pri inicializácii poradia stĺpcov: ${e.message}`);
             setColumnOrder(defaultColumnOrder);
+            setLoadingColumnOrder(false); // Column order loading failed
         }
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
@@ -529,18 +535,18 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                 }));
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Všetci používatelia načítaní:", usersData.length, "používateľov.");
                 setAllUsers(usersData);
-                setFilteredUsers(usersData); // Na začiatku sú filtrovaní používatelia rovnakí ako všetci
-                setLoading(false); // Only set loading to false after both fetches are attempted/completed
+                setFilteredUsers(usersData);
+                setLoadingUsers(false); // Users are loaded
             }, error => {
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní všetkých používateľov z Firestore:", error);
                 setError(`Chyba pri načítaní používateľov: ${error.message}`);
-                setLoading(false); // Stop loading on error
-                setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
+                setLoadingUsers(false); // Users loading failed
+                setUserNotificationMessage(`Chyba pri načítaní dát: ${error.message}`);
             });
         } catch (e) {
             console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre všetkých používateľov (try-catch):", e);
             setError(`Chyba pri načítaní používateľov: ${e.message}`);
-            setLoading(false); // Stop loading on error
+            setLoadingUsers(false); // Users loading failed
             setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`);
         }
     } else if (isAuthReady && user === null) {
@@ -549,13 +555,15 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] User is not an approved admin, not fetching data. Redirecting to my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
-        setLoading(false);
+        setLoadingUsers(false); // Ensure loading is false if not authorized
+        setLoadingColumnOrder(false); // Ensure loading is false if not authorized
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky.");
-        window.location.href = 'logged-in-my-data.html'; // Ensure redirect happens
+        window.location.href = 'logged-in-my-data.html';
     } else {
         console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Conditions not met for fetching data. Waiting for state updates.");
         // If conditions are not met, ensure loading is false if it's stuck
-        if (loading) setLoading(false);
+        if (loadingUsers) setLoadingUsers(false);
+        if (loadingColumnOrder) setLoadingColumnOrder(false);
     }
 
     return () => {
@@ -735,7 +743,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const handleLogout = React.useCallback(async () => {
     if (!auth) return;
     try {
-      setLoading(true);
+      setLoadingUsers(true); // ZMENA: Používame loadingUsers
+      setLoadingColumnOrder(true); // ZMENA: Používame loadingColumnOrder
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
@@ -745,7 +754,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       console.error("AllRegistrationsApp: Chyba pri odhlásení:", e); // Zmena logu
       setError(`Chyba pri odhlásení: ${e.message}`);
     } finally {
-      setLoading(false);
+      setLoadingUsers(false); // ZMENA: Používame loadingUsers
+      setLoadingColumnOrder(false); // ZMENA: Používame loadingColumnOrder
     }
   }, [auth]);
 
@@ -809,19 +819,14 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
+  if (!isAuthReady || user === undefined || (user && !userProfileData) || loadingUsers || loadingColumnOrder) { // ZMENA: Podmienky pre loading
     if (isAuthReady && user === null) {
         console.log("AllRegistrationsApp: Auth je ready a používateľ je null, presmerovávam na login.html"); // Zmena logu
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
-        loadingMessage = 'Načítavam...';
-    }
-
+    // Simplified loading message as it's now derived from two states
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
