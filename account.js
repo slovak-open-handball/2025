@@ -214,7 +214,24 @@ function ResetPasswordApp() {
                             setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
                             setLoading(false);
                         });
-                } else {
+                } else if (currentMode === 'recoverEmail') { // NOVINKA: Režim pre obnovenie pôvodného e-mailu
+                    console.log("account.js: Režim 'recoverEmail' detekovaný.");
+                    authInstance.applyActionCode(currentOobCode)
+                        .then(() => {
+                            console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
+                            setSuccessMessage("Vaša pôvodná e-mailová adresa bola úspešne obnovená. Budete presmerovaní na prihlasovaciu stránku.");
+                            setLoading(false);
+                            setTimeout(() => {
+                                window.location.href = 'login.html';
+                            }, 3000);
+                        })
+                        .catch(e => {
+                            console.error("account.js: Chyba pri obnovovaní e-mailu (recoverEmail zlyhalo):", e);
+                            setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
+                            setLoading(false);
+                        });
+                }
+                 else {
                     setError("Neplatný režim akcie. Chýbajú parametre.");
                     setLoading(false);
                 }
