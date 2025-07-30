@@ -59,22 +59,25 @@
             firebase.initializeApp(firebaseConfig);
         }
     </script>
-
-    <!-- Načítanie header.js a account.js -->
-    <!-- Header.js by mal obsahovať komponent GlobalNotificationHandler, ktorý sa vykreslí sám -->
-    <script src="header.js"></script>
-    <script src="account.js"></script>
 </head>
 <body class="bg-gray-100">
     <!-- Hlavička a ľavé menu budú načítané dynamicky alebo sú súčasťou iných komponentov -->
     <div id="header-placeholder"></div>
     <div id="left-menu-placeholder"></div>
 
+    <!-- NOVINKA: Element pre globálne notifikácie z header.js -->
+    <div id="global-notification-root"></div>
+
     <div id="main-content-area" class="flex-1 p-4">
         <div id="root">
             <!-- React aplikácia sa vykreslí tu -->
         </div>
     </div>
+
+    <!-- Načítanie header.js a account.js -->
+    <!-- DÔLEŽITÁ ZMENA: header.js sa načítava po DOM elementoch, ktoré potrebuje -->
+    <script src="header.js"></script>
+    <script src="account.js"></script>
 
     <script>
         // Spustíme vykreslenie React aplikácie po načítaní DOM
