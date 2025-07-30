@@ -418,13 +418,13 @@ function MyDataApp() {
     // Zobrazenie rôznych správ podľa stavu načítavania
     let loadingMessage = 'Načítavam...';
     if (!isAuthReady) {
-        loadingMessage = 'Inicializujem autentifikáciu...';
+        loadingMessage = 'Načítavam...';
     } else if (user === undefined) {
-        loadingMessage = 'Čakám na stav používateľa...';
+        loadingMessage = 'Načítavam...';
     } else if (user && !userProfileData) {
-        loadingMessage = 'Načítavam profilové dáta...';
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
-        loadingMessage = 'Prebieha operácia...';
+        loadingMessage = 'Načítavam...';
+    } else if (loading) {
+        loadingMessage = 'Načítavam...';
     }
 
     return React.createElement(
