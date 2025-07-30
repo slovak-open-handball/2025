@@ -154,12 +154,20 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
+                        // NOVINKA: Volanie initializeHeaderLogic() po načítaní header.js
+                        // Ak initializeHeaderLogic existuje v header.js a je globálna
+                        if (typeof initializeHeaderLogic === 'function') {
+                            initializeHeaderLogic();
+                        } else {
+                            console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js.");
+                        }
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
                     };
-                    // ZMENA: Pripojíme header.js k headerPlaceholder namiesto document.body
-                    headerPlaceholder.appendChild(headerScript); 
+                    // ZMENA: Pripojíme header.js k document.body namiesto headerPlaceholder
+                    // Toto by malo zabezpečiť, že header.js beží v globálnom kontexte
+                    document.body.appendChild(headerScript); 
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
