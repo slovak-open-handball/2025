@@ -1,7 +1,10 @@
-// Tento súbor už nenačítava Firebase ani nevykonáva autentifikáciu.
-// Spolieha sa na to, že Firebase je inicializované a používateľ je prihlásený v hlavnej aplikácii.
+// Tento súbor obsahuje logiku pre ľavé navigačné menu.
+// Je navrhnutý tak, aby fungoval nezávisle od hlavnej aplikácie
+// pre prepínanie svojho zbaleného/rozbaleného stavu.
 
 // Funkcia na zvýraznenie aktívnej položky menu
+// Táto funkcia je ponechaná, ak by ju volala hlavná aplikácia pre vizuálnu konzistenciu,
+// ale samotné prepínanie menu na ňu už nezávisí.
 function highlightActiveMenuItem() {
     // Odstránime zvýraznenie a triedy pre neklikateľnosť zo všetkých predtým aktívnych položiek
     const allMenuItems = document.querySelectorAll('#left-menu-nav ul li a'); // Selektor pre odkazy v menu
@@ -18,9 +21,8 @@ function highlightActiveMenuItem() {
     // Nájdeme odkaz v menu, ktorého href atribút končí aktuálnou stránkou
     const activeLink = document.querySelector(`#left-menu-nav ul li a[href$="${currentPage}"]`);
     const menuToggleIcon = document.getElementById('menu-toggle-icon');
-    const leftMenuNav = document.getElementById('left-menu-nav'); // Získame nav element
 
-    if (menuToggleIcon && leftMenuNav) {
+    if (menuToggleIcon) {
         // Vždy nastavíme farbu ikonky na bielu pre lepšiu viditeľnosť na tmavom pozadí menu
         menuToggleIcon.style.color = 'white';
     }
@@ -32,12 +34,11 @@ function highlightActiveMenuItem() {
     }
 }
 
-
 // Funkcia na načítanie obsahu do hlavnej oblasti
 // Táto funkcia by mala byť volaná z hlavnej React aplikácie (MyDataApp)
 // na dynamické načítanie rôznych sub-komponentov/stránok do #root divu.
-// Už nenačítava celé HTML súbory, ale iba ich zodpovedajúce JS súbory s React komponentmi.
-async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js prípony
+// Je ponechaná, pretože ju môže volať hlavná aplikácia.
+async function loadContent(jsFileName) {
     const contentArea = document.getElementById('main-content-area');
     if (!contentArea) {
         console.error("Element s ID 'main-content-area' nebol nájdený.");
@@ -51,20 +52,17 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
     }
 
     // Vyčistíme starý obsah Reactu
-    if (rootElement._reactRootContainer) { // Kontrola existencie React 18 root kontajnera
+    if (rootElement._reactRootContainer) {
         rootElement._reactRootContainer.unmount();
     }
     rootElement.innerHTML = '<div class="flex items-center justify-center h-full text-xl text-gray-700">Načítavam...</div>';
 
     try {
-        // Dynamicky načítať JS súbor s React komponentom
         const scriptElement = document.createElement('script');
         scriptElement.src = `${jsFileName}.js`;
         
-        // Zabezpečíme, aby sa skript načítal len raz
         scriptElement.onload = () => {
             let rootComponent = null;
-            // Určiť, ktorý React komponent sa má vykresliť na základe jsFileName
             if (jsFileName === 'logged-in-my-data' && typeof MyDataApp !== 'undefined') {
                 rootComponent = MyDataApp;
             } else if (jsFileName === 'logged-in-change-name' && typeof ChangeNameApp !== 'undefined') {
@@ -105,11 +103,9 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
             rootElement.innerHTML = `<div class="text-red-500 text-center p-4">Chyba pri načítaní obsahu. Skript ${jsFileName}.js chýba alebo je poškodený.</div>`;
         };
         
-        // Skontrolujte, či skript už neexistuje, aby ste sa vyhli duplicitnému načítaniu
         if (!document.querySelector(`script[src="${jsFileName}.js"]`)) {
-            document.body.appendChild(scriptElement); // Pridajte skript do body
+            document.body.appendChild(scriptElement);
         } else {
-            // Ak skript už existuje, jednoducho vykreslite komponent, ak je už definovaný
             let rootComponent = null;
             if (jsFileName === 'logged-in-my-data' && typeof MyDataApp !== 'undefined') {
                 rootComponent = MyDataApp;
@@ -140,7 +136,7 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
                 const root = ReactDOM.createRoot(rootElement);
                 root.render(React.createElement(rootComponent, null));
-                highlightActiveMenuItem(); // Zvýrazníme aktívnu položku po opätovnom načítaní
+                highlightActiveMenuItem();
             } else {
                 console.warn(`Komponent pre ${jsFileName} nie je definovaný po opätovnom načítaní.`);
                 rootElement.innerHTML = `<div class="text-red-500 text-center p-4">Chyba: Komponent pre stránku "${jsFileName}" sa nenašiel po opätovnom načítaní.</div>`;
@@ -156,7 +152,7 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
 // Táto funkcia je sprístupnená globálne, aby ju mohla volať hlavná aplikácia
 // po načítaní používateľskej roly.
 window.updateMenuItemsVisibility = function(userRole) {
-    console.log("updateMenuItemsVisibility volaná s rolou:", userRole); // Debugovací výpis
+    console.log("updateMenuItemsVisibility volaná s rolou:", userRole);
     const menuItems = {
         'menu-my-data': ['admin', 'user'],
         'menu-change-name': ['admin', 'user'],
@@ -175,130 +171,115 @@ window.updateMenuItemsVisibility = function(userRole) {
     for (const id in menuItems) {
         const element = document.getElementById(id);
         if (element) {
-            // Získame rodičovský <li> element
             const listItem = element.closest('li');
             if (listItem) {
                 if (menuItems[id].includes(userRole)) {
                     listItem.classList.remove('hidden');
-                    console.log(`Zobrazujem: ${id} pre rolu: ${userRole}`); // Debugovací výpis
+                    console.log(`Zobrazujem: ${id} pre rolu: ${userRole}`);
                 } else {
                     listItem.classList.add('hidden');
-                    console.log(`Skrývam: ${id} pre rolu: ${userRole}`); // Debugovací výpis
+                    console.log(`Skrývam: ${id} pre rolu: ${userRole}`);
                 }
             }
         }
     }
-    // Po aktualizácii viditeľnosti menu zvýrazníme aktívnu položku
     highlightActiveMenuItem();
 };
 
-// NOVINKA: Funkcia na prepínanie viditeľnosti ľavého menu
+// Funkcia na prepínanie viditeľnosti ľavého menu
 function toggleLeftMenu() {
-    console.log("toggleLeftMenu function called!"); // Debugovací výpis
+    console.log("toggleLeftMenu function called!");
     const leftMenuNav = document.getElementById('left-menu-nav');
     const menuToggleIcon = document.getElementById('menu-toggle-icon');
-    const mainContentArea = document.getElementById('main-content-area');
-    const menuTitle = leftMenuNav ? leftMenuNav.querySelector('h2') : null; // Získame nadpis "Možnosti"
-    const menuItemsList = document.getElementById('menu-items-list'); // Získame <ul> element
+    const menuTitle = document.getElementById('menu-title');
+    const menuItemsList = document.getElementById('menu-items-list');
+    const bodyElement = document.body; // Získame element body
 
-    if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
-        // Skontrolujeme, či je menu momentálne otvorené (pozícia left: 0px)
-        const isCurrentlyOpen = leftMenuNav.style.left === '0px' || leftMenuNav.style.left === ''; // Prázdny reťazec pre počiatočný stav
+    if (leftMenuNav && menuToggleIcon && menuTitle && menuItemsList && bodyElement) {
+        const isCurrentlyExpanded = leftMenuNav.style.width === '256px' || leftMenuNav.style.width === ''; // Predvolená šírka je 256px
 
-        if (isCurrentlyOpen) { // Menu je otvorené, teraz ho skryjeme (posunieme doľava)
-            leftMenuNav.style.left = '-256px'; // Posunieme menu o celú jeho šírku doľava
-            menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-            // menuItemsList.classList.add('hidden'); // Už neskrývame celý zoznam položiek
-            menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
-            mainContentArea.classList.remove('ml-64');
-            mainContentArea.classList.add('ml-0'); // Posunieme hlavný obsah úplne doľava
-            localStorage.setItem('leftMenuHidden', 'true');
-            console.log("Menu je teraz skryté. leftMenuNav.style.left:", leftMenuNav.style.left);
-        } else { // Menu je skryté, teraz ho zobrazíme (posunieme doprava)
-            leftMenuNav.style.left = '0px'; // Posunieme menu späť na pôvodnú pozíciu
-            menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-            // menuItemsList.classList.remove('hidden'); // Už nezobrazujeme celý zoznam položiek
-            menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
-            mainContentArea.classList.remove('ml-0');
-            mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
-            localStorage.setItem('leftMenuHidden', 'false');
-            console.log("Menu je teraz zobrazené. leftMenuNav.style.left:", leftMenuNav.style.left);
+        if (isCurrentlyExpanded) {
+            // Zbaliť menu
+            leftMenuNav.style.width = '64px';
+            menuTitle.classList.add('hidden');
+            menuItemsList.classList.add('hidden');
+            menuToggleIcon.classList.add('rotate-180'); // Otočiť šípku doprava
+            bodyElement.style.paddingLeft = '64px'; // Upraviť padding body
+            localStorage.setItem('leftMenuState', 'collapsed');
+            console.log("Menu je teraz zbalené. Šírka:", leftMenuNav.style.width, "Body padding-left:", bodyElement.style.paddingLeft);
+        } else {
+            // Rozbaliť menu
+            leftMenuNav.style.width = '256px';
+            menuTitle.classList.remove('hidden');
+            menuItemsList.classList.remove('hidden');
+            menuToggleIcon.classList.remove('rotate-180'); // Otočiť šípku doľava
+            bodyElement.style.paddingLeft = '256px'; // Upraviť padding body
+            localStorage.setItem('leftMenuState', 'expanded');
+            console.log("Menu je teraz rozbalené. Šírka:", leftMenuNav.style.width, "Body padding-left:", bodyElement.style.paddingLeft);
         }
-        // Po zmene stavu menu aktualizujeme farbu ikonky
-        highlightActiveMenuItem();
     } else {
-        console.error("toggleLeftMenu: Niektoré elementy menu neboli nájdené.");
-        console.log("leftMenuNav:", !!leftMenuNav, "menuToggleIcon:", !!menuToggleIcon, "mainContentArea:", !!mainContentArea, "menuTitle:", !!menuTitle, "menuItemsList:", !!menuItemsList);
+        console.error("toggleLeftMenu: Niektoré elementy menu neboli nájdené pre prepínanie.");
+        console.log("leftMenuNav:", !!leftMenuNav, "menuToggleIcon:", !!menuToggleIcon, "menuTitle:", !!menuTitle, "menuItemsList:", !!menuItemsList, "bodyElement:", !!bodyElement);
     }
 }
 
-// Spracovanie kliknutí na odkazy v menu
+// Inicializácia stavu menu pri načítaní DOM
 document.addEventListener('DOMContentLoaded', () => {
-    const menuLinks = document.querySelectorAll('#left-menu-nav ul li a'); // Presnejší selektor
-    menuLinks.forEach(link => {
-        link.addEventListener('click', (event) => {
-            // Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
-            if (link.classList.contains('bg-blue-600')) {
-                event.preventDefault();
-                console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
-                return; // Ukončíme funkciu, aby sa nenačítal obsah
-            }
+    const leftMenuNav = document.getElementById('left-menu-nav');
+    const menuToggleIcon = document.getElementById('menu-toggle-icon');
+    const menuTitle = document.getElementById('menu-title');
+    const menuItemsList = document.getElementById('menu-items-list');
+    const menuToggleButton = document.getElementById('menu-toggle-button');
+    const bodyElement = document.body;
 
-            event.preventDefault(); // Zabrániť predvolenému správaniu odkazu
-            const href = link.getAttribute('href');
-            // Získame len názov súboru bez .html pre loadContent
-            const jsFileName = href.replace('.html', '');
-            
-            // Voláme globálnu funkciu loadContent
-            if (typeof loadContent === 'function') {
-                loadContent(jsFileName); 
-            } else {
-                console.error("loadContent funkcia nie je definovaná.");
-            }
-        });
-    });
+    if (leftMenuNav && menuToggleIcon && menuTitle && menuItemsList && menuToggleButton && bodyElement) {
+        // Priradenie poslucháča udalostí pre tlačidlo prepínania menu
+        menuToggleButton.addEventListener('click', toggleLeftMenu);
+        console.log("Poslucháč udalostí pre menu-toggle-button priradený.");
 
-    // POSLÚCHÁČ PRE menu-toggle-button JE TERAZ PRIRADENÝ V logged-in-my-data.html PO NAČÍTANÍ left-menu.js
-    // Toto je dôležité, pretože zaručuje, že tlačidlo existuje v DOM.
-
-    // Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
-    // Toto zabezpečí, že DOM a CSS sú plne načítané a pripravené pred aplikovaním tried.
-    window.addEventListener('load', () => {
-        const isMenuHidden = localStorage.getItem('leftMenuHidden') === 'true';
-        const leftMenuNav = document.getElementById('left-menu-nav');
-        const menuToggleIcon = document.getElementById('menu-toggle-icon');
-        const mainContentArea = document.getElementById('main-content-area');
-        const menuTitle = leftMenuNav ? leftMenuNav.querySelector('h2') : null;
-        // const menuItemsList = document.getElementById('menu-items-list'); // Už nepotrebujeme pristupovať k celému zoznamu tu
-
-        if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle) { // Odstránený menuItemsList z podmienky
-            // Odstránime prechodné triedy, aby sa stav aplikoval okamžite pri načítaní
-            leftMenuNav.classList.remove('transition-all', 'duration-300', 'ease-in-out');
-
-            if (isMenuHidden) {
-                leftMenuNav.style.left = '-256px'; // Nastavíme počiatočnú pozíciu na skrytú (celé menu)
-                menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-                menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
-                mainContentArea.classList.remove('ml-64');
-                mainContentArea.classList.add('ml-0'); // Posunieme hlavný obsah úplne doľava
-            } else {
-                leftMenuNav.style.left = '0px'; // Nastavíme počiatočnú pozíciu na zobrazenú
-                menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-                menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
-                mainContentArea.classList.remove('ml-0');
-                mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
-            }
-
-            // Po aplikovaní stavu môžeme vrátiť prechodné triedy
-            // Použijeme setTimeout, aby sa triedy pridali až po vykonaní zmien DOM a umožnili animácie pri ďalších kliknutiach
-            setTimeout(() => {
-                leftMenuNav.classList.add('transition-all', 'duration-300', 'ease-in-out');
-            }, 0);
+        // Načítanie stavu z localStorage
+        const savedMenuState = localStorage.getItem('leftMenuState');
+        if (savedMenuState === 'collapsed') {
+            leftMenuNav.style.width = '64px';
+            menuTitle.classList.add('hidden');
+            menuItemsList.classList.add('hidden');
+            menuToggleIcon.classList.add('rotate-180');
+            bodyElement.style.paddingLeft = '64px'; // Nastaviť padding body pri zbalenom stave
+            console.log("Menu inicializované ako zbalené z localStorage.");
+        } else {
+            leftMenuNav.style.width = '256px';
+            menuTitle.classList.remove('hidden');
+            menuItemsList.classList.remove('hidden');
+            menuToggleIcon.classList.remove('rotate-180');
+            bodyElement.style.paddingLeft = '256px'; // Nastaviť padding body pri rozbalenom stave
+            console.log("Menu inicializované ako rozbalené (predvolené alebo z localStorage).");
         }
-        // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky
-        highlightActiveMenuItem();
-    });
+    } else {
+        console.error("DOMContentLoaded: Niektoré elementy menu neboli nájdené pre inicializáciu.");
+        console.log("leftMenuNav:", !!leftMenuNav, "menuToggleIcon:", !!menuToggleIcon, "menuTitle:", !!menuTitle, "menuItemsList:", !!menuItemsList, "menuToggleButton:", !!menuToggleButton, "bodyElement:", !!bodyElement);
+    }
+    highlightActiveMenuItem(); // Zvýrazníme aktívnu položku pri prvom načítaní
+});
 
-    // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky (pre prípad, že load listener sa spustí neskôr)
-    highlightActiveMenuItem();
+// Spracovanie kliknutí na odkazy v menu (ak sa menu rozbalí/zbalí, stále by mali fungovať)
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('#left-menu-nav ul li a');
+    if (link) {
+        // Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
+        if (link.classList.contains('bg-blue-600')) {
+            event.preventDefault();
+            console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
+            return;
+        }
+
+        event.preventDefault();
+        const href = link.getAttribute('href');
+        const jsFileName = href.replace('.html', '');
+        
+        if (typeof loadContent === 'function') {
+            loadContent(jsFileName);
+        } else {
+            console.error("loadContent funkcia nie je definovaná.");
+        }
+    }
 });
