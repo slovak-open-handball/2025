@@ -297,6 +297,12 @@ function GlobalNotificationHandler() {
   const [displayTopRightNotificationsEnabled, setDisplayTopRightNotificationsEnabled] = React.useState(true); // Získané z userProfileData, pre top-right
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
+  // NOVINKA: Stav pre existenciu kategórií
+  const [categoriesExist, setCategoriesExist] = React.useState(true);
+  // NOVINKA: Stavy pre dátumy registrácie
+  const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
+  const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
+
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
   // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
   React.useEffect(() => {
@@ -437,6 +443,58 @@ function GlobalNotificationHandler() {
     };
   }, [isAuthReady, db, user]);
 
+  // NOVINKA: Effect pre načítanie kategórií a dátumov registrácie
+  React.useEffect(() => {
+    let unsubscribeCategories;
+    let unsubscribeRegistrationSettings;
+
+    if (db) {
+      // Načítanie kategórií
+      const categoriesDocRef = db.collection('settings').doc('categories');
+      unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => {
+        if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+          setCategoriesExist(true);
+          console.log("GNH: Kategórie existujú.");
+        } else {
+          setCategoriesExist(false);
+          console.log("GNH: Žiadne kategórie neexistujú.");
+        }
+      }, error => {
+        console.error("GNH: Chyba pri načítaní kategórií:", error);
+        setCategoriesExist(false); // V prípade chyby predpokladáme, že neexistujú
+      });
+
+      // Načítanie dátumov registrácie
+      const registrationDocRef = db.collection('settings').doc('registration');
+      unsubscribeRegistrationSettings = registrationDocRef.onSnapshot(docSnapshot => {
+        if (docSnapshot.exists) {
+          const data = docSnapshot.data();
+          setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate() : null);
+          setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate() : null);
+          console.log("GNH: Dátumy registrácie načítané.");
+        } else {
+          setRegistrationStartDate(null);
+          setRegistrationEndDate(null);
+          console.log("GNH: Dátumy registrácie neexistujú.");
+        }
+      }, error => {
+        console.error("GNH: Chyba pri načítaní dátumov registrácie:", error);
+        setRegistrationStartDate(null);
+        setRegistrationEndDate(null);
+      });
+    }
+
+    return () => {
+      if (unsubscribeCategories) {
+        unsubscribeCategories();
+      }
+      if (unsubscribeRegistrationSettings) {
+        unsubscribeRegistrationSettings();
+      }
+    };
+  }, [db]);
+
+
   // Effect for listening to new notifications (only for top-right notifications)
   React.useEffect(() => {
     let unsubscribeNotifications;
@@ -518,6 +576,29 @@ function GlobalNotificationHandler() {
       }
     };
   }, [db, user, userProfileData, lastNotificationTimestamp, displayTopRightNotificationsEnabled]); // Závisí aj od lastNotificationTimestamp a displayTopRightNotificationsEnabled
+
+  // NOVINKA: Effect pre aktualizáciu viditeľnosti registra-link
+  React.useEffect(() => {
+    const registerLink = document.getElementById('register-link');
+    if (!registerLink) return;
+
+    const now = new Date();
+    const isRegistrationPeriod = (registrationStartDate && now >= registrationStartDate) &&
+                                 (registrationEndDate ? now <= registrationEndDate : true);
+    const isBeforeRegistration = (registrationStartDate && now < registrationStartDate);
+
+    // Podmienka pre zobrazenie "Registrácia na turnaj"
+    // Zobrazí sa, ak:
+    // 1. Existujú kategórie
+    // 2. A (je pred začiatkom registrácie ALEBO je v období registrácie)
+    if (categoriesExist && (isBeforeRegistration || isRegistrationPeriod)) {
+      registerLink.classList.remove('hidden');
+      console.log("GNH: 'Registrácia na turnaj' je zobrazená.");
+    } else {
+      registerLink.classList.add('hidden');
+      console.log("GNH: 'Registrácia na turnaj' je skrytá.");
+    }
+  }, [categoriesExist, registrationStartDate, registrationEndDate, user]); // Závislosti pre prepočet
 
   return React.createElement(
     React.Fragment,
@@ -754,7 +835,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
@@ -791,7 +872,7 @@ function UsersManagementApp() {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document = document.getElementById('register-link');
+    const registerLink = document.getElementById('register-link');
 
     if (authLink) {
       if (user) {
@@ -804,8 +885,9 @@ function UsersManagementApp() {
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
+        // registerLink sa bude riadiť logikou v GlobalNotificationHandler
+        // registerLink && registerLink.classList.remove('hidden'); 
+        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
       }
     }
   }, [user]);
@@ -865,7 +947,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
-          setError(`Chyba pri načítaní používateľov: ${e.message}`);
+          setError(`Chyba pri načítaní používateľov: ${error.message}`);
           setLoading(false);
         });
       } catch (e) {
