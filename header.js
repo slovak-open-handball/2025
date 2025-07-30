@@ -616,9 +616,10 @@ function GlobalNotificationHandler() {
 
     // Podmienka pre zobrazenie "Registrácia na turnaj"
     // Zobrazí sa, ak:
-    // 1. Existujú kategórie (categoriesExist je true)
-    // 2. A (je pred začiatkom registrácie ALEBO je v období registrácie)
-    if (categoriesExist && (isBeforeRegistration || isRegistrationPeriod)) {
+    // 1. Používateľ NIE JE prihlásený (user === null)
+    // 2. Existujú kategórie (categoriesExist je true)
+    // 3. A (je pred začiatkom registrácie ALEBO je v období registrácie)
+    if (user === null && categoriesExist && (isBeforeRegistration || isRegistrationPeriod)) {
       registerLink.classList.remove('hidden');
       console.log("GNH: 'Registrácia na turnaj' je zobrazená.");
     } else {
@@ -1271,21 +1272,20 @@ function UsersManagementApp() {
                                             React.createElement(
                                                 'button',
                                                 {
+                                                  onClick: () => handleToggleAdminApproval(u), // ZMENA: Toto tlačidlo je teraz vždy pre schválenie/odobratie prístupu
+                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
+                                                  disabled: loading,
+                                                },
+                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
+                                            ),
+                                            React.createElement(
+                                                'button',
+                                                {
                                                   onClick: () => openRoleEditModal(u),
                                                   className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                                   disabled: loading,
                                                 },
                                                 'Upraviť rolu'
-                                            ),
-                                            // NOVINKA: Tlačidlo na schválenie/odobratie prístupu pre adminov
-                                            u.role === 'admin' && React.createElement(
-                                                'button',
-                                                {
-                                                  onClick: () => handleToggleAdminApproval(u),
-                                                  className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
-                                                  disabled: loading,
-                                                },
-                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
                                             ),
                                             React.createElement(
                                                 'button',
