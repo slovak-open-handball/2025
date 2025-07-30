@@ -620,9 +620,9 @@ function AddCategoriesApp() {
       setUserNotificationMessage("Kategória úspešne pridaná!");
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
-      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
-      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
-      await sendAdminNotification(`Nová kategória "${trimmedCategoryName}" bola vytvorená používateľom ${userName}.`);
+      // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
+      const userEmail = user.email;
+      await sendAdminNotification(`Používateľ ${userEmail} vytvoril kategóriu "${trimmedCategoryName}".`);
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
@@ -676,9 +676,9 @@ function AddCategoriesApp() {
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
 
-      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
-      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
-      await sendAdminNotification(`Kategória "${originalCategoryName}" bola premenovaná na "${trimmedNewName}" používateľom ${userName}.`);
+      // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
+      const userEmail = user.email;
+      await sendAdminNotification(`Používateľ ${userEmail} upravil názov kategórie "${originalCategoryName}" na nový názov kategórie "${trimmedNewName}".`);
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
@@ -718,9 +718,9 @@ function AddCategoriesApp() {
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
-      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
-      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
-      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná používateľom ${userName}.`);
+      // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
+      const userEmail = user.email;
+      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná používateľom ${userEmail}.`);
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
@@ -739,7 +739,7 @@ function AddCategoriesApp() {
     }
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
