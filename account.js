@@ -217,12 +217,10 @@ function ResetPasswordApp() {
                                             console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
                                             setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a aktualizovaná vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
                                         } else {
-                                            // Ak dokument používateľa neexistuje (čo by sa nemalo stať, ak používateľ existuje v Auth)
-                                            console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore pomocou UID. Vytváram nový záznam.");
-                                            // Môžeme voliteľne vytvoriť záznam, ak neexistuje (napr. ak bol používateľ vytvorený len v Auth)
-                                            await userDocRef.set({ email: targetUserEmail, uid: targetUserUid, role: 'user', approved: true, registrationDate: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-                                            console.log("account.js: Nový záznam používateľa vytvorený vo Firestore.");
-                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a vytvorený záznam vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
+                                            // Ak dokument používateľa neexistuje, NEVYTVÁRAME HO TU, aby sme sa vyhli chybám oprávnení.
+                                            // Vytvorenie záznamu vo Firestore by sa malo udiať pri prvom prihlásení používateľa.
+                                            console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore pomocou UID. Pokračujem v presmerovaní.");
+                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
                                         }
                                     } catch (firestoreError) {
                                         console.error("account.js: Chyba pri aktualizácii Firestore emailu (po vyhľadaní UID):", firestoreError);
