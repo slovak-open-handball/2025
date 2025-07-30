@@ -271,6 +271,14 @@ function MyDataApp() {
                   console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
               }
 
+              // NOVINKA: Volanie updateHeaderLinks z header.js
+              if (typeof updateHeaderLinks === 'function') {
+                  updateHeaderLinks(user, null); // Predpokladáme, že isRegistrationOpenStatus nie je relevantný tu
+              } else {
+                  console.warn("MyDataApp: Funkcia updateHeaderLinks nie je definovaná v header.js.");
+              }
+
+
               console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
