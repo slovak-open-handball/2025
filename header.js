@@ -564,7 +564,7 @@ try {
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
   // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
-  if (window.location.pathname.includes('logged-in-users.html')) {
+  if (!window.location.pathname.includes('logged-in-users.html')) {
     console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
