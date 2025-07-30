@@ -313,4 +313,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky (pre prípad, že load listener sa spustí neskôr)
     highlightActiveMenuItem();
-}
+})
