@@ -456,7 +456,8 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie.");
       setLoading(true);
       try {
-        unsubscribeCategories = db.collection('settings').doc('categories').orderBy('createdAt').onSnapshot(snapshot => {
+        // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+        unsubscribeCategories = db.collection('settings').collection('categories').orderBy('createdAt').onSnapshot(snapshot => {
           const fetchedCategories = [];
           snapshot.forEach(doc => {
             fetchedCategories.push({ id: doc.id, ...doc.data() });
@@ -560,7 +561,8 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie
-      const categoriesRef = db.collection('settings').doc('categories');
+      // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+      const categoriesRef = db.collection('settings').collection('categories');
       const existingCategorySnapshot = await categoriesRef.where('name', '==', categoryName.trim()).get();
 
       if (!existingCategorySnapshot.empty) {
@@ -569,7 +571,7 @@ function AddCategoriesApp() {
         return;
       }
 
-      // Ukladanie do kolekcie settings/categories/list
+      // Ukladanie do kolekcie settings/categories
       await categoriesRef.add({
         name: categoryName.trim(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -603,7 +605,8 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
-      const categoriesRef = db.collection('settings').doc('categories');
+      // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+      const categoriesRef = db.collection('settings').collection('categories');
       const existingCategorySnapshot = await categoriesRef
         .where('name', '==', newName.trim())
         .get();
@@ -615,7 +618,8 @@ function AddCategoriesApp() {
         return;
       }
 
-      await db.collection('settings').doc('categories').doc(categoryId).update({
+      // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+      await db.collection('settings').collection('categories').doc(categoryId).update({
         name: newName.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: user.uid,
@@ -651,7 +655,8 @@ function AddCategoriesApp() {
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
-      await db.collection('settings').doc('categories').doc(categoryToDelete.id).delete();
+      // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+      await db.collection('settings').collection('categories').doc(categoryToDelete.id).delete();
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
     } catch (e) {
