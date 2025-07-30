@@ -530,7 +530,7 @@ function ChangeEmailApp() {
       } else if (e.code === 'auth/email-already-in-use') {
         errorMessage = "Táto e-mailová adresa je už používaná iným účtom.";
       } else {
-        errorMessage = `Chyba: ${e.message}`;
+        errorMessage = `Chyba`;
       }
       setError(errorMessage);
     } finally {
