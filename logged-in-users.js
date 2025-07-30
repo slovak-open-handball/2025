@@ -483,7 +483,7 @@ function UsersManagementApp() {
       // ZMENA: Upravené znenie správy pre odobratie prístupu
       const messageForNotification = newApprovedStatus
         ? `Používateľ ${userToToggle.email} bol schválený.`
-        : `Používateľovi ${userToToggle.email} bol odobratý prístup.`;
+        : `Používateľovi ${userToToggle.email} bol odobratý prístup.`; // ZMENA TU
 
       setUserNotificationMessage(messageForNotification, 'success');
 
@@ -717,7 +717,7 @@ function UsersManagementApp() {
                                                   className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
-                                                u.approved ? 'Schváliť' : 'Odobrať prístup' // ZMENA: Zmenené poradie textu pre tlačidlo
+                                                u.approved ? 'Odobrať prístup' : 'Schváliť' // ZMENA TU
                                             ),
                                             React.createElement(
                                                 'button',
