@@ -778,7 +778,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     }
 
     newColumnOrder.splice(newIndex, 0, columnToMove);
-    // setColumnOrder(newColumnOrder); // ODSTRÁNENÉ: Už neaktualizujeme lokálny stav priamo
+    setColumnOrder(newColumnOrder); // ZMENA: Okamžitá aktualizácia lokálneho stavu
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
@@ -795,7 +795,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
   const handleSaveColumnVisibility = async (updatedColumns) => {
-    // setColumnOrder(updatedColumns); // ODSTRÁNENÉ: Už neaktualizujeme lokálny stav priamo
+    setColumnOrder(updatedColumns); // ZMENA: Okamžitá aktualizácia lokálneho stavu
     if (db && user && user.uid) {
         const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
