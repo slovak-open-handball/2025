@@ -199,7 +199,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50' },
     React.createElement(
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
@@ -559,8 +559,18 @@ function AddCategoriesApp() {
     setUserNotificationMessage('');
 
     try {
+      // NOVINKA: Kontrola duplicity názvu kategórie
+      const categoriesRef = db.collection('settings').doc('categories').collection('list');
+      const existingCategorySnapshot = await categoriesRef.where('name', '==', categoryName.trim()).get();
+
+      if (!existingCategorySnapshot.empty) {
+        setError(`Kategória s názvom "${categoryName.trim()}" už existuje. Zvoľte iný názov.`);
+        setLoading(false);
+        return;
+      }
+
       // Ukladanie do kolekcie settings/categories/list
-      await db.collection('settings').doc('categories').collection('list').add({
+      await categoriesRef.add({
         name: categoryName.trim(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         createdBy: user.uid,
@@ -592,6 +602,19 @@ function AddCategoriesApp() {
     setUserNotificationMessage('');
 
     try {
+      // NOVINKA: Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
+      const categoriesRef = db.collection('settings').doc('categories').collection('list');
+      const existingCategorySnapshot = await categoriesRef
+        .where('name', '==', newName.trim())
+        .get();
+
+      // Ak nájdeme kategóriu s rovnakým názvom, a jej ID nie je rovnaké ako ID upravovanej kategórie
+      if (!existingCategorySnapshot.empty && existingCategorySnapshot.docs[0].id !== categoryId) {
+        setError(`Kategória s názvom "${newName.trim()}" už existuje. Zvoľte iný názov.`);
+        setLoading(false);
+        return;
+      }
+
       await db.collection('settings').doc('categories').collection('list').doc(categoryId).update({
         name: newName.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
