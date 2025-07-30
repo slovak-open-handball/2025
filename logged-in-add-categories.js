@@ -451,8 +451,8 @@ function AddCategoriesApp() {
 
   // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
-    if (!db) return null; // appId už nie je potrebné pre túto cestu
-    // ZMENA: Správna cesta je teraz: db.collection('settings').doc('categories')
+    if (!db) return null; 
+    // Správna cesta: db.collection('settings').doc('categories')
     return db.collection('settings').doc('categories');
   }, [db]);
 
@@ -499,7 +499,7 @@ function AddCategoriesApp() {
         unsubscribeCategories();
       }
     };
-  }, [db, userProfileData, getCategoriesDocRef]); // appId odstránené zo závislostí
+  }, [db, userProfileData, getCategoriesDocRef]);
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -583,7 +583,8 @@ function AddCategoriesApp() {
       setError("Nemáte oprávnenie na pridanie kategórie.");
       return;
     }
-    if (categoryName.trim() === '') {
+    const trimmedCategoryName = categoryName.trim();
+    if (trimmedCategoryName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
       return;
     }
@@ -601,23 +602,27 @@ function AddCategoriesApp() {
       const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
-      if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === categoryName.trim().toLowerCase())) {
-        setError(`Kategória s názvom "${categoryName.trim()}" už existuje. Zvoľte iný názov.`);
+      if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
+        setError(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
         setLoading(false);
         return;
       }
 
-      const newCategoryId = db.collection('settings').doc().id; // Generuje unikátne ID pre pole (key)
+      // Generujeme náhodné ID pre názov poľa
+      const newFieldId = db.collection('settings').doc().id; 
 
       // Používame set s merge: true, aby sa dokument vytvoril, ak neexistuje, alebo aktualizoval
-      // a pridalo sa nové pole s názvom kategórie
+      // a pridalo sa nové pole s náhodným ID ako názvom a názvom kategórie ako hodnotou
       await categoriesDocRef.set({
-        [newCategoryId]: categoryName.trim()
+        [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
       setUserNotificationMessage("Kategória úspešne pridaná!");
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
-      await sendAdminNotification(`Nová kategória "${categoryName.trim()}" bola vytvorená.`);
+
+      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
+      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
+      await sendAdminNotification(`Nová kategória "${trimmedCategoryName}" bola vytvorená používateľom ${userName}.`);
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
@@ -633,7 +638,8 @@ function AddCategoriesApp() {
       setError("Nemáte oprávnenie na úpravu kategórie.");
       return;
     }
-    if (newName.trim() === '') {
+    const trimmedNewName = newName.trim();
+    if (trimmedNewName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
       return;
     }
@@ -651,20 +657,29 @@ function AddCategoriesApp() {
       const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
-      if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === newName.trim().toLowerCase() && id !== categoryId)) {
-        setError(`Kategória s názvom "${newName.trim()}" už existuje. Zvoľte iný názov.`);
+      // categoryId je tu náhodné ID, newName je nová hodnota
+      if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
+        setError(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
         setLoading(false);
         return;
       }
 
+      // Získame pôvodný názov kategórie pre notifikáciu
+      const originalCategoryName = currentCategoriesData[categoryId];
+
       // Aktualizujeme konkrétne pole v dokumente
       await categoriesDocRef.update({
-        [categoryId]: newName.trim()
+        [categoryId]: trimmedNewName
       });
 
       setUserNotificationMessage("Kategória úspešne aktualizovaná!");
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
+
+      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
+      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
+      await sendAdminNotification(`Kategória "${originalCategoryName}" bola premenovaná na "${trimmedNewName}" používateľom ${userName}.`);
+
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
       setError(`Chyba pri aktualizácii kategórie: ${e.message}`);
@@ -702,7 +717,10 @@ function AddCategoriesApp() {
 
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
-      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná.`);
+
+      // NOVINKA: Odoslanie notifikácie administrátorom s menom používateľa
+      const userName = userProfileData.firstName && userProfileData.lastName ? `${userProfileData.firstName} ${userProfileData.lastName}` : user.email;
+      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná používateľom ${userName}.`);
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
