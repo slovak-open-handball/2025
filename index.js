@@ -472,7 +472,7 @@ function App() {
                 React.createElement(
                   'p',
                   { className: 'text-lg text-gray-600' },
-                  categoriesExist ? 'Registračný formulár nie je prístupný.' : 'Registrácia na turnaj nie je momentálne dostupná, pretože nie sú definované žiadne kategórie.'
+                  categoriesExist ? 'Registračný formulár nie je prístupný.' : 'Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.'
                 ),
                 // Zobraz dátumy len ak kategórie existujú
                 categoriesExist && regStart && !isNaN(regStart) && now < regStart && (
