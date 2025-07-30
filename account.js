@@ -193,8 +193,8 @@ function ResetPasswordApp() {
                             setTimeout(async () => {
                                 let targetUserEmail = null;
                                 try {
-                                    // Získame e-mail z overovacieho kódu
-                                    targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
+                                    // ZMENA: Správne volanie verifyActionCode cez firebase.auth()
+                                    targetUserEmail = await firebase.auth().verifyActionCode(currentOobCode);
                                     console.log(`account.js: Email z overovacieho kódu: ${targetUserEmail}`);
                                 } catch (e) {
                                     console.error("account.js: Chyba pri získavaní emailu z overovacieho kódu:", e);
