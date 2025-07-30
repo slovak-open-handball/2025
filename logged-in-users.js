@@ -49,6 +49,7 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   return React.createElement(
     'div',
     {
+      // ZMENA: Triedy pre pozíciu hore uprostred
       className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
@@ -57,7 +58,7 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
     React.createElement(
       'div',
       {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`, // max-w-md pre menšiu šírku ako predtým
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -384,12 +385,8 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      // Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
       setUserProfileData(null); // Explicitne nastaviť userProfileData na null
@@ -454,6 +451,7 @@ function UsersManagementApp() {
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
 
   const openConfirmationModal = (user) => {
+    // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
     setUserNotificationMessage(`Používateľ ${user.email} bude zmazaný. Je potrebné ho manuálne zmazať aj vo Firebase Console.`, 'info');
   };
 
@@ -475,11 +473,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
     
     try {
       const newApprovedStatus = !userToToggle.approved; // Prepnúť aktuálny stav
@@ -487,11 +481,8 @@ function UsersManagementApp() {
       await userDocRef.update({ approved: newApprovedStatus });
 
       const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
 
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
         message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
@@ -516,11 +507,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       const userDocRef = db.collection('users').doc(userId);
@@ -529,11 +516,8 @@ function UsersManagementApp() {
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
       
       closeRoleEditModal();
 
@@ -571,11 +555,7 @@ function UsersManagementApp() {
     }
     setLoading(true);
     setError('');
-    if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(''); // Vyčistíme predchádzajúcu správu
-    } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-    }
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       // Zmažeme používateľa IBA z Firestore.
@@ -583,11 +563,8 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
       // Aktualizácia notifikačnej správy
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, manuálne ho zmažte aj vo Firebase Authentication Console.`, 'success');
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
+      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      setUserNotificationMessage(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, manuálne ho zmažte aj vo Firebase Authentication Console.`, 'success');
       
       // Otvoriť Firebase Console Authentication v novej záložke pre manuálne zmazanie
       const projectId = firebaseConfig.projectId;
@@ -609,9 +586,8 @@ function UsersManagementApp() {
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
       setError(`Chyba pri mazaní používateľa z databázy: ${e.message}.`);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri mazaní používateľa z databázy: ${e.message}.`, 'error');
-      }
+      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      setUserNotificationMessage(`Chyba pri mazaní používateľa z databázy: ${e.message}.`, 'error');
     } finally {
       setLoading(false);
     }
