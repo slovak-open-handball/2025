@@ -2,8 +2,6 @@
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> logged-in-all-registrations.html.
 
-// const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
-
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 // Pridaný prop 'displayNotificationsEnabled'
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
@@ -166,6 +164,28 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const [filterColumn, setFilterColumn] = React.useState('');
   const [activeFilters, setActiveFilters] = React.useState({});
   const [uniqueColumnValues, setUniqueColumnValues] = React.useState([]);
+
+  // NOVINKA: Stav pre poradie stĺpcov
+  const defaultColumnOrder = [
+    { id: 'role', label: 'Rola', type: 'string' },
+    { id: 'approved', label: 'Schválený', type: 'boolean' },
+    { id: 'registrationDate', label: 'Dátum registrácie', type: 'date' },
+    { id: 'firstName', label: 'Meno', type: 'string' },
+    { id: 'lastName', label: 'Priezvisko', type: 'string' },
+    { id: 'email', label: 'Email', type: 'string' },
+    { id: 'contactPhoneNumber', label: 'Tel. číslo', type: 'string' },
+    { id: 'billing.clubName', label: 'Názov klubu', type: 'string' },
+    { id: 'billing.ico', label: 'IČO', type: 'string' },
+    { id: 'billing.dic', label: 'DIČ', type: 'string' },
+    { id: 'billing.icDph', label: 'IČ DPH', type: 'string' },
+    { id: 'street', label: 'Ulica', type: 'string' },
+    { id: 'houseNumber', label: 'Číslo domu', type: 'string' },
+    { id: 'city', label: 'Mesto', type: 'string' },
+    { id: 'postalCode', label: 'PSČ', type: 'string' },
+    { id: 'country', label: 'Krajina', type: 'string' },
+  ];
+  const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
+  const [hoveredColumn, setHoveredColumn] = React.useState(null);
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -371,17 +391,66 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Effect for fetching all users from Firestore
+  // Effect for fetching all users from Firestore and column order
   React.useEffect(() => {
     let unsubscribeAllUsers;
+    let unsubscribeColumnOrder;
     // appId by mal byť globálne dostupný z HTML
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-        console.log("AllRegistrationsApp: Admin prihlásený a schválený. Načítavam všetkých používateľov.");
+        console.log("AllRegistrationsApp: Admin prihlásený a schválený. Načítavam všetkých používateľov a poradie stĺpcov.");
         setLoading(true);
+
+        // Načítanie poradia stĺpcov pre aktuálneho admina
         try {
-            // Získanie všetkých používateľov z kolekcie 'users'
+            const columnOrderDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('columnOrder');
+            unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
+                if (docSnapshot.exists) {
+                    const savedOrder = docSnapshot.data().order;
+                    if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
+                        // Skontroluj, či sa zhodujú ID stĺpcov
+                        const validSavedOrder = savedOrder.filter(item => defaultColumnOrder.some(def => def.id === item.id));
+                        if (validSavedOrder.length === defaultColumnOrder.length) {
+                             // Ak sa zhodujú, použijeme uložené poradie
+                            setColumnOrder(validSavedOrder);
+                            console.log("AllRegistrationsApp: Načítané uložené poradie stĺpcov:", validSavedOrder);
+                        } else {
+                            // Ak sa nezhodujú (napr. chýbajú stĺpce), použijeme predvolené a uložíme ho
+                            setColumnOrder(defaultColumnOrder);
+                            columnOrderDocRef.set({ order: defaultColumnOrder }).then(() => {
+                                console.log("AllRegistrationsApp: Uložené predvolené poradie stĺpcov do Firestore.");
+                            }).catch(e => console.error("AllRegistrationsApp: Chyba pri ukladaní predvoleného poradia stĺpcov:", e));
+                            console.warn("AllRegistrationsApp: Uložené poradie stĺpcov je nekompletné alebo neplatné, používam predvolené.");
+                        }
+                    } else {
+                        // Ak je uložené poradie prázdne alebo neexistuje, použijeme predvolené a uložíme ho
+                        setColumnOrder(defaultColumnOrder);
+                        columnOrderDocRef.set({ order: defaultColumnOrder }).then(() => {
+                            console.log("AllRegistrationsApp: Uložené predvolené poradie stĺpcov do Firestore.");
+                        }).catch(e => console.error("AllRegistrationsApp: Chyba pri ukladaní predvoleného poradia stĺpcov:", e));
+                        console.log("AllRegistrationsApp: Uložené poradie stĺpcov neexistuje alebo je prázdne, používam predvolené.");
+                    }
+                } else {
+                    // Ak dokument neexistuje, použijeme predvolené a uložíme ho
+                    setColumnOrder(defaultColumnOrder);
+                    columnOrderDocRef.set({ order: defaultColumnOrder }).then(() => {
+                        console.log("AllRegistrationsApp: Uložené predvolené poradie stĺpcov do Firestore.");
+                    }).catch(e => console.error("AllRegistrationsApp: Chyba pri ukladaní predvoleného poradia stĺpcov:", e));
+                    console.log("AllRegistrationsApp: Dokument poradia stĺpcov neexistuje, používam predvolené.");
+                }
+            }, error => {
+                console.error("AllRegistrationsApp: Chyba pri načítaní poradia stĺpcov z Firestore:", error);
+                // V prípade chyby použijeme predvolené
+                setColumnOrder(defaultColumnOrder);
+            });
+        } catch (e) {
+            console.error("AllRegistrationsApp: Chyba pri nastavovaní onSnapshot pre poradie stĺpcov:", e);
+            setColumnOrder(defaultColumnOrder);
+        }
+
+        // Získanie všetkých používateľov z kolekcie 'users'
+        try {
             unsubscribeAllUsers = db.collection('users').onSnapshot(snapshot => {
                 const usersData = snapshot.docs.map(doc => ({
                     id: doc.id,
@@ -418,42 +487,57 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
             console.log("AllRegistrationsApp: Ruším odber onSnapshot pre všetkých používateľov.");
             unsubscribeAllUsers();
         }
+        if (unsubscribeColumnOrder) {
+            console.log("AllRegistrationsApp: Ruším odber onSnapshot pre poradie stĺpcov.");
+            unsubscribeColumnOrder();
+        }
     };
-  }, [db, userProfileData, isAuthReady]); // Závisí od db a userProfileData
+  }, [db, userProfileData, isAuthReady, user]); // Závisí od db, userProfileData a user
 
 
   // Sorting logic
-  const handleSort = (column) => {
+  const handleSort = (columnId) => {
       let direction = 'asc';
-      if (currentSort.column === column && currentSort.direction === 'asc') {
+      if (currentSort.column === columnId && currentSort.direction === 'asc') {
           direction = 'desc';
       }
-      setCurrentSort({ column, direction });
+      setCurrentSort({ column: columnId, direction });
 
       const sorted = [...filteredUsers].sort((a, b) => {
-          const valA = a[column] || '';
-          const valB = b[column] || '';
+          // Find the column definition to get its type
+          const columnDef = columnOrder.find(col => col.id === columnId);
+          const type = columnDef ? columnDef.type : 'string'; // Default to string if type not found
 
-          if (column === 'registrationDate') {
-              const dateA = a.registrationDate ? a.registrationDate.toDate() : new Date(0);
-              const dateB = b.registrationDate ? b.registrationDate.toDate() : new Date(0);
-              return direction === 'asc' ? dateA - dateB : dateB - dateA;
-          } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
-              const parts = column.split('.');
-              let nestedValA = a;
-              let nestedValB = b;
-              for (const part of parts) {
-                  nestedValA = nestedValA ? nestedValA[part] : undefined;
-                  nestedValB = nestedValB ? nestedValB[part] : undefined;
-              }
-              const finalValA = nestedValA || '';
-              const finalValB = nestedValB || '';
-              return direction === 'asc' ? String(finalValA).localeCompare(String(finalValB)) : String(finalValB).localeCompare(String(finalValA));
-          }
-          else if (typeof valA === 'string' && typeof valB === 'string') {
-              return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          let valA, valB;
+
+          // Helper to get nested value
+          const getNestedValue = (obj, path) => {
+              return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
+          };
+
+          if (columnId.includes('.')) {
+              valA = getNestedValue(a, columnId);
+              valB = getNestedValue(b, columnId);
           } else {
-              return direction === 'asc' ? valA - valB : valB - valA;
+              valA = a[columnId];
+              valB = b[columnId];
+          }
+
+          // Convert to comparable types based on column type
+          if (type === 'date') {
+              const dateA = valA && typeof valA.toDate === 'function' ? valA.toDate() : new Date(0);
+              const dateB = valB && typeof valB.toDate === 'function' ? valB.toDate() : new Date(0);
+              return direction === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+          } else if (type === 'boolean') {
+              const boolA = Boolean(valA);
+              const boolB = Boolean(valB);
+              return direction === 'asc' ? (boolA === boolB ? 0 : (boolA ? 1 : -1)) : (boolA === boolB ? 0 : (boolA ? -1 : 1));
+          } else if (type === 'number') {
+              const numA = parseFloat(valA) || 0;
+              const numB = parseFloat(valB) || 0;
+              return direction === 'asc' ? numA - numB : numB - numA;
+          } else { // Default to string comparison
+              return direction === 'asc' ? String(valA || '').localeCompare(String(valB || '')) : String(valB || '').localeCompare(String(valA || ''));
           }
       });
       setFilteredUsers(sorted);
@@ -467,10 +551,10 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       setFilterColumn(column);
       // Získanie unikátnych hodnôt pre daný stĺpec, prevedené na string a malé písmená pre konzistentnosť
       const values = [...new Set(allUsers.map(u => {
-          let val = u[column];
-          if (column === 'registrationDate' && val && typeof val.toDate === 'function') {
+          let val;
+          if (column === 'registrationDate' && u.registrationDate && typeof u.registrationDate.toDate === 'function') {
               // Používame toLocaleString pre zobrazenie dátumu a času vo filtri
-              val = val.toDate().toLocaleString('sk-SK');
+              val = u.registrationDate.toDate().toLocaleString('sk-SK');
           } else if (column.includes('.')) { // Pre vnorené polia ako billing.clubName
               const parts = column.split('.');
               let nestedVal = u;
@@ -478,6 +562,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                   nestedVal = nestedVal ? nestedVal[part] : undefined;
               }
               val = nestedVal;
+          } else {
+              val = u[column];
           }
           // Špecifické pre boolean stĺpce (napr. 'approved')
           if (typeof val === 'boolean') {
@@ -600,6 +686,38 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     };
   }, [handleLogout]);
 
+  // NOVINKA: Funkcia na presun stĺpca
+  const moveColumn = async (columnId, direction) => {
+    const currentIndex = columnOrder.findIndex(col => col.id === columnId);
+    if (currentIndex === -1) return;
+
+    const newColumnOrder = [...columnOrder];
+    const columnToMove = newColumnOrder.splice(currentIndex, 1)[0];
+
+    let newIndex;
+    if (direction === 'left') {
+      newIndex = Math.max(0, currentIndex - 1);
+    } else { // 'right'
+      newIndex = Math.min(newColumnOrder.length, currentIndex + 1);
+    }
+
+    newColumnOrder.splice(newIndex, 0, columnToMove);
+    setColumnOrder(newColumnOrder);
+
+    // Uloženie nového poradia do Firestore
+    if (db && user && user.uid) {
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const columnOrderDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('columnOrder');
+        try {
+            await columnOrderDocRef.set({ order: newColumnOrder });
+            console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
+        } catch (e) {
+            console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
+            setUserNotificationMessage(`Chyba pri ukladaní poradia stĺpcov: ${e.message}`);
+        }
+    }
+  };
+
   // Display loading state
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     if (isAuthReady && user === null) {
@@ -636,6 +754,11 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
     }
     return postalCode; // Vráti pôvodné, ak nemá 5 číslic
+  };
+
+  // Funkcia na získanie vnorenej hodnoty
+  const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined) ? acc[part] : undefined, obj);
   };
 
   // Ak je používateľ admin a schválený, zobrazíme mu tabuľku registrácií
@@ -683,117 +806,35 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                     React.createElement(
                         'tr',
                         null,
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('role') },
-                                'Rola',
-                                currentSort.column === 'role' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('role'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('approved') },
-                                'Schválený',
-                                currentSort.column === 'approved' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('approved'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('registrationDate') },
-                                'Dátum registrácie',
-                                currentSort.column === 'registrationDate' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('registrationDate'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('firstName') },
-                                'Meno',
-                                currentSort.column === 'firstName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('firstName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('lastName') },
-                                'Priezvisko',
-                                currentSort.column === 'lastName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('lastName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('email') },
-                                'Email',
-                                currentSort.column === 'email' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('email'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('contactPhoneNumber') },
-                                'Tel. číslo',
-                                currentSort.column === 'contactPhoneNumber' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('contactPhoneNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.clubName') },
-                                'Názov klubu',
-                                currentSort.column === 'billing.clubName' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.clubName'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.ico') },
-                                'IČO',
-                                currentSort.column === 'billing.ico' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.ico'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.dic') },
-                                'DIČ',
-                                currentSort.column === 'billing.dic' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.dic'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('billing.icDph') },
-                                'IČ DPH',
-                                currentSort.column === 'billing.icDph' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('billing.icDph'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('street') },
-                                'Ulica',
-                                currentSort.column === 'street' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('street'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('houseNumber') },
-                                'Číslo domu',
-                                currentSort.column === 'houseNumber' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('houseNumber'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('city') },
-                                'Mesto',
-                                currentSort.column === 'city' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('city'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('postalCode') },
-                                'PSČ',
-                                currentSort.column === 'postalCode' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('postalCode'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
-                        ),
-                        React.createElement('th', { scope: 'col', className: 'py-3 px-6 cursor-pointer' },
-                            React.createElement('div', { className: 'flex items-center whitespace-nowrap', onClick: () => handleSort('country') },
-                                'Krajina',
-                                currentSort.column === 'country' && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                React.createElement('button', { onClick: (e) => { e.stopPropagation(); openFilterModal('country'); }, className: 'ml-2 text-gray-400 hover:text-gray-600' }, '⚙️')
-                            )
+                        columnOrder.map((col, index) => (
+                            React.createElement('th', { 
+                                key: col.id, 
+                                scope: 'col', 
+                                className: 'py-3 px-6 cursor-pointer relative group', // Pridaný 'group' pre hover efekt
+                                onMouseEnter: () => setHoveredColumn(col.id),
+                                onMouseLeave: () => setHoveredColumn(null)
+                            },
+                                React.createElement('div', { className: 'flex items-center whitespace-nowrap justify-between' }, // Zmena na justify-between
+                                    React.createElement('span', { onClick: () => handleSort(col.id) }, // Kliknutie na text pre triedenie
+                                        col.label,
+                                        currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
+                                    ),
+                                    React.createElement('div', { className: `flex items-center space-x-1 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` }, // Šípky a filter
+                                        index > 0 && React.createElement('button', { // Šípka doľava
+                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'left'); },
+                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200'
+                                        }, '←'),
+                                        index < columnOrder.length - 1 && React.createElement('button', { // Šípka doprava
+                                            onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
+                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200'
+                                        }, '→'),
+                                        React.createElement('button', { 
+                                            onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
+                                            className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200' 
+                                        }, '⚙️')
+                                    )
+                                )
+                            ))
                         )
                     )
                 ),
@@ -804,29 +845,21 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('td', { colSpan: '16', className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            React.createElement('td', { colSpan: columnOrder.length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         filteredUsers.map(u => (
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.role || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.approved ? 'Áno' : 'Nie'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.registrationDate ? u.registrationDate.toDate().toLocaleString('sk-SK') : '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.firstName || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.lastName || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.email || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.contactPhoneNumber || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.clubName || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.ico || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.dic || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.billing?.icDph || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.street || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.houseNumber || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.city || '-'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, formatPostalCode(u.postalCode)), // Použitie formátovacej funkcie
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, u.country || '-')
+                                columnOrder.map(col => (
+                                    React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' },
+                                        col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
+                                        col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
+                                        col.id === 'postalCode' ? formatPostalCode(getNestedValue(u, col.id)) :
+                                        getNestedValue(u, col.id) || '-'
+                                    )
+                                ))
                             )
                         ))
                     )
