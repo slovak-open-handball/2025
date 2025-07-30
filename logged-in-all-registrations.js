@@ -398,6 +398,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     // appId by mal byť globálne dostupný z HTML
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
+    console.log("AllRegistrationsApp: Using appId:", appId); // NOVÝ DIAGNOSTICKÝ LOG
     console.log("AllRegistrationsApp: Column Order/All Users useEffect triggered.");
     console.log("AllRegistrationsApp: Current state for column order/all users fetch - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
 
@@ -514,7 +515,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
       const sorted = [...filteredUsers].sort((a, b) => {
           // Find the column definition to get its type
           const columnDef = columnOrder.find(col => col.id === columnId);
-          const type = columnDef ? columnDef.type : 'string'; // Default to string if type not found
+          const type = columnDef ? colDef.type : 'string'; // Default to string if type not found
 
           let valA, valB;
 
