@@ -398,14 +398,20 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     // appId by mal byť globálne dostupný z HTML
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+    console.log("AllRegistrationsApp: Column Order/All Users useEffect triggered.");
+    console.log("AllRegistrationsApp: Current state for column order/all users fetch - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
+
+
+    if (db && user && user.uid && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
         console.log("AllRegistrationsApp: Admin prihlásený a schválený. Načítavam všetkých používateľov a poradie stĺpcov.");
         setLoading(true);
 
         // Načítanie poradia stĺpcov pre aktuálneho admina
         try {
             const columnOrderDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('columnOrder');
+            console.log("AllRegistrationsApp: Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
+                console.log("AllRegistrationsApp: columnOrder onSnapshot received data.");
                 if (docSnapshot.exists) {
                     const savedOrder = docSnapshot.data().order;
                     if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
@@ -440,7 +446,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                     console.log("AllRegistrationsApp: Dokument poradia stĺpcov neexistuje, používam predvolené.");
                 }
             }, error => {
-                console.error("AllRegistrationsApp: Chyba pri načítaní poradia stĺpcov z Firestore:", error);
+                console.error("AllRegistrationsApp: Chyba pri načítaní poradia stĺpcov z Firestore:", error); // Line 443
                 // V prípade chyby použijeme predvolené
                 setColumnOrder(defaultColumnOrder);
             });
@@ -472,14 +478,16 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
             setLoading(false);
             setUserNotificationMessage(`Chyba pri načítaní dát: ${e.message}`); // Zobrazenie notifikácie
         }
+    } else if (isAuthReady && user === null) {
+        console.log("AllRegistrationsApp: User is null, not fetching column order or all users. Redirecting to login.html.");
+        window.location.href = 'login.html';
     } else if (isAuthReady && userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved === false)) {
+        console.log("AllRegistrationsApp: User is not an approved admin, not fetching column order or all users. Redirecting to my-data.html.");
         setError("Nemáte oprávnenie na zobrazenie tejto stránky. Iba schválení administrátori majú prístup.");
         setLoading(false);
-        console.log("AllRegistrationsApp: Používateľ nie je schválený administrátor. Prístup zamietnutý.");
         setUserNotificationMessage("Nemáte oprávnenie na zobrazenie tejto stránky."); // Zobrazenie notifikácie
-    } else if (isAuthReady && user === null) {
-        console.log("AllRegistrationsApp: Používateľ nie je prihlásený. Presmerovanie na login.html.");
-        window.location.href = 'login.html';
+    } else {
+        console.log("AllRegistrationsApp: Conditions not met for fetching column order/all users. Waiting for state updates.");
     }
 
     return () => {
