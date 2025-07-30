@@ -189,14 +189,16 @@ function ResetPasswordApp() {
                         .then(async () => { // Zmena na async funkciu
                             console.log("account.js: applyActionCode úspešné. Pokúšam sa aktualizovať Firestore.");
                             // Získanie aktuálne prihláseného používateľa
-                            const currentUser = authInstance.currentUser;
-                            // Použite 'db' stav priamo, pretože by mal byť už inicializovaný.
-                            if (currentUser && db) { // Použite 'db' zo stavu
+                            // Použite authInstance.currentUser, ktoré by malo byť aktualizované po applyActionCode
+                            const currentUser = authInstance.currentUser; 
+                            
+                            // Použite dbInstance, ktorá je lokálne definovaná a zaručene inicializovaná
+                            if (currentUser && dbInstance) { 
                                 console.log(`account.js: Aktuálny používateľ UID: ${currentUser.uid}, Email (po overení): ${currentUser.email}`);
                                 console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
-                                const userDocRef = db.collection('users').doc(currentUser.uid);
+                                const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
                                 try {
-                                    // ZMENA: Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
+                                    // Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
                                     await userDocRef.set({ email: currentUser.email }, { merge: true });
                                     console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
                                     setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
@@ -205,14 +207,14 @@ function ResetPasswordApp() {
                                     setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
                                 }
                             } else {
-                                console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo db nie je dostupná.");
+                                console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo dbInstance nie je dostupná.");
                                 setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
                             }
 
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
                             setTimeout(() => {
-//                                window.location.href = 'login.html';
+                                window.location.href = 'login.html';
                             }, 3000);
                         })
                         .catch(e => {
