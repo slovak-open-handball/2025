@@ -125,7 +125,7 @@ const validatePassword = (pwd) => {
 // Main React component for the reset password / email verification page
 function ResetPasswordApp() {
     const [auth, setAuth] = React.useState(null);
-    const [db, setDb] = React.useState(null); // Pridaný stav pre Firestore
+    // const [db, setDb] = React.useState(null); // Firestore už nie je potrebný
     const [mode, setMode] = React.useState(null);
     const [oobCode, setOobCode] = React.useState(null);
     const [newPassword, setNewPassword] = React.useState('');
@@ -152,15 +152,17 @@ function ResetPasswordApp() {
 
     React.useEffect(() => {
         try {
-            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined' || typeof firebase.firestore === 'undefined') {
+            // ODSTRÁNENÁ KONTROLA FIREBASE FIRESTORE SDK
+            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
                 setError("Firebase SDK nie je načítané. Skontrolujte account.html.");
                 setLoading(false);
                 return;
             }
             const authInstance = firebase.auth();
             setAuth(authInstance);
-            const dbInstance = firebase.firestore(); // Inicializácia Firestore
-            setDb(dbInstance);
+            // ODSTRÁNENÁ INICIALIZÁCIA FIRESTORE
+            // const dbInstance = firebase.firestore();
+            // setDb(dbInstance);
 
             const params = getUrlParams();
             const currentMode = params.mode;
@@ -185,62 +187,28 @@ function ResetPasswordApp() {
                 } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
                     console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
-                    // NOVINKA: Najprv skontrolujeme akčný kód, aby sme získali e-mail A UID
-                    let targetUserEmail = null;
-                    let targetUserUid = null; // Pridaná premenná pre UID
+                    // NOVINKA: Najprv skontrolujeme akčný kód
                     authInstance.checkActionCode(currentOobCode)
                         .then(actionCodeInfo => {
-                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo); // NOVÝ LOG
-                            targetUserEmail = actionCodeInfo.data.email;
-                            targetUserUid = actionCodeInfo.data.uid; // Získanie UID
-                            console.log(`account.js: Email z overovacieho kódu (cez checkActionCode): ${targetUserEmail}`);
-                            console.log(`account.js: UID z overovacieho kódu (cez checkActionCode): ${targetUserUid}`);
+                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
+                            // E-mail a UID sú tu dostupné, ale už ich nebudeme priamo používať pre Firestore zápis
+                            // targetUserEmail = actionCodeInfo.data.email;
+                            // targetUserUid = actionCodeInfo.data.uid;
 
                             // Až potom aplikujeme akčný kód
                             return authInstance.applyActionCode(currentOobCode);
                         })
                         .then(async () => { // Zmena na async funkciu
-                            console.log("account.js: applyActionCode úspešné. Pokúšam sa aktualizovať Firestore.");
+                            console.log("account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
                             
-                            // NOVINKA: Pridanie oneskorenia pred pokusom o aktualizáciu Firestore
-                            setTimeout(async () => {
-                                console.log("account.js: DEBUG - Inside setTimeout, targetUserUid:", targetUserUid); // NOVÝ LOG
-                                console.log("account.js: DEBUG - Inside setTimeout, targetUserEmail:", targetUserEmail); // NOVÝ LOG
-                                console.log("account.js: DEBUG - Inside setTimeout, dbInstance:", dbInstance); // NOVÝ LOG
-
-                                if (targetUserUid && targetUserEmail && dbInstance) { // Kontrola, či máme UID aj email
-                                    try {
-                                        // Vyhľadáme používateľa vo Firestore priamo pomocou UID
-                                        const userDocRef = dbInstance.collection('users').doc(targetUserUid);
-                                        const docSnap = await userDocRef.get(); // Získame dokument priamo
-
-                                        if (docSnap.exists) { // Ak dokument existuje
-                                            console.log(`account.js: Nájdený používateľ vo Firestore s UID: ${targetUserUid}`);
-                                            // Aktualizujeme pole 'email' v dokumente používateľa
-                                            // Použijeme set s merge: true, aby sa aktualizoval len email a ostatné polia zostali nedotknuté
-                                            await userDocRef.set({ email: targetUserEmail }, { merge: true });
-                                            console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
-                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a aktualizovaná vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
-                                        } else {
-                                            // Ak dokument používateľa neexistuje, NEVYTVÁRAME HO TU, aby sme sa vyhli chybám oprávnení.
-                                            // Vytvorenie záznamu vo Firestore by sa malo udiať pri prvom prihlásení používateľa.
-                                            console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore pomocou UID. Pokračujem v presmerovaní.");
-                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
-                                        }
-                                    } catch (firestoreError) {
-                                        console.error("account.js: Chyba pri aktualizácii Firestore emailu (po vyhľadaní UID):", firestoreError);
-                                        setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
-                                    }
-                                } else {
-                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: targetUserUid alebo targetUserEmail nie je dostupný alebo dbInstance nie je dostupná. (Detail: UID:", targetUserUid, ", Email:", targetUserEmail, ", DB:", dbInstance, ")"); // Detailnejší log
-                                    setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
-                                }
-                                setLoading(false);
-                                // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
-                                setTimeout(() => {
-                                    window.location.href = 'login.html';
-                                }, 3000);
-                            }, 2000); // 2000ms oneskorenie
+                            // NOVINKA: Zobrazenie novej správy o úspechu
+                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená. Pre jej úspešnú aktualizáciu sa prosím prihláste. Budete presmerovaní na prihlasovaciu stránku.");
+                            
+                            setLoading(false);
+                            // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
+                            setTimeout(() => {
+                                window.location.href = 'login.html';
+                            }, 3000);
                         })
                         .catch(e => {
                             console.error("account.js: Chyba pri overovaní e-mailu (checkActionCode alebo applyActionCode zlyhalo):", e);
@@ -260,7 +228,7 @@ function ResetPasswordApp() {
             setError(`Chyba pri inicializácii: ${e.message}`);
             setLoading(false);
         }
-    }, []);
+    }, []); // ODSTRÁNENÁ ZÁVISLOSŤ NA dbInstance
 
     // Effect pre validáciu hesla pri zmene 'newPassword' alebo 'confirmNewPassword'
     React.useEffect(() => {
