@@ -199,19 +199,9 @@ function ResetPasswordApp() {
                                     console.log("account.js: DEBUG - Does authInstance have verifyActionCode method?", typeof authInstance.verifyActionCode === 'function');
                                     console.dir(authInstance); // Inspect the object properties
 
-                                    // ZMENA: Pokus o volanie verifyActionCode priamo z firebase.auth
-                                    // Toto je menej štandardné pre v7, ale skúšame to ako poslednú možnosť
-                                    // ak authInstance.verifyActionCode zlyhá.
-                                    if (typeof firebase.auth.verifyActionCode === 'function') {
-                                        targetUserEmail = await firebase.auth.verifyActionCode(currentOobCode);
-                                        console.log(`account.js: Email z overovacieho kódu (cez firebase.auth.verifyActionCode): ${targetUserEmail}`);
-                                    } else if (typeof authInstance.verifyActionCode === 'function') {
-                                        // Ak predchádzajúci pokus zlyhal, vráťme sa k pôvodnému (štandardnému) volaniu
-                                        targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
-                                        console.log(`account.js: Email z overovacieho kódu (cez authInstance.verifyActionCode): ${targetUserEmail}`);
-                                    } else {
-                                        throw new Error("Funkcia verifyActionCode nie je dostupná.");
-                                    }
+                                    // ŠTANDARDNÉ VOLANIE PRE FIREBASE SDK v7
+                                    targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
+                                    console.log(`account.js: Email z overovacieho kódu (cez authInstance.verifyActionCode): ${targetUserEmail}`);
 
                                 } catch (e) {
                                     console.error("account.js: Chyba pri získavaní emailu z overovacieho kódu:", e);
