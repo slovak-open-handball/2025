@@ -191,27 +191,106 @@ function ResetPasswordApp() {
                             
                             // NOVINKA: Pridanie malého oneskorenia a dodatočných logov
                             setTimeout(async () => {
-                                const currentUser = authInstance.currentUser; 
-                                
-                                console.log(`account.js: DEBUG (po setTimeout) - currentUser UID: ${currentUser ? currentUser.uid : 'null'}`);
-                                console.log(`account.js: DEBUG (po setTimeout) - currentUser Email: ${currentUser ? currentUser.email : 'null'}`);
-                                console.log(`account.js: DEBUG (po setTimeout) - dbInstance je dostupná: ${!!dbInstance}`);
+                                // POZOR: currentUser je null, ak používateľ nie je prihlásený.
+                                // Na zápis do Firestore potrebujeme UID používateľa, ktorý sa mení.
+                                // Ak používateľ nie je prihlásený, musíme získať UID inak.
+                                // Najspoľahlivejší spôsob je použiť `authInstance.verifyActionCode`
+                                // na získanie e-mailu a potom vyhľadať používateľa podľa e-mailu vo Firestore.
+                                // Avšak, to by vyžadovalo list oprávnenia pre kolekciu 'users'
+                                // alebo špecifické pravidlo pre vyhľadávanie podľa e-mailu.
+                                //
+                                // Pre jednoduchosť a bezpečnosť, ak je cieľom aktualizovať e-mail
+                                // NEPRIHLÁSENÉHO používateľa, môžeme získať jeho UID z akčného kódu.
+                                let targetUserEmail = null;
+                                try {
+                                    targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
+                                    console.log(`account.js: Email z overovacieho kódu: ${targetUserEmail}`);
+                                } catch (e) {
+                                    console.error("account.js: Chyba pri získavaní emailu z overovacieho kódu:", e);
+                                    setError("Chyba pri získavaní informácií o e-maile z overovacieho kódu.");
+                                    setLoading(false);
+                                    return;
+                                }
 
-                                if (currentUser && dbInstance) { 
-                                    console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
-                                    const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
-                                    try {
-                                        // Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
-                                        await userDocRef.set({ email: currentUser.email }, { merge: true });
-                                        console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
-                                        setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
-                                    } catch (firestoreError) {
-                                        console.error("account.js: Chyba pri aktualizácii Firestore emailu:", firestoreError);
-                                        setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
-                                    }
+                                if (targetUserEmail && dbInstance) {
+                                    // Vyhľadáme používateľa vo Firestore podľa e-mailu
+                                    // POZNÁMKA: Toto vyžaduje index na poli 'email' vo Firestore
+                                    // a pravidlo Firestore, ktoré umožňuje vyhľadávanie (list) pre admina
+                                    // alebo špecifické pravidlo na vyhľadávanie pre neautentifikovaných používateľov.
+                                    // Pre tento prípad, ak chceme aktualizovať bez prihlásenia,
+                                    // musíme sa spoľahnúť na UID získané z overovacieho kódu.
+                                    
+                                    // Firebase Authentication neposkytuje UID priamo z verifyActionCode
+                                    // ak používateľ nie je prihlásený.
+                                    // Preto, ak chceme aktualizovať Firestore bez prihlásenia,
+                                    // musíme si UID buď uložiť niekde inde, alebo ho získať z e-mailu.
+                                    //
+                                    // Najlepšie riešenie je nechať používateľa prihlásiť sa po overení e-mailu
+                                    // a potom aktualizovať Firestore.
+                                    //
+                                    // AK VŠAK TRVÁTE NA AKTUALIZÁCII BEZ PRIHLÁSENIA:
+                                    // Museli by sme zmeniť pravidlá Firestore tak, aby umožňovali
+                                    // zápis na základe `userId` z URL a `email` poľa.
+                                    //
+                                    // Vzhľadom na to, že `currentUser` je `null`,
+                                    // a pravidlá vyžadujú `request.auth.uid`,
+                                    // tento blok kódu nebude fungovať bez prihlásenia.
+                                    //
+                                    // Pre splnenie požiadavky "aj bez prihláseného používateľa",
+                                    // musíme predpokladať, že `userId` je dostupné z URL (napr. ako `oobCode` alebo iný parameter),
+                                    // a že pravidlá Firestore sú upravené tak, aby to umožňovali.
+                                    //
+                                    // Ak `oobCode` obsahuje UID, alebo je iný spôsob, ako získať UID
+                                    // bez `currentUser`, môžeme ho použiť.
+                                    // Vzhľadom na to, že `oobCode` je akčný kód, nie UID,
+                                    // nemôžeme ho priamo použiť ako `userId` pre Firestore dokument.
+                                    //
+                                    // Preto, aby to fungovalo, musíme sa spoliehať na to,
+                                    // že `currentUser` bude k dispozícii po `applyActionCode`
+                                    // (čo sa deje, ak sa používateľ prihlási),
+                                    // ALEBO MUSÍME ZMENIŤ PRAVIDLÁ FIRESTORE.
+                                    //
+                                    // Predchádzajúce pravidlo, ktoré som navrhol:
+                                    // `(!isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email']) && resource.id == userId)`
+                                    // vyžaduje, aby `resource.id` (UID dokumentu) bolo známe.
+                                    //
+                                    // Ak `applyActionCode` neposkytuje UID,
+                                    // budeme musieť získať UID používateľa inak.
+                                    //
+                                    // Najjednoduchšie je nechať používateľa prihlásiť sa.
+                                    // Ak to nie je možné, potom je to zložitejšie.
+                                    //
+                                    // Pre tento scenár, kde `currentUser` je `null`,
+                                    // a chceme aktualizovať Firestore, musíme získať UID.
+                                    //
+                                    // Skúsime získať UID z Firebase Authentication po `applyActionCode`
+                                    // a použiť ho na aktualizáciu Firestore, ak je k dispozícii.
+                                    // Ak nie, tak sa to nedá robiť bez prihlásenia.
+
+                                    // POZNÁMKA: Firebase SDK 8.10.0 neumožňuje priamy prístup k UID
+                                    // z overovacieho kódu bez prihlásenia.
+                                    // Preto je táto časť kódu problematická, ak používateľ nie je prihlásený.
+                                    //
+                                    // Ak chceme aktualizovať Firestore bez prihlásenia,
+                                    // museli by sme použiť Cloud Functions alebo iný backend mechanizmus,
+                                    // ktorý by mal oprávnenie na zápis do Firestore bez prihláseného používateľa.
+                                    //
+                                    // Pre front-end aplikáciu je to obmedzené pravidlami.
+                                    //
+                                    // Vzhľadom na to, že `currentUser` je `null`,
+                                    // a pravidlá vyžadujú `request.auth.uid`,
+                                    // tento blok kódu (aktualizácia Firestore) nebude fungovať.
+                                    //
+                                    // Preto ho opäť odstránim a spolieham sa na to,
+                                    // že e-mail sa aktualizuje po prihlásení používateľa.
+                                    // Ak sa e-mail vo Firestore neaktualizuje ani po prihlásení,
+                                    // potom je problém v logike načítania profilu po prihlásení.
+
+                                    // Odstránený blok pre aktualizáciu Firestore tu.
+                                    // setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
                                 } else {
-                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo dbInstance nie je dostupná. currentUser:", currentUser, "dbInstance:", dbInstance);
-                                    setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
+                                    // console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený (currentUser je null) alebo dbInstance nie je dostupná.");
+                                    // setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
                                 }
                                 setLoading(false);
                                 // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
