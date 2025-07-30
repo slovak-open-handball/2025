@@ -563,11 +563,15 @@ try {
 // ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
-  // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
-  if (!window.location.pathname.includes('logged-in-users.html')) {
-    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+  // ZMENA: Podmienka na spustenie, keď NIE JE na stránke logged-in-users.html
+  if (window.location.pathname.includes('logged-in-users.html')) {
+    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent pre hlavičku.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
   }
+
+  // Ak sa sem dostaneme, znamená to, že NIE SME na logged-in-users.html, takže pokračujeme vo vykresľovaní
+  console.log("UsersManagementApp (header.js): Nie je na stránke logged-in-users.html. Spúšťam komponent pre hlavičku.");
+
 
   const [app, setApp] = React.useState(null);
   const [auth, setAuth] = React.useState(null);
@@ -791,7 +795,7 @@ function UsersManagementApp() {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document = document.getElementById('register-link');
+    const registerLink = document.getElementById('register-link'); // Opravené, bolo document = document.getElementById
 
     if (authLink) {
       if (user) {
@@ -865,7 +869,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
-          setError(`Chyba pri načítaní používateľov: ${e.message}`);
+          setError(`Chyba pri načítaní používateľov: ${error.message}`); // Používame error.message
           setLoading(false);
         });
       } catch (e) {
