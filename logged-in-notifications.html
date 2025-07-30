@@ -49,16 +49,31 @@
     <!-- Globálne konštanty pre Firebase - MUSIA BYŤ DEFINOVANÉ PRED AKÝMKOĽVEK SKRIPTOM, KTORÝ ICH POUŽÍVA -->
     <script>
         // Tieto konštanty by mali byť konzistentné v celej aplikácii
-        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const __app_id = '1:572988314768:web:781e27eb035179fe34b415';
         const __firebase_config = JSON.stringify({
-            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
-            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
-            projectId: "prihlasovanie-4f3f3",
-            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
-            messagingSenderId: "26454452024",
-            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
-        });
-        const __initial_auth_token = null; // Token by mal byť poskytnutý z backendu, ak je potrebný
+          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+          projectId: "soh2025-2s0o2h5",
+          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+          messagingSenderId: "572988314768",
+          appId: "1:572988314768:web:781e27eb035179fe34b415"
+        };
+        // ZMENA: Dynamické načítanie __initial_auth_token pre konzistentnosť
+        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Inicializácia Firebase aplikácie globálne
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try {
+                firebase.initializeApp(JSON.parse(__firebase_config));
+                console.log("logged-in-notifications.html: Firebase inicializovaný globálne.");
+            } catch (e) {
+                console.error("logged-in-notifications.html: Chyba pri globálnej inicializácii Firebase:", e);
+            }
+        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+            console.log("logged-in-notifications.html: Firebase už bol inicializovaný.");
+        } else {
+            console.error("logged-in-notifications.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+        }
     </script>
 </head>
 <body class="bg-gray-100">
