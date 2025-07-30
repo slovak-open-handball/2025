@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Všetky registrácie</title>
+    <title>SOH 2025 - Vytvorenie kategórií</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -13,10 +13,7 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
+            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -42,78 +39,53 @@
             width: 90%;
             position: relative;
         }
-        /* Kontajner pre hlavičku */
-        #header-placeholder {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 30; /* Vyšší z-index pre hlavičku */
-        }
-        /* Kontajner pre ľavé menu */
-        #left-menu-placeholder {
-            position: fixed;
-            top: 64px; /* Pod hlavičkou */
-            left: 0;
-            height: calc(100vh - 64px); /* Zaberá zvyšok výšky obrazovky */
-            z-index: 25; /* Vyšší z-index pre ľavé menu */
-            /* Na mobilných zariadeniach môže byť menu skryté alebo zobrazené ako overlay */
-            /* Pre základné zobrazenie na mobiloch ho môžeme skryť alebo zmenšiť */
-            /* Toto sa bude riadiť primárne v left-menu.html/js */
-        }
-
-        /* Hlavná oblasť pre obsah React aplikácie */
+        /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
             margin-left: 256px; /* Šírka ľavého menu */
             padding: 1rem;
             flex-grow: 1;
-            width: calc(100% - 256px); /* Zabezpečí, že zaberie zvyšok šírky */
-            box-sizing: border-box; /* Dôležité pre správne výpočty šírky */
-            overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
-            position: relative; /* Zabezpečí správne vrstvenie */
-            z-index: 1; /* Nižší z-index ako menu a hlavička */
+            /* NOVÉ ŠTÝLY PRE CENTROVANIE */
+            display: flex;
+            justify-content: center; /* Centrovanie horizontálne */
+            align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
+            width: calc(100% - 256px); /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
-
-        /* Pre mobilné zariadenia */
         @media (max-width: 768px) {
             #main-content-area {
                 margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberie celú šírku */
+                width: 100%; /* Na mobiloch zaberá celú šírku */
+                justify-content: center; /* Stále centrovať obsah */
+                align-items: flex-start;
             }
-            /* Ak je menu na mobiloch overlay, možno bude potrebné upraviť aj body/html overflow */
         }
-        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
-        #header-notification-area {
+        /* Štýly pre plávajúce tlačidlo */
+        .fab-button {
             position: fixed;
-            top: 80px; /* Odsadenie pod hlavičkou (64px hlavička + 16px medzera) */
+            bottom: 20px;
             right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end; /* Notifikácie sa zarovnajú doprava */
-            max-width: 350px; /* Maximálna šírka kontajnera notifikácií */
-            pointer-events: none; /* Umožňuje klikanie cez kontajner */
-        }
-
-        /* Jednotlivá notifikácia */
-        .notification-item {
-            background-color: #3A8D41; /* Zelená farba */
+            background-color: #34D399; /* Zelená */
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            margin-bottom: 10px; /* Medzi notifikáciami */
-            opacity: 0;
-            transform: translateX(100%); /* Začína mimo obrazovky vpravo */
-            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-            pointer-events: auto; /* Umožňuje interakciu s notifikáciou */
-            width: 100%; /* Vyplní max-width kontajnera */
-            box-sizing: border-box; /* Zabezpečí, že padding nepridá šírku */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            z-index: 30; /* Vyššie ako hlavička a menu */
         }
-
-        .notification-item.show {
-            opacity: 1;
-            transform: translateX(0); /* Posunie sa na miesto */
+        .fab-button:hover {
+            background-color: #10B981; /* Tmavšia zelená */
+        }
+        #header-placeholder { /* NOVINKA: Explicitný z-index pre hlavičku */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100; /* Nižšie ako notifikácia (1000), ale vyššie ako menu (20) */
         }
     </style>
     <!-- Firebase SDKs -->
@@ -125,6 +97,8 @@
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
+        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
+        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
         const appId = '1:572988314768:web:781e27eb035179fe34b415';
         const firebaseConfig = {
           apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
@@ -134,13 +108,23 @@
           messagingSenderId: "572988314768",
           appId: "1:572988314768:web:781e27eb035179fe34b415"
         };
-        const initialAuthToken = null; // Tento token by mal byť poskytnutý z backendu, ak sa používa vlastná autentifikácia
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         
-        // NOVINKA: Inicializácia Firebase aplikácie globálne
-        firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                console.log("logged-in-add-categories.html: Firebase inicializovaný globálne.");
+            } catch (e) {
+                console.error("logged-in-add-categories.html: Chyba pri globálnej inicializácii Firebase:", e);
+            }
+        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+            console.log("logged-in-add-categories.html: Firebase už bol inicializovaný.");
+        } else {
+            console.error("logged-in-add-categories.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+        }
     </script>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
 
@@ -155,8 +139,8 @@
         </div>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
-    <script src="logged-in-all-registrations.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (AddCategoriesApp) -->
+    <script src="logged-in-add-categories.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -225,16 +209,15 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Zmena: MyDataApp na AllRegistrationsApp
-            if (typeof AllRegistrationsApp === 'undefined') {
-                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
+            if (typeof AddCategoriesApp === 'undefined') {
+                console.error("Chyba: Komponent AddCategoriesApp nie je definovaný. Skontrolujte logged-in-add-categories.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(AllRegistrationsApp, null));
-            console.log("logged-in-all-registrations.html: React App vykreslená.");
+            root.render(React.createElement(AddCategoriesApp, null));
+            console.log("logged-in-add-categories.html: React App vykreslená.");
         };
     </script>
 </body>
