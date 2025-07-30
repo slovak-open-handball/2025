@@ -6,7 +6,8 @@ function highlightActiveMenuItem() {
     // Odstránime zvýraznenie a triedy pre neklikateľnosť zo všetkých predtým aktívnych položiek
     const allMenuItems = document.querySelectorAll('.w-64 a');
     allMenuItems.forEach(item => {
-        item.classList.remove('bg-blue-600', 'bg-purple-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // ZMENA: Odstránime aj bg-purple-600
+        // ZMENA: Odstránime aj bg-emerald-600 pri resetovaní tried
+        item.classList.remove('bg-blue-600', 'bg-emerald-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
         item.classList.add('hover:bg-blue-600'); // Vrátime hover efekt
     });
 
@@ -24,7 +25,7 @@ function highlightActiveMenuItem() {
         
         // ZMENA: Dynamické nastavenie farby na základe prítomnosti triedy 'user-menu-item'
         if (activeLink.classList.contains('user-menu-item')) {
-            activeLink.classList.add('bg-purple-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
+            activeLink.classList.add('bg-emerald-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // Používame bg-emerald-600
         } else {
             activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
         }
@@ -209,7 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             // NOVINKA: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
-            if (link.classList.contains('bg-blue-600') || link.classList.contains('bg-purple-600')) { // ZMENA: Kontrolujeme aj bg-purple-600
+            // ZMENA: Kontrolujeme aj bg-emerald-600
+            if (link.classList.contains('bg-blue-600') || link.classList.contains('bg-emerald-600')) {
                 event.preventDefault();
                 console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
                 return; // Ukončíme funkciu, aby sa nenačítal obsah
