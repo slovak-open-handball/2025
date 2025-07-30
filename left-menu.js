@@ -6,7 +6,8 @@ function highlightActiveMenuItem() {
     // Odstránime zvýraznenie a triedy pre neklikateľnosť zo všetkých predtým aktívnych položiek
     const allMenuItems = document.querySelectorAll('.w-64 a');
     allMenuItems.forEach(item => {
-        item.classList.remove('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
+        // Pôvodné: Odstránime aj bg-emerald-600 pri resetovaní tried
+        item.classList.remove('bg-blue-600', 'bg-emerald-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
         item.classList.add('hover:bg-blue-600'); // Vrátime hover efekt
     });
 
@@ -21,7 +22,10 @@ function highlightActiveMenuItem() {
     if (activeLink) {
         // Zvýrazníme aktívnu položku a pridáme triedy pre neklikateľnosť
         activeLink.classList.remove('hover:bg-blue-600'); // Odstránime hover, aby sa nekolidoval so zvýraznením
-        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // Pridáme triedy pre zvýraznenie a neklikateľnosť
+        
+        // Pôvodné: Dynamické nastavenie farby na základe prítomnosti triedy 'user-menu-item'
+        // Vrátené na jednotnú modrú farbu pre aktívnu položku
+        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
     }
 }
 
@@ -178,9 +182,13 @@ window.updateMenuItemsVisibility = function(userRole) {
             if (listItem) {
                 if (menuItems[id].includes(userRole)) {
                     listItem.classList.remove('hidden');
+                    // Pôvodné: Pridanie triedy 'user-menu-item' pre používateľov typu 'user'
+                    // Odstránené, aby sa farby nerozlišovali
+                    element.classList.remove('user-menu-item'); 
                     console.log(`Zobrazujem: ${id} pre rolu: ${userRole}`); // Debugovací výpis
                 } else {
                     listItem.classList.add('hidden');
+                    element.classList.remove('user-menu-item'); // Odstrániť, ak je skryté
                     console.log(`Skrývam: ${id} pre rolu: ${userRole}`); // Debugovací výpis
                 }
             }
@@ -195,7 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuLinks = document.querySelectorAll('.w-64 a'); // Všetky odkazy v navigačnom menu
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
-            // NOVINKA: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
+            // Pôvodné: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
+            // Vrátené na kontrolu len bg-blue-600
             if (link.classList.contains('bg-blue-600')) {
                 event.preventDefault();
                 console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
