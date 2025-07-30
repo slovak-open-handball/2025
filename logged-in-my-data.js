@@ -324,11 +324,61 @@ function MyDataApp() {
     };
   }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
-  // ODSTRÁNENÝ useEffect pre aktualizáciu odkazov hlavičky
-  // Táto logika je teraz plne riadená v header.js
+  // NOVINKA: useEffect pre aktualizáciu odkazov hlavičky
+  React.useEffect(() => {
+    console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
 
-  // ODSTRÁNENÝ handleLogout a jeho pripojenie k tlačidlu
-  // Odhlásenie je teraz plne riadené v header.js
+    if (authLink) {
+      if (user) {
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        registerLink && registerLink.classList.add('hidden');
+        console.log("MyDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
+      } else {
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        registerLink && registerLink.classList.remove('hidden'); 
+        console.log("MyDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
+      }
+    }
+  }, [user]);
+
+  // NOVINKA: Handle logout (needed for the header logout button)
+  const handleLogout = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      setLoading(true);
+      await auth.signOut();
+      setUserNotificationMessage("Úspešne odhlásený.");
+      window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+    } catch (e) {
+      console.error("MyDataApp: Chyba pri odhlásení:", e);
+      setError(`Chyba pri odhlásení: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [auth]);
+
+  // NOVINKA: Attach logout handler to the button in the header
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]);
 
   // Removed handleUpdateProfile as there are no input fields to update directly in this view
 
