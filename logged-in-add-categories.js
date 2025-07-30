@@ -451,10 +451,10 @@ function AddCategoriesApp() {
 
   // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
-    if (!db || !appId) return null;
-    // Správna cesta: artifacts/{appId}/settings (kolekcia) -> categories (dokument)
-    return db.collection('artifacts').doc(appId).collection('settings').doc('categories');
-  }, [db, appId]);
+    if (!db) return null; // appId už nie je potrebné pre túto cestu
+    // ZMENA: Správna cesta je teraz: db.collection('settings').doc('categories')
+    return db.collection('settings').doc('categories');
+  }, [db]);
 
   // Effect for fetching categories
   React.useEffect(() => {
@@ -499,7 +499,7 @@ function AddCategoriesApp() {
         unsubscribeCategories();
       }
     };
-  }, [db, userProfileData, appId, getCategoriesDocRef]); // Pridaný getCategoriesDocRef do závislostí
+  }, [db, userProfileData, getCategoriesDocRef]); // appId odstránené zo závislostí
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -572,7 +572,7 @@ function AddCategoriesApp() {
       });
       console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
     } catch (e) {
-      console.error("Chyba pri ukladaní notifikácie pre administrátorov:", e);
+      console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
     }
   };
 
@@ -600,14 +600,14 @@ function AddCategoriesApp() {
       const docSnapshot = await categoriesDocRef.get();
       const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {};
 
-      // Kontrola duplicity názvu kategórie
+      // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === categoryName.trim().toLowerCase())) {
         setError(`Kategória s názvom "${categoryName.trim()}" už existuje. Zvoľte iný názov.`);
         setLoading(false);
         return;
       }
 
-      const newCategoryId = db.collection('artifacts').doc().id; // Generuje unikátne ID pre pole (key)
+      const newCategoryId = db.collection('settings').doc().id; // Generuje unikátne ID pre pole (key)
 
       // Používame set s merge: true, aby sa dokument vytvoril, ak neexistuje, alebo aktualizoval
       // a pridalo sa nové pole s názvom kategórie
