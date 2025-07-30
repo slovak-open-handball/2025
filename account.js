@@ -124,8 +124,9 @@ const validatePassword = (pwd) => {
 
 // Main React component for the reset password / email verification page
 function ResetPasswordApp() {
-    const [auth, setAuth] = React.useState(null);
-    // const [db, setDb] = React.useState(null); // Firestore už nie je potrebný
+    // Odstránené useState pre auth a db, teraz sa pristupuje ku globálnym inštanciám
+    // const [auth, setAuth] = React.useState(null);
+    // const [db, setDb] = React.useState(null);
     const [mode, setMode] = React.useState(null);
     const [oobCode, setOobCode] = React.useState(null);
     const [newPassword, setNewPassword] = React.useState('');
@@ -152,17 +153,15 @@ function ResetPasswordApp() {
 
     React.useEffect(() => {
         try {
-            // ODSTRÁNENÁ KONTROLA FIREBASE FIRESTORE SDK
-            if (typeof firebase === 'undefined' || typeof firebase.auth === 'undefined') {
-                setError("Firebase SDK nie je načítané. Skontrolujte account.html.");
+            // Prístup ku globálnym inštanciám Firebase Auth a Firestore
+            const authInstance = window.auth;
+            // const dbInstance = window.db; // Firestore už nie je potrebný v tomto komponente
+
+            if (!authInstance) { // Kontrola, či je authInstance dostupná
+                setError("Firebase Authentication nie je inicializované. Skontrolujte account.html.");
                 setLoading(false);
                 return;
             }
-            const authInstance = firebase.auth();
-            setAuth(authInstance);
-            // ODSTRÁNENÁ INICIALIZÁCIA FIRESTORE
-            // const dbInstance = firebase.firestore();
-            // setDb(dbInstance);
 
             const params = getUrlParams();
             const currentMode = params.mode;
@@ -228,7 +227,7 @@ function ResetPasswordApp() {
             setError(`Chyba pri inicializácii: ${e.message}`);
             setLoading(false);
         }
-    }, []); // ODSTRÁNENÁ ZÁVISLOSŤ NA dbInstance
+    }, []); // Odstránená závislosť na dbInstance
 
     // Effect pre validáciu hesla pri zmene 'newPassword' alebo 'confirmNewPassword'
     React.useEffect(() => {
@@ -245,7 +244,9 @@ function ResetPasswordApp() {
         setError('');
         setSuccessMessage('');
 
-        if (!auth || !oobCode) {
+        // Prístup ku globálnej inštancii Firebase Auth
+        const authInstance = window.auth;
+        if (!authInstance || !oobCode) {
             setError("Chyba: Autentifikácia nie je pripravená alebo chýba kód.");
             return;
         }
@@ -263,7 +264,7 @@ function ResetPasswordApp() {
 
         setLoading(true);
         try {
-            await auth.confirmPasswordReset(oobCode, newPassword);
+            await authInstance.confirmPasswordReset(oobCode, newPassword);
             setSuccessMessage("Vaše heslo bolo úspešne resetované! Budete presmerovaní na prihlasovaciu stránku.");
             setMessage('');
             
