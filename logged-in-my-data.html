@@ -95,7 +95,7 @@
     <script>
         const appId = '1:572988314768:web:781e27eb035179fe34b415';
         const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkCjcuWJ2ALpb5Z1alZYy4",
+          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
           authDomain: "soh2025-2s0o2h5.firebaseapp.com",
           projectId: "soh2025-2s0o2h5",
           storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
@@ -154,16 +154,12 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
-                        // NOVINKA: Volanie initializeHeaderLogic() po načítaní header.js
-                        if (typeof initializeHeaderLogic === 'function') {
-                            initializeHeaderLogic();
-                        }
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
                     };
-                    // ZMENA: Pripojíme header.js k document.body, aby bola logika hlavičky globálne dostupná
-                    document.body.appendChild(headerScript); 
+                    // ZMENA: Pripojíme header.js k headerPlaceholder namiesto document.body
+                    headerPlaceholder.appendChild(headerScript); 
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
