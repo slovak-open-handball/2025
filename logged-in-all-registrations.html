@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Vytvorenie kategórií</title>
+    <title>SOH 2025 - Všetky registrácie</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -13,7 +13,10 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            /* padding-left: 256px; */ /* TOTO ODSTRÁNIME, ak by tu bolo, aby sa obsah neposúval celý doprava */
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -113,14 +116,14 @@
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             try {
                 firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-add-categories.html: Firebase inicializovaný globálne.");
+                console.log("logged-in-all-registrations.html: Firebase inicializovaný globálne.");
             } catch (e) {
-                console.error("logged-in-add-categories.html: Chyba pri globálnej inicializácii Firebase:", e);
+                console.error("logged-in-all-registrations.html: Chyba pri globálnej inicializácii Firebase:", e);
             }
         } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-add-categories.html: Firebase už bol inicializovaný.");
+            console.log("logged-in-all-registrations.html: Firebase už bol inicializovaný.");
         } else {
-            console.error("logged-in-add-categories.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+            console.error("logged-in-all-registrations.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
         }
     </script>
 </head>
@@ -139,8 +142,8 @@
         </div>
     </div>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (AddCategoriesApp) -->
-    <script src="logged-in-add-categories.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku (AllRegistrationsApp) -->
+    <script src="logged-in-all-registrations.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -209,15 +212,16 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            if (typeof AddCategoriesApp === 'undefined') {
-                console.error("Chyba: Komponent AddCategoriesApp nie je definovaný. Skontrolujte logged-in-add-categories.js.");
+            // Zmena: MyDataApp na AllRegistrationsApp
+            if (typeof AllRegistrationsApp === 'undefined') {
+                console.error("Chyba: Komponent AllRegistrationsApp nie je definovaný. Skontrolujte logged-in-all-registrations.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(AddCategoriesApp, null));
-            console.log("logged-in-add-categories.html: React App vykreslená.");
+            root.render(React.createElement(AllRegistrationsApp, null));
+            console.log("logged-in-all-registrations.html: React App vykreslená.");
         };
     </script>
 </body>
