@@ -238,14 +238,6 @@ function MyDataApp() {
                 userDocRef.update({ email: user.email })
                   .then(async () => { // Zmena na async funkciu
                     console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
-                    // Vytvorenie globálnej správy pre administrátora (pre aktuálneho používateľa)
-                    // ZMENA: Odstránené volanie window.showGlobalNotification, aby sa zabránilo duplicitnému zobrazeniu
-                    // if (typeof window.showGlobalNotification === 'function') {
-                    //     window.showGlobalNotification(`E-mailová adresa bola úspešne aktualizovaná!`);
-                    // } else {
-                    //     console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
-                    // }
-                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu (pre aktuálneho používateľa)
                     setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
 
                     // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
