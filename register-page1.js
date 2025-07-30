@@ -292,7 +292,7 @@ const validateEmail = (email) => {
 };
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady }) {
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady, isRegistrationClosed }) {
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   // NOVINKA: Stav pre sledovanie, či bol input "Potvrdiť heslo" aktivovaný
@@ -368,7 +368,15 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
     { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
 
-    isRegistrationOpen === false && countdownMessage ? (
+    // NOVINKA: Podmienené zobrazenie na základe stavu registrácie
+    isRegistrationClosed ? (
+      React.createElement(
+        'div',
+        { className: 'text-center text-gray-800 text-lg py-4' },
+        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registrácia je ukončená.'),
+        React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, 'Ďakujeme za Váš záujem o turnaj Slovak Open Handball.')
+      )
+    ) : (isRegistrationOpen === false && countdownMessage) ? (
       React.createElement(
         'div',
         { className: 'text-center text-gray-800 text-lg py-4' },
@@ -392,7 +400,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           )
         )
       )
-    ) : isRegistrationOpen === null ? (
+    ) : (isRegistrationOpen === null) ? (
       React.createElement(
         'div',
         { className: 'flex items-center justify-center py-8' },
