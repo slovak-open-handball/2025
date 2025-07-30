@@ -62,6 +62,137 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   );
 }
 
+// AddCategoryModal Component
+function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage }) {
+  const [newCategoryName, setNewCategoryName] = React.useState('');
+
+  if (!show) return null;
+
+  const handleSubmit = () => {
+    onAddCategory(newCategoryName);
+    setNewCategoryName(''); // Vyčistí pole po odoslaní
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
+      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Pridať novú kategóriu'),
+      notificationMessage && React.createElement(NotificationModal, {
+        message: notificationMessage,
+        onClose: () => setNotificationMessage(''),
+        type: error ? 'error' : 'success'
+      }),
+      React.createElement(
+        'div',
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'new-category-name' }, 'Názov kategórie'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'new-category-name',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: newCategoryName,
+          onChange: (e) => setNewCategoryName(e.target.value),
+          required: true,
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSubmit,
+            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading || newCategoryName.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`,
+            disabled: loading || newCategoryName.trim() === '',
+          },
+          loading ? 'Ukladám...' : 'Pridať'
+        )
+      )
+    )
+  );
+}
+
+// EditCategoryModal Component
+function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, error, notificationMessage, setNotificationMessage }) {
+  const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
+
+  React.useEffect(() => {
+    if (category) {
+      setEditedCategoryName(category.name);
+    }
+  }, [category]);
+
+  if (!show || !category) return null;
+
+  const handleSubmit = () => {
+    onSaveCategory(category.id, editedCategoryName);
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
+      React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Upraviť kategóriu: ${category.name}`),
+      notificationMessage && React.createElement(NotificationModal, {
+        message: notificationMessage,
+        onClose: () => setNotificationMessage(''),
+        type: error ? 'error' : 'success'
+      }),
+      React.createElement(
+        'div',
+        { className: 'mb-4' },
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'edit-category-name' }, 'Nový názov kategórie'),
+        React.createElement('input', {
+          type: 'text',
+          id: 'edit-category-name',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: editedCategoryName,
+          onChange: (e) => setEditedCategoryName(e.target.value),
+          required: true,
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-end space-x-4' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200',
+            disabled: loading,
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSubmit,
+            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading || editedCategoryName.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`,
+            disabled: loading || editedCategoryName.trim() === '',
+          },
+          loading ? 'Ukladám...' : 'Uložiť zmeny'
+        )
+      )
+    )
+  );
+}
+
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
   const [app, setApp] = React.useState(null);
@@ -73,7 +204,11 @@ function AddCategoriesApp() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
-  const [categoryName, setCategoryName] = React.useState(''); // Nový stav pre názov kategórie
+
+  const [categories, setCategories] = React.useState([]); // Stav pre zoznam kategórií
+  const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
+  const [showEditCategoryModal, setShowEditCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna úpravy
+  const [categoryToEdit, setCategoryToEdit] = React.useState(null); // Stav pre kategóriu, ktorá sa má upraviť
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -273,6 +408,44 @@ function AddCategoriesApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
+  // Effect for fetching categories
+  React.useEffect(() => {
+    let unsubscribeCategories;
+    if (db && userProfileData && userProfileData.role === 'admin') {
+      console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie.");
+      setLoading(true);
+      try {
+        unsubscribeCategories = db.collection('settings').doc('categories').collection('list').orderBy('createdAt').onSnapshot(snapshot => {
+          const fetchedCategories = [];
+          snapshot.forEach(doc => {
+            fetchedCategories.push({ id: doc.id, ...doc.data() });
+          });
+          setCategories(fetchedCategories);
+          setLoading(false);
+          setError('');
+          console.log("AddCategoriesApp: Kategórie aktualizované z onSnapshot.");
+        }, error => {
+          console.error("AddCategoriesApp: Chyba pri načítaní kategórií z Firestore (onSnapshot error):", error);
+          setError(`Chyba pri načítaní kategórií: ${error.message}`);
+          setLoading(false);
+        });
+      } catch (e) {
+        console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre kategórie (try-catch):", e);
+        setError(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`);
+        setLoading(false);
+      }
+    } else {
+        setCategories([]); // Vyčisti kategórie, ak nie je admin
+    }
+
+    return () => {
+      if (unsubscribeCategories) {
+        console.log("AddCategoriesApp: Ruším odber onSnapshot pre kategórie.");
+        unsubscribeCategories();
+      }
+    };
+  }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
+
   // Effect for updating header link visibility
   React.useEffect(() => {
     console.log(`AddCategoriesApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
@@ -330,7 +503,7 @@ function AddCategoriesApp() {
   }, [handleLogout]);
 
   // Funkcia na pridanie novej kategórie
-  const handleAddCategory = async () => {
+  const handleAddCategorySubmit = async (categoryName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na pridanie kategórie.");
       return;
@@ -345,18 +518,77 @@ function AddCategoriesApp() {
     setUserNotificationMessage('');
 
     try {
-      // Ukladanie do kolekcie settings/categories
+      // Ukladanie do kolekcie settings/categories/list
       await db.collection('settings').doc('categories').collection('list').add({
         name: categoryName.trim(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         createdBy: user.uid,
-        createdByName: userProfileData.firstName + ' ' + userProfileData.lastName,
+        createdByName: `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`,
       });
-      setCategoryName(''); // Vyčistí pole po uložení
       setUserNotificationMessage("Kategória úspešne pridaná!");
+      setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       setError(`Chyba pri pridávaní kategórie: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funkcia na úpravu kategórie
+  const handleEditCategorySubmit = async (categoryId, newName) => {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
+      setError("Nemáte oprávnenie na úpravu kategórie.");
+      return;
+    }
+    if (newName.trim() === '') {
+      setError("Názov kategórie nemôže byť prázdny.");
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setUserNotificationMessage('');
+
+    try {
+      await db.collection('settings').doc('categories').collection('list').doc(categoryId).update({
+        name: newName.trim(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: user.uid,
+        updatedByName: `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`,
+      });
+      setUserNotificationMessage("Kategória úspešne aktualizovaná!");
+      setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
+      setCategoryToEdit(null);
+    } catch (e) {
+      console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
+      setError(`Chyba pri aktualizácii kategórie: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funkcia na zmazanie kategórie
+  const handleDeleteCategory = async (categoryId, categoryName) => {
+    if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
+      setError("Nemáte oprávnenie na zmazanie kategórie.");
+      return;
+    }
+
+    if (!window.confirm(`Naozaj chcete zmazať kategóriu "${categoryName}"? Táto akcia je nevratná.`)) {
+        return; // Ak používateľ zruší, nič nerobíme
+    }
+
+    setLoading(true);
+    setError('');
+    setUserNotificationMessage('');
+
+    try {
+      await db.collection('settings').doc('categories').collection('list').doc(categoryId).delete();
+      setUserNotificationMessage(`Kategória "${categoryName}" bola úspešne zmazaná!`);
+    } catch (e) {
+      console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
+      setError(`Chyba pri mazaní kategórie: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -373,7 +605,7 @@ function AddCategoriesApp() {
     if (isAuthReady && user && !userProfileData) {
         loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
-        loadingMessage = 'Ukladám zmeny...';
+        loadingMessage = 'Načítavam...';
     }
 
     return React.createElement(
@@ -398,6 +630,25 @@ function AddCategoriesApp() {
         onClose: () => setUserNotificationMessage(''),
         type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
     }),
+    React.createElement(AddCategoryModal, {
+        show: showAddCategoryModal,
+        onClose: () => setShowAddCategoryModal(false),
+        onAddCategory: handleAddCategorySubmit,
+        loading: loading,
+        error: error,
+        notificationMessage: userNotificationMessage,
+        setNotificationMessage: setUserNotificationMessage // Pre odovzdanie funkcie na reset notifikácie
+    }),
+    React.createElement(EditCategoryModal, {
+        show: showEditCategoryModal,
+        onClose: () => { setShowEditCategoryModal(false); setCategoryToEdit(null); },
+        onSaveCategory: handleEditCategorySubmit,
+        loading: loading,
+        category: categoryToEdit,
+        error: error,
+        notificationMessage: userNotificationMessage,
+        setNotificationMessage: setUserNotificationMessage // Pre odovzdanie funkcie na reset notifikácie
+    }),
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
@@ -412,32 +663,68 @@ function AddCategoriesApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Vytvorenie kategórií' // Hlavný nadpis
         ),
-        React.createElement(
-          'div',
-          { className: 'space-y-4' },
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'category-name' }, 'Názov kategórie'),
-            React.createElement('input', {
-              type: 'text',
-              id: 'category-name',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: categoryName,
-              onChange: (e) => setCategoryName(e.target.value),
-              required: true,
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'button',
-            {
-              onClick: handleAddCategory,
-              className: `mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200 ${loading || categoryName.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`,
-              disabled: loading || categoryName.trim() === '',
-            },
-            loading ? 'Ukladám...' : 'Pridať kategóriu'
-          )
+        categories.length === 0 && !loading ? (
+            React.createElement('p', { className: 'text-center text-gray-600' }, 'Zatiaľ neboli pridané žiadne kategórie.')
+        ) : (
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full bg-white rounded-lg shadow-md' },
+                    React.createElement(
+                        'thead',
+                        null,
+                        React.createElement(
+                            'tr',
+                            { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Vytvorené'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Vytvoril'),
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
+                        )
+                    ),
+                    React.createElement(
+                        'tbody',
+                        { className: 'text-gray-600 text-sm font-light' },
+                        categories.map((cat) => (
+                            React.createElement(
+                                'tr',
+                                { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.createdAt ? new Date(cat.createdAt.toDate()).toLocaleString() : 'N/A'),
+                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.createdByName || 'N/A'),
+                                React.createElement(
+                                    'td',
+                                    { className: 'py-3 px-6 text-center' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex item-center justify-center space-x-2' },
+                                        React.createElement(
+                                            'button',
+                                            {
+                                              onClick: () => { setCategoryToEdit(cat); setShowEditCategoryModal(true); },
+                                              className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                              disabled: loading,
+                                            },
+                                            'Upraviť'
+                                        ),
+                                        React.createElement(
+                                            'button',
+                                            {
+                                              onClick: () => handleDeleteCategory(cat.id, cat.name),
+                                              className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                              disabled: loading,
+                                            },
+                                            'Zmazať'
+                                        )
+                                    )
+                                )
+                            )
+                        ))
+                    )
+                )
+            )
         )
       )
     ),
@@ -446,8 +733,8 @@ function AddCategoriesApp() {
       'button',
       {
         className: 'fab-button',
-        onClick: handleAddCategory,
-        disabled: loading || categoryName.trim() === '',
+        onClick: () => setShowAddCategoryModal(true), // Otvorí modálne okno na pridanie
+        disabled: loading,
       },
       '+'
     )
