@@ -48,29 +48,17 @@
 
     <!-- Global Firebase config and token - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
     <script>
-        // Check if __firebase_config and __initial_auth_token are defined in the environment
-        // If not, provide default empty values to prevent errors
-        let firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // Použijeme pevne zadané parametre pre Firebase konfiguráciu
+        const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const firebaseConfig = {
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo",
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
+        };
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        // NOVINKA: Získanie API kľúča z URL parametrov
-        function getUrlParams() {
-            const params = {};
-            window.location.search.substring(1).split('&').forEach(param => {
-                const [key, value] = param.split('=');
-                params[key] = decodeURIComponent(value);
-            });
-            return params;
-        }
-
-        const urlParams = getUrlParams();
-        if (urlParams.apiKey) {
-            firebaseConfig.apiKey = urlParams.apiKey;
-            console.log("account.html: API kľúč bol získaný z URL a pridaný do firebaseConfig.");
-        } else {
-            console.warn("account.html: API kľúč nebol nájdený v URL parametroch.");
-        }
 
         // Initialize Firebase app only if it hasn't been initialized already
         if (firebase.apps.length === 0) {
