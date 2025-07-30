@@ -63,8 +63,14 @@ function NotificationModal({ message, onClose, type = 'info' }) {
 }
 
 // AddCategoryModal Component
-function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage }) {
+function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage, existingCategories }) {
   const [newCategoryName, setNewCategoryName] = React.useState('');
+
+  // Kontrola, či názov kategórie už existuje (case-insensitive)
+  const categoryExists = React.useMemo(() => {
+    const trimmedName = newCategoryName.trim().toLowerCase();
+    return existingCategories.some(cat => cat.name.toLowerCase() === trimmedName);
+  }, [newCategoryName, existingCategories]);
 
   if (!show) return null;
 
@@ -97,7 +103,12 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
           onChange: (e) => setNewCategoryName(e.target.value),
           required: true,
           disabled: loading,
-        })
+        }),
+        categoryExists && React.createElement(
+          'p',
+          { className: 'text-red-500 text-xs italic mt-2' },
+          'Kategória s týmto názvom už existuje.'
+        )
       ),
       React.createElement(
         'div',
@@ -115,8 +126,8 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
           'button',
           {
             onClick: handleSubmit,
-            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading || newCategoryName.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`,
-            disabled: loading || newCategoryName.trim() === '',
+            className: `bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 ${loading || newCategoryName.trim() === '' || categoryExists ? 'opacity-50 cursor-not-allowed' : ''}`,
+            disabled: loading || newCategoryName.trim() === '' || categoryExists, // Zablokovanie, ak názov existuje
           },
           loading ? 'Ukladám...' : 'Pridať'
         )
@@ -773,7 +784,8 @@ function AddCategoriesApp() {
         loading: loading,
         error: error,
         notificationMessage: userNotificationMessage,
-        setNotificationMessage: setUserNotificationMessage // Pre odovzdanie funkcie na reset notifikácie
+        setNotificationMessage: setUserNotificationMessage, // Pre odovzdanie funkcie na reset notifikácie
+        existingCategories: categories // NOVINKA: Odovzdávame existujúce kategórie
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
