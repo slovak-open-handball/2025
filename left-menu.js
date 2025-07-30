@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (leftMenuNav && menuToggleIcon && menuTitle && menuItemsList && menuToggleButton && bodyElement) {
         // Priradenie poslucháča udalostí pre tlačidlo prepínania menu
-        menuToggleButton.addEventListener('click', toggleLeftMenu);
+        menuToggleButton.addEventListener('click', toggleLeftMenu); // ZMENA: Opätovné priradenie poslucháča tu
         console.log("Poslucháč udalostí pre menu-toggle-button priradený.");
 
         // Načítanie stavu z localStorage
