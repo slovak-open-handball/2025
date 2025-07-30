@@ -154,6 +154,10 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
+                        // NOVINKA: Volanie initializeHeaderLogic po načítaní header.js
+                        if (typeof initializeHeaderLogic === 'function') {
+                            initializeHeaderLogic();
+                        }
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
