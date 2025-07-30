@@ -104,10 +104,10 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
           required: true,
           disabled: loading,
         }),
-        categoryExists && React.createElement(
+        categoryExists && React.createElement( // NOVINKA: Zobrazenie chybovej správy
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
-          'Kategória s týmto názvom už existuje.'
+          `Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`
         )
       ),
       React.createElement(
@@ -481,7 +481,26 @@ function AddCategoriesApp() {
           if (docSnapshot.exists) {
             const data = docSnapshot.data();
             // Konvertujeme objekt polí na pole objektov { id, name }
-            const fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
+            let fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
+            
+            // NOVINKA: Triedenie kategórií podľa názvu (abecedne/číselne)
+            fetchedCategories.sort((a, b) => {
+              const nameA = a.name.toLowerCase();
+              const nameB = b.name.toLowerCase();
+
+              // Skúsiť číselné porovnanie, ak sú to čísla
+              const numA = parseFloat(nameA);
+              const numB = parseFloat(nameB);
+
+              if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+              }
+              // Inak abecedné porovnanie
+              if (nameA < nameB) return -1;
+              if (nameA > nameB) return 1;
+              return 0;
+            });
+
             setCategories(fetchedCategories);
             console.log("AddCategoriesApp: Kategórie aktualizované z onSnapshot dokumentu, dáta:", fetchedCategories);
           } else {
