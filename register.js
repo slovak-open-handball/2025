@@ -103,10 +103,10 @@ function App() {
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // Nový stav pre úspešnú registráciu
 
-  // Firebase stav
-  const [db, setDb] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  // Firebase stav - už nie sú potrebné useState, pristupujeme ku globálnym inštanciám
+  // const [db, setDb] = React.useState(null);
+  // const [auth, setAuth] = React.useState(null);
+  const [isAuthReady, setIsAuthReady] = React.useState(false); // Stále potrebné pre sledovanie pripravenosti autentifikácie
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
@@ -167,33 +167,23 @@ function App() {
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
     try {
-      if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined' || typeof firebase.auth === 'undefined') {
-        console.error("register.js: Firebase SDK nie je načítané alebo nie sú dostupné všetky moduly. Uistite sa, že sú script tagy Firebase v HTML.");
+      // Prístup ku globálnym inštanciám Firebase Auth a Firestore
+      const authInstance = window.auth;
+      const firestoreDb = window.db;
+
+      if (!authInstance || !firestoreDb) {
+        console.error("register.js: Firebase Auth alebo Firestore nie sú globálne dostupné. Skontrolujte register.html.");
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
         setShowNotification(true);
         setNotificationType('error');
         return;
       }
 
-      let firebaseAppInstance;
-      if (firebase.apps.length === 0) {
-          console.warn("register.js: Predvolená Firebase App nebola nájdená, inicializujem novú.");
-          const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-          firebaseAppInstance = firebase.initializeApp(firebaseConfig);
-      } else {
-          firebaseAppInstance = firebase.app();
-          console.log("register.js: Používam existujúcu Firebase App inštanciu.");
-      }
+      // Už nie je potrebné volať firebase.initializeApp() ani získavať inštancie, sú globálne
+      // setDb(firestoreDb); // Už sa nepoužíva useState
+      // setAuth(authInstance); // Už sa nepoužíva useState
 
-      const firestoreDb = firebase.firestore(firebaseAppInstance);
-      const firebaseAuth = firebase.auth(firebaseAppInstance);
-
-      setDb(firestoreDb);
-      setAuth(firebaseAuth);
-
-      const unsubscribe = firebaseAuth.onAuthStateChanged(async (currentUser) => {
-        // Táto funkcia by mala len reagovať na zmeny stavu autentifikácie, nie riadiť presmerovanie počas registrácie.
-        // Presmerovanie sa riadi v handleSubmit funkcii.
+      const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
       });
 
@@ -209,11 +199,14 @@ function App() {
   // Načítanie a počúvanie stavu registrácie z Firestore
   React.useEffect(() => {
     const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
+      // Prístup ku globálnej inštancii Firestore
+      const firestoreDb = window.db;
+
+      if (!firestoreDb || !isAuthReady) { // isAuthReady je dôležité, aby sa nespúšťalo príliš skoro
         return;
       }
       try {
-          const settingsDocRef = db.collection('settings').doc('registration');
+          const settingsDocRef = firestoreDb.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
@@ -244,7 +237,7 @@ function App() {
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [isAuthReady]); // Zmenená závislosť na isAuthReady
 
   // Effect pre odpočet
   React.useEffect(() => {
@@ -448,7 +441,11 @@ function App() {
     console.log("Konštruované telefónne číslo pre odoslanie:", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
-      if (!auth || !db) {
+      // Prístup ku globálnym inštanciám Firebase Auth a Firestore
+      const authInstance = window.auth;
+      const firestoreDb = window.db;
+
+      if (!authInstance || !firestoreDb) {
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
@@ -469,7 +466,7 @@ function App() {
       console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
       // 1. Vytvorenie používateľa vo Firebase Authentication
-      const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
+      const userCredential = await authInstance.createUserWithEmailAndPassword(formData.email, formData.password);
       const user = userCredential.user;
 
       if (!user || !user.uid) {
@@ -487,7 +484,7 @@ function App() {
 
       // 2. Uloženie používateľských údajov do Firestore
       // Zmenená cesta pre zápis do databázy na /users/{userId}
-      const userDocRef = db.collection('users').doc(user.uid);
+      const userDocRef = firestoreDb.collection('users').doc(user.uid);
 
       console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       await userDocRef.set({
@@ -564,7 +561,7 @@ function App() {
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
       try {
-        await auth.signOut();
+        await authInstance.signOut();
         console.log("Používateľ úspešne odhlásený po registrácii.");
       } catch (signOutError) {
         console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
