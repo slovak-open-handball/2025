@@ -563,16 +563,9 @@ try {
 // ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
-  // ZMENA: Podmienka na spustenie, keď NIE JE na stránke logged-in-users.html
-  // Táto podmienka je teraz opravená tak, aby sa komponent spustil VŽDY,
-  // pokiaľ NIE JE na stránke logged-in-users.html.
-  if (window.location.pathname.includes('logged-in-users.html')) {
-    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent pre hlavičku.");
-    return null; // Nespúšťať komponent, ak je na správcovskej stránke
-  }
-
-  // Ak sa sem dostaneme, znamená to, že NIE SME na logged-in-users.html, takže pokračujeme vo vykresľovaní
-  console.log("UsersManagementApp (header.js): Nie je na stránke logged-in-users.html. Spúšťam komponent pre hlavičku.");
+  // ZMENA: Odstránená podmienka na spustenie len na logged-in-users.html
+  // Tento komponent sa teraz bude vždy spúšťať, aby mohol spravovať odkazy v hlavičke.
+  console.log("UsersManagementApp (header.js): Spúšťam komponent pre hlavičku.");
 
 
   const [app, setApp] = React.useState(null);
@@ -733,8 +726,12 @@ function UsersManagementApp() {
               setLoading(false);
               setError('');
 
+              // ZMENA: Volanie window.updateMenuItemsVisibility len ak je používateľ admin
+              // Ak nie je admin, predpokladáme, že sa zobrazia len bežné položky
               if (typeof window.updateMenuItemsVisibility === 'function') {
                   window.updateMenuItemsVisibility(userData.role);
+              } else {
+                  console.warn("UsersManagementApp: window.updateMenuItemsVisibility nie je definovaná.");
               }
 
               console.log("UsersManagementApp: Načítanie používateľských dát dokončené, loading: false"); // Zmena logu
@@ -760,7 +757,7 @@ function UsersManagementApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("UsersManagementApp: Načítanie používateľských dát zlyhalo, loading: false"); // Zmena logu
@@ -797,7 +794,7 @@ function UsersManagementApp() {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link'); // Opravené, bolo document = document.getElementById
+    const registerLink = document.getElementById('register-link'); 
 
     if (authLink) {
       if (user) {
@@ -856,8 +853,9 @@ function UsersManagementApp() {
   React.useEffect(() => {
     let unsubscribeUsers;
 
-    if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
-      console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor. Načítavam používateľov."); // Zmena logu
+    // ZMENA: Načítavanie používateľov len ak je aktuálna stránka logged-in-users.html
+    if (window.location.pathname.includes('logged-in-users.html') && db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true) {
+      console.log("UsersManagementApp: Prihlásený používateľ je schválený administrátor a je na stránke správy používateľov. Načítavam používateľov."); // Zmena logu
       setLoading(true);
       try {
         unsubscribeUsers = db.collection('users').onSnapshot(snapshot => {
@@ -880,7 +878,7 @@ function UsersManagementApp() {
         setLoading(false);
       }
     } else {
-        setUsers([]); // Vyčisti používateľov, ak nie je admin
+        setUsers([]); // Vyčisti používateľov, ak nie je admin alebo nie je na správnej stránke
     }
 
     return () => {
@@ -1083,17 +1081,21 @@ function UsersManagementApp() {
   }
 
   // If user is not admin, redirect
-  if (userProfileData && userProfileData.role !== 'admin') {
+  // ZMENA: Presmerovanie len ak NIE JE na stránke logged-in-users.html
+  if (userProfileData && userProfileData.role !== 'admin' && window.location.pathname.includes('logged-in-users.html')) {
     console.log("UsersManagementApp: Používateľ nie je admin a snaží sa pristupovať k správe používateľov, presmerovávam."); // Zmena logu
     window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
     return null;
   }
 
+  // ZMENA: Ak nie je na stránke logged-in-users.html, vráť null, aby sa nevykreslil celý komponent správy používateľov
+  if (!window.location.pathname.includes('logged-in-users.html')) {
+      return null;
+  }
+
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Odstránené vykresľovanie TopRightNotificationModal z UsersManagementApp
-    // React.createElement(TopRightNotificationModal, { ... }), // TOTO BOLO ODSTRÁNENÉ
     React.createElement(ConfirmationModal, {
         show: showConfirmationModal,
         message: `Naozaj chcete zmazať používateľa ${userToDelete ? userToDelete.email : ''}?`,
