@@ -272,10 +272,11 @@ function MyDataApp() {
               }
 
               // NOVINKA: Volanie updateHeaderLinks z header.js
-              if (typeof updateHeaderLinks === 'function') {
-                  updateHeaderLinks(user, null); // Predpokladáme, že isRegistrationOpenStatus nie je relevantný tu
+              // Toto je kľúčová zmena pre zobrazenie odkazov v hlavičke
+              if (typeof window.updateHeaderLinks === 'function') {
+                  window.updateHeaderLinks(user, null); // Predpokladáme, že isRegistrationOpenStatus nie je relevantný tu
               } else {
-                  console.warn("MyDataApp: Funkcia updateHeaderLinks nie je definovaná v header.js.");
+                  console.warn("MyDataApp: Funkcia window.updateHeaderLinks nie je definovaná v header.js.");
               }
 
 
