@@ -127,7 +127,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
-            } else if (jsFileName === 'logged-in-change-email' && typeof ChangeEmailApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-email' && typeof ChangeEmailApp !== 'undefined') {
                 rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
