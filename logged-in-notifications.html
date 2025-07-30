@@ -57,9 +57,9 @@
           storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
           messagingSenderId: "572988314768",
           appId: "1:572988314768:web:781e27eb035179fe34b415"
-        });
-        // ZMENA: Dynamické načítanie __initial_auth_token pre konzistentnosť
-        const __initial_auth_token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        }); 
+        // __initial_auth_token je poskytovaný prostredím, preto ho tu nedeklarujeme znova ako const.
+        // Bude prístupný v logged-in-notifications.js
         
         // Inicializácia Firebase aplikácie globálne
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
