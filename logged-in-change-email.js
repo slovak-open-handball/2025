@@ -314,6 +314,14 @@ function ChangeEmailApp() {
                   setUser(null); // Explicitne nastaviť user na null
                   setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
+              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                  console.warn("ChangeEmailApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
               } else {
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
               }
@@ -337,7 +345,7 @@ function ChangeEmailApp() {
               setError('');
 
               if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
+                  updateMenuItemsVisibility(userData.role);
               }
 
               console.log("ChangeEmailApp: Načítanie používateľských dát dokončené, loading: false");
@@ -363,7 +371,7 @@ function ChangeEmailApp() {
                     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                  }
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${e.message}`);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
             setLoading(false);
             console.log("ChangeEmailApp: Načítanie používateľských dát zlyhalo, loading: false");
@@ -492,14 +500,14 @@ function ChangeEmailApp() {
       setEmailError('Nová e-mailová adresa musí byť odlišná od pôvodnej.');
       return;
     }
-    if (password.length < 10) {
-      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 10 znakov).');
+    if (password.length < 10) { // ZMENA: Zmenené z 6 na 10 znakov
+      setPasswordError('Pre zmenu e-mailu zadajte svoje aktuálne heslo (min. 10 znakov).'); // ZMENA: Správa
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    setUserNotificationMessage(''); // Vyčistí notifikáciu pred novým pokusom
 
     try {
       // Re-autentifikácia používateľa
@@ -539,7 +547,8 @@ function ChangeEmailApp() {
   };
 
   // Check if form is valid for button disabled state
-  const isFormValid = validateEmail(newEmail) && newEmail !== currentEmail && password.length >= 6;
+  // ZMENA: Podmienka pre dĺžku hesla z 6 na 10
+  const isFormValid = validateEmail(newEmail) && newEmail !== currentEmail && password.length >= 10;
 
   // Dynamické triedy pre tlačidlo na základe stavu disabled
   const buttonClasses = `
