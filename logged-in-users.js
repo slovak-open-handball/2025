@@ -385,7 +385,7 @@ function UsersManagementApp() {
     try {
       setLoading(true);
       await auth.signOut();
-      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage("Úspešne odhlásený.");
       window.location.href = 'login.html';
       setUser(null); // Explicitne nastaviť user na null
@@ -451,7 +451,7 @@ function UsersManagementApp() {
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
 
   const openConfirmationModal = (user) => {
-    // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+    // ZMENA: Používam setUserNotificationMessage
     setUserNotificationMessage(`Používateľ ${user.email} bude zmazaný. Je potrebné ho manuálne zmazať aj vo Firebase Console.`, 'info');
   };
 
@@ -480,17 +480,20 @@ function UsersManagementApp() {
       const userDocRef = db.collection('users').doc(userToToggle.id);
       await userDocRef.update({ approved: newApprovedStatus });
 
-      const actionMessage = newApprovedStatus ? 'schválený' : 'odobratý prístup';
-      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
-      setUserNotificationMessage(`Používateľ ${userToToggle.email} bol ${actionMessage}.`, 'success');
+      // ZMENA: Upravené znenie správy pre odobratie prístupu
+      const messageForNotification = newApprovedStatus
+        ? `Používateľ ${userToToggle.email} bol schválený.`
+        : `Používateľovi ${userToToggle.email} bol odobratý prístup.`;
+
+      setUserNotificationMessage(messageForNotification, 'success');
 
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToToggle.email} bol ${actionMessage}.`,
+        message: messageForNotification, // Používame rovnakú správu
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
       });
-      console.log(`Notifikácia o ${actionMessage} používateľa úspešne uložená do Firestore.`);
+      console.log(`Notifikácia o ${newApprovedStatus ? 'schválení' : 'odobratí prístupu'} používateľa úspešne uložená do Firestore.`);
 
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri zmene stavu schválenia:", e);
@@ -516,7 +519,7 @@ function UsersManagementApp() {
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       
-      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
       
       closeRoleEditModal();
@@ -563,7 +566,7 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
       // Aktualizácia notifikačnej správy
-      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, manuálne ho zmažte aj vo Firebase Authentication Console.`, 'success');
       
       // Otvoriť Firebase Console Authentication v novej záložke pre manuálne zmazanie
@@ -586,7 +589,7 @@ function UsersManagementApp() {
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
       setError(`Chyba pri mazaní používateľa z databázy: ${e.message}.`);
-      // ZMENA: Používam setUserNotificationMessage namiesto window.showGlobalNotification
+      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Chyba pri mazaní používateľa z databázy: ${e.message}.`, 'error');
     } finally {
       setLoading(false);
@@ -714,7 +717,7 @@ function UsersManagementApp() {
                                                   className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
-                                                u.approved ? 'Odobrať prístup' : 'Schváliť'
+                                                u.approved ? 'Schváliť' : 'Odobrať prístup' // ZMENA: Zmenené poradie textu pre tlačidlo
                                             ),
                                             React.createElement(
                                                 'button',
