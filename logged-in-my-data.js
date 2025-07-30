@@ -104,8 +104,6 @@ function MyDataApp() {
     let unsubscribeAuth;
     let firestoreInstance;
 
-    console.log("MyDataApp: useEffect pre inicializáciu Firebase a Auth Listener.");
-
     try {
       if (typeof firebase === 'undefined') {
         console.error("MyDataApp: Firebase SDK nie je načítané.");
@@ -126,13 +124,11 @@ function MyDataApp() {
       const signIn = async () => {
         try {
           // ZMENA: Používame globálnu premennú initialAuthToken
-          console.log("MyDataApp: Pokúšam sa prihlásiť s custom tokenom. Token je k dispozícii:", initialAuthToken !== null);
-          if (initialAuthToken) { // Kontrola, či initialAuthToken nie je null
+          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             await authInstance.signInWithCustomToken(initialAuthToken);
-            console.log("MyDataApp: Prihlásenie s custom tokenom úspešné (alebo už prihlásený).");
-          } else {
-            console.log("MyDataApp: initialAuthToken nie je k dispozícii. Spolieham sa na pretrvávajúci stav prihlásenia.");
           }
+          // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
+          // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
         } catch (e) {
           console.error("MyDataApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
           setError(`Chyba pri prihlásení: ${e.message}`);
@@ -140,13 +136,9 @@ function MyDataApp() {
       };
 
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null", "Email:", currentUser ? currentUser.email : "null");
+        console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
         setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
-        if (currentUser === null) {
-            console.log("MyDataApp: onAuthStateChanged detekoval odhláseného používateľa. Presmerovávam na login.html.");
-            window.location.href = 'login.html';
-        }
       });
 
       signIn();
@@ -154,11 +146,10 @@ function MyDataApp() {
       return () => {
         if (unsubscribeAuth) {
           unsubscribeAuth();
-          console.log("MyDataApp: Zrušený odber onAuthStateChanged.");
         }
       };
     } catch (e) {
-      console.error("MyDataApp: Nepodarilo sa inicializovať Firebase (v try-catch bloku):", e);
+      console.error("MyDataApp: Nepodarilo sa inicializovať Firebase:", e);
       setError(`Chyba pri inicializácii Firebase: ${e.message}`);
       setLoading(false);
     }
@@ -168,12 +159,10 @@ function MyDataApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    console.log(`MyDataApp: useEffect pre načítanie používateľských dát. isAuthReady: ${isAuthReady}, db: ${!!db}, user: ${user === undefined ? 'undefined' : (user ? user.uid : 'null')}`);
-
     // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
       if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
-        console.log("MyDataApp: Auth je ready a používateľ je null v useEffect pre dáta, presmerovávam na login.html.");
+        console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
@@ -189,7 +178,7 @@ function MyDataApp() {
           unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
               const userData = docSnapshot.data();
-              console.log("MyDataApp: Používateľský dokument existuje, dáta načítané.");
+              console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
               // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
               if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
@@ -209,23 +198,26 @@ function MyDataApp() {
 
               console.log(`MyDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
 
-              if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  // Password bol zmenený novšie vo Firestore (napr. iné zariadenie)
-                  console.log("MyDataApp: Detekovaná novšia zmena hesla v Firestore. Odhlasujem používateľa.");
+              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("MyDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                  console.log("MyDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   localStorage.removeItem(localStorageKey);
-                  setUser(null);
-                  setUserProfileData(null);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return;
               } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  // Firestore má staršiu časovú značku ako localStorage. Toto je nekonzistencia.
-                  // Aktualizujeme localStorage, aby zodpovedal Firestore, predpokladajúc, že Firestore odráža skutočný aktuálny stav.
-                  console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Aktualizujem localStorage.");
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  localStorage.removeItem(localStorageKey);
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                  return;
               } else {
-                  // Časové značky sa zhodujú, alebo localStorage bol 0 a Firestore nie je.
-                  // Zabezpečíme, aby localStorage bol aktualizovaný na aktuálnu hodnotu z Firestore.
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
@@ -274,7 +266,6 @@ function MyDataApp() {
 
               // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
               if (typeof updateMenuItemsVisibility === 'function') {
-                  console.log(`MyDataApp: Volám updateMenuItemsVisibility s rolou: ${userData.role}`);
                   updateMenuItemsVisibility(userData.role);
               } else {
                   console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
@@ -285,11 +276,6 @@ function MyDataApp() {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              // Ak sa dokument nenájde, môže to znamenať, že používateľ bol zmazaný alebo nemá profil.
-              // V takom prípade ho odhlásime.
-              console.log("MyDataApp: Používateľský dokument sa nenašiel, odhlasujem používateľa.");
-              auth.signOut();
-              window.location.href = 'login.html';
               setUser(null); // Explicitne nastaviť user na null
               setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
@@ -336,7 +322,7 @@ function MyDataApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth, appId]); // Pridaná závislosť 'auth' a 'appId' pre použitie auth.signOut() a notifikácií
+  }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
   // NOVINKA: useEffect pre aktualizáciu odkazov hlavičky
   React.useEffect(() => {
@@ -370,9 +356,9 @@ function MyDataApp() {
       setLoading(true);
       await auth.signOut();
       setUserNotificationMessage("Úspešne odhlásený.");
-      // window.location.href = 'login.html'; // Toto už zabezpečí onAuthStateChanged
-      // setUser(null); // Toto už zabezpečí onAuthStateChanged
-      // setUserProfileData(null); // Toto už zabezpečí onAuthStateChanged
+      window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
     } catch (e) {
       console.error("MyDataApp: Chyba pri odhlásení:", e);
       setError(`Chyba pri odhlásení: ${e.message}`);
@@ -409,21 +395,16 @@ function MyDataApp() {
   // alebo userProfileData je null (ešte neboli načítané dáta profilu), alebo loading je true, zobraz loading.
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
     // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
-    // Táto podmienka by sa mala spustiť len raz, ak onAuthStateChanged detekuje null používateľa
     if (isAuthReady && user === null) {
-        console.log("MyDataApp: Auth je ready a používateľ je null v render fáze, presmerovávam na login.html");
+        console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
     // Zobrazenie rôznych správ podľa stavu načítavania
     let loadingMessage = 'Načítavam...';
-    if (!isAuthReady) {
-        loadingMessage = 'Načítavam...';
-    } else if (user === undefined) {
-        loadingMessage = 'Načítavam...';
-    } else if (user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
-    } else if (loading) {
+    if (isAuthReady && user && !userProfileData) {
+        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
+    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
         loadingMessage = 'Načítavam...';
     }
 
