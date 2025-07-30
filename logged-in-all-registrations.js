@@ -139,6 +139,73 @@ function FilterModal({ isOpen, onClose, columnName, onApplyFilter, initialFilter
     );
 }
 
+// ColumnVisibilityModal Component
+function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibility }) {
+    const [tempColumns, setTempColumns] = React.useState(columns);
+
+    React.useEffect(() => {
+        setTempColumns(columns);
+    }, [columns, isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleToggleVisibility = (columnId) => {
+        setTempColumns(prev =>
+            prev.map(col =>
+                col.id === columnId ? { ...col, visible: !col.visible } : col
+            )
+        );
+    };
+
+    const handleSave = () => {
+        onSaveColumnVisibility(tempColumns);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-md' },
+            React.createElement('h3', { className: 'text-lg font-semibold mb-4' }, 'Viditeľnosť stĺpcov'),
+            React.createElement(
+                'div',
+                { className: 'max-h-80 overflow-y-auto mb-4 border border-gray-200 rounded-md p-2' },
+                tempColumns.map((col) =>
+                    React.createElement(
+                        'div',
+                        { key: col.id, className: 'flex items-center justify-between py-2 border-b last:border-b-0' },
+                        React.createElement('label', { className: 'flex items-center cursor-pointer' },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                className: 'form-checkbox h-5 w-5 text-blue-600 mr-2',
+                                checked: col.visible,
+                                onChange: () => handleToggleVisibility(col.id),
+                            }),
+                            React.createElement('span', { className: 'text-gray-700' }, col.label)
+                        ),
+                        React.createElement('span', { className: 'text-gray-500 text-sm' }, col.id)
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex justify-end space-x-2' },
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300',
+                    onClick: onClose
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    className: 'px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600',
+                    onClick: handleSave
+                }, 'Uložiť zmeny')
+            )
+        )
+    );
+}
+
+
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const [app, setApp] = React.useState(null);
@@ -167,25 +234,26 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
   // NOVINKA: Stav pre poradie stĺpcov
   const defaultColumnOrder = [
-    { id: 'role', label: 'Rola', type: 'string' },
-    { id: 'approved', label: 'Schválený', type: 'boolean' },
-    { id: 'registrationDate', label: 'Dátum registrácie', type: 'date' },
-    { id: 'firstName', label: 'Meno', type: 'string' },
-    { id: 'lastName', label: 'Priezvisko', type: 'string' },
-    { id: 'email', label: 'Email', type: 'string' },
-    { id: 'contactPhoneNumber', label: 'Tel. číslo', type: 'string' },
-    { id: 'billing.clubName', label: 'Názov klubu', type: 'string' },
-    { id: 'billing.ico', label: 'IČO', type: 'string' },
-    { id: 'billing.dic', label: 'DIČ', type: 'string' },
-    { id: 'billing.icDph', label: 'IČ DPH', type: 'string' },
-    { id: 'street', label: 'Ulica', type: 'string' },
-    { id: 'houseNumber', label: 'Číslo domu', type: 'string' },
-    { id: 'city', label: 'Mesto', type: 'string' },
-    { id: 'postalCode', label: 'PSČ', type: 'string' },
-    { id: 'country', label: 'Krajina', type: 'string' },
+    { id: 'role', label: 'Rola', type: 'string', visible: true },
+    { id: 'approved', label: 'Schválený', type: 'boolean', visible: true },
+    { id: 'registrationDate', label: 'Dátum registrácie', type: 'date', visible: true },
+    { id: 'firstName', label: 'Meno', type: 'string', visible: true },
+    { id: 'lastName', label: 'Priezvisko', type: 'string', visible: true },
+    { id: 'email', label: 'Email', type: 'string', visible: true },
+    { id: 'contactPhoneNumber', label: 'Tel. číslo', type: 'string', visible: true },
+    { id: 'billing.clubName', label: 'Názov klubu', type: 'string', visible: true },
+    { id: 'billing.ico', label: 'IČO', type: 'string', visible: true },
+    { id: 'billing.dic', label: 'DIČ', type: 'string', visible: true },
+    { id: 'billing.icDph', label: 'IČ DPH', type: 'string', visible: true },
+    { id: 'street', label: 'Ulica', type: 'string', visible: true },
+    { id: 'houseNumber', label: 'Číslo domu', type: 'string', visible: true },
+    { id: 'city', label: 'Mesto', type: 'string', visible: true },
+    { id: 'postalCode', label: 'PSČ', type: 'string', visible: true },
+    { id: 'country', label: 'Krajina', type: 'string', visible: true },
   ];
   const [columnOrder, setColumnOrder] = React.useState(defaultColumnOrder);
   const [hoveredColumn, setHoveredColumn] = React.useState(null);
+  const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
@@ -408,7 +476,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
         // --- Načítanie poradia stĺpcov pre aktuálneho admina ---
         try {
-            // ZMENA: Nová cesta pre columnOrder
+            // Cesta pre columnOrder je teraz users/{userId}/columnOrder/columnOrder
             const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
@@ -416,20 +484,14 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                 if (docSnapshot.exists) {
                     const savedOrder = docSnapshot.data().order;
                     if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
-                        // Skontroluj, či sa zhodujú ID stĺpcov
-                        const validSavedOrder = savedOrder.filter(item => defaultColumnOrder.some(def => def.id === item.id));
-                        if (validSavedOrder.length === defaultColumnOrder.length) {
-                             // Ak sa zhodujú, použijeme uložené poradie
-                            setColumnOrder(validSavedOrder);
-                            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Načítané uložené poradie stĺpcov:", validSavedOrder);
-                        } else {
-                            // Ak sa nezhodujú (napr. chýbajú stĺpce), použijeme predvolené a uložíme ho
-                            setColumnOrder(defaultColumnOrder);
-                            columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true }).then(() => { // Use merge: true
-                                console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie stĺpcov do Firestore (invalid saved order).");
-                            }).catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia stĺpcov (invalid saved order):", e));
-                            console.warn("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie stĺpcov je nekompletné alebo neplatné, používam predvolené.");
-                        }
+                        // Skontroluj, či sa zhodujú ID stĺpcov a pridaj 'visible' ak chýba
+                        const validSavedOrder = defaultColumnOrder.map(defaultCol => {
+                            const savedCol = savedOrder.find(item => item.id === defaultCol.id);
+                            return savedCol ? { ...defaultCol, ...savedCol, visible: savedCol.visible !== undefined ? savedCol.visible : true } : defaultCol;
+                        });
+                        
+                        setColumnOrder(validSavedOrder);
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Načítané uložené poradie stĺpcov (s aktualizovanou viditeľnosťou):", validSavedOrder);
                     } else {
                         // Ak je uložené poradie prázdne alebo malformované, použijeme predvolené a uložíme ho
                         setColumnOrder(defaultColumnOrder);
@@ -700,7 +762,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     };
   }, [handleLogout]);
 
-  // NOVINKA: Funkcia na presun stĺpca
+  // Funkcia na presun stĺpca
   const moveColumn = async (columnId, direction) => {
     const currentIndex = columnOrder.findIndex(col => col.id === columnId);
     if (currentIndex === -1) return;
@@ -720,7 +782,6 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
-        // ZMENA: Nová cesta pre columnOrder
         const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
             await columnOrderDocRef.set({ order: newColumnOrder }, { merge: true }); // Používame merge: true
@@ -728,6 +789,21 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         } catch (e) {
             console.error("AllRegistrationsApp: Chyba pri ukladaní poradia stĺpcov do Firestore:", e);
             setUserNotificationMessage(`Chyba pri ukladaní poradia stĺpcov: ${e.message}`);
+        }
+    }
+  };
+
+  // Funkcia na uloženie viditeľnosti stĺpcov do Firestore
+  const handleSaveColumnVisibility = async (updatedColumns) => {
+    setColumnOrder(updatedColumns); // Aktualizujeme stav v Reactu
+    if (db && user && user.uid) {
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
+        try {
+            await columnOrderDocRef.set({ order: updatedColumns }, { merge: true });
+            setUserNotificationMessage("Viditeľnosť stĺpcov bola úspešne uložená.", 'success');
+        } catch (e) {
+            console.error("AllRegistrationsApp: Chyba pri ukladaní viditeľnosti stĺpcov do Firestore:", e);
+            setUserNotificationMessage(`Chyba pri ukladaní viditeľnosti stĺpcov: ${e.message}`, 'error');
         }
     }
   };
@@ -793,6 +869,12 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         onClearFilter: clearFilter,
         uniqueColumnValues: uniqueColumnValues
     }),
+    React.createElement(ColumnVisibilityModal, {
+        isOpen: showColumnVisibilityModal,
+        onClose: () => setShowColumnVisibilityModal(false),
+        columns: columnOrder,
+        onSaveColumnVisibility: handleSaveColumnVisibility,
+    }),
     React.createElement(
       'div',
       { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
@@ -807,6 +889,14 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Všetky registrácie'
         ),
+        React.createElement(
+            'div',
+            { className: 'flex justify-end mb-4' },
+            React.createElement('button', {
+                onClick: () => setShowColumnVisibilityModal(true),
+                className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            }, 'Upraviť stĺpce')
+        ),
         // Tabuľka všetkých registrácií
         React.createElement(
             'div',
@@ -820,7 +910,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                     React.createElement(
                         'tr',
                         null,
-                        columnOrder.map((col, index) => (
+                        columnOrder.filter(col => col.visible).map((col, index) => ( // Filter for visible columns
                             React.createElement('th', { 
                                 key: col.id, 
                                 scope: 'col', 
@@ -838,7 +928,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                                             onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
                                         }, '⚙️'),
-                                        index < columnOrder.length - 1 && React.createElement('button', { // Šípka doprava
+                                        index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', { // Šípka doprava
                                             onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
                                             className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
                                         }, '→')
@@ -859,14 +949,14 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                         React.createElement(
                             'tr',
                             null,
-                            React.createElement('td', { colSpan: columnOrder.length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
+                            React.createElement('td', { colSpan: columnOrder.filter(c => c.visible).length, className: 'py-4 px-6 text-center text-gray-500' }, 'Žiadne registrácie na zobrazenie.')
                         )
                     ) : (
                         filteredUsers.map(u => (
                             React.createElement(
                                 'tr',
                                 { key: u.id, className: 'bg-white border-b hover:bg-gray-50' },
-                                columnOrder.map(col => (
+                                columnOrder.filter(col => col.visible).map(col => ( // Filter for visible columns
                                     React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap' },
                                         col.id === 'registrationDate' && getNestedValue(u, col.id) && typeof getNestedValue(u, col.id).toDate === 'function' ? getNestedValue(u, col.id).toDate().toLocaleString('sk-SK') :
                                         col.id === 'approved' ? (getNestedValue(u, col.id) ? 'Áno' : 'Nie') :
