@@ -95,6 +95,9 @@ function MyDataApp() {
   const [role, setRole] = React.useState('');
   const [isApproved, setIsApproved] = React.useState(false);
 
+  // Zabezpečíme, že appId je definované (používame globálnu premennú)
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
     let unsubscribeAuth;
@@ -232,16 +235,29 @@ function MyDataApp() {
               if (user && user.email && userData.email !== user.email) {
                 console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${user.email}. Aktualizujem Firestore.`);
                 userDocRef.update({ email: user.email })
-                  .then(() => {
+                  .then(async () => { // Zmena na async funkciu
                     console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
-                    // Vytvorenie globálnej správy pre administrátora
+                    // Vytvorenie globálnej správy pre administrátora (pre aktuálneho používateľa)
                     if (typeof window.showGlobalNotification === 'function') {
-                        window.showGlobalNotification(`E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`);
+                        window.showGlobalNotification(`E-mailová adresa bola úspešne aktualizovaná!`);
                     } else {
                         console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
                     }
-                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu
+                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu (pre aktuálneho používateľa)
                     setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
+
+                    // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
+                    try {
+                        await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+                            message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
+                            read: false
+                        });
+                        console.log("MyDataApp: Notifikácia o automatickej aktualizácii e-mailu pre adminov úspešne uložená do Firestore.");
+                    } catch (notificationError) {
+                        console.error("MyDataApp: Chyba pri ukladaní notifikácie pre adminov o zmene e-mailu:", notificationError);
+                    }
                   })
                   .catch(updateError => {
                     console.error("MyDataApp: Chyba pri aktualizácii emailu vo Firestore:", updateError);
