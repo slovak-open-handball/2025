@@ -212,7 +212,7 @@ function ResetPasswordApp() {
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
                             setTimeout(() => {
-                                window.location.href = 'login.html';
+//                                window.location.href = 'login.html';
                             }, 3000);
                         })
                         .catch(e => {
