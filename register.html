@@ -79,20 +79,37 @@
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
 
-    <!-- Globálne premenné pre Firebase config (pre React aplikácie) -->
+    <!-- Global Firebase config and initialization - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
     <script type="text/javascript">
         // Tieto premenné sú definované globálne a budú použité v header.js a register.js
-        const __app_id = '1:572988314768:web:781e27eb035179fe34b415';
-        const __firebase_config = JSON.stringify({
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
+        const __app_id = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
+        const __firebase_config_string = JSON.stringify({ // Zmenený názov premennej
+            apiKey: "AIzaSyDj_bSTkjrquu1nyIVYW7YLbyBl1pD6YYo", // Uistite sa, že toto je váš správny API kľúč
+            authDomain: "prihlasovanie-4f3f3.firebaseapp.com",
+            projectId: "prihlasovanie-4f3f3",
+            storageBucket: "prihlasovanie-4f3f3.firebasestorage.app",
+            messagingSenderId: "26454452024",
+            appId: "1:26454452024:web:6954b4f90f87a3a1eb43cd"
         });
         const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
         const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
+
+        // Parsujeme konfiguráciu na objekt
+        const firebaseConfig = JSON.parse(__firebase_config_string);
+
+        // Inicializácia Firebase aplikácie
+        if (firebase.apps.length === 0) {
+            window.firebaseApp = firebase.initializeApp(firebaseConfig);
+            console.log("register.html: Firebase aplikácia inicializovaná s konfiguráciou:", firebaseConfig);
+        } else {
+            window.firebaseApp = firebase.app();
+            console.log("register.html: Používam existujúcu Firebase App inštanciu.");
+        }
+
+        // Získanie inštancií Auth a Firestore a ich sprístupnenie globálne
+        window.auth = window.firebaseApp.auth();
+        window.db = window.firebaseApp.firestore();
+        console.log("register.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
     </script>
 
     <!-- Vlastné skripty - header.js musí byť type="text/javascript" pre globálne Firebase -->
