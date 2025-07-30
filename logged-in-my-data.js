@@ -244,7 +244,7 @@ function MyDataApp() {
                     // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
                     try {
                         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                            message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`,
+                            message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný.`,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                             recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
                             read: false
