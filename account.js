@@ -189,19 +189,20 @@ function ResetPasswordApp() {
                         .then(async () => { // Zmena na async funkciu
                             console.log("account.js: applyActionCode úspešné. Pokúšam sa aktualizovať Firestore.");
                             
-                            // NOVINKA: Pridanie malého oneskorenia a dodatočných logov
+                            // NOVINKA: Pridanie oneskorenia pred pokusom o získanie e-mailu a aktualizáciu Firestore
                             setTimeout(async () => {
                                 let targetUserEmail = null;
                                 try {
-                                    // DEBUGGING: Log authInstance before calling verifyActionCode
+                                    // DEBUGGING: Log authInstance before calling checkActionCode
                                     console.log("account.js: DEBUG - authInstance:", authInstance);
                                     console.log("account.js: DEBUG - Type of authInstance:", typeof authInstance);
-                                    console.log("account.js: DEBUG - Does authInstance have verifyActionCode method?", typeof authInstance.verifyActionCode === 'function');
+                                    console.log("account.js: DEBUG - Does authInstance have checkActionCode method?", typeof authInstance.checkActionCode === 'function');
                                     console.dir(authInstance); // Inspect the object properties
 
-                                    // ŠTANDARDNÉ VOLANIE PRE FIREBASE SDK v7
-                                    targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
-                                    console.log(`account.js: Email z overovacieho kódu (cez authInstance.verifyActionCode): ${targetUserEmail}`);
+                                    // ZMENA: Použitie checkActionCode na získanie informácií o akčnom kóde
+                                    const actionCodeInfo = await authInstance.checkActionCode(currentOobCode);
+                                    targetUserEmail = actionCodeInfo.data.email; // E-mail je v objekte data
+                                    console.log(`account.js: Email z overovacieho kódu (cez checkActionCode): ${targetUserEmail}`);
 
                                 } catch (e) {
                                     console.error("account.js: Chyba pri získavaní emailu z overovacieho kódu:", e);
@@ -246,7 +247,7 @@ function ResetPasswordApp() {
                                 setTimeout(() => {
                                     window.location.href = 'login.html';
                                 }, 3000);
-                            }, 500); // 500ms oneskorenie
+                            }, 2000); // 2000ms oneskorenie
                         })
                         .catch(e => {
                             console.error("account.js: Chyba pri overovaní e-mailu (applyActionCode zlyhalo):", e);
