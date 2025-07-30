@@ -193,8 +193,13 @@ function ResetPasswordApp() {
                             setTimeout(async () => {
                                 let targetUserEmail = null;
                                 try {
-                                    // ZMENA: Pokus o volanie verifyActionCode priamo z firebase.auth
-                                    targetUserEmail = await firebase.auth.verifyActionCode(currentOobCode);
+                                    // DEBUGGING: Log authInstance before calling verifyActionCode
+                                    console.log("account.js: DEBUG - authInstance:", authInstance);
+                                    console.log("account.js: DEBUG - Type of authInstance:", typeof authInstance);
+                                    console.log("account.js: DEBUG - Does authInstance have verifyActionCode method?", typeof authInstance.verifyActionCode === 'function');
+
+                                    // REVERTING TO ORIGINAL: Use authInstance.verifyActionCode
+                                    targetUserEmail = await authInstance.verifyActionCode(currentOobCode);
                                     console.log(`account.js: Email z overovacieho kódu: ${targetUserEmail}`);
                                 } catch (e) {
                                     console.error("account.js: Chyba pri získavaní emailu z overovacieho kódu:", e);
