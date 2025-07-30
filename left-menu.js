@@ -21,7 +21,8 @@ function highlightActiveMenuItem() {
     const leftMenuNav = document.getElementById('left-menu-nav'); // Získame nav element
 
     if (menuToggleIcon && leftMenuNav) {
-        const isMenuCollapsed = leftMenuNav.classList.contains('w-16');
+        // Skontrolujeme, či je menu skryté na základe jeho pozície
+        const isMenuCollapsed = leftMenuNav.style.left === '-192px'; // Predpokladáme, že -192px znamená skryté (256px - 64px)
 
         if (isMenuCollapsed) {
             // Ak je menu skryté, ikonka by mala byť biela
@@ -209,26 +210,24 @@ function toggleLeftMenu() {
     const menuItemsList = document.getElementById('menu-items-list');
 
     if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
-        // Skontrolujeme aktuálny stav na základe triedy 'w-16' (skryté)
-        const isCurrentlyHidden = leftMenuNav.classList.contains('w-16');
+        // Skontrolujeme, či je menu momentálne otvorené (pozícia left: 0px)
+        const isCurrentlyOpen = leftMenuNav.style.left === '0px' || leftMenuNav.style.left === ''; // Prázdny reťazec pre počiatočný stav
 
-        if (!isCurrentlyHidden) { // Menu je momentálne otvorené (w-64), takže ho skryjeme
-            leftMenuNav.classList.remove('w-64');
-            leftMenuNav.classList.add('w-16', 'items-center'); // Pridáme items-center pre centrovanie obsahu
+        if (isCurrentlyOpen) { // Menu je otvorené, teraz ho skryjeme (posunieme doľava)
+            leftMenuNav.style.left = '-192px'; // Posunieme menu o (256px - 64px) doľava, aby zostalo viditeľných 64px
             menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
             menuItemsList.classList.add('hidden'); // Skryjeme zoznam položiek menu
             menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
             mainContentArea.classList.remove('ml-64');
-            mainContentArea.classList.add('ml-16');
+            mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
             localStorage.setItem('leftMenuHidden', 'true');
-        } else { // Menu je momentálne skryté (w-16), takže ho zobrazíme
-            leftMenuNav.classList.remove('w-16', 'items-center');
-            leftMenuNav.classList.add('w-64');
+        } else { // Menu je skryté, teraz ho zobrazíme (posunieme doprava)
+            leftMenuNav.style.left = '0px'; // Posunieme menu späť na pôvodnú pozíciu
             menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
             menuItemsList.classList.remove('hidden'); // Zobrazíme zoznam položiek menu
             menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
             mainContentArea.classList.remove('ml-16');
-            mainContentArea.classList.add('ml-64');
+            mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
             localStorage.setItem('leftMenuHidden', 'false');
         }
         // Po zmene stavu menu aktualizujeme farbu ikonky
@@ -281,22 +280,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const menuItemsList = document.getElementById('menu-items-list');
 
 
-        if (isMenuHidden && leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
-            // Odstránime prechodné triedy, aby sa stav aplikoval okamžite
+        if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
+            // Odstránime prechodné triedy, aby sa stav aplikoval okamžite pri načítaní
             leftMenuNav.classList.remove('transition-all', 'duration-300', 'ease-in-out');
 
-            leftMenuNav.classList.add('w-16', 'items-center');
-            leftMenuNav.classList.remove('w-64');
-            
-            menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-            menuItemsList.classList.add('hidden'); // Skryjeme zoznam položiek menu
-            
-            menuToggleIcon.classList.add('rotate-180');
-            mainContentArea.classList.remove('ml-64');
-            mainContentArea.classList.add('ml-16');
+            if (isMenuHidden) {
+                leftMenuNav.style.left = '-192px'; // Nastavíme počiatočnú pozíciu na skrytú
+                menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
+                menuItemsList.classList.add('hidden'); // Skryjeme zoznam položiek menu
+                menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
+                mainContentArea.classList.remove('ml-64');
+                mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
+            } else {
+                leftMenuNav.style.left = '0px'; // Nastavíme počiatočnú pozíciu na zobrazenú
+                menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
+                menuItemsList.classList.remove('hidden'); // Zobrazíme zoznam položiek menu
+                menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
+                mainContentArea.classList.remove('ml-16');
+                mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
+            }
 
             // Po aplikovaní stavu môžeme vrátiť prechodné triedy
-            // Použijeme setTimeout, aby sa triedy pridali až po vykonaní zmien DOM
+            // Použijeme setTimeout, aby sa triedy pridali až po vykonaní zmien DOM a umožnili animácie pri ďalších kliknutiach
             setTimeout(() => {
                 leftMenuNav.classList.add('transition-all', 'duration-300', 'ease-in-out');
             }, 0);
