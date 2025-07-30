@@ -457,7 +457,8 @@ function AddCategoriesApp() {
       setLoading(true);
       try {
         // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
-        unsubscribeCategories = db.collection('settings').collection('categories').orderBy('createdAt').onSnapshot(snapshot => {
+        // ZMENA: Odstránené orderBy('createdAt')
+        unsubscribeCategories = db.collection('settings').collection('categories').onSnapshot(snapshot => {
           const fetchedCategories = [];
           snapshot.forEach(doc => {
             fetchedCategories.push({ id: doc.id, ...doc.data() });
@@ -572,11 +573,9 @@ function AddCategoriesApp() {
       }
 
       // Ukladanie do kolekcie settings/categories
+      // ZMENA: Odstránené createdAt, createdBy, createdByName
       await categoriesRef.add({
         name: categoryName.trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdBy: user.uid,
-        createdByName: `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`,
       });
       setUserNotificationMessage("Kategória úspešne pridaná!");
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
@@ -619,11 +618,9 @@ function AddCategoriesApp() {
       }
 
       // ZMENA: Cesta k kolekcii je teraz priamo 'settings/categories'
+      // ZMENA: Odstránené updatedAt, updatedBy, updatedByName
       await db.collection('settings').collection('categories').doc(categoryId).update({
         name: newName.trim(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedBy: user.uid,
-        updatedByName: `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`,
       });
       setUserNotificationMessage("Kategória úspešne aktualizovaná!");
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
@@ -705,7 +702,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(AddCategoryModal, {
         show: showAddCategoryModal,
-        onClose: () => setShowAddCategoryModal(false),
+        onClose: () => setUserNotificationMessage('') || setShowAddCategoryModal(false), // ZMENA: Pridané vyčistenie notifikácie
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
         error: error,
@@ -714,7 +711,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
-        onClose: () => { setShowEditCategoryModal(false); setCategoryToEdit(null); },
+        onClose: () => { setUserNotificationMessage(''); setShowEditCategoryModal(false); setCategoryToEdit(null); }, // ZMENA: Pridané vyčistenie notifikácie
         onSaveCategory: handleEditCategorySubmit,
         loading: loading,
         category: categoryToEdit,
@@ -759,8 +756,7 @@ function AddCategoriesApp() {
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Vytvorené'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Vytvoril'),
+                            // ZMENA: Odstránené stĺpce "Vytvorené" a "Vytvoril"
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
@@ -772,8 +768,7 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.createdAt ? new Date(cat.createdAt.toDate()).toLocaleString() : 'N/A'),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.createdByName || 'N/A'),
+                                // ZMENA: Odstránené zobrazenie dátumu vytvorenia a mena tvorcu
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
