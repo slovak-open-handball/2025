@@ -69,6 +69,7 @@
             justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
             overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
+            /* ZMENA: Odstránené position: relative a z-index: 1, aby NotificationModal fungoval správne */
         }
 
         /* Pre mobilné zariadenia */
@@ -80,6 +81,8 @@
                 align-items: flex-start;
             }
         }
+        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
+        /* Tieto štýly sú teraz riadené priamo v header.js komponente NotificationModal */
     </style>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -151,19 +154,12 @@
                     headerScript.src = 'header.js';
                     headerScript.onload = () => {
                         console.log("header.js načítaný a spustený.");
-                        // Po načítaní header.js vykreslíme UsersManagementApp do header-placeholder
-                        if (typeof UsersManagementApp !== 'undefined' && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
-                            const headerRoot = ReactDOM.createRoot(headerPlaceholder);
-                            headerRoot.render(React.createElement(UsersManagementApp, null));
-                            console.log("UsersManagementApp vykreslená v hlavičke.");
-                        } else {
-                            console.error("Chyba: UsersManagementApp alebo React/ReactDOM nie sú načítané po načítaní header.js.");
-                        }
                     };
                     headerScript.onerror = (e) => {
                         console.error("Chyba pri načítaní header.js:", e);
                     };
-                    document.body.appendChild(headerScript); 
+                    // ZMENA: Pripojíme header.js k headerPlaceholder namiesto document.body
+                    headerPlaceholder.appendChild(headerScript); 
                 } catch (error) {
                     console.error("Chyba pri načítaní hlavičky:", error);
                 }
@@ -184,7 +180,7 @@
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility by mala byť teraz dostupná
+                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
