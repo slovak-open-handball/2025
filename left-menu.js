@@ -24,20 +24,21 @@ function highlightActiveMenuItem() {
         // Skontrolujeme, či je menu skryté na základe jeho pozície
         const isMenuCollapsed = leftMenuNav.style.left === '-192px'; // Predpokladáme, že -192px znamená skryté (256px - 64px)
 
-        if (isMenuCollapsed) {
-            // Ak je menu skryté, ikonka by mala byť biela
-            menuToggleIcon.style.color = 'white';
+        // NOVINKA: Ak je menu skryté, ikonka by mala mať farbu aktívneho odkazu, inak bielu
+        if (activeLink) {
+            const computedStyle = getComputedStyle(activeLink);
+            const activeLinkColor = computedStyle.backgroundColor; // Získame farbu pozadia aktívneho odkazu (modrá)
+            menuToggleIcon.style.color = activeLinkColor; // Nastavíme farbu ikonky
         } else {
-            // Ak je menu zobrazené, nastavíme farbu podľa aktívneho odkazu
-            if (activeLink) {
-                const computedStyle = getComputedStyle(activeLink);
-                const activeLinkColor = computedStyle.backgroundColor; // Získame farbu pozadia aktívneho odkazu (modrá)
-                menuToggleIcon.style.color = activeLinkColor; // Nastavíme farbu ikonky
-            } else {
-                // Ak žiadna položka nie je aktívna a menu je zobrazené, predvolene nastavíme bielu
-                menuToggleIcon.style.color = 'white';
-            }
+            // Ak žiadna položka nie je aktívna, predvolene nastavíme bielu
+            menuToggleIcon.style.color = 'white';
         }
+    }
+
+    if (activeLink) {
+        // Zvýrazníme aktívnu položku a pridáme triedy pre neklikateľnosť
+        activeLink.classList.remove('hover:bg-blue-600'); // Odstránime hover, aby sa nekolidoval so zvýraznením
+        activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // Pridáme triedy pre zvýraznenie a neklikateľnosť
     }
 }
 
@@ -312,4 +313,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky (pre prípad, že load listener sa spustí neskôr)
     highlightActiveMenuItem();
-});
+}
