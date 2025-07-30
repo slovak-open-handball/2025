@@ -1,7 +1,15 @@
 <!-- Tento súbor obsahuje štruktúru ľavého navigačného menu. -->
-<nav class="w-64 bg-gray-800 text-white flex flex-col p-4 space-y-2 h-full fixed top-16 left-0 overflow-y-auto shadow-lg rounded-tr-lg" style="z-index: 20;">
-    <h2 class="text-xl font-bold mb-4 text-center">Možnosti</h2>
-    <ul>
+<nav id="left-menu-nav" class="w-64 bg-gray-800 text-white flex flex-col p-4 space-y-2 h-full fixed top-16 left-0 overflow-y-auto shadow-lg rounded-tr-lg transition-all duration-300 ease-in-out" style="z-index: 20;">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-center flex-grow">Možnosti</h2>
+        <!-- Ikona pre skrytie/zobrazenie menu -->
+        <button id="menu-toggle-button" class="p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200">
+            <svg id="menu-toggle-icon" class="w-6 h-6 transform transition-transform duration-300 ease-in-out" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M15.707 10.293a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L10 13.586l4.293-4.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+        </button>
+    </div>
+    <ul id="menu-items-list">
         <li class="hidden"><a id="menu-my-data" href="logged-in-my-data.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Moje údaje</a></li>
         <li class="hidden"><a id="menu-change-name" href="logged-in-change-name.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Zmeniť meno a priezvisko</a></li>
         <li class="hidden"><a id="menu-change-phone" href="logged-in-change-phone.html" class="block py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200">Zmeniť telefónne číslo</a></li>
