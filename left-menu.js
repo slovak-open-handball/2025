@@ -17,11 +17,24 @@ function highlightActiveMenuItem() {
 
     // Nájdeme odkaz v menu, ktorého href atribút končí aktuálnou stránkou
     const activeLink = document.querySelector(`.w-64 a[href$="${currentPage}"]`);
+    const menuToggleIcon = document.getElementById('menu-toggle-icon');
 
     if (activeLink) {
         // Zvýrazníme aktívnu položku a pridáme triedy pre neklikateľnosť
         activeLink.classList.remove('hover:bg-blue-600'); // Odstránime hover, aby sa nekolidoval so zvýraznením
         activeLink.classList.add('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none'); // Pridáme triedy pre zvýraznenie a neklikateľnosť
+
+        // NOVINKA: Získame farbu aktívneho odkazu a nastavíme ju pre ikonku
+        const computedStyle = getComputedStyle(activeLink);
+        const activeLinkColor = computedStyle.backgroundColor; // Získame farbu pozadia aktívneho odkazu (modrá)
+        if (menuToggleIcon) {
+            menuToggleIcon.style.color = activeLinkColor; // Nastavíme farbu ikonky
+        }
+    } else {
+        // Ak žiadna položka nie je aktívna, nastavíme ikonku na predvolenú bielu
+        if (menuToggleIcon) {
+            menuToggleIcon.style.color = 'white';
+        }
     }
 }
 
@@ -185,6 +198,36 @@ window.updateMenuItemsVisibility = function(userRole) {
     highlightActiveMenuItem();
 };
 
+// NOVINKA: Funkcia na prepínanie viditeľnosti ľavého menu
+function toggleLeftMenu() {
+    const leftMenuNav = document.getElementById('left-menu-nav');
+    const menuToggleIcon = document.getElementById('menu-toggle-icon');
+    const mainContentArea = document.getElementById('main-content-area');
+
+    if (leftMenuNav && menuToggleIcon && mainContentArea) {
+        const isHidden = leftMenuNav.classList.toggle('w-16'); // Prepína šírku medzi 64 (otvorené) a 16 (skryté)
+        leftMenuNav.classList.toggle('w-64', !isHidden); // Zabezpečí správnu šírku
+        leftMenuNav.classList.toggle('items-center', isHidden); // Centrovanie obsahu, keď je skryté
+
+        // Prepínanie viditeľnosti textu v menu
+        const menuItemsList = document.getElementById('menu-items-list');
+        if (menuItemsList) {
+            menuItemsList.classList.toggle('hidden', isHidden);
+            menuItemsList.classList.toggle('block', !isHidden);
+        }
+
+        // Otočenie ikonky
+        menuToggleIcon.classList.toggle('rotate-180', isHidden);
+
+        // Posunutie hlavného obsahu
+        mainContentArea.classList.toggle('ml-64', !isHidden);
+        mainContentArea.classList.toggle('ml-16', isHidden);
+
+        // Uložiť stav do localStorage
+        localStorage.setItem('leftMenuHidden', isHidden);
+    }
+}
+
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
     const menuLinks = document.querySelectorAll('.w-64 a'); // Všetky odkazy v navigačnom menu
@@ -210,6 +253,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // NOVINKA: Pridanie poslucháča udalostí pre tlačidlo prepínania menu
+    const menuToggleButton = document.getElementById('menu-toggle-button');
+    if (menuToggleButton) {
+        menuToggleButton.addEventListener('click', toggleLeftMenu);
+    }
+
+    // NOVINKA: Načítať stav menu z localStorage pri načítaní stránky
+    const isMenuHidden = localStorage.getItem('leftMenuHidden') === 'true';
+    if (isMenuHidden) {
+        // Aplikovať skrytý stav bez animácie pri načítaní
+        const leftMenuNav = document.getElementById('left-menu-nav');
+        const menuToggleIcon = document.getElementById('menu-toggle-icon');
+        const mainContentArea = document.getElementById('main-content-area');
+
+        if (leftMenuNav && menuToggleIcon && mainContentArea) {
+            leftMenuNav.classList.add('w-16');
+            leftMenuNav.classList.remove('w-64');
+            leftMenuNav.classList.add('items-center');
+            
+            const menuItemsList = document.getElementById('menu-items-list');
+            if (menuItemsList) {
+                menuItemsList.classList.add('hidden');
+                menuItemsList.classList.remove('block');
+            }
+            menuToggleIcon.classList.add('rotate-180');
+            mainContentArea.classList.remove('ml-64');
+            mainContentArea.classList.add('ml-16');
+        }
+    }
+
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky
     highlightActiveMenuItem();
 });
