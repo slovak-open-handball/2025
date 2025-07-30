@@ -236,7 +236,7 @@ function MyDataApp() {
                 console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${user.email}. Aktualizujem Firestore.`);
                 userDocRef.update({ email: user.email })
                   .then(async () => { // Zmena na async funkciu
-                    console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
+                    console.log("MyDataApp: Email úspešne aktualizovaný.");
                     // Vytvorenie globálnej správy pre administrátora (pre aktuálneho používateľa)
                     if (typeof window.showGlobalNotification === 'function') {
                         window.showGlobalNotification(`E-mailová adresa bola úspešne aktualizovaná!`);
@@ -249,7 +249,7 @@ function MyDataApp() {
                     // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
                     try {
                         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                            message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`,
+                            message: `E-mail používateľa ${user.email} bol aktualizovaný.`,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                             recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
                             read: false
