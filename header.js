@@ -298,10 +298,13 @@ function GlobalNotificationHandler() {
   const [lastNotificationTimestamp, setLastNotificationTimestamp] = React.useState(0); // Sledovanie poslednej zobrazenej notifikácie
 
   // NOVINKA: Stav pre existenciu kategórií
-  const [categoriesExist, setCategoriesExist] = React.useState(true);
+  const [categoriesExist, setCategoriesExist] = React.useState(false); // ZMENA: Predvolene na false
   // NOVINKA: Stavy pre dátumy registrácie
   const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
   const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
+  // NOVINKA: Nový stav pre celkovú pripravenosť nastavení a kategórií
+  const [settingsAndCategoriesLoaded, setSettingsAndCategoriesLoaded] = React.useState(false);
+
 
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
   // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
@@ -447,6 +450,15 @@ function GlobalNotificationHandler() {
   React.useEffect(() => {
     let unsubscribeCategories;
     let unsubscribeRegistrationSettings;
+    let categoriesDataLoaded = false;
+    let registrationDataLoaded = false;
+
+    const checkAllLoaded = () => {
+      if (categoriesDataLoaded && registrationDataLoaded) {
+        setSettingsAndCategoriesLoaded(true);
+        console.log("GNH: Všetky nastavenia a kategórie načítané.");
+      }
+    };
 
     if (db) {
       // Načítanie kategórií
@@ -459,9 +471,13 @@ function GlobalNotificationHandler() {
           setCategoriesExist(false);
           console.log("GNH: Žiadne kategórie neexistujú.");
         }
+        categoriesDataLoaded = true;
+        checkAllLoaded();
       }, error => {
         console.error("GNH: Chyba pri načítaní kategórií:", error);
         setCategoriesExist(false); // V prípade chyby predpokladáme, že neexistujú
+        categoriesDataLoaded = true;
+        checkAllLoaded();
       });
 
       // Načítanie dátumov registrácie
@@ -477,10 +493,14 @@ function GlobalNotificationHandler() {
           setRegistrationEndDate(null);
           console.log("GNH: Dátumy registrácie neexistujú.");
         }
+        registrationDataLoaded = true;
+        checkAllLoaded();
       }, error => {
         console.error("GNH: Chyba pri načítaní dátumov registrácie:", error);
         setRegistrationStartDate(null);
         setRegistrationEndDate(null);
+        registrationDataLoaded = true;
+        checkAllLoaded();
       });
     }
 
@@ -492,7 +512,7 @@ function GlobalNotificationHandler() {
         unsubscribeRegistrationSettings();
       }
     };
-  }, [db]);
+  }, [db]); // Závisí len od 'db'
 
 
   // Effect for listening to new notifications (only for top-right notifications)
@@ -582,6 +602,13 @@ function GlobalNotificationHandler() {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
+    // NOVINKA: Ak ešte nie sú načítané všetky nastavenia (vrátane kategórií), skryj odkaz a počkaj
+    if (!settingsAndCategoriesLoaded) {
+      registerLink.classList.add('hidden');
+      console.log("GNH: Čakám na načítanie nastavení a kategórií, 'Registrácia na turnaj' je skrytá.");
+      return;
+    }
+
     const now = new Date();
     const isRegistrationPeriod = (registrationStartDate && now >= registrationStartDate) &&
                                  (registrationEndDate ? now <= registrationEndDate : true);
@@ -589,7 +616,7 @@ function GlobalNotificationHandler() {
 
     // Podmienka pre zobrazenie "Registrácia na turnaj"
     // Zobrazí sa, ak:
-    // 1. Existujú kategórie
+    // 1. Existujú kategórie (categoriesExist je true)
     // 2. A (je pred začiatkom registrácie ALEBO je v období registrácie)
     if (categoriesExist && (isBeforeRegistration || isRegistrationPeriod)) {
       registerLink.classList.remove('hidden');
@@ -598,7 +625,7 @@ function GlobalNotificationHandler() {
       registerLink.classList.add('hidden');
       console.log("GNH: 'Registrácia na turnaj' je skrytá.");
     }
-  }, [categoriesExist, registrationStartDate, registrationEndDate, user]); // Závislosti pre prepočet
+  }, [categoriesExist, registrationStartDate, registrationEndDate, user, settingsAndCategoriesLoaded]); // Pridaná závislosť settingsAndCategoriesLoaded
 
   return React.createElement(
     React.Fragment,
@@ -879,7 +906,7 @@ function UsersManagementApp() {
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Zabezpečí, že register-link je skrytý, keď je používateľ prihlásený
         console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
       } else {
         authLink.classList.remove('hidden');
