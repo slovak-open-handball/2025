@@ -188,34 +188,37 @@ function ResetPasswordApp() {
                     authInstance.applyActionCode(currentOobCode)
                         .then(async () => { // Zmena na async funkciu
                             console.log("account.js: applyActionCode úspešné. Pokúšam sa aktualizovať Firestore.");
-                            // Získanie aktuálne prihláseného používateľa
-                            // Použite authInstance.currentUser, ktoré by malo byť aktualizované po applyActionCode
-                            const currentUser = authInstance.currentUser; 
                             
-                            // Použite dbInstance, ktorá je lokálne definovaná a zaručene inicializovaná
-                            if (currentUser && dbInstance) { 
-                                console.log(`account.js: Aktuálny používateľ UID: ${currentUser.uid}, Email (po overení): ${currentUser.email}`);
-                                console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
-                                const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
-                                try {
-                                    // Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
-                                    await userDocRef.set({ email: currentUser.email }, { merge: true });
-                                    console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
-                                    setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
-                                } catch (firestoreError) {
-                                    console.error("account.js: Chyba pri aktualizácii Firestore emailu:", firestoreError);
-                                    setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
-                                }
-                            } else {
-                                console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo dbInstance nie je dostupná.");
-                                setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
-                            }
+                            // NOVINKA: Pridanie malého oneskorenia a dodatočných logov
+                            setTimeout(async () => {
+                                const currentUser = authInstance.currentUser; 
+                                
+                                console.log(`account.js: DEBUG (po setTimeout) - currentUser UID: ${currentUser ? currentUser.uid : 'null'}`);
+                                console.log(`account.js: DEBUG (po setTimeout) - currentUser Email: ${currentUser ? currentUser.email : 'null'}`);
+                                console.log(`account.js: DEBUG (po setTimeout) - dbInstance je dostupná: ${!!dbInstance}`);
 
-                            setLoading(false);
-                            // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
-                            setTimeout(() => {
-                                window.location.href = 'login.html';
-                            }, 3000);
+                                if (currentUser && dbInstance) { 
+                                    console.log(`account.js: Cieľový Firestore dokument: users/${currentUser.uid}`);
+                                    const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
+                                    try {
+                                        // Použitie setDoc s merge: true pre robustnejšiu aktualizáciu
+                                        await userDocRef.set({ email: currentUser.email }, { merge: true });
+                                        console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
+                                        setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
+                                    } catch (firestoreError) {
+                                        console.error("account.js: Chyba pri aktualizácii Firestore emailu:", firestoreError);
+                                        setError(`Chyba pri aktualizácii e-mailu vo Firestore: ${firestoreError.message}`);
+                                    }
+                                } else {
+                                    console.warn("account.js: Nepodarilo sa aktualizovať Firestore email: Používateľ nie je prihlásený alebo dbInstance nie je dostupná. currentUser:", currentUser, "dbInstance:", dbInstance);
+                                    setError("Chyba: Nepodarilo sa aktualizovať e-mail vo Firestore. Skúste to prosím znova.");
+                                }
+                                setLoading(false);
+                                // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
+                                setTimeout(() => {
+                                    window.location.href = 'login.html';
+                                }, 3000);
+                            }, 500); // 500ms oneskorenie
                         })
                         .catch(e => {
                             console.error("account.js: Chyba pri overovaní e-mailu (applyActionCode zlyhalo):", e);
@@ -395,7 +398,7 @@ function ResetPasswordApp() {
                     placeholder: 'Zadajte heslo znova',
                     autoComplete: 'new-password',
                     disabled: loading,
-                    showPassword: showConfirmPassword,
+                    showConfirmPassword: showConfirmPassword,
                     toggleShowPassword: () => setShowConfirmPassword(!showConfirmPassword)
                 }),
                 // NOVINKA: Zobrazenie správy "Heslá sa nezhodujú"
