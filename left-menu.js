@@ -256,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuToggleButton = document.getElementById('menu-toggle-button');
     if (menuToggleButton) {
         menuToggleButton.addEventListener('click', toggleLeftMenu);
+        console.log("Poslucháč udalostí pre menu-toggle-button priradený."); // Debugovací výpis
     } else {
         console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené!");
     }
@@ -303,4 +304,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky (pre prípad, že load listener sa spustí neskôr)
     highlightActiveMenuItem();
-})
+});
