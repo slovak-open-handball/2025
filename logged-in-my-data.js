@@ -12,7 +12,7 @@
 //  const hours = date.getHours().toString().padStart(2, '0');
 //  const minutes = (date.getMinutes()).toString().padStart(2, '0');
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
-// };
+//};
 
 // ZMENA: Odstránený lokálny komponent NotificationModal.
 // Notifikácie sú teraz riadené globálne cez header.js.
@@ -104,7 +104,7 @@ function MyDataApp() {
         return;
       }
 
-      // Ak je používateľ prihlásený, pokus se načíst jeho data z Firestore
+      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
       if (user) {
         console.log(`MyDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
         // Nastavíme loading na true, pretože začíname načítavať profilové dáta
@@ -139,7 +139,7 @@ function MyDataApp() {
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítanie, aby sa zobrazila chyba
+              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
               setUser(null); // Explicitne nastaviť user na null
               setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
@@ -208,7 +208,7 @@ function MyDataApp() {
   // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia),
   // alebo userProfileData je null (ešte neboli načítané dáta profilu), alebo loading je true, zobraz loading.
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    // Ak je používateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
+    // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
     if (isAuthReady && user === null) {
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
@@ -217,7 +217,7 @@ function MyDataApp() {
     // Zobrazenie rôznych správ podľa stavu načítavania
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam profilové dáta...'; // Špecifická správa pre profilové dáta
+        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
     } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
         loadingMessage = 'Načítavam...';
     }
@@ -297,8 +297,7 @@ function MyDataApp() {
                 'p',
                 { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
                 React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                // ZMENA: E-mailová adresa sa načítava z user.email (Authentication)
-                ` ${user.email || ''}`
+                ` ${userProfileData.email || user.email || ''}`
               )
             ),
             // NOVINKA: Podmienené zobrazenie fakturačnej adresy len pre rolu 'user'
@@ -370,6 +369,3 @@ function MyDataApp() {
     )
   );
 }
-
-// Explicitne zpřístupnit komponent globálně
-window.MyDataApp = MyDataApp;
