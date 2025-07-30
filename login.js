@@ -740,17 +740,17 @@ function App() {
                 className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200',
               },
               'Zabudli ste heslo?'
-            ),
-            // NOVINKA: Odkaz na registráciu - podmienené zobrazenie
-            (categoriesExist && isRegistrationOpen) && React.createElement(
-              'a',
-              {
-                href: 'register.html',
-                className: 'inline-block align-baseline font-bold text-sm text-green-600 hover:text-green-800 transition-colors duration-200',
-                tabIndex: 4
-              },
-              'Registrovať sa'
             )
+            // ODSTRÁNENÉ: Odkaz na registráciu - už sa nebude zobrazovať
+            // (categoriesExist && isRegistrationOpen) && React.createElement(
+            //   'a',
+            //   {
+            //     href: 'register.html',
+            //     className: 'inline-block align-baseline font-bold text-sm text-green-600 hover:text-green-800 transition-colors duration-200',
+            //     tabIndex: 4
+            //   },
+            //   'Registrovať sa'
+            // )
           )
         )
       )
