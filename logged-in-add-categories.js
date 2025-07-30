@@ -456,8 +456,8 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie.");
       setLoading(true);
       try {
-        // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).collection('settings')
-        unsubscribeCategories = db.collection('artifacts').doc(appId).collection('settings').onSnapshot(snapshot => {
+        // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
+        unsubscribeCategories = db.collection('artifacts').doc(appId).doc('settings').collection('categories').onSnapshot(snapshot => {
           const fetchedCategories = [];
           snapshot.forEach(doc => {
             fetchedCategories.push({ id: doc.id, ...doc.data() });
@@ -581,8 +581,8 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).collection('settings')
-      const categoriesRef = db.collection('artifacts').doc(appId).collection('settings');
+      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
+      const categoriesRef = db.collection('artifacts').doc(appId).doc('settings').collection('categories');
       const existingCategorySnapshot = await categoriesRef.where('name', '==', categoryName.trim()).get();
 
       if (!existingCategorySnapshot.empty) {
@@ -627,8 +627,8 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).collection('settings')
-      const categoriesRef = db.collection('artifacts').doc(appId).collection('settings');
+      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
+      const categoriesRef = db.collection('artifacts').doc(appId).doc('settings').collection('categories');
       const existingCategorySnapshot = await categoriesRef
         .where('name', '==', newName.trim())
         .get();
@@ -640,9 +640,9 @@ function AddCategoriesApp() {
         return;
       }
 
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).collection('settings')
+      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
       // ZMENA: Odstránené updatedAt, updatedBy, updatedByName
-      await db.collection('artifacts').doc(appId).collection('settings').doc(categoryId).update({
+      await db.collection('artifacts').doc(appId).doc('settings').collection('categories').doc(categoryId).update({
         name: newName.trim(),
       });
       setUserNotificationMessage("Kategória úspešne aktualizovaná!");
@@ -675,8 +675,8 @@ function AddCategoriesApp() {
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).collection('settings')
-      await db.collection('artifacts').doc(appId).collection('settings').doc(categoryToDelete.id).delete();
+      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
+      await db.collection('artifacts').doc(appId).doc('settings').collection('categories').doc(categoryToDelete.id).delete();
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
