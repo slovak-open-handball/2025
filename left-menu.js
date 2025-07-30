@@ -4,7 +4,7 @@
 // Funkcia na zvýraznenie aktívnej položky menu
 function highlightActiveMenuItem() {
     // Odstránime zvýraznenie a triedy pre neklikateľnosť zo všetkých predtým aktívnych položiek
-    const allMenuItems = document.querySelectorAll('.w-64 a');
+    const allMenuItems = document.querySelectorAll('#left-menu-nav ul li a'); // Selektor pre odkazy v menu
     allMenuItems.forEach(item => {
         item.classList.remove('bg-blue-600', 'font-bold', 'text-white', 'cursor-default', 'pointer-events-none');
         item.classList.add('hover:bg-blue-600'); // Vrátime hover efekt
@@ -16,12 +16,12 @@ function highlightActiveMenuItem() {
     const currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1);
 
     // Nájdeme odkaz v menu, ktorého href atribút končí aktuálnou stránkou
-    const activeLink = document.querySelector(`.w-64 a[href$="${currentPage}"]`);
+    const activeLink = document.querySelector(`#left-menu-nav ul li a[href$="${currentPage}"]`);
     const menuToggleIcon = document.getElementById('menu-toggle-icon');
     const leftMenuNav = document.getElementById('left-menu-nav'); // Získame nav element
 
     if (menuToggleIcon && leftMenuNav) {
-        // NOVINKA: Vždy nastavíme farbu ikonky na bielu pre lepšiu viditeľnosť na tmavom pozadí menu
+        // Vždy nastavíme farbu ikonky na bielu pre lepšiu viditeľnosť na tmavom pozadí menu
         menuToggleIcon.style.color = 'white';
     }
 
@@ -37,7 +37,7 @@ function highlightActiveMenuItem() {
 // Táto funkcia by mala byť volaná z hlavnej React aplikácie (MyDataApp)
 // na dynamické načítanie rôznych sub-komponentov/stránok do #root divu.
 // Už nenačítava celé HTML súbory, ale iba ich zodpovedajúce JS súbory s React komponentmi.
-async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru bez .js prípony
+async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js prípony
     const contentArea = document.getElementById('main-content-area');
     if (!contentArea) {
         console.error("Element s ID 'main-content-area' nebol nájdený.");
@@ -75,7 +75,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
-            } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') { // Opravený názov komponentu
+            } else if (jsFileName === 'logged-in-change-billing-data' && typeof ChangeBillingDataApp !== 'undefined') {
                 rootComponent = ChangeBillingDataApp;
             } else if (jsFileName === 'logged-in-my-settings' && typeof MySettingsApp !== 'undefined') {
                 rootComponent = MySettingsApp;
@@ -117,7 +117,7 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
-            } else if (jsFileName === 'logged-in-email' && typeof ChangeEmailApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-change-email' && typeof ChangeEmailApp !== 'undefined') {
                 rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
@@ -194,11 +194,12 @@ window.updateMenuItemsVisibility = function(userRole) {
 
 // NOVINKA: Funkcia na prepínanie viditeľnosti ľavého menu
 function toggleLeftMenu() {
+    console.log("toggleLeftMenu function called!"); // Debugovací výpis
     const leftMenuNav = document.getElementById('left-menu-nav');
     const menuToggleIcon = document.getElementById('menu-toggle-icon');
     const mainContentArea = document.getElementById('main-content-area');
     const menuTitle = leftMenuNav ? leftMenuNav.querySelector('h2') : null; // Získame nadpis "Možnosti"
-    const menuItemsList = document.getElementById('menu-items-list');
+    const menuItemsList = document.getElementById('menu-items-list'); // Získame <ul> element
 
     if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
         // Skontrolujeme, či je menu momentálne otvorené (pozícia left: 0px)
@@ -207,7 +208,7 @@ function toggleLeftMenu() {
         if (isCurrentlyOpen) { // Menu je otvorené, teraz ho skryjeme (posunieme doľava)
             leftMenuNav.style.left = '-192px'; // Posunieme menu o (256px - 64px) doľava, aby zostalo viditeľných 64px
             menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-            menuItemsList.classList.add('hidden'); // Skryjeme zoznam položiek menu
+            // ODSTRÁNENÉ: menuItemsList.classList.add('hidden'); // Už neskrývame celý zoznam položiek
             menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
             mainContentArea.classList.remove('ml-64');
             mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
@@ -215,7 +216,7 @@ function toggleLeftMenu() {
         } else { // Menu je skryté, teraz ho zobrazíme (posunieme doprava)
             leftMenuNav.style.left = '0px'; // Posunieme menu späť na pôvodnú pozíciu
             menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-            menuItemsList.classList.remove('hidden'); // Zobrazíme zoznam položiek menu
+            // ODSTRÁNENÉ: menuItemsList.classList.remove('hidden'); // Už nezobrazujeme celý zoznam položiek
             menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
             mainContentArea.classList.remove('ml-16');
             mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
@@ -223,12 +224,17 @@ function toggleLeftMenu() {
         }
         // Po zmene stavu menu aktualizujeme farbu ikonky
         highlightActiveMenuItem();
+        // NOVINKA: Po prepnutí menu zavoláme updateMenuItemsVisibility, aby sa položky aktualizovali podľa roly
+        // Predpokladáme, že aktuálna rola je uložená niekde globálne alebo sa dá získať.
+        // Ak nie je priamo dostupná, bude ju musieť React komponent znova poslať.
+        // Pre účely testovania môžeme použiť placeholder, ale v reálnej aplikácii by mala prísť z Reactu.
+        // Pre túto chvíľu to ponechám tak, že sa spolieham na volanie z Reactu.
     }
 }
 
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
-    const menuLinks = document.querySelectorAll('.w-64 a'); // Všetky odkazy v navigačnom menu
+    const menuLinks = document.querySelectorAll('#left-menu-nav ul li a'); // ZMENA: Presnejší selektor
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             // NOVINKA: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
@@ -269,24 +275,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const menuToggleIcon = document.getElementById('menu-toggle-icon');
         const mainContentArea = document.getElementById('main-content-area');
         const menuTitle = leftMenuNav ? leftMenuNav.querySelector('h2') : null;
-        const menuItemsList = document.getElementById('menu-items-list');
+        // const menuItemsList = document.getElementById('menu-items-list'); // Už nepotrebujeme pristupovať k celému zoznamu tu
 
-
-        if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle && menuItemsList) {
+        if (leftMenuNav && menuToggleIcon && mainContentArea && menuTitle) { // Odstránený menuItemsList z podmienky
             // Odstránime prechodné triedy, aby sa stav aplikoval okamžite pri načítaní
             leftMenuNav.classList.remove('transition-all', 'duration-300', 'ease-in-out');
 
             if (isMenuHidden) {
                 leftMenuNav.style.left = '-192px'; // Nastavíme počiatočnú pozíciu na skrytú
                 menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-                menuItemsList.classList.add('hidden'); // Skryjeme zoznam položiek menu
+                // ODSTRÁNENÉ: menuItemsList.classList.add('hidden');
                 menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
                 mainContentArea.classList.remove('ml-64');
                 mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
             } else {
                 leftMenuNav.style.left = '0px'; // Nastavíme počiatočnú pozíciu na zobrazenú
                 menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-                menuItemsList.classList.remove('hidden'); // Zobrazíme zoznam položiek menu
+                // ODSTRÁNENÉ: menuItemsList.classList.remove('hidden');
                 menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
                 mainContentArea.classList.remove('ml-16');
                 mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
