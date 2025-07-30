@@ -1,7 +1,9 @@
 // logged-in-my-data.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> logged-in-my-data.html.
+// A tiež, že Firebase SDK je už načítané a inicializované.
 
+// Už nepotrebujeme NotificationModal tu, pretože GlobalNotificationHandler v header.js sa o to postará.
 // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // const formatToDatetimeLocal = (date) => {
@@ -14,87 +16,17 @@
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 // };
 
-// ZMENA: NotificationModal Component pre zobrazovanie dočasných správ (teraz presne ako v logged-in-change-name.js)
-function NotificationModal({ message, onClose, type = 'info' }) { // Ponechávam 'type' pre flexibilitu, ale pre úspech bude rovnaká farba
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
-
-  if (!show && !message) return null;
-
-  // Dynamické triedy pre farbu pozadia na základe typu správy
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Zelená (rovnaká ako v logged-in-change-name.js)
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Červená
-  } else {
-    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
-  }
-
-  return React.createElement(
-    'div',
-    {
-      // ZMENA: Návrat k top-0 a z-50 pre zhodu s logged-in-change-name.js
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
-
-
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-  const [app, setApp] = React.useState(null);
+  // Firebase inštancie sú teraz globálne dostupné z header.js po jeho načítaní
   const [auth, setAuth] = React.useState(null);
   const [db, setDb] = React.useState(null);
   const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  // Nový stav pre dáta používateľského profilu z Firestore
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  // ZMENA: Pridaný stav pre notifikačnú správu
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); 
-
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  // Removed contactPhoneNumber, email states as they are no longer editable here
-  const [role, setRole] = React.useState('');
-  const [isApproved, setIsApproved] = React.useState(false);
+  // userNotificationMessage je teraz spravovaná globálne cez window.showGlobalNotification
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
@@ -114,34 +46,19 @@ function MyDataApp() {
 
       // Získanie predvolenej Firebase aplikácie. Predpokladá sa, že je inicializovaná v HTML.
       const firebaseApp = firebase.app();
-      setApp(firebaseApp);
-
       const authInstance = firebase.auth(firebaseApp);
+      const firestoreInstance = firebase.firestore(firebaseApp);
+      
       setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
       setDb(firestoreInstance);
 
-      const signIn = async () => {
-        try {
-          // ZMENA: Používame globálnu premennú initialAuthToken
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          }
-          // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
-          // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
-        } catch (e) {
-          console.error("MyDataApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
+      // Už sa nesnažíme prihlásiť s custom tokenom tu, spoliehame sa na header.js
+      // a na pretrvávajúci stav prihlásenia.
       unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
         console.log("MyDataApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
         setUser(currentUser); // Nastaví Firebase User objekt
         setIsAuthReady(true); // Označí autentifikáciu ako pripravenú po prvej kontrole
       });
-
-      signIn();
 
       return () => {
         if (unsubscribeAuth) {
@@ -155,23 +72,20 @@ function MyDataApp() {
     }
   }, []);
 
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // Effect for fetching userProfileData from Firestore
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
     if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
+      if (user === null) { 
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return;
       }
 
-      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
       if (user) {
         console.log(`MyDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        // Nastavíme loading na true, pretože začíname načítavať profilové dáta
-        setLoading(true); // Nastavíme loading na true tu
+        setLoading(true);
 
         try {
           const userDocRef = db.collection('users').doc(user.uid);
@@ -180,14 +94,8 @@ function MyDataApp() {
               const userData = docSnapshot.data();
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
-              // NOVINKA: Kontrola príznaku 'justLoggedIn'
               const justLoggedIn = sessionStorage.getItem('justLoggedIn') === 'true';
-              if (justLoggedIn) {
-                  console.log("MyDataApp: Detekovaný príznak 'justLoggedIn'. Odkladám odhlasovaciu logiku pre prvé načítanie.");
-              }
 
-              // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
-              // Túto logiku aplikujeme len ak používateľ práve nebol prihlásený (aby sa predišlo cyklu)
               if (!justLoggedIn) {
                   if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
                       console.error("MyDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
@@ -195,8 +103,8 @@ function MyDataApp() {
                       auth.signOut();
                       window.location.href = 'login.html';
                       localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      setUser(null);
+                      setUserProfileData(null);
                       return;
                   }
 
@@ -211,61 +119,58 @@ function MyDataApp() {
                       auth.signOut();
                       window.location.href = 'login.html';
                       localStorage.removeItem(localStorageKey);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      setUser(null);
+                      setUserProfileData(null);
                       return;
                   } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
                       console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
                       auth.signOut();
                       window.location.href = 'login.html';
                       localStorage.removeItem(localStorageKey);
-                      setUser(null); // Explicitne nastaviť user na null
-                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      setUser(null);
+                      setUserProfileData(null);
                       return;
                   } else {
                       localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   }
               } else {
-                  // Ak je justLoggedIn, stále aktualizujeme localStorage pre budúce kontroly
                   const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
                   const localStorageKey = `passwordLastChanged_${user.uid}`;
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
                   console.log("MyDataApp: justLoggedIn je true. Aktualizujem localStorage passwordLastChanged, ale neodhlasujem.");
               }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
 
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              // Túto logiku aplikujeme len ak používateľ práve nebol prihlásený (aby sa predišlo cyklu)
               if (!justLoggedIn && userData.role === 'admin' && userData.approved === false) {
                   console.log("MyDataApp: Používateľ je admin a nie je schválený. Odhlasujem.");
                   auth.signOut();
                   window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
+                  setUser(null);
+                  setUserProfileData(null);
+                  return;
               } else if (justLoggedIn && userData.role === 'admin' && userData.approved === false) {
                   console.warn("MyDataApp: justLoggedIn je true. Používateľ je neschválený admin, ale neodhlasujem okamžite. Zobrazím správu.");
-                  setUserNotificationMessage("Váš administrátorský účet čaká na schválenie. Počkajte prosím na aktiváciu.");
-                  // Stále vyčistíme príznak, aby sa pri ďalšom načítaní stránky (ak by sa používateľ pokúsil znova) odhlásil
+                  // Používame globálnu funkciu pre notifikácie
+                  if (typeof window.showGlobalNotification === 'function') {
+                      window.showGlobalNotification("Váš administrátorský účet čaká na schválenie. Počkajte prosím na aktiváciu.");
+                  }
                   sessionStorage.removeItem('justLoggedIn');
               }
 
-
-              // NOVINKA: Aktualizácia emailu vo Firestore, ak sa nezhoduje s Auth emailom
               if (user && user.email && userData.email !== user.email) {
                 console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${user.email}. Aktualizujem Firestore.`);
                 userDocRef.update({ email: user.email })
-                  .then(async () => { // Zmena na async funkciu
+                  .then(async () => {
                     console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
-                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu (pre aktuálneho používateľa)
-                    setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
+                    // Používame globálnu funkciu pre notifikácie
+                    if (typeof window.showGlobalNotification === 'function') {
+                        window.showGlobalNotification("E-mailová adresa bola úspešne aktualizovaná!");
+                    }
 
-                    // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
                     try {
                         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
                             message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný.`,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                            recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
+                            recipientId: 'all_admins',
                             read: false
                         });
                         console.log("MyDataApp: Notifikácia o automatickej aktualizácii e-mailu pre adminov úspešne uložená do Firestore.");
@@ -275,22 +180,19 @@ function MyDataApp() {
                   })
                   .catch(updateError => {
                     console.error("MyDataApp: Chyba pri aktualizácii emailu vo Firestore:", updateError);
-                    // Tu môžete zobraziť notifikáciu, ak je to potrebné
                   });
               }
 
-              setUserProfileData(userData); // Aktualizujeme stav userProfileData
-              setLoading(false); // Stop loading po načítaní používateľských dát
-              setError(''); // Vymazať chyby po úspešnom načítaní
+              setUserProfileData(userData);
+              setLoading(false);
+              setError('');
 
-              // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
               if (typeof updateMenuItemsVisibility === 'function') {
                   updateMenuItemsVisibility(userData.role);
               } else {
                   console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
               }
 
-              // NOVINKA: Po úspešnom načítaní a spracovaní dát vyčistíme príznak 'justLoggedIn'
               if (justLoggedIn) {
                   sessionStorage.removeItem('justLoggedIn');
                   console.log("MyDataApp: Príznak 'justLoggedIn' vyčistený po úspešnom načítaní dát.");
@@ -300,12 +202,12 @@ function MyDataApp() {
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              auth.signOut(); // Odhlásiť, ak sa dokument nenašiel
-              window.location.href = 'login.html'; // Presmerovať
+              setLoading(false);
+              auth.signOut();
+              window.location.href = 'login.html';
               localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+              setUser(null);
+              setUserProfileData(null);
             }
           }, error => {
             console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
@@ -318,43 +220,39 @@ function MyDataApp() {
                  if (auth) {
                     auth.signOut();
                     window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                    setUser(null);
+                    setUserProfileData(null);
                  }
             } else {
                 setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
             }
-            setLoading(false); // Stop loading aj pri chybe
+            setLoading(false);
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
-            // Aj pri chybe, ak sa nepodarilo načítať dáta, odhlásime používateľa,
-            // ale len ak nie je príznak justLoggedIn (aby sa predišlo cyklu)
             if (sessionStorage.getItem('justLoggedIn') !== 'true') {
                 auth.signOut();
                 window.location.href = 'login.html';
                 localStorage.removeItem(`passwordLastChanged_${user.uid}`);
             } else {
                 console.warn("MyDataApp: justLoggedIn je true. Chyba pri načítaní dát, ale neodhlasujem okamžite.");
-                sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak, aby sa pri ďalšom pokuse o načítanie odhlásil
+                sessionStorage.removeItem('justLoggedIn');
             }
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            setUser(null);
+            setUserProfileData(null);
           });
         } catch (e) {
           console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
-          // Aj pri chybe, ak sa nepodarilo načítať dáta, odhlásime používateľa,
-          // ale len ak nie je príznak justLoggedIn (aby sa predišlo cyklu)
           if (sessionStorage.getItem('justLoggedIn') !== 'true') {
               auth.signOut();
               window.location.href = 'login.html';
               localStorage.removeItem(`passwordLastChanged_${user.uid}`);
           } else {
               console.warn("MyDataApp: justLoggedIn je true. Chyba pri nastavovaní onSnapshot, ale neodhlasujem okamžite.");
-              sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak
+              sessionStorage.removeItem('justLoggedIn');
           }
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+          setUser(null);
+          setUserProfileData(null);
         }
       }
     } else if (isAuthReady && user === undefined) {
@@ -362,21 +260,13 @@ function MyDataApp() {
         setLoading(false);
     }
 
-
     return () => {
-      // Zrušíme odber onSnapshot pri unmount
       if (unsubscribeUserDoc) {
         console.log("MyDataApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
-
-  // ODSTRÁNENÝ useEffect pre aktualizáciu odkazov hlavičky (bola duplicitná s header.js)
-  // ODSTRÁNENÁ handleLogout funkcia (bola duplicitná s header.js)
-  // ODSTRÁNENÝ useEffect pre pripojenie handleLogout k tlačidlu (bola duplicitná s header.js)
-
-  // Removed handleUpdateProfile as there are no input fields to update directly in this view
+  }, [isAuthReady, db, user, auth]);
 
   // Helper function to format postal code
   const formatPostalCode = (code) => {
@@ -387,20 +277,16 @@ function MyDataApp() {
   };
 
   // Display loading state
-  // Ak je user === undefined (ešte nebola skontrolovaná autentifikácia),
-  // alebo userProfileData je null (ešte neboli načítané dáta profilu), alebo loading je true, zobraz loading.
   if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    // Ak je užívateľ null a auth je ready, znamená to, že nie je prihlásený, presmeruj
     if (isAuthReady && user === null) {
         console.log("MyDataApp: Auth je ready a používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
-    // Zobrazenie rôznych správ podľa stavu načítavania
     let loadingMessage = 'Načítavam...';
     if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
+        loadingMessage = 'Načítavam...';
+    } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
 
@@ -411,15 +297,12 @@ function MyDataApp() {
     );
   }
 
-  // Ak je userProfileData.billing.address definované, vytvoríme si premennú pre zjednodušenie
-  // ZMENA: Adresa sa načíta priamo z userProfileData, nie z userProfileData.billing.address
   const street = userProfileData.street || '';
   const houseNumber = userProfileData.houseNumber || '';
   const city = userProfileData.city || '';
   const postalCode = userProfileData.postalCode || '';
   const country = userProfileData.country || '';
 
-  // Apply formatting to postalCode
   const formattedPostalCode = formatPostalCode(postalCode);
 
   const fullAddress = `${street} ${houseNumber}, ${formattedPostalCode} ${city}, ${country}`.trim();
@@ -427,15 +310,10 @@ function MyDataApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Vykreslenie NotificationModal
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage(''),
-        type: 'success' // Vždy úspešná správa pre aktualizáciu e-mailu
-    }),
+    // NotificationModal je teraz spravovaný globálne v header.js
     React.createElement(
       'div',
-      { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
+      { className: 'w-full px-4 mt-20 mb-10' },
       error && React.createElement(
         'div',
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
@@ -443,15 +321,13 @@ function MyDataApp() {
       ),
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené w-full a overflow-x-auto
+        { className: 'bg-white p-8 rounded-lg shadow-xl' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Moje údaje' // Zmenený hlavný nadpis
+          'Moje údaje'
         ),
-        // My Data Section
         React.createElement(
           React.Fragment,
           null,
-          // Odstránený nadpis h2
           React.createElement(
             'div', 
             { className: 'space-y-2' }, 
@@ -460,18 +336,17 @@ function MyDataApp() {
                 null,
                 React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
                     React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
                     ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 )
             ),
-            // Podmienené zobrazenie telefónneho čísla len pre rolu 'user'
             userProfileData.role === 'user' && React.createElement(
               'div',
               null,
               React.createElement(
                 'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                { className: 'text-gray-800 text-lg whitespace-nowrap' },
                 React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                 ` ${userProfileData.contactPhoneNumber || ''}`
               )
@@ -481,38 +356,35 @@ function MyDataApp() {
               null,
               React.createElement(
                 'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                { className: 'text-gray-800 text-lg whitespace-nowrap' },
                 React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                 ` ${userProfileData.email || user.email || ''}`
               )
             ),
-            // NOVINKA: Podmienené zobrazenie fakturačnej adresy len pre rolu 'user'
             userProfileData.role === 'user' && userProfileData.billing && React.createElement(
               React.Fragment,
               null,
-              // Horizontálna čiara nad nadpisom "Fakturačné údaje"
               React.createElement('hr', { className: 'my-6 border-gray-300' }), 
               React.createElement('h2', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Fakturačné údaje'),
               React.createElement(
                 'div',
                 { className: 'space-y-2' },
-                userProfileData.billing.clubName && React.createElement( // Zmena: companyName na clubName
+                userProfileData.billing.clubName && React.createElement(
                   'div',
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
-                    React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'), // Zmena: Názov spoločnosti na Názov klubu
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
+                    React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
                     ` ${userProfileData.billing.clubName}`
                   )
                 ),
-                // ZMENA: Zobrazenie adresy z hlavného objektu userProfileData
                 fullAddress && React.createElement(
                   'div',
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
                     React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
                     ` ${fullAddress}`
                   )
@@ -522,7 +394,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
                     React.createElement('span', { className: 'font-bold' }, 'IČO:'),
                     ` ${userProfileData.billing.ico}`
                   )
@@ -532,7 +404,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
                     React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                     ` ${userProfileData.billing.dic}`
                   )
@@ -542,7 +414,7 @@ function MyDataApp() {
                   null,
                   React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg whitespace-nowrap' }, // Pridané whitespace-nowrap
+                    { className: 'text-gray-800 text-lg whitespace-nowrap' },
                     React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                     ` ${userProfileData.billing.icDph}`
                   )
