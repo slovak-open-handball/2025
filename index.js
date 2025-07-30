@@ -81,6 +81,8 @@ function App() {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+  // NOVINKA: Stav pre existenciu kategórií
+  const [categoriesExist, setCategoriesExist] = React.useState(false); // Predvolene na false
 
   // New state for countdown
   const [countdown, setCountdown] = React.useState(null);
@@ -221,6 +223,7 @@ function App() {
         return; // Wait for DB and Auth to be initialized
       }
       try {
+          // Načítanie dátumov registrácie
           const settingsDocRef = db.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
             if (docSnapshot.exists) {
@@ -232,23 +235,43 @@ function App() {
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
             }
-            setSettingsLoaded(true);
-            // Nastav loading na false až keď sú pripravené aj auth aj settings
+            // Nastav loading na false až keď sú pripravené aj auth aj settings aj kategórie
+            // setSettingsLoaded(true); // Toto sa presunie po načítaní kategórií
+          }, error => {
+            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            // setSettingsLoaded(true); // Toto sa presunie po načítaní kategórií
+          });
+
+          // Načítanie kategórií
+          const categoriesDocRef = db.collection('settings').doc('categories');
+          const unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => {
+            if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+              setCategoriesExist(true);
+              console.log("IndexApp: Kategórie existujú.");
+            } else {
+              setCategoriesExist(false);
+              console.log("IndexApp: Žiadne kategórie neexistujú.");
+            }
+            setSettingsLoaded(true); // Nastav settingsLoaded na true až po načítaní kategórií
             if (isAuthReady) {
               setLoading(false);
             }
           }, error => {
-            console.error("Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
-            setSettingsLoaded(true);
+            console.error("IndexApp: Chyba pri načítaní kategórií:", error);
+            setCategoriesExist(false); // V prípade chyby predpokladáme, že neexistujú
+            setSettingsLoaded(true); // Nastav settingsLoaded na true aj pri chybe
             if (isAuthReady) {
               setLoading(false);
             }
           });
 
-          return () => unsubscribeSettings();
+          return () => {
+              unsubscribeSettings();
+              unsubscribeCategories();
+          };
       } catch (e) {
-          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
+          console.error("Chyba pri nastavovaní onSnapshot pre nastavenia registrácie alebo kategórie:", e);
           setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
           setSettingsLoaded(true);
           if (isAuthReady) {
@@ -293,7 +316,7 @@ function App() {
 
   // useEffect for updating header link visibility
   React.useEffect(() => {
-    console.log(`IndexApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
+    console.log(`IndexApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}, categoriesExist: ${categoriesExist}`);
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -304,22 +327,25 @@ function App() {
         authLink.classList.add('hidden');
         profileLink && profileLink.classList.remove('hidden');
         logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
+        registerLink && registerLink.classList.add('hidden'); // Zabezpečí, že register-link je skrytý, keď je používateľ prihlásený
         console.log("IndexApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
       } else { // If user is not logged in
         authLink.classList.remove('hidden');
         profileLink && profileLink.classList.add('hidden');
         logoutButton && logoutButton.classList.add('hidden');
-        if (isRegistrationOpen) {
+        
+        // ZMENA: Podmienka pre zobrazenie odkazu v hlavičke
+        // Zobrazí sa, ak existujú kategórie A registrácia je otvorená
+        if (categoriesExist && isRegistrationOpen) {
           registerLink && registerLink.classList.remove('hidden');
-          console.log("IndexApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
+          console.log("IndexApp: Používateľ odhlásený, registrácia otvorená A kategórie existujú. Zobrazené: Prihlásenie, Registrácia.");
         } else {
           registerLink && registerLink.classList.add('hidden');
-          console.log("IndexApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
+          console.log("IndexApp: Používateľ odhlásený, registrácia zatvorená ALEBO kategórie neexistujú. Zobrazené: Prihlásenie. Skryté: Registrácia.");
         }
       }
     }
-  }, [user, isRegistrationOpen]);
+  }, [user, isRegistrationOpen, categoriesExist]); // Pridaná závislosť categoriesExist
 
   // Handle logout (needed for the header logout button)
   const handleLogout = React.useCallback(async () => {
@@ -363,6 +389,9 @@ function App() {
   const now = new Date();
   const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
   const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
+  // NOVINKA: Zavedenie premennej pre podmienené vykresľovanie tlačidla "Registrácia na turnaj"
+  const shouldShowRegisterButton = categoriesExist && isRegistrationOpen;
 
   return React.createElement(
     'div',
@@ -408,7 +437,8 @@ function App() {
           React.createElement(
             React.Fragment,
             null,
-            isRegistrationOpen ? (
+            // ZMENA: Podmienené zobrazenie celého bloku pre registráciu
+            shouldShowRegisterButton ? (
               React.createElement(
                 React.Fragment,
                 null,
@@ -435,15 +465,17 @@ function App() {
                 )
               )
             ) : (
+              // ZMENA: Ak registrácia nie je otvorená alebo neexistujú kategórie
               React.createElement(
                 React.Fragment,
                 null,
                 React.createElement(
                   'p',
                   { className: 'text-lg text-gray-600' },
-                  'Registračný formulár nie je prístupný.'
+                  categoriesExist ? 'Registračný formulár nie je prístupný.' : 'Registrácia na turnaj nie je momentálne dostupná, pretože nie sú definované žiadne kategórie.'
                 ),
-                regStart && !isNaN(regStart) && now < regStart && (
+                // Zobraz dátumy len ak kategórie existujú
+                categoriesExist && regStart && !isNaN(regStart) && now < regStart && (
                   React.createElement(
                     React.Fragment,
                     null,
@@ -461,7 +493,7 @@ function App() {
                     )
                   )
                 ),
-                regEnd && !isNaN(regEnd) && now > regEnd && (
+                categoriesExist && regEnd && !isNaN(regEnd) && now > regEnd && (
                   React.createElement(
                     'p',
                     { className: 'text-md text-gray-500 mt-2' },
@@ -492,3 +524,6 @@ function App() {
     )
   );
 }
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App, null));
