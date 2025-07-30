@@ -260,29 +260,40 @@ document.addEventListener('DOMContentLoaded', () => {
         menuToggleButton.addEventListener('click', toggleLeftMenu);
     }
 
-    // NOVINKA: Načítať stav menu z localStorage pri načítaní stránky
-    const isMenuHidden = localStorage.getItem('leftMenuHidden') === 'true';
-    if (isMenuHidden) {
-        // Aplikovať skrytý stav bez animácie pri načítaní
-        const leftMenuNav = document.getElementById('left-menu-nav');
-        const menuToggleIcon = document.getElementById('menu-toggle-icon');
-        const mainContentArea = document.getElementById('main-content-area');
+    // ZMENA: Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
+    // Toto zabezpečí, že DOM a CSS sú plne načítané a pripravené pred aplikovaním tried.
+    window.addEventListener('load', () => {
+        const isMenuHidden = localStorage.getItem('leftMenuHidden') === 'true';
+        if (isMenuHidden) {
+            const leftMenuNav = document.getElementById('left-menu-nav');
+            const menuToggleIcon = document.getElementById('menu-toggle-icon');
+            const mainContentArea = document.getElementById('main-content-area');
 
-        if (leftMenuNav && menuToggleIcon && mainContentArea) {
-            leftMenuNav.classList.add('w-16');
-            leftMenuNav.classList.remove('w-64');
-            leftMenuNav.classList.add('items-center');
-            
-            const menuItemsList = document.getElementById('menu-items-list');
-            if (menuItemsList) {
-                menuItemsList.classList.add('hidden');
-                menuItemsList.classList.remove('block');
+            if (leftMenuNav && menuToggleIcon && mainContentArea) {
+                // Odstránime prechodné triedy, aby sa stav aplikoval okamžite
+                leftMenuNav.classList.remove('transition-all', 'duration-300', 'ease-in-out');
+
+                leftMenuNav.classList.add('w-16');
+                leftMenuNav.classList.remove('w-64');
+                leftMenuNav.classList.add('items-center');
+                
+                const menuItemsList = document.getElementById('menu-items-list');
+                if (menuItemsList) {
+                    menuItemsList.classList.add('hidden');
+                    menuItemsList.classList.remove('block');
+                }
+                menuToggleIcon.classList.add('rotate-180');
+                mainContentArea.classList.remove('ml-64');
+                mainContentArea.classList.add('ml-16');
+
+                // Po aplikovaní stavu môžeme vrátiť prechodné triedy
+                // Použijeme setTimeout, aby sa triedy pridali až po vykonaní zmien DOM
+                setTimeout(() => {
+                    leftMenuNav.classList.add('transition-all', 'duration-300', 'ease-in-out');
+                }, 0);
             }
-            menuToggleIcon.classList.add('rotate-180');
-            mainContentArea.classList.remove('ml-64');
-            mainContentArea.classList.add('ml-16');
         }
-    }
+    });
 
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky
     highlightActiveMenuItem();
