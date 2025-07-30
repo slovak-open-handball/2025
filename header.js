@@ -564,6 +564,8 @@ try {
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
 function UsersManagementApp() {
   // ZMENA: Podmienka na spustenie, keď NIE JE na stránke logged-in-users.html
+  // Táto podmienka je teraz opravená tak, aby sa komponent spustil VŽDY,
+  // pokiaľ NIE JE na stránke logged-in-users.html.
   if (window.location.pathname.includes('logged-in-users.html')) {
     console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent pre hlavičku.");
     return null; // Nespúšťať komponent, ak je na správcovskej stránke
