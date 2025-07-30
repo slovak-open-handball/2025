@@ -21,18 +21,8 @@ function highlightActiveMenuItem() {
     const leftMenuNav = document.getElementById('left-menu-nav'); // Získame nav element
 
     if (menuToggleIcon && leftMenuNav) {
-        // Skontrolujeme, či je menu skryté na základe jeho pozície
-        const isMenuCollapsed = leftMenuNav.style.left === '-192px'; // Predpokladáme, že -192px znamená skryté (256px - 64px)
-
-        // NOVINKA: Ak je menu skryté, ikonka by mala mať farbu aktívneho odkazu, inak bielu
-        if (activeLink) {
-            const computedStyle = getComputedStyle(activeLink);
-            const activeLinkColor = computedStyle.backgroundColor; // Získame farbu pozadia aktívneho odkazu (modrá)
-            menuToggleIcon.style.color = activeLinkColor; // Nastavíme farbu ikonky
-        } else {
-            // Ak žiadna položka nie je aktívna, predvolene nastavíme bielu
-            menuToggleIcon.style.color = 'white';
-        }
+        // NOVINKA: Vždy nastavíme farbu ikonky na bielu pre lepšiu viditeľnosť na tmavom pozadí menu
+        menuToggleIcon.style.color = 'white';
     }
 
     if (activeLink) {
@@ -313,4 +303,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zvýrazníme aktívnu položku aj pri prvom načítaní stránky (pre prípad, že load listener sa spustí neskôr)
     highlightActiveMenuItem();
-})
+}
