@@ -485,45 +485,68 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
             console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] columnOrder onSnapshot received data. Exists:", docSnapshot.exists);
+                let newOrderToSet = defaultColumnOrder; // Predvolené poradie
+
                 if (docSnapshot.exists) {
                     const savedOrder = docSnapshot.data().order;
+                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Raw savedOrder from Firestore:", savedOrder);
+
                     if (savedOrder && Array.isArray(savedOrder) && savedOrder.length > 0) {
-                        // Skontroluj, či sa zhodujú ID stĺpcov a pridaj 'visible' ak chýba
-                        const validSavedOrder = defaultColumnOrder.map(defaultCol => {
-                            const savedCol = savedOrder.find(item => item.id === defaultCol.id);
-                            return savedCol ? { ...defaultCol, ...savedCol, visible: savedCol.visible !== undefined ? savedCol.visible : true } : defaultCol;
+                        let mergedOrder = [];
+                        // 1. Pridajte stĺpce z savedOrder, zachovajte ich poradie a viditeľnosť
+                        savedOrder.forEach(savedCol => {
+                            const defaultColDef = defaultColumnOrder.find(dCol => dCol.id === savedCol.id);
+                            if (defaultColDef) {
+                                // Zlúčte uložené vlastnosti s predvolenými, prioritizujte uloženú viditeľnosť
+                                mergedOrder.push({
+                                    ...defaultColDef, // Získajte predvolený label, type atď.
+                                    ...savedCol,      // Prepíšte uloženým ID, visible
+                                    visible: savedCol.visible !== undefined ? savedCol.visible : true // Zabezpečte, že visible je boolean
+                                });
+                            } else {
+                                // Ak ID uloženého stĺpca nie je v defaultColumnOrder, stále ho zahrňte
+                                mergedOrder.push({ ...savedCol, visible: savedCol.visible !== undefined ? savedCol.visible : true });
+                            }
                         });
-                        
-                        setColumnOrder(validSavedOrder);
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Načítané uložené poradie stĺpcov (s aktualizovanou viditeľnosťou):", validSavedOrder);
+
+                        // 2. Pridajte všetky predvolené stĺpce, ktoré NEBOLI v savedOrder
+                        defaultColumnOrder.forEach(defaultCol => {
+                            if (!mergedOrder.some(mCol => mCol.id === defaultCol.id)) {
+                                mergedOrder.push(defaultCol); // Pridajte s jeho predvolenými vlastnosťami (vrátane visible: true)
+                            }
+                        });
+
+                        newOrderToSet = mergedOrder;
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Zlúčené a preusporiadané uložené poradie:", newOrderToSet);
                     } else {
-                        // Ak je uložené poradie prázdne alebo malformované, použijeme predvolené a uložíme ho
-                        setColumnOrder(defaultColumnOrder);
-                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true }).then(() => { // Use merge: true
-                            console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie stĺpcov do Firestore (empty/malformed saved order).");
-                        }).catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia stĺpcov (empty/malformed saved order):", e));
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie stĺpcov neexistuje alebo je prázdne, používam predvolené.");
+                        // Dokument existuje, ale savedOrder je prázdny alebo poškodený.
+                        // To znamená, že by sa mal resetovať na predvolené a uložiť.
+                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené poradie je prázdne alebo poškodené. Používam predvolené a ukladám ho.");
+                        columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                            .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (prázdne/poškodené)."))
+                            .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (prázdne/poškodené):", e));
                     }
                 } else {
-                    // Ak dokument neexistuje, použijeme predvolené a uložíme ho
-                    setColumnOrder(defaultColumnOrder);
-                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true }).then(() => { // Use merge: true
-                        console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie stĺpcov do Firestore (document did not exist).");
-                    }).catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia stĺpcov (document did not exist):", e));
-                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje, používam predvolené.");
+                    // Dokument neexistuje. Nastavte predvolené a uložte ho.
+                    console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Dokument poradia stĺpcov neexistuje. Používam predvolené a ukladám ho.");
+                    columnOrderDocRef.set({ order: defaultColumnOrder }, { merge: true })
+                        .then(() => console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Uložené predvolené poradie do Firestore (dokument neexistoval)."))
+                        .catch(e => console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri ukladaní predvoleného poradia (dokument neexistoval):", e));
                 }
-                setLoadingColumnOrder(false); // Column order is loaded
+                
+                setColumnOrder(newOrderToSet); // Vždy nastavte stav na základe určeného poradia
+                setLoadingColumnOrder(false); // Poradie stĺpcov je načítané
             }, error => {
                 console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri načítaní poradia stĺpcov z Firestore (onSnapshot error):", error);
                 setError(`Chyba pri načítaní poradia stĺpcov: ${error.message}`);
-                setColumnOrder(defaultColumnOrder);
-                setLoadingColumnOrder(false); // Column order loading failed
+                setColumnOrder(defaultColumnOrder); // Návrat na predvolené pri chybe
+                setLoadingColumnOrder(false); // Načítanie poradia stĺpcov zlyhalo
             });
         } catch (e) {
             console.error("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Chyba pri nastavovaní onSnapshot pre poradie stĺpcov (try-catch):", e);
             setError(`Chyba pri inicializácii poradia stĺpcov: ${e.message}`);
             setColumnOrder(defaultColumnOrder);
-            setLoadingColumnOrder(false); // Column order loading failed
+            setLoadingColumnOrder(false); // Načítanie poradia stĺpcov zlyhalo
         }
 
         // --- Získanie všetkých používateľov z kolekcie 'users' ---
