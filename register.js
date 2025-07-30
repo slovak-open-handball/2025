@@ -16,7 +16,7 @@ const formatToDatetimeLocal = (date) => {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const minutes = (date.getMinutes()).toString().padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -110,6 +110,7 @@ function App() {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+  const [categoriesExist, setCategoriesExist] = React.useState(true); // NOVINKA: Stav pre existenciu kategórií
 
   // Nové stavy pre odpočet a vynútenie prepočtu
   const [countdown, setCountdown] = React.useState(null);
@@ -139,6 +140,22 @@ function App() {
       (isRegEndValid ? now <= regEnd : true)
     );
   }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
+
+  // NOVINKA: Stav pre kontrolu, či je registrácia už zatvorená (po dátume ukončenia)
+  const isRegistrationClosed = React.useMemo(() => {
+    if (!settingsLoaded) return false;
+    const now = new Date();
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+    return regEnd instanceof Date && !isNaN(regEnd) && now > regEnd;
+  }, [settingsLoaded, registrationEndDate, periodicRefreshKey]);
+
+  // NOVINKA: Stav pre kontrolu, či je terajší čas skorší ako čas otvorenia registrácie
+  const isBeforeRegistrationStart = React.useMemo(() => {
+    if (!settingsLoaded) return false;
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    return regStart instanceof Date && !isNaN(regStart) && now < regStart;
+  }, [settingsLoaded, registrationStartDate, periodicRefreshKey]);
 
 
   const calculateTimeLeft = React.useCallback(() => {
@@ -179,10 +196,6 @@ function App() {
         return;
       }
 
-      // Už nie je potrebné volať firebase.initializeApp() ani získavať inštancie, sú globálne
-      // setDb(firestoreDb); // Už sa nepoužíva useState
-      // setAuth(authInstance); // Už sa nepoužíva useState
-
       const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
       });
@@ -196,47 +209,53 @@ function App() {
     }
   }, []); // Odstránená závislosť isRegistering, pretože ref je okamžitý
 
-  // Načítanie a počúvanie stavu registrácie z Firestore
+  // Načítanie a počúvanie stavu registrácie a kategórií z Firestore
   React.useEffect(() => {
-    const fetchSettings = async () => {
-      // Prístup ku globálnej inštancii Firestore
-      const firestoreDb = window.db;
+    const firestoreDb = window.db;
+    if (!firestoreDb || !isAuthReady) {
+      return;
+    }
 
-      if (!firestoreDb || !isAuthReady) { // isAuthReady je dôležité, aby sa nespúšťalo príliš skoro
-        return;
+    // Načítanie nastavení registrácie
+    const settingsDocRef = firestoreDb.collection('settings').doc('registration');
+    const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+      if (docSnapshot.exists) {
+          const data = docSnapshot.data();
+          setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+          setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+      } else {
+          console.log("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+          setRegistrationStartDate('');
+          setRegistrationEndDate('');
       }
-      try {
-          const settingsDocRef = firestoreDb.collection('settings').doc('registration');
-          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
-            if (docSnapshot.exists) {
-                const data = docSnapshot.data();
-                setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
-                setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-            } else {
-                console.log("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
-                setRegistrationStartDate('');
-                setRegistrationEndDate('');
-            }
-            setSettingsLoaded(true);
-          }, error => {
-            console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
-            setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
-            setShowNotification(true);
-            setNotificationType('error');
-            setSettingsLoaded(true);
-          });
+      setSettingsLoaded(true);
+    }, error => {
+      console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+      setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
+      setShowNotification(true);
+      setNotificationType('error');
+      setSettingsLoaded(true);
+    });
 
-          return () => unsubscribeSettings();
-      } catch (e) {
-          console.error("register.js: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie:", e);
-          setNotificationMessage(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
-          setShowNotification(true);
-          setNotificationType('error');
-          setSettingsLoaded(true);
+    // Načítanie kategórií
+    const categoriesDocRef = firestoreDb.collection('settings').doc('categories');
+    const unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => {
+      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+        setCategoriesExist(true);
+      } else {
+        setCategoriesExist(false);
       }
+    }, error => {
+      console.error("register.js: Chyba pri načítaní kategórií (onSnapshot):", error);
+      // Ak nastane chyba pri načítaní kategórií, predpokladáme, že neexistujú
+      setCategoriesExist(false); 
+    });
+
+
+    return () => {
+      unsubscribeSettings();
+      unsubscribeCategories();
     };
-
-    fetchSettings();
   }, [isAuthReady]); // Zmenená závislosť na isAuthReady
 
   // Effect pre odpočet
@@ -655,37 +674,51 @@ function App() {
         )
       )
     ) : (
-      // Zobrazenie formulára, ak registrácia nebola úspešná
-      page === 1 ?
-        React.createElement(Page1Form, {
-          formData: formData,
-          handleChange: handleChange,
-          handleNext: handleNext,
-          loading: loading,
-          notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
-          closeNotification: closeNotification,
-          isCountryCodeModalOpen: isCountryCodeModalOpen,
-          setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
-          setSelectedCountryDialCode: setSelectedCountryDialCode,
-          selectedCountryDialCode: selectedCountryDialCode,
-          NotificationModal: NotificationModal,
-          isRegistrationOpen: isRegistrationOpen,
-          countdownMessage: countdown,
-          registrationStartDate: registrationStartDate,
-          isRecaptchaReady: isRecaptchaReady,
-        }) :
-        React.createElement(Page2Form, {
-          formData: formData,
-          handleChange: handleChange,
-          handlePrev: handlePrev,
-          handleSubmit: handleSubmit,
-          loading: loading,
-          notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
-          closeNotification: closeNotification,
-          userRole: userRole,
-          handleRoleChange: handleRoleChange,
-          NotificationModal: NotificationModal,
-        })
+      // NOVINKA: Podmienené zobrazenie správy o kategóriách/registrácii
+      (!categoriesExist && (isBeforeRegistrationStart || isRegistrationOpen)) ? (
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+          React.createElement(
+            'p',
+            { className: 'text-red-600 text-lg font-semibold' },
+            'Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.'
+          )
+        )
+      ) : (
+        // Zobrazenie formulára, ak registrácia nebola úspešná
+        page === 1 ?
+          React.createElement(Page1Form, {
+            formData: formData,
+            handleChange: handleChange,
+            handleNext: handleNext,
+            loading: loading,
+            notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+            closeNotification: closeNotification,
+            isCountryCodeModalOpen: isCountryCodeModalOpen,
+            setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
+            setSelectedCountryDialCode: setSelectedCountryDialCode,
+            selectedCountryDialCode: selectedCountryDialCode,
+            NotificationModal: NotificationModal,
+            isRegistrationOpen: isRegistrationOpen,
+            countdownMessage: countdown,
+            registrationStartDate: registrationStartDate,
+            isRecaptchaReady: isRecaptchaReady,
+            isRegistrationClosed: isRegistrationClosed // NOVINKA: Odovzdávame stav registrácie
+          }) :
+          React.createElement(Page2Form, {
+            formData: formData,
+            handleChange: handleChange,
+            handlePrev: handlePrev,
+            handleSubmit: handleSubmit,
+            loading: loading,
+            notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+            closeNotification: closeNotification,
+            userRole: userRole,
+            handleRoleChange: handleRoleChange,
+            NotificationModal: NotificationModal,
+          })
+      )
     )
   );
 }
