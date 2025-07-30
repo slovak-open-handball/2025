@@ -14,8 +14,67 @@
 //  return `${year}-${month}-${day}T${hours}:${minutes}`;
 // };
 
-// ZMENA: Odstránený lokálny komponent NotificationModal.
-// Notifikácie sú teraz riadené globálne cez header.js.
+// ZMENA: NotificationModal Component pre zobrazovanie dočasných správ
+function NotificationModal({ message, onClose, type = 'info' }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) return null;
+
+  // Dynamické triedy pre farbu pozadia na základe typu správy
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-[#3A8D41]'; // Zelená
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Červená
+  } else {
+    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+  }
+
+  return React.createElement(
+    'div',
+    {
+      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+        show ? 'translate-y-0' : '-translate-y-full'
+      }`,
+      style: { pointerEvents: 'none' }
+    },
+    React.createElement(
+      'div',
+      {
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+        style: { pointerEvents: 'auto' }
+      },
+      React.createElement('p', { className: 'font-semibold' }, message)
+    )
+  );
+}
+
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
@@ -28,7 +87,7 @@ function MyDataApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  // ZMENA: userNotificationMessage sa už nepoužíva priamo pre lokálny modal, ale pre globálny
+  // ZMENA: Pridaný stav pre notifikačnú správu
   const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); 
 
   // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
@@ -181,6 +240,8 @@ function MyDataApp() {
                     } else {
                         console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
                     }
+                    // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu
+                    setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
                   })
                   .catch(updateError => {
                     console.error("MyDataApp: Chyba pri aktualizácii emailu vo Firestore:", updateError);
@@ -309,8 +370,12 @@ function MyDataApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ZMENA: Odstránené volanie lokálneho NotificationModal.
-    // Globálny NotificationModal je vykreslený v header.js.
+    // ZMENA: Vykreslenie NotificationModal
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage(''),
+        type: 'success' // Vždy úspešná správa pre aktualizáciu e-mailu
+    }),
     React.createElement(
       'div',
       { className: 'w-full px-4 mt-20 mb-10' }, // Zmenené triedy pre konzistentný okraj
