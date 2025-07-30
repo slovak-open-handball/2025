@@ -59,7 +59,8 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   return React.createElement(
     'div',
     {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+      // ZMENA: Zvýšený z-index na 999
+      className: `fixed top-0 left-0 right-0 z-[999] flex justify-center p-4 transition-transform duration-500 ease-out ${
         show ? 'translate-y-0' : '-translate-y-full'
       }`,
       style: { pointerEvents: 'none' }
@@ -236,20 +237,21 @@ function MyDataApp() {
                 console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${user.email}. Aktualizujem Firestore.`);
                 userDocRef.update({ email: user.email })
                   .then(async () => { // Zmena na async funkciu
-                    console.log("MyDataApp: Email úspešne aktualizovaný.");
+                    console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
                     // Vytvorenie globálnej správy pre administrátora (pre aktuálneho používateľa)
-                    if (typeof window.showGlobalNotification === 'function') {
-                        window.showGlobalNotification(`E-mailová adresa bola úspešne aktualizovaná!`);
-                    } else {
-                        console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
-                    }
+                    // ZMENA: Odstránené volanie window.showGlobalNotification, aby sa zabránilo duplicitnému zobrazeniu
+                    // if (typeof window.showGlobalNotification === 'function') {
+                    //     window.showGlobalNotification(`E-mailová adresa bola úspešne aktualizovaná!`);
+                    // } else {
+                    //     console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
+                    // }
                     // ZMENA: Zobrazenie notifikácie o úspešnej aktualizácii e-mailu (pre aktuálneho používateľa)
                     setUserNotificationMessage("E-mailová adresa bola úspešne aktualizovaná!");
 
                     // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
                     try {
                         await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                            message: `E-mail používateľa ${user.email} bol aktualizovaný.`,
+                            message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                             recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
                             read: false
