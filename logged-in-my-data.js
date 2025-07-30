@@ -372,61 +372,9 @@ function MyDataApp() {
     };
   }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
-  // NOVINKA: useEffect pre aktualizáciu odkazov hlavičky (prevzaté z logged-in-change-name.js)
-  React.useEffect(() => {
-    console.log(`MyDataApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link'); // Ak existuje na tejto stránke
-
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden'); // Skryť register link pre prihlásených
-        console.log("MyDataApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); // Zobraziť register link pre odhlásených (ak je relevantný)
-        console.log("MyDataApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]); // Závisí od stavu používateľa
-
-  // NOVINKA: handleLogout funkcia (prevzaté z logged-in-change-name.js)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      // Vyčistiť príznak 'justLoggedIn' pri manuálnom odhlásení
-      sessionStorage.removeItem('justLoggedIn');
-    } catch (e) {
-      console.error("MyDataApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // NOVINKA: Attach logout handler to the button in the header (prevzaté z logged-in-change-name.js)
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  // ODSTRÁNENÝ useEffect pre aktualizáciu odkazov hlavičky (bola duplicitná s header.js)
+  // ODSTRÁNENÁ handleLogout funkcia (bola duplicitná s header.js)
+  // ODSTRÁNENÝ useEffect pre pripojenie handleLogout k tlačidlu (bola duplicitná s header.js)
 
   // Removed handleUpdateProfile as there are no input fields to update directly in this view
 
