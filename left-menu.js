@@ -253,14 +253,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Pridanie poslucháča udalostí pre tlačidlo prepínania menu
-    const menuToggleButton = document.getElementById('menu-toggle-button');
-    if (menuToggleButton) {
-        menuToggleButton.addEventListener('click', toggleLeftMenu);
-        console.log("Poslucháč udalostí pre menu-toggle-button priradený."); // Debugovací výpis
-    } else {
-        console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené!");
-    }
+    // POSLÚCHÁČ PRE menu-toggle-button JE TERAZ PRIRADENÝ V logged-in-my-data.html PO NAČÍTANÍ left-menu.js
+    // const menuToggleButton = document.getElementById('menu-toggle-button');
+    // if (menuToggleButton) {
+    //     menuToggleButton.addEventListener('click', toggleLeftMenu);
+    //     console.log("Poslucháč udalostí pre menu-toggle-button priradený."); // Debugovací výpis
+    // } else {
+    //     console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené!");
+    // }
 
     // Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
     // Toto zabezpečí, že DOM a CSS sú plne načítané a pripravené pred aplikovaním tried.
