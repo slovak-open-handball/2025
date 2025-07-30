@@ -175,6 +175,12 @@ function MyDataApp() {
                 userDocRef.update({ email: user.email })
                   .then(() => {
                     console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
+                    // Vytvorenie globálnej správy pre administrátora
+                    if (typeof window.showGlobalNotification === 'function') {
+                        window.showGlobalNotification(`E-mail používateľa ${user.email} bol automaticky aktualizovaný vo Firestore.`);
+                    } else {
+                        console.warn("MyDataApp: window.showGlobalNotification nie je definovaná v header.js.");
+                    }
                   })
                   .catch(updateError => {
                     console.error("MyDataApp: Chyba pri aktualizácii emailu vo Firestore:", updateError);
