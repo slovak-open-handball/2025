@@ -97,7 +97,7 @@
     <script>
         const appId = '1:572988314768:web:781e27eb035179fe34b415';
         const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4", /* ZMENA: API kľúč opravený na zhodu s nahraným súborom */
           authDomain: "soh2025-2s0o2h5.firebaseapp.com",
           projectId: "soh2025-2s0o2h5",
           storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
@@ -176,11 +176,24 @@
                     const menuHtml = await response.text();
                     leftMenuPlaceholder.innerHTML = menuHtml;
 
+                    // NOVINKA: Priradenie poslucháča udalostí pre tlačidlo prepínania menu
+                    const menuToggleButton = document.getElementById('menu-toggle-button');
+                    if (menuToggleButton) {
+                        if (typeof toggleLeftMenu === 'function') {
+                            menuToggleButton.addEventListener('click', toggleLeftMenu);
+                            console.log("Poslucháč udalostí pre menu-toggle-button priradený po vložení HTML v loadLeftMenu.");
+                        } else {
+                            console.error("Funkcia toggleLeftMenu nie je definovaná pri pokuse o priradenie poslucháča v loadLeftMenu!");
+                        }
+                    } else {
+                        console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené po vložení HTML v loadLeftMenu!");
+                    }
+
                     const menuScript = document.createElement('script');
                     menuScript.src = 'left-menu.js';
                     menuScript.onload = () => {
                         console.log("left-menu.js načítaný a spustený.");
-                        // Poslucháč udalostí pre menu-toggle-button je teraz priradený priamo v left-menu.js
+                        // Poslucháč udalostí pre menu-toggle-button je už priradený vyššie
                     };
                     menuScript.onerror = (e) => {
                         console.error("Chyba pri načítaní left-menu.js:", e);
