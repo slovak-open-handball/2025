@@ -56,7 +56,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
     <!-- Global Firebase config and token - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
     <script>
@@ -80,7 +80,7 @@
             console.log("account.html: Firebase aplikácia už bola inicializovaná.");
         }
 
-        // NOVINKA: Funkcia na získanie URL parametrov pre dynamický názov karty
+        // Funkcia na získanie URL parametrov pre dynamický názov karty
         function getUrlParams() {
             const params = {};
             window.location.search.substring(1).split('&').forEach(param => {
@@ -127,7 +127,7 @@
                 return;
             }
 
-            // NOVINKA: Dynamická zmena názvu karty
+            // Dynamická zmena názvu karty
             const params = getUrlParams();
             const mode = params.mode;
             const titleElement = document.querySelector('title');
