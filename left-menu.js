@@ -117,7 +117,7 @@ async function loadContent(jsFileName) { // Očakáva názov JS súboru bez .js 
                 rootComponent = ChangeNameApp;
             } else if (jsFileName === 'logged-in-change-phone' && typeof ChangePhoneApp !== 'undefined') {
                 rootComponent = ChangePhoneApp;
-            } else if (jsFileName === 'logged-in-change-email' && typeof ChangeEmailApp !== 'undefined') {
+            } else if (jsFileName === 'logged-in-email' && typeof ChangeEmailApp !== 'undefined') {
                 rootComponent = ChangeEmailApp;
             } else if (jsFileName === 'logged-in-change-password' && typeof ChangePasswordApp !== 'undefined') {
                 rootComponent = ChangePasswordApp;
@@ -206,38 +206,33 @@ function toggleLeftMenu() {
         const isCurrentlyOpen = leftMenuNav.style.left === '0px' || leftMenuNav.style.left === ''; // Prázdny reťazec pre počiatočný stav
 
         if (isCurrentlyOpen) { // Menu je otvorené, teraz ho skryjeme (posunieme doľava)
-            leftMenuNav.style.left = '-192px'; // Posunieme menu o (256px - 64px) doľava, aby zostalo viditeľných 64px
+            leftMenuNav.style.left = '-256px'; // Posunieme menu o celú jeho šírku doľava
             menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-            // ODSTRÁNENÉ: menuItemsList.classList.add('hidden'); // Už neskrývame celý zoznam položiek
+            // menuItemsList.classList.add('hidden'); // Už neskrývame celý zoznam položiek
             menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
             mainContentArea.classList.remove('ml-64');
-            mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
+            mainContentArea.classList.add('ml-0'); // Posunieme hlavný obsah úplne doľava
             localStorage.setItem('leftMenuHidden', 'true');
         } else { // Menu je skryté, teraz ho zobrazíme (posunieme doprava)
             leftMenuNav.style.left = '0px'; // Posunieme menu späť na pôvodnú pozíciu
             menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-            // ODSTRÁNENÉ: menuItemsList.classList.remove('hidden'); // Už nezobrazujeme celý zoznam položiek
+            // menuItemsList.classList.remove('hidden'); // Už nezobrazujeme celý zoznam položiek
             menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
-            mainContentArea.classList.remove('ml-16');
+            mainContentArea.classList.remove('ml-0');
             mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
             localStorage.setItem('leftMenuHidden', 'false');
         }
         // Po zmene stavu menu aktualizujeme farbu ikonky
         highlightActiveMenuItem();
-        // NOVINKA: Po prepnutí menu zavoláme updateMenuItemsVisibility, aby sa položky aktualizovali podľa roly
-        // Predpokladáme, že aktuálna rola je uložená niekde globálne alebo sa dá získať.
-        // Ak nie je priamo dostupná, bude ju musieť React komponent znova poslať.
-        // Pre účely testovania môžeme použiť placeholder, ale v reálnej aplikácii by mala prísť z Reactu.
-        // Pre túto chvíľu to ponechám tak, že sa spolieham na volanie z Reactu.
     }
 }
 
 // Spracovanie kliknutí na odkazy v menu
 document.addEventListener('DOMContentLoaded', () => {
-    const menuLinks = document.querySelectorAll('#left-menu-nav ul li a'); // ZMENA: Presnejší selektor
+    const menuLinks = document.querySelectorAll('#left-menu-nav ul li a'); // Presnejší selektor
     menuLinks.forEach(link => {
         link.addEventListener('click', (event) => {
-            // NOVINKA: Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
+            // Ak je odkaz aktívny, zabránime predvolenému správaniu a nebudeme načítavať obsah
             if (link.classList.contains('bg-blue-600')) {
                 event.preventDefault();
                 console.log("Kliknutie na aktívnu položku menu bolo zablokované.");
@@ -258,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // NOVINKA: Pridanie poslucháča udalostí pre tlačidlo prepínania menu
+    // Pridanie poslucháča udalostí pre tlačidlo prepínania menu
     const menuToggleButton = document.getElementById('menu-toggle-button');
     if (menuToggleButton) {
         menuToggleButton.addEventListener('click', toggleLeftMenu);
@@ -267,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Tlačidlo pre prepínanie menu (menu-toggle-button) nebolo nájdené!");
     }
 
-    // ZMENA: Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
+    // Presunutie logiky načítania stavu menu z localStorage do funkcie, ktorá sa vykoná po načítaní všetkých skriptov
     // Toto zabezpečí, že DOM a CSS sú plne načítané a pripravené pred aplikovaním tried.
     window.addEventListener('load', () => {
         const isMenuHidden = localStorage.getItem('leftMenuHidden') === 'true';
@@ -282,18 +277,16 @@ document.addEventListener('DOMContentLoaded', () => {
             leftMenuNav.classList.remove('transition-all', 'duration-300', 'ease-in-out');
 
             if (isMenuHidden) {
-                leftMenuNav.style.left = '-192px'; // Nastavíme počiatočnú pozíciu na skrytú
+                leftMenuNav.style.left = '-256px'; // Nastavíme počiatočnú pozíciu na skrytú (celé menu)
                 menuTitle.classList.add('hidden'); // Skryjeme text nadpisu
-                // ODSTRÁNENÉ: menuItemsList.classList.add('hidden');
                 menuToggleIcon.classList.add('rotate-180'); // Otočíme ikonku
                 mainContentArea.classList.remove('ml-64');
-                mainContentArea.classList.add('ml-16'); // Posunieme hlavný obsah doľava
+                mainContentArea.classList.add('ml-0'); // Posunieme hlavný obsah úplne doľava
             } else {
                 leftMenuNav.style.left = '0px'; // Nastavíme počiatočnú pozíciu na zobrazenú
                 menuTitle.classList.remove('hidden'); // Zobrazíme text nadpisu
-                // ODSTRÁNENÉ: menuItemsList.classList.remove('hidden');
                 menuToggleIcon.classList.remove('rotate-180'); // Resetujeme rotáciu ikonky
-                mainContentArea.classList.remove('ml-16');
+                mainContentArea.classList.remove('ml-0');
                 mainContentArea.classList.add('ml-64'); // Posunieme hlavný obsah doprava
             }
 
