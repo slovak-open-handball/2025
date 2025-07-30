@@ -82,6 +82,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = AllRegistrationsApp;
             } else if (jsFileName === 'logged-in-tournament-settings' && typeof TournamentSettingsApp !== 'undefined') {
                 rootComponent = TournamentSettingsApp;
+            } else if (jsFileName === 'logged-in-add-categories' && typeof AddCategoriesApp !== 'undefined') { // NOVINKA
+                rootComponent = AddCategoriesApp;
             }
 
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
@@ -128,6 +130,8 @@ async function loadContent(jsFileName) { // ZMENA: Očakáva názov JS súboru b
                 rootComponent = AllRegistrationsApp;
             } else if (jsFileName === 'logged-in-tournament-settings' && typeof TournamentSettingsApp !== 'undefined') {
                 rootComponent = TournamentSettingsApp;
+            } else if (jsFileName === 'logged-in-add-categories' && typeof AddCategoriesApp !== 'undefined') { // NOVINKA
+                rootComponent = AddCategoriesApp;
             }
 
             if (rootComponent && typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
@@ -162,7 +166,8 @@ window.updateMenuItemsVisibility = function(userRole) {
         'menu-soh-chat': ['admin'],
         'menu-users': ['admin'],
         'menu-all-registrations': ['admin'],
-        'menu-tournament-settings': ['admin']
+        'menu-tournament-settings': ['admin'],
+        'menu-add-categories': ['admin'] // NOVINKA: Pridaná položka pre Vytvorenie kategórií
     };
 
     for (const id in menuItems) {
