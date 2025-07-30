@@ -396,9 +396,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     let unsubscribeAllUsers;
     let unsubscribeColumnOrder;
     // appId by mal byť globálne dostupný z HTML
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Už nepotrebné pre novú cestu
 
-    console.log("AllRegistrationsApp: Using appId:", appId); // NOVÝ DIAGNOSTICKÝ LOG
     console.log("AllRegistrationsApp: Column Order/All Users useEffect triggered.");
     console.log("AllRegistrationsApp: Current state for column order/all users fetch - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
 
@@ -409,7 +408,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
         // Načítanie poradia stĺpcov pre aktuálneho admina
         try {
-            const columnOrderDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('columnOrder');
+            // ZMENA: Nová cesta pre columnOrder
+            const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
             console.log("AllRegistrationsApp: Attempting to set up onSnapshot for columnOrder at path:", columnOrderDocRef.path);
             unsubscribeColumnOrder = columnOrderDocRef.onSnapshot(docSnapshot => {
                 console.log("AllRegistrationsApp: columnOrder onSnapshot received data.");
@@ -715,8 +715,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
 
     // Uloženie nového poradia do Firestore
     if (db && user && user.uid) {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const columnOrderDocRef = db.collection('artifacts').doc(appId).collection('users').doc(user.uid).collection('settings').doc('columnOrder');
+        // ZMENA: Nová cesta pre columnOrder
+        const columnOrderDocRef = db.collection('users').doc(user.uid).collection('columnOrder').doc('columnOrder');
         try {
             await columnOrderDocRef.set({ order: newColumnOrder });
             console.log("AllRegistrationsApp: Poradie stĺpcov uložené do Firestore.");
