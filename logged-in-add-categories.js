@@ -456,7 +456,7 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie.");
       setLoading(true);
       try {
-        unsubscribeCategories = db.collection('settings').doc('categories').collection('list').orderBy('createdAt').onSnapshot(snapshot => {
+        unsubscribeCategories = db.collection('settings').doc('categories').orderBy('createdAt').onSnapshot(snapshot => {
           const fetchedCategories = [];
           snapshot.forEach(doc => {
             fetchedCategories.push({ id: doc.id, ...doc.data() });
@@ -560,7 +560,7 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie
-      const categoriesRef = db.collection('settings').doc('categories').collection('list');
+      const categoriesRef = db.collection('settings').doc('categories');
       const existingCategorySnapshot = await categoriesRef.where('name', '==', categoryName.trim()).get();
 
       if (!existingCategorySnapshot.empty) {
@@ -603,7 +603,7 @@ function AddCategoriesApp() {
 
     try {
       // NOVINKA: Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
-      const categoriesRef = db.collection('settings').doc('categories').collection('list');
+      const categoriesRef = db.collection('settings').doc('categories');
       const existingCategorySnapshot = await categoriesRef
         .where('name', '==', newName.trim())
         .get();
@@ -615,7 +615,7 @@ function AddCategoriesApp() {
         return;
       }
 
-      await db.collection('settings').doc('categories').collection('list').doc(categoryId).update({
+      await db.collection('settings').doc('categories').doc(categoryId).update({
         name: newName.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedBy: user.uid,
@@ -651,7 +651,7 @@ function AddCategoriesApp() {
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
-      await db.collection('settings').doc('categories').collection('list').doc(categoryToDelete.id).delete();
+      await db.collection('settings').doc('categories').doc(categoryToDelete.id).delete();
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
     } catch (e) {
