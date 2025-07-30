@@ -545,6 +545,26 @@ function AddCategoriesApp() {
     };
   }, [handleLogout]);
 
+  // Funkcia na odoslanie notifikácie administrátorom
+  const sendAdminNotification = async (message) => {
+    if (!db || !appId) {
+      console.error("Chyba: Databáza alebo ID aplikácie nie je k dispozícii pre odoslanie notifikácie.");
+      return;
+    }
+    try {
+      await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
+        message: message,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
+        read: false
+      });
+      console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
+    } catch (e) {
+      console.error("Chyba pri ukladaní notifikácie pre administrátorov:", e);
+    }
+  };
+
+
   // Funkcia na pridanie novej kategórie
   const handleAddCategorySubmit = async (categoryName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
@@ -579,6 +599,10 @@ function AddCategoriesApp() {
       });
       setUserNotificationMessage("Kategória úspešne pridaná!");
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
+
+      // NOVINKA: Odoslanie notifikácie administrátorom
+      await sendAdminNotification(`Nová kategória "${categoryName.trim()}" bola vytvorená.`);
+
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       setError(`Chyba pri pridávaní kategórie: ${e.message}`);
@@ -656,6 +680,10 @@ function AddCategoriesApp() {
       await db.collection('settings').collection('categories').doc(categoryToDelete.id).delete();
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
+
+      // NOVINKA: Odoslanie notifikácie administrátorom
+      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná.`);
+
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
       setError(`Chyba pri mazaní kategórie: ${e.message}`);
