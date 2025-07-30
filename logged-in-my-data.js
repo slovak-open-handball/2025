@@ -180,57 +180,76 @@ function MyDataApp() {
               const userData = docSnapshot.data();
               console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
-              // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("MyDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("MyDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
+              // NOVINKA: Kontrola príznaku 'justLoggedIn'
+              const justLoggedIn = sessionStorage.getItem('justLoggedIn') === 'true';
+              if (justLoggedIn) {
+                  console.log("MyDataApp: Detekovaný príznak 'justLoggedIn'. Odkladám odhlasovaciu logiku pre prvé načítanie.");
               }
 
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+              // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
+              // Túto logiku aplikujeme len ak používateľ práve nebol prihlásený (aby sa predišlo cyklu)
+              if (!justLoggedIn) {
+                  if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                      console.error("MyDataApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                      console.log("MyDataApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  }
 
-              console.log(`MyDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+                  const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+                  const localStorageKey = `passwordLastChanged_${user.uid}`;
+                  let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
 
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("MyDataApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("MyDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
+                  console.log(`MyDataApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+                  if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                      console.log("MyDataApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(localStorageKey);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                      console.warn("MyDataApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                      auth.signOut();
+                      window.location.href = 'login.html';
+                      localStorage.removeItem(localStorageKey);
+                      setUser(null); // Explicitne nastaviť user na null
+                      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                      return;
+                  } else {
+                      localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  }
               } else {
+                  // Ak je justLoggedIn, stále aktualizujeme localStorage pre budúce kontroly
+                  const firestorePasswordChangedTime = userData.passwordLastChanged ? userData.passwordLastChanged.toDate().getTime() : 0;
+                  const localStorageKey = `passwordLastChanged_${user.uid}`;
                   localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                  console.log("MyDataApp: justLoggedIn je true. Aktualizujem localStorage passwordLastChanged, ale neodhlasujem.");
               }
               // --- KONIEC LOGIKY ODHLÁSENIA ---
 
               // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
+              // Túto logiku aplikujeme len ak používateľ práve nebol prihlásený (aby sa predišlo cyklu)
+              if (!justLoggedIn && userData.role === 'admin' && userData.approved === false) {
                   console.log("MyDataApp: Používateľ je admin a nie je schválený. Odhlasujem.");
                   auth.signOut();
                   window.location.href = 'login.html';
                   setUser(null); // Explicitne nastaviť user na null
                   setUserProfileData(null); // Explicitne nastaviť userProfileData na null
                   return; // Zastav ďalšie spracovanie
+              } else if (justLoggedIn && userData.role === 'admin' && userData.approved === false) {
+                  console.warn("MyDataApp: justLoggedIn je true. Používateľ je neschválený admin, ale neodhlasujem okamžite. Zobrazím správu.");
+                  setUserNotificationMessage("Váš administrátorský účet čaká na schválenie. Počkajte prosím na aktiváciu.");
+                  // Stále vyčistíme príznak, aby sa pri ďalšom načítaní stránky (ak by sa používateľ pokúsil znova) odhlásil
+                  sessionStorage.removeItem('justLoggedIn');
               }
+
 
               // NOVINKA: Aktualizácia emailu vo Firestore, ak sa nezhoduje s Auth emailom
               if (user && user.email && userData.email !== user.email) {
@@ -271,11 +290,28 @@ function MyDataApp() {
                   console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
               }
 
+              // NOVINKA: Volanie updateHeaderLinks z header.js
+              // Toto je kľúčová zmena pre zobrazenie odkazov v hlavičke
+              if (typeof window.updateHeaderLinks === 'function') {
+                  window.updateHeaderLinks(user, null); // Predpokladáme, že isRegistrationOpenStatus nie je relevantný tu
+              } else {
+                  console.warn("MyDataApp: Funkcia window.updateHeaderLinks nie je definovaná v header.js.");
+              }
+
+              // NOVINKA: Po úspešnom načítaní a spracovaní dát vyčistíme príznak 'justLoggedIn'
+              if (justLoggedIn) {
+                  sessionStorage.removeItem('justLoggedIn');
+                  console.log("MyDataApp: Príznak 'justLoggedIn' vyčistený po úspešnom načítaní dát.");
+              }
+
               console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
             } else {
               console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
               setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
               setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
+              auth.signOut(); // Odhlásiť, ak sa dokument nenašiel
+              window.location.href = 'login.html'; // Presmerovať
+              localStorage.removeItem(`passwordLastChanged_${user.uid}`);
               setUser(null); // Explicitne nastaviť user na null
               setUserProfileData(null); // Explicitne nastaviť userProfileData na null
             }
@@ -298,6 +334,16 @@ function MyDataApp() {
             }
             setLoading(false); // Stop loading aj pri chybe
             console.log("MyDataApp: Načítanie používateľských dát zlyhalo, loading: false");
+            // Aj pri chybe, ak sa nepodarilo načítať dáta, odhlásime používateľa,
+            // ale len ak nie je príznak justLoggedIn (aby sa predišlo cyklu)
+            if (sessionStorage.getItem('justLoggedIn') !== 'true') {
+                auth.signOut();
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+            } else {
+                console.warn("MyDataApp: justLoggedIn je true. Chyba pri načítaní dát, ale neodhlasujem okamžite.");
+                sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak, aby sa pri ďalšom pokuse o načítanie odhlásil
+            }
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
           });
@@ -305,6 +351,16 @@ function MyDataApp() {
           console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
           setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
           setLoading(false);
+          // Aj pri chybe, ak sa nepodarilo načítať dáta, odhlásime používateľa,
+          // ale len ak nie je príznak justLoggedIn (aby sa predišlo cyklu)
+          if (sessionStorage.getItem('justLoggedIn') !== 'true') {
+              auth.signOut();
+              window.location.href = 'login.html';
+              localStorage.removeItem(`passwordLastChanged_${user.uid}`);
+          } else {
+              console.warn("MyDataApp: justLoggedIn je true. Chyba pri nastavovaní onSnapshot, ale neodhlasujem okamžite.");
+              sessionStorage.removeItem('justLoggedIn'); // Vyčistíme príznak
+          }
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
         }
