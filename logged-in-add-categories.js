@@ -449,44 +449,57 @@ function AddCategoriesApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
+  // Callback funkcia pre získanie referencie na dokument kategórií
+  const getCategoriesDocRef = React.useCallback(() => {
+    if (!db || !appId) return null;
+    // Správna cesta: artifacts/{appId}/settings (kolekcia) -> categories (dokument)
+    return db.collection('artifacts').doc(appId).collection('settings').doc('categories');
+  }, [db, appId]);
+
   // Effect for fetching categories
   React.useEffect(() => {
     let unsubscribeCategories;
-    if (db && userProfileData && userProfileData.role === 'admin') {
-      console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie.");
+    const categoriesDocRef = getCategoriesDocRef();
+
+    if (db && userProfileData && userProfileData.role === 'admin' && categoriesDocRef) {
+      console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie z dokumentu 'categories'.");
       setLoading(true);
       try {
-        // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
-        unsubscribeCategories = db.collection('artifacts').doc(appId).doc('settings').collection('categories').onSnapshot(snapshot => {
-          const fetchedCategories = [];
-          snapshot.forEach(doc => {
-            fetchedCategories.push({ id: doc.id, ...doc.data() });
-          });
-          setCategories(fetchedCategories);
+        unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => {
+          console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
+          if (docSnapshot.exists) {
+            const data = docSnapshot.data();
+            // Konvertujeme objekt polí na pole objektov { id, name }
+            const fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
+            setCategories(fetchedCategories);
+            console.log("AddCategoriesApp: Kategórie aktualizované z onSnapshot dokumentu, dáta:", fetchedCategories);
+          } else {
+            console.log("AddCategoriesApp: Dokument 'categories' neexistuje, inicializujem prázdne kategórie.");
+            setCategories([]); // Dokument kategórií zatiaľ neexistuje, takže prázdny zoznam
+          }
           setLoading(false);
           setError('');
-          console.log("AddCategoriesApp: Kategórie aktualizované z onSnapshot.");
         }, error => {
-          console.error("AddCategoriesApp: Chyba pri načítaní kategórií z Firestore (onSnapshot error):", error);
+          console.error("AddCategoriesApp: Chyba pri načítaní dokumentu 'categories' z Firestore (onSnapshot error):", error);
           setError(`Chyba pri načítaní kategórií: ${error.message}`);
           setLoading(false);
         });
       } catch (e) {
-        console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre kategórie (try-catch):", e);
+        console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre dokument 'categories' (try-catch):", e);
         setError(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`);
         setLoading(false);
       }
     } else {
-        setCategories([]); // Vyčisti kategórie, ak nie je admin
+      setCategories([]); // Vyčisti kategórie, ak nie je admin alebo nie je pripravené
     }
 
     return () => {
       if (unsubscribeCategories) {
-        console.log("AddCategoriesApp: Ruším odber onSnapshot pre kategórie.");
+        console.log("AddCategoriesApp: Ruším odber onSnapshot pre dokument 'categories'.");
         unsubscribeCategories();
       }
     };
-  }, [db, userProfileData, appId]); // Pridaný appId do závislostí
+  }, [db, userProfileData, appId, getCategoriesDocRef]); // Pridaný getCategoriesDocRef do závislostí
 
   // Effect for updating header link visibility
   React.useEffect(() => {
@@ -580,26 +593,30 @@ function AddCategoriesApp() {
     setUserNotificationMessage('');
 
     try {
-      // NOVINKA: Kontrola duplicity názvu kategórie
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
-      const categoriesRef = db.collection('artifacts').doc(appId).doc('settings').collection('categories');
-      const existingCategorySnapshot = await categoriesRef.where('name', '==', categoryName.trim()).get();
+      const categoriesDocRef = getCategoriesDocRef();
+      if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      if (!existingCategorySnapshot.empty) {
+      // Načítanie aktuálneho stavu dokumentu
+      const docSnapshot = await categoriesDocRef.get();
+      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {};
+
+      // Kontrola duplicity názvu kategórie
+      if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === categoryName.trim().toLowerCase())) {
         setError(`Kategória s názvom "${categoryName.trim()}" už existuje. Zvoľte iný názov.`);
         setLoading(false);
         return;
       }
 
-      // Ukladanie do kolekcie settings/categories
-      // ZMENA: Odstránené createdAt, createdBy, createdByName
-      await categoriesRef.add({
-        name: categoryName.trim(),
-      });
+      const newCategoryId = db.collection('artifacts').doc().id; // Generuje unikátne ID pre pole (key)
+
+      // Používame set s merge: true, aby sa dokument vytvoril, ak neexistuje, alebo aktualizoval
+      // a pridalo sa nové pole s názvom kategórie
+      await categoriesDocRef.set({
+        [newCategoryId]: categoryName.trim()
+      }, { merge: true });
+
       setUserNotificationMessage("Kategória úspešne pridaná!");
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
-
-      // NOVINKA: Odoslanie notifikácie administrátorom
       await sendAdminNotification(`Nová kategória "${categoryName.trim()}" bola vytvorená.`);
 
     } catch (e) {
@@ -626,25 +643,25 @@ function AddCategoriesApp() {
     setUserNotificationMessage('');
 
     try {
-      // NOVINKA: Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
-      const categoriesRef = db.collection('artifacts').doc(appId).doc('settings').collection('categories');
-      const existingCategorySnapshot = await categoriesRef
-        .where('name', '==', newName.trim())
-        .get();
+      const categoriesDocRef = getCategoriesDocRef();
+      if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Ak nájdeme kategóriu s rovnakým názvom, a jej ID nie je rovnaké ako ID upravovanej kategórie
-      if (!existingCategorySnapshot.empty && existingCategorySnapshot.docs[0].id !== categoryId) {
+      // Načítanie aktuálneho stavu dokumentu
+      const docSnapshot = await categoriesDocRef.get();
+      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {};
+
+      // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
+      if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === newName.trim().toLowerCase() && id !== categoryId)) {
         setError(`Kategória s názvom "${newName.trim()}" už existuje. Zvoľte iný názov.`);
         setLoading(false);
         return;
       }
 
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
-      // ZMENA: Odstránené updatedAt, updatedBy, updatedByName
-      await db.collection('artifacts').doc(appId).doc('settings').collection('categories').doc(categoryId).update({
-        name: newName.trim(),
+      // Aktualizujeme konkrétne pole v dokumente
+      await categoriesDocRef.update({
+        [categoryId]: newName.trim()
       });
+
       setUserNotificationMessage("Kategória úspešne aktualizovaná!");
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
@@ -675,12 +692,16 @@ function AddCategoriesApp() {
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
-      // ZMENA: Cesta k kolekcii je teraz: db.collection('artifacts').doc(appId).doc('settings').collection('categories')
-      await db.collection('artifacts').doc(appId).doc('settings').collection('categories').doc(categoryToDelete.id).delete();
+      const categoriesDocRef = getCategoriesDocRef();
+      if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
+
+      // Odstránime konkrétne pole z dokumentu
+      await categoriesDocRef.update({
+        [categoryToDelete.id]: firebase.firestore.FieldValue.delete()
+      });
+
       setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
-
-      // NOVINKA: Odoslanie notifikácie administrátorom
       await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná.`);
 
     } catch (e) {
