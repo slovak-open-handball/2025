@@ -204,7 +204,6 @@ function ResetPasswordApp() {
                                     try {
                                         // Vyhľadáme používateľa vo Firestore podľa e-mailu
                                         // POZNÁMKA: Toto vyžaduje index na poli 'email' vo Firestore
-                                        // a upravené pravidlá Firestore na povolenie list operácie pre neautentifikovaných používateľov.
                                         const usersRef = dbInstance.collection('users');
                                         const q = usersRef.where('email', '==', targetUserEmail);
                                         const querySnapshot = await q.get();
@@ -216,9 +215,10 @@ function ResetPasswordApp() {
 
                                             const userDocRef = dbInstance.collection('users').doc(userUid);
                                             // Aktualizujeme pole 'email' v dokumente používateľa
+                                            // DÔLEŽITÉ: Toto vyžaduje špecifické pravidlo vo Firestore Security Rules
                                             await userDocRef.set({ email: targetUserEmail }, { merge: true });
                                             console.log("account.js: Firestore email bol úspešne aktualizovaný po overení.");
-                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená! Budete presmerovaní na prihlasovaciu stránku.");
+                                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená a aktualizovaná vo Firestore! Budete presmerovaní na prihlasovaciu stránku.");
                                         } else {
                                             console.warn("account.js: Používateľ s overeným e-mailom sa nenašiel vo Firestore.");
                                             setError("Chyba: Používateľ s overeným e-mailom sa nenašiel vo Firestore. Skúste to prosím znova.");
