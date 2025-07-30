@@ -177,8 +177,6 @@ function App() {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  // contactPhoneNumber is not required for admin registration, but kept for consistent data structure
-  const [contactPhoneNumber, setContactPhoneNumber] = React.useState(''); 
 
   const [showPasswordReg, setShowPasswordReg] = React.useState(false);
   const [showConfirmPasswordReg, setShowConfirmPasswordReg] = React.useState(false);
@@ -359,7 +357,6 @@ function App() {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        contactPhoneNumber: contactPhoneNumber, // Will be empty for admin register, but kept for schema consistency
         displayName: `${firstName} ${lastName}`,
         role: 'admin', // Priamo nastavené ako admin
         approved: false, // Priamo nastavené ako neschválený admin
@@ -379,10 +376,9 @@ function App() {
           const payload = {
             action: 'sendRegistrationEmail',
             email: email,
-            isAdmin: true, // This is an admin registration
+            isAdmin: true,
             firstName: firstName,
             lastName: lastName,
-            contactPhoneNumber: contactPhoneNumber
           };
           console.log("Odosielanie dát do Apps Script (registračný e-mail admina):", payload);
           
