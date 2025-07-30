@@ -399,7 +399,7 @@ function MyDataApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl' }, // ZMENA: Odstránené w-full a overflow-x-auto
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Moje údaje' // Zmenený hlavný nadpis
+          'Moje údaje' // Hlavný nadpis
         ),
         // My Data Section
         React.createElement(
