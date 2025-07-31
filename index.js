@@ -66,14 +66,14 @@ function App() {
         console.log("index.js: Nastavenia registrácie neboli nájdené.");
       }
 
-      // Kontrola existencie kategórií
-      const categoriesRef = window.db.collection('categories');
+      // === ZMENA: Kontrola existencie kategórií na správnej ceste ===
+      const categoriesRef = window.db.collection('settings').doc('categories').collection('categories');
       const categoriesSnap = await categoriesRef.get();
       setCategoriesExist(!categoriesSnap.empty);
 
     } catch (e) {
       console.error("index.js: Chyba pri načítaní nastavení alebo kategórií:", e);
-      setError('Chyba pri načítaní dát.');
+      setError(`Chyba: ${e.message}`);
     } finally {
       setLoading(false);
     }
