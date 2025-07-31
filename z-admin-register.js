@@ -302,7 +302,7 @@ function App() {
 
       // ZMENA: Nastavenie role na 'admin' a approved na 'false' priamo pri prvom zápise
       const userDataToSave = {
-        uid: userCredential.user.uid,
+//        uid: userCredential.user.uid,
         email: email,
         firstName: firstName,
         lastName: lastName,
