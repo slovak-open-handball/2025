@@ -67,7 +67,7 @@ const updateHeaderLinks = () => {
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
 
-    // Inicializácia globálnych premenných, ak ešte neexistujú
+    // Inicializácia globálnych premenných
     const user = window.auth ? window.auth.currentUser : null;
     const userProfileData = window.globalUserProfileData;
 
@@ -127,30 +127,22 @@ const loadHeader = async () => {
         const headerHtml = await response.text();
         document.getElementById('header-placeholder').innerHTML = headerHtml;
 
-        // Vrátime Promise, ktorá sa vyrieši, keď je hlavička načítaná a listener je nastavený.
-        return new Promise((resolve) => {
-            // Po načítaní hlavičky pridajte event listener na tlačidlo odhlásenia
-            const logoutButton = document.getElementById('logout-button');
-            if (logoutButton) {
-                logoutButton.addEventListener('click', handleLogout);
-                console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
-            }
+        // Po načítaní hlavičky pridajte event listener na tlačidlo odhlásenia
+        const logoutButton = document.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', handleLogout);
+            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
+        }
 
-            // Dôležité: Listener pre zmeny stavu autentifikácie
-            // Toto je spoľahlivý spôsob, ako reagovať na prihlásenie/odhlásenie
-            if (window.auth) {
-                window.auth.onAuthStateChanged(user => {
-                    // Aktualizujeme odkazy a farbu hlavičky hneď po zmene stavu
-                    updateHeaderLinks();
-                });
-            }
-
-            // Inicializácia pre prvý stav, ak už je používateľ prihlásený
+        // Pridáme listener na globálnu udalosť, ktorá sa odosiela po načítaní profilových dát
+        window.addEventListener('globalDataUpdated', () => {
+            console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             updateHeaderLinks();
-
-            resolve();
         });
 
+        // Inicializácia pre prvý stav pri prvom načítaní stránky
+        updateHeaderLinks();
+        
     } catch (error) {
         console.error('header.js: Chyba pri načítaní hlavičky:', error);
     }
