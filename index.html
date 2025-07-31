@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOH 2025 - Slovak Open Handball</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS v produkcii by mal byť skompilovaný a linkovaný sem: -->
+    <!-- <link href="/path/to/your/output.css" rel="stylesheet"> -->
+
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase JS SDK -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
-    <!-- React a ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -42,17 +36,23 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            width: 80%;
-            max-width: 500px;
         }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
     <div id="root"></div>
+    <div id="header-notification-root"></div>
+    <div id="authentication-root"></div>
 
-    <!-- Vložíme hlavičku dynamicky. Tento skript sa postará o načítanie header.html -->
-    <script type="module">
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="index.js"></script>
+    
+    <script>
+        // Funkcia na načítanie hlavičky (už len HTML štruktúry)
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -67,18 +67,18 @@
             }
         }
 
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov
         window.onload = function() {
+            // Načítať hlavičku HTML štruktúru ako prvú
             loadHeader().then(() => {
-                console.log("index.html: Hlavička HTML načítaná.");
+                // Po načítaní HTML hlavičky, React komponenty (authentication.js, header.js, index.js)
+                // sa už automaticky vykreslia do svojich "root" elementov, ak sú správne nastavené.
+                // Tu už nie je potrebné manuálne renderovať App, pretože index.js to robí sám.
+                console.log("index.html: Všetky skripty načítané a spúšťané.");
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
         };
     </script>
-
-    <!-- Načítavanie hlavných skriptov aplikácie ako ES6 modulov -->
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="index.js"></script>
 </body>
 </html>
