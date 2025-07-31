@@ -90,31 +90,10 @@
 
     <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
-        // Centralizovaná inicializácia Firebase pomocou explicitne definovaných premenných
-        // Inicializujeme Firebase iba raz, ak už nebola inicializovaná.
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-add-categories.html: Firebase inicializovaný globálne.");
-            } catch (e) {
-                console.error("logged-in-add-categories.html: Chyba pri globálnej inicializácii Firebase:", e);
-            }
-        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-add-categories.html: Firebase už bol inicializovaný.");
-        } else {
-            console.error("logged-in-add-categories.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
-        }
+        // Tieto premenné sú definované v hlavnom HTML súbore alebo v authentication.js
+        // const appId = '...';
+        // const firebaseConfig = { ... };
+        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -137,80 +116,64 @@
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
+        // Funkcia na načítanie HTML obsahu a jeho skriptov
+        async function loadHtmlContent(placeholderId, htmlFile, jsFile) {
+            const placeholder = document.getElementById(placeholderId);
+            if (placeholder) {
                 try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
+                    const response = await fetch(htmlFile);
+                    if (!response.ok) throw new Error(`Network response was not ok for ${htmlFile}. Status: ${response.status}`);
+                    const html = await response.text();
+                    placeholder.innerHTML = html;
 
-                    const headerScript = document.createElement('script');
-                    headerScript.src = 'header.js';
-                    headerScript.onload = () => {
-                        console.log("header.js načítaný a spustený.");
-                        if (typeof initializeHeaderLogic === 'function') {
-                            initializeHeaderLogic();
-                        }
-                    };
-                    headerScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní header.js:", e);
-                    };
-                    document.body.appendChild(headerScript);
+                    if (jsFile) {
+                        const scriptElement = document.createElement('script');
+                        scriptElement.src = jsFile;
+                        scriptElement.onload = () => console.log(`${jsFile} načítaný a spustený.`);
+                        scriptElement.onerror = (e) => console.error(`Chyba pri načítaní ${jsFile}:`, e);
+                        document.body.appendChild(scriptElement);
+                    }
                 } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
-                try {
-                    const response = await fetch('left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
-
-                    const menuScript = document.createElement('script');
-                    menuScript.src = 'left-menu.js';
-                    menuScript.onload = () => {
-                        console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
-                    };
-                    menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní left-menu.js:", e);
-                    };
-                    document.body.appendChild(menuScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
+                    console.error(`Chyba pri načítaní ${htmlFile}:`, error);
+                    placeholder.innerHTML = `<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní obsahu z ${htmlFile}.</div>`;
                 }
             }
         }
 
         // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.onload = async () => {
-            await loadHeader();
-            await loadLeftMenu();
+            // Načítanie authentication.js ako prvého, pretože inicializuje Firebase a nastavuje globálne premenné
+            await loadHtmlContent('authentication-root', '', 'authentication.js'); // authentication.js sa vykresľuje do skrytého divu
+
+            await loadHtmlContent('header-placeholder', 'header.html', 'header.js');
+            await loadHtmlContent('left-menu-placeholder', 'left-menu.html', 'left-menu.js');
 
             // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            if (typeof AddCategoriesApp === 'undefined') {
-                console.error("Chyba: Komponent AddCategoriesApp nie je definovaný. Skontrolujte logged-in-add-categories.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
+            // a po tom, čo je Firebase Auth pripravené (isGlobalAuthReady)
+            // a globalUserProfileData je k dispozícii.
+            const checkReadyAndRender = () => {
+                if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                    return;
+                }
+                if (typeof AddCategoriesApp === 'undefined') {
+                    console.error("Chyba: Komponent AddCategoriesApp nie je definovaný. Skontrolujte logged-in-add-categories.js.");
+                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                    return;
+                }
+                // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
+                if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined) {
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(AddCategoriesApp, null));
+                    console.log("logged-in-add-categories.html: React App vykreslená.");
+                } else {
+                    // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
+                    setTimeout(checkReadyAndRender, 100);
+                }
+            };
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(AddCategoriesApp, null));
-            console.log("logged-in-add-categories.html: React App vykreslená.");
+            checkReadyAndRender();
         };
     </script>
 </body>
