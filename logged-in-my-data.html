@@ -138,12 +138,9 @@
         
         // Vykreslíme React aplikáciu až po načítaní DOM-u a uistení sa, že authentication.js už beží.
         window.onload = () => {
-            // Použijeme onAuthStateChanged, aby sme sa uistili, že React kód sa spustí až po úspešnej autentifikácii
-            // To je bezpečnejší prístup ako sa spoliehať na window.onload
             const auth = window.auth;
             if (auth) {
                 auth.onAuthStateChanged(user => {
-                    // Ak je používateľ prihlásený, alebo bol aspoň overený prvý stav, môžeme vykresliť aplikáciu.
                     if (user || window.isGlobalAuthReady) {
                         if (typeof window.MyDataApp === 'undefined') {
                             console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
@@ -153,13 +150,17 @@
                             }
                             return;
                         }
-                        const root = ReactDOM.createRoot(document.getElementById('root'));
-                        root.render(React.createElement(window.MyDataApp, null));
+                        const rootElement = document.getElementById('root');
+                        // Používame ReactDOM.render pre kompatibilitu s React 17
+                        ReactDOM.render(
+                            React.createElement(window.MyDataApp, null),
+                            rootElement
+                        );
                         console.log("logged-in-my-data.html: React App úspešne vykreslená po overení autentifikácie.");
                     }
                 });
             } else {
-                console.error("Chyba: Firebase Auth nie je definovaný.");
+                console.error("Chyba: Firebase Auth nie je definovaný. Aplikácia čaká na jeho inicializáciu.");
             }
         };
     </script>
