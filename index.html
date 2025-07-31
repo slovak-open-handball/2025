@@ -79,15 +79,20 @@
 <body class="bg-gray-100">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
+    <!-- Koreňový element pre globálne notifikácie a správu autentifikácie -->
+    <div id="header-notification-root"></div>
+    <div id="authentication-root"></div>
 
     <div id="root">
         <!-- React aplikácia sa tu vykreslí -->
     </div>
 
     <!-- Načítanie hlavného React komponentu pre túto stránku -->
+    <script src="authentication.js"></script>
+    <script src="header.js"></script>
     <script src="index.js"></script>
     <script>
-        // Funkcia na načítanie hlavičky
+        // Funkcia na načítanie hlavičky (už len HTML štruktúry)
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -102,34 +107,14 @@
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov, vrátane index.js
+        // Tento skript sa spustí po načítaní DOM a všetkých skriptov
         window.onload = function() {
-            // Načítať hlavičku ako prvú
+            // Načítať hlavičku HTML štruktúru ako prvú
             loadHeader().then(() => {
-                // Po načítaní header.html, načítame header.js
-                const headerScript = document.createElement('script');
-                headerScript.src = 'header.js';
-                headerScript.onload = () => {
-                    console.log("index.html: header.js načítaný a spustený.");
-                    // Pokračujeme s načítaním React aplikácie
-                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                        return;
-                    }
-                    if (typeof App === 'undefined') {
-                        console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                        return;
-                    }
-
-                    const root = ReactDOM.createRoot(document.getElementById('root'));
-                    root.render(React.createElement(App, null));
-                };
-                headerScript.onerror = (e) => {
-                    console.error("index.html: Chyba pri načítaní header.js:", e);
-                };
-                document.body.appendChild(headerScript); // Pridáme skript do body
+                // Po načítaní HTML hlavičky, React komponenty (authentication.js, header.js, index.js)
+                // sa už automaticky vykreslia do svojich "root" elementov, ak sú správne nastavené.
+                // Tu už nie je potrebné manuálne renderovať App, pretože index.js to robí sám.
+                console.log("index.html: Všetky skripty načítané a spúšťané.");
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
