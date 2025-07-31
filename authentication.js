@@ -12,6 +12,7 @@ window.db = null; // Inštancia Firebase Firestore
 const checkPageAuthorization = (userData, currentPath) => {
     // Definícia prístupových pravidiel pre jednotlivé stránky
     const pageAccessRules = {
+      'index.html': { role: 'public', approved: true },
       'logged-in-users.html': { role: 'admin', approved: true },
       'logged-in-tournament-settings.html': { role: 'admin', approved: true },
       'logged-in-add-categories.html': { role: 'admin', approved: true },
