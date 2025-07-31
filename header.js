@@ -153,19 +153,41 @@ function GlobalHeaderAndNotifications() {
     const registerLink = document.getElementById('register-link');
 
     if (window.isGlobalAuthReady) {
-      if (window.globalUserProfileData) {
+      const isUserLoggedIn = !!window.globalUserProfileData;
+      const isRegistrationOpen = window.registrationSettings?.registrationOpen;
+
+      if (isUserLoggedIn) {
         // Používateľ je prihlásený
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
         if (authLink) authLink.classList.add('hidden');
-        if (registerLink) registerLink.classList.remove('hidden');
+        // Zmena: Zobrazíme odkaz len ak je registrácia otvorená
+        if (registerLink) {
+            if (isRegistrationOpen) {
+                registerLink.classList.remove('hidden');
+            } else {
+                registerLink.classList.add('hidden');
+            }
+        }
         console.log("Header: Používateľ je prihlásený, zobrazujem odkazy 'Moja zóna' a 'Odhlásenie'.");
+        if (isRegistrationOpen) {
+          console.log("Header: Registrácia je otvorená, zobrazujem aj odkaz 'Registrácia na turnaj'.");
+        } else {
+          console.log("Header: Registrácia je uzavretá, odkaz 'Registrácia na turnaj' je skrytý.");
+        }
       } else {
         // Používateľ nie je prihlásený
         if (profileLink) profileLink.classList.add('hidden');
         if (logoutButton) logoutButton.classList.add('hidden');
         if (authLink) authLink.classList.remove('hidden');
-        if (registerLink) registerLink.classList.remove('hidden');
+        // Zmena: Odkaz na registráciu je viditeľný pre všetkých, keď je otvorená
+        if (registerLink) {
+            if (isRegistrationOpen) {
+                registerLink.classList.remove('hidden');
+            } else {
+                registerLink.classList.add('hidden');
+            }
+        }
         console.log("Header: Používateľ nie je prihlásený, zobrazujem odkaz 'Prihlásenie'.");
       }
     } else {
