@@ -90,46 +90,36 @@
         </div>
     </div>
     
-    <!-- Skripty -->
+    <!-- Skripty - poradie je dôležité! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-my-data.js"></script>
 
     <script type="text/javascript">
-        // Spustíme načítanie hlavičky po načítaní DOM
-        window.onload = async () => {
-            await loadHeader();
+        // Tento skript spúšťa renderovanie React aplikácie, ale až po načítaní ostatných modulov.
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
+            if (typeof loadHeader !== 'undefined') {
+                await loadHeader();
+            }
 
-            // Funkcia, ktorá čaká na pripravenosť Firebase autentifikácie
-            const renderReactApp = () => {
-                if (window.isGlobalAuthReady) {
-                    console.log("logged-in-my-data.html: Firebase autentifikácia pripravená. Vykresľujem React App.");
-                    
-                    // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                        return;
-                    }
-                    if (typeof MyDataApp === 'undefined') {
-                        console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                        return;
-                    }
+            // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
+            // Starú logiku s setTimeout sme odstránili, pretože komponent už reaguje na udalosti.
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof MyDataApp === 'undefined') {
+                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
 
-                    const root = ReactDOM.createRoot(document.getElementById('root'));
-                    root.render(React.createElement(MyDataApp, null));
-                    console.log("logged-in-my-data.html: React App vykreslená.");
-                } else {
-                    console.log("logged-in-my-data.html: Čakám na pripravenosť Firebase autentifikácie...");
-                    // Ak autentifikácia nie je pripravená, skúsime to znova o 100ms
-                    setTimeout(renderReactApp, 100);
-                }
-            };
-            
-            // Spustíme čakanie na pripravenosť
-            renderReactApp();
-        };
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(MyDataApp, null));
+            console.log("logged-in-my-data.html: React App vykreslená.");
+        });
     </script>
 </body>
 </html>
