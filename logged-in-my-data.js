@@ -3,84 +3,37 @@
 
 // Pre React potrebujeme definovať hlavný komponent.
 function MyDataApp() {
-  // Lokálny stav pre používateľské dáta, ktorý sa bude synchronizovať s globálnou premennou.
   const [userProfileData, setUserProfileData] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Začíname v stave načítavania
   const [error, setError] = React.useState('');
 
-  // Zabezpečíme, že appId je definované (používame globálnu premennú).
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-  // Efekt pre synchronizáciu dát. Tento kód sa spustí po prvom vykreslení a
-  // vždy, keď sa zmení stav globálnej autentifikácie alebo globálne dáta profilu.
+  // Efekt na nastavenie poslucháča udalostí po prvom vykreslení
   React.useEffect(() => {
-    // Ak už máme globálne dáta profilu, môžeme ich použiť okamžite.
-    if (window.globalUserProfileData) {
-      console.log("MyDataApp: Používam už načítané globálne dáta profilu.");
-      setUserProfileData(window.globalUserProfileData);
-      setLoading(false);
-      return;
-    }
-
-    // Ak nie sú globálne dáta k dispozícii, ale autentifikácia je pripravená
-    if (window.isGlobalAuthReady) {
-      const auth = window.auth;
-      const db = window.db;
-
-      // Ak je používateľ prihlásený, nastavíme listener na globálne dáta
-      if (auth.currentUser) {
-        console.log("MyDataApp: Používateľ je prihlásený. Čakám na načítanie globálnych dát.");
-
-        // Funkcia, ktorá sa spustí, keď sa zmenia globálne dáta profilu
-        const handleProfileDataChange = () => {
-          if (window.globalUserProfileData) {
-            console.log("MyDataApp: Zistená zmena v globálnych dátach. Aktualizujem stav.");
-            setUserProfileData(window.globalUserProfileData);
-            setLoading(false);
-          } else {
-            // Ak sa dáta odstránia (napríklad pri odhlásení), resetujeme stav
-            setUserProfileData(null);
-            setLoading(true); // Znova začneme načítavať, ak sa dáta stratia
-          }
-        };
-
-        // Vytvoríme proxy, ktorý bude sledovať zmeny na globalUserProfileData
-        const originalSetter = Object.getOwnPropertyDescriptor(window, 'globalUserProfileData').set;
-        Object.defineProperty(window, 'globalUserProfileData', {
-          set: function(value) {
-            originalSetter.call(this, value);
-            handleProfileDataChange();
-          },
-          get: function() {
-            return this._globalUserProfileData;
-          }
-        });
-        
-        // Funkcia na vyčistenie proxy pri odmontovaní komponentu
-        return () => {
-           // Resetovať na pôvodný setter
-           Object.defineProperty(window, 'globalUserProfileData', {
-            set: originalSetter,
-            get: function() {
-              return this._globalUserProfileData;
-            }
-          });
-        }
-
-      } else {
-        console.warn("MyDataApp: Používateľ nie je prihlásený, presmerovanie.");
-        setError('Nie ste prihlásený. Prosím, prihláste sa.');
+    const handleProfileDataLoaded = () => {
+      console.log("MyDataApp: Udalosť 'profileDataLoaded' bola prijatá.");
+      const data = window.globalUserProfileData;
+      if (data) {
+        setUserProfileData(data);
         setLoading(false);
-        // Môžete pridať presmerovanie, ak je potrebné
-        // window.location.href = 'index.html';
+      } else {
+        setError('Chyba: Dáta profilu neboli k dispozícii.');
+        setLoading(false);
       }
-    } else {
-      // Stále čakáme, ak autentifikácia ešte nie je pripravená
-      console.log("MyDataApp: Čakám na pripravenosť globálnej autentifikácie...");
-      setLoading(true);
+    };
+
+    // Pridá poslucháč na globálnu udalosť
+    window.addEventListener('profileDataLoaded', handleProfileDataLoaded);
+
+    // Ak už sú dáta profilu k dispozícii v čase renderovania (napríklad pri horúcej výmene modulov), použijeme ich.
+    if (window.globalUserProfileData) {
+        handleProfileDataLoaded();
     }
 
-  }, [window.isGlobalAuthReady]); // Spustí sa, keď sa zmení stav pripravenosti autentifikácie
+    // Funkcia na vyčistenie poslucháča
+    return () => {
+      window.removeEventListener('profileDataLoaded', handleProfileDataLoaded);
+    };
+  }, []); // Prázdne pole závislostí zabezpečí, že sa spustí len raz
 
   // Zobrazenie načítavania
   if (loading) {
