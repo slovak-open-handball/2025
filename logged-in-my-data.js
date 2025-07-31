@@ -173,8 +173,8 @@ function MyDataApp() {
                 ` ${userProfileData.contactPhoneNumber}`
             )
         ),
-        // Adresa (iba používateľská adresa, ak existuje)
-        userAddress && React.createElement(
+        // Adresa (iba používateľská adresa, ak existuje a nie sú fakturačné údaje)
+        !userProfileData.billing && userAddress && React.createElement(
           'div',
           { className: 'space-y-4' },
           React.createElement(
