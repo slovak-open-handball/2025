@@ -50,6 +50,26 @@ function MyDataApp() {
 
   }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí len raz
 
+  // Funkcia, ktorá formátuje telefónne číslo
+  const formatPhoneNumber = (number) => {
+      if (!number) return '';
+      // Odstránime všetky medzery, pomlčky a zátvorky
+      const cleanNumber = number.replace(/[\s-()]/g, '');
+
+      // Ak číslo začína s '+', oddelíme predvoľbu
+      const countryCodeMatch = cleanNumber.match(/^(\+\d{1,4})(.+)/);
+      if (countryCodeMatch) {
+          const countryCode = countryCodeMatch[1];
+          const restOfNumber = countryCodeMatch[2];
+          // Rozdelíme zvyšok čísla na skupiny po troch
+          const formattedRest = restOfNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
+          return `${countryCode} ${formattedRest}`;
+      }
+
+      // Ak číslo nezačína predvoľbou, rozdelíme ho na skupiny po troch
+      return cleanNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
+  };
+
   // Funkcia, ktorá renderuje buď loading obrazovku, error, alebo dáta
   function renderContent() {
     if (loading) {
@@ -164,7 +184,7 @@ function MyDataApp() {
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
-                ` ${userProfileData.contactPhoneNumber}`
+                ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
             ),
             // Dátum a čas registrácie
             userProfileData.registrationDate && React.createElement(
