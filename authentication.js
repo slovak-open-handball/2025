@@ -49,18 +49,25 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const initFirebase = async () => {
     try {
         const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        const firebaseConfig = JSON.parse(firebaseConfigString);
+        let firebaseConfig = JSON.parse(firebaseConfigString);
 
-        // Kľúčová kontrola pred inicializáciou!
+        // Kľúčová kontrola pred inicializáciou! Ak chýba 'projectId', použijeme pevnú konfiguráciu.
         if (!firebaseConfig.projectId) {
-            console.error("AuthManager: 'projectId' nie je poskytnuté v __firebase_config. Inicializácia Firebase zlyhala.");
-            return null;
+            console.warn("AuthManager: 'projectId' nie je poskytnuté v __firebase_config. Používa sa pevne zadaná konfigurácia.");
+            firebaseConfig = {
+                apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+                authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+                projectId: "soh2025-2s0o2h5",
+                storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+                messagingSenderId: "572988314768",
+                appId: "1:572988314768:web:781e27eb035179fe34b415"
+            };
         }
 
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
         window.auth = getAuth(app);
-        
+
         const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
         if (token) {
             await signInWithCustomToken(window.auth, token);
@@ -94,14 +101,14 @@ const checkPageAuthorization = (userData, currentPath) => {
 
     const rules = pageAccessRules[currentPath.split('/').pop()] || { role: 'public', approved: true };
     const userRole = userData?.role;
-    
+
     if (rules.role === 'admin' && userRole !== 'admin') {
       return false;
     }
     if (rules.role === 'user' && !userRole) {
       return false;
     }
-    
+
     return true;
 };
 
@@ -123,7 +130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (user) {
                 console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
                 const userDocRef = doc(window.db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-                
+
                 // onSnapshot pre real-time aktualizácie profilu
                 const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -133,10 +140,10 @@ window.addEventListener('DOMContentLoaded', async () => {
                         window.globalUserProfileData = { isLoggedIn: true, id: user.uid }; // Anonymný používateľ alebo bez profilu
                         console.log("AuthManager: Žiadny profil používateľa nenájdený, nastavený anonymný profil.");
                     }
-                    
+
                     // Upozorníme ostatné skripty na zmenu stavu
                     dispatchGlobalStateChanged();
-                    
+
                     // Kontrola autorizácie stránky po načítaní profilu
                     if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
                         console.warn("AuthManager: Používateľ nemá oprávnenie pre túto stránku. Presmerovanie na domovskú stránku.");
@@ -153,10 +160,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             } else {
                 console.log("AuthManager: Používateľ odhlásený.");
                 window.globalUserProfileData = null;
-                
+
                 // Upozorníme ostatné skripty na zmenu stavu
                 dispatchGlobalStateChanged();
-                
+
                 // Kontrola autorizácie stránky po odhlásení
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
                     window.location.href = 'index.html';
