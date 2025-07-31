@@ -1,6 +1,6 @@
 // index.js
-// This file is now self-contained and does not rely on global window variables from authentication.js.
-// It initializes Firebase and handles authentication on its own.
+// Tento súbor je teraz samostatný a nespolieha sa na globálne premenné z authentication.js.
+// Inicializuje Firebase a spravuje autentifikáciu sám.
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -37,6 +37,11 @@ function App() {
         const initFirebase = async () => {
             try {
                 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+                if (!firebaseConfig.projectId) {
+                    throw new Error("Firebase configuration 'projectId' is missing. Please ensure '__firebase_config' is correctly provided.");
+                }
+
                 const app = initializeApp(firebaseConfig);
                 const firestoreDb = getFirestore(app);
                 const firebaseAuth = getAuth(app);
@@ -64,7 +69,7 @@ function App() {
 
             } catch (e) {
                 console.error("Firebase initialization failed:", e);
-                setError("Chyba pri inicializácii Firebase. Skúste obnoviť stránku.");
+                setError(`Chyba pri inicializácii Firebase: ${e.message}. Skúste obnoviť stránku.`);
             }
         };
 
