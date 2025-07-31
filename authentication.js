@@ -1,6 +1,6 @@
 // authentication.js
-// Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
-// overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
+// Tento súbor spravuje globálnu autentifikáciu Firebase s pevne definovanými premennými,
+// načítanie profilových dát používateľa, overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
 
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
 window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
@@ -8,7 +8,7 @@ window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného po
 window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
-window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Načíta global appId
+window.appId = null; // ID aplikácie, ktoré sa nastaví po inicializácii Firebase
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -55,14 +55,24 @@ function checkPageAuthorization(userProfile, path) {
     }
 }
 
-// Funkcia pre inicializáciu Firebase
+// Funkcia pre inicializáciu Firebase s pevne definovanými premennými
 const setupFirebase = () => {
+    // Pevne definovaná konfigurácia Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+        authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+        projectId: "soh2025-2s0o2h5",
+        storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+        messagingSenderId: "572988314768",
+        appId: "1:572988314768:web:781e27eb035179fe34b415"
+    };
+
     try {
-        const firebaseConfig = JSON.parse(window.__firebase_config);
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
-        console.log("AuthManager: Firebase inicializované.");
+        window.appId = firebaseConfig.projectId; // Použijeme projectId ako appId pre Firestore cesty
+        console.log("AuthManager: Firebase inicializované s pevnou konfiguráciou.");
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
@@ -72,6 +82,13 @@ const setupFirebase = () => {
 const handleAuthState = () => {
     const auth = window.auth;
     const db = window.db;
+
+    // Kontrola, či je autentifikácia inicializovaná pred spustením listenera
+    if (!auth) {
+        console.error("AuthManager: Autentifikácia nie je inicializovaná. Listener nebude nastavený.");
+        window.isGlobalAuthReady = true; // Zabezpečí, že aplikácia nezostane v stave "načítavam"
+        return;
+    }
 
     onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
