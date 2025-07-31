@@ -143,9 +143,11 @@ try {
 
 // --- Inicializácia Firebase ---
 console.log("AuthManager: Spúšťam inicializáciu Firebase.");
-// Zabraňujeme duplicitnej inicializácii
+
+// Nová, vylepšená inicializácia Firebase, ktorá by mala zabrániť chybe.
+// Používame namespaced prístup, ktorý už je na stránke.
 const app = typeof firebaseConfig !== 'undefined'
-  ? firebase.getApps().find(app => app.name === '[DEFAULT]') || firebase.initializeApp(firebaseConfig)
+  ? (!firebase.app ? firebase.initializeApp(firebaseConfig) : firebase.app())
   : null;
 
 if (app) {
