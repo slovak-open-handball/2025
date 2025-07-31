@@ -173,7 +173,7 @@ function MyDataApp() {
                 ` ${userProfileData.contactPhoneNumber}`
             )
         ),
-        // Adresa - v jednom riadku
+        // Adresa (iba používateľská adresa, ak existuje)
         userAddress && React.createElement(
           'div',
           { className: 'space-y-4' },
@@ -220,6 +220,7 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
             ` ${userProfileData.billing.clubName}`
           ),
+          // Presunutie fakturačnej adresy sem
           billingAddress && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
