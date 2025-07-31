@@ -8,6 +8,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+    <!-- React a ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -34,65 +42,17 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 80%;
             max-width: 500px;
-            width: 90%;
-            text-align: left;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <!-- reCAPTCHA v3 -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
-
-    <!-- Kľúčová ZMENA: Inicializácia Firebase aplikácie tu, pred akýmikoľvek inými skriptami, ktoré ju používajú -->
-    <script>
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        const initialAuthToken = null; // Stále globálne definované
-        
-
-        try {
-            // Inicializovať predvolenú Firebase aplikáciu len raz
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-                console.log("index.html: Firebase App '[DEFAULT]' inicializovaná v head.");
-            } else {
-                console.log("index.html: Firebase App '[DEFAULT]' už existuje.");
-            }
-        } catch (e) {
-            console.error("index.html: Chyba pri inicializácii Firebase App v head:", e);
-        }
-    </script>
 </head>
-<body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
+<body>
     <div id="header-placeholder"></div>
-    <!-- Koreňový element pre globálne notifikácie a správu autentifikácie -->
-    <div id="header-notification-root"></div>
-    <div id="authentication-root"></div>
+    <div id="root"></div>
 
-    <div id="root">
-        <!-- React aplikácia sa tu vykreslí -->
-    </div>
-
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="authentication.js"></script>
-    <script src="header.js"></script>
-    <script src="index.js"></script>
-    <script>
-        // Funkcia na načítanie hlavičky (už len HTML štruktúry)
+    <!-- Vložíme hlavičku dynamicky. Tento skript sa postará o načítanie header.html -->
+    <script type="module">
         async function loadHeader() {
             try {
                 const response = await fetch('header.html');
@@ -101,25 +61,24 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
-                window.dispatchEvent(new Event('header-loaded'));
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
             }
         }
 
-        // Tento skript sa spustí po načítaní DOM a všetkých skriptov
         window.onload = function() {
-            // Načítať hlavičku HTML štruktúru ako prvú
             loadHeader().then(() => {
-                // Po načítaní HTML hlavičky, React komponenty (authentication.js, header.js, index.js)
-                // sa už automaticky vykreslia do svojich "root" elementov, ak sú správne nastavené.
-                // Tu už nie je potrebné manuálne renderovať App, pretože index.js to robí sám.
-                console.log("index.html: Všetky skripty načítané a spúšťané.");
+                console.log("index.html: Hlavička HTML načítaná.");
             }).catch(error => {
                 console.error("Chyba pri inicializácii stránky:", error);
             });
         };
     </script>
+
+    <!-- Načítavanie hlavných skriptov aplikácie ako ES6 modulov -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="index.js"></script>
 </body>
 </html>
