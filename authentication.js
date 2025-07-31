@@ -62,7 +62,17 @@ function checkPageAuthorization(userProfileData, path) {
 // Inicializácia Firebase a nastavenie listenerov
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        let firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'soh2025-2s0o2h5';
+
+        // Oprava: Ak chýba projectId, použije sa appId ako záloha
+        if (!firebaseConfig.projectId) {
+            firebaseConfig = {
+                ...firebaseConfig,
+                projectId: appId
+            };
+        }
+
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
         window.auth = getAuth(app);
@@ -88,8 +98,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
 
-            // Upravená cesta k profilu, aby sedela s vašou štruktúrou Firestore
-            const userDocRef = doc(window.db, 'artifacts', 'soh2025-2s0o2h5', 'users', user.uid);
+            // Použitie dynamického appId pre cestu k profilu
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'soh2025-2s0o2h5';
+            const userDocRef = doc(window.db, 'artifacts', appId, 'users', user.uid);
 
             // Listener pre dáta profilu v reálnom čase
             const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
