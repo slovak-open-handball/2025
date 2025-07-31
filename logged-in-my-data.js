@@ -1,84 +1,34 @@
 // logged-in-my-data.js
-// Tento súbor predpokladá, že Firebase SDK je inicializovaný a prihlásenie prebehlo v logged-in-my-data.html.
-// Kód definuje React komponent, ktorý zobrazuje údaje používateľa.
+// Tento súbor definuje React komponent, ktorý zobrazuje údaje používateľa.
+// Kód sa teraz spolieha na globálne dáta načítané skriptom authentication.js.
 
-// Main React component for the logged-in-my-data.html page
 const MyDataApp = () => {
-  // Get references to Firebase services and global data from authentication.js
-  const auth = window.auth;
-  const db = window.db;
-
-  // Local state for user data that is loaded after global authentication
+  // Lokálny stav pre používateľské dáta
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [loading, setLoading] = React.useState(true); // Loading state for data in MyDataApp
+  const [loading, setLoading] = React.useState(true); // Loading stav
   const [error, setError] = React.useState('');
 
-  // Ensure appId is defined (using a global variable)
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
-  
-  // Use a state variable for userId to ensure reactivity
-  const [userId, setUserId] = React.useState('anonymous');
-  
-  // Effect for loading user data from Firestore
-  // This effect runs only when global authentication is ready.
+  // Effect pre načítanie používateľských dát z globálnej premennej
+  // Tento efekt sa spustí vždy, keď sa zmení stav autentifikácie alebo globálne dáta.
   React.useEffect(() => {
-    let unsubscribeUserDoc;
-
-    // Wait until global authentication is ready and the user is logged in
-    if (window.isGlobalAuthReady && db && auth && auth.currentUser) {
-      console.log(`MyDataApp: Global authentication is ready. Attempting to load user document for UID: ${auth.currentUser.uid}`);
-      setLoading(true); // Set loading to true while user profile data is being fetched
-      setUserId(auth.currentUser.uid); // Set the reactive userId
-
-      try {
-        const userDocRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid);
-        
-        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
-          if (docSnapshot.exists()) {
-            const userData = docSnapshot.data();
-            console.log("MyDataApp: User document exists, data:", userData);
-            setUserProfileData(userData);
-            setError('');
-          } else {
-            console.log("MyDataApp: User document does not exist. Creating it.");
-            const defaultUserData = { email: auth.currentUser.email, createdAt: new Date() };
-            setDoc(userDocRef, defaultUserData)
-              .then(() => {
-                console.log("MyDataApp: Created new user document.");
-                setUserProfileData(defaultUserData);
-                setError('');
-              })
-              .catch(err => {
-                console.error("MyDataApp: Error creating user document:", err);
-                setError('Error loading or creating user profile.');
-              });
-          }
-          setLoading(false);
-        }, (error) => {
-          console.error("MyDataApp: Error loading user document:", error);
-          setError('Error loading user profile.');
-          setLoading(false);
-        });
-
-      } catch (e) {
-        console.error("MyDataApp: General error trying to load the document:", e);
-        setError('An error occurred while loading data. Please try again later.');
+    // Čakáme, kým bude globálna autentifikácia pripravená
+    if (window.isGlobalAuthReady) {
+      // Ak sú globálne dáta profilu k dispozícii, použijeme ich
+      if (window.globalUserProfileData) {
+        console.log("MyDataApp: Používam globálne načítané dáta používateľa.");
+        setUserProfileData(window.globalUserProfileData);
         setLoading(false);
+        setError('');
+      } else {
+        // Ak sú dáta null, ale autentifikácia je hotová, znamená to, že profil neexistuje alebo nastala chyba
+        console.log("MyDataApp: Globálne dáta používateľa neboli nájdené.");
+        setLoading(false);
+        setError('Nepodarilo sa načítať profil používateľa. Skúste sa prosím prihlásiť znova.');
       }
-    } else if (window.isGlobalAuthReady && !auth.currentUser) {
-        // If auth is ready but the user is not logged in
-        setLoading(false);
-        setError('You must be logged in to view this page.');
     }
+  }, [window.isGlobalAuthReady, window.globalUserProfileData]); // Efekt sa znova spustí, ak sa zmenia tieto premenné
 
-    return () => {
-      if (unsubscribeUserDoc) {
-        unsubscribeUserDoc();
-      }
-    };
-  }, [window.isGlobalAuthReady, db, auth]); // Effect will rerun when these dependencies change
-
-  // Show loading state
+  // Zobrazenie načítania
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -87,7 +37,7 @@ const MyDataApp = () => {
     );
   }
 
-  // Show error if one occurred
+  // Zobrazenie chyby
   if (error) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -96,7 +46,7 @@ const MyDataApp = () => {
     );
   }
 
-  // Show page content
+  // Zobrazenie obsahu stránky
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
         <div className="flex-1 p-8 md:ml-64 mt-8 md:mt-0">
@@ -112,13 +62,13 @@ const MyDataApp = () => {
                             </h3>
                             <div className="space-y-2">
                                 <p className="text-gray-800 text-lg">
-                                    <span className="font-bold">ID používateľa:</span> {userId}
+                                    <span className="font-bold">ID používateľa:</span> {userProfileData.uid || 'Nezadané'}
                                 </p>
                                 <p className="text-gray-800 text-lg">
-                                    <span className="font-bold">Meno:</span> {userProfileData.name || 'Nezadané'}
+                                    <span className="font-bold">Meno:</span> {userProfileData.firstName || 'Nezadané'}
                                 </p>
                                 <p className="text-gray-800 text-lg">
-                                    <span className="font-bold">Priezvisko:</span> {userProfileData.surname || 'Nezadané'}
+                                    <span className="font-bold">Priezvisko:</span> {userProfileData.lastName || 'Nezadané'}
                                 </p>
                                 <p className="text-gray-800 text-lg">
                                     <span className="font-bold">Email:</span> {userProfileData.email || 'Nezadané'}
