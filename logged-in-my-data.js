@@ -96,7 +96,7 @@ function MyDataApp() {
         return code || '';
     };
 
-    // Funkcia na spojenie adresy do jedného riadku
+    // Funkcia na spojenie adresy do jedného riadku z top-level polí
     const formatAddress = (street, houseNumber, city, postalCode, country) => {
         const parts = [];
         if (street) parts.push(street);
@@ -116,14 +116,14 @@ function MyDataApp() {
         return finalAddressParts.join(', ');
     };
 
-    // Priprava dat pre billing adresy
-    const billingAddress = userProfileData.billing ? formatAddress(
-      userProfileData.billing.street,
-      userProfileData.billing.houseNumber,
-      userProfileData.billing.city,
-      userProfileData.billing.zipCode,
-      userProfileData.billing.country
-    ) : null;
+    // Vytvorenie adresného reťazca z top-level polí
+    const billingAddress = formatAddress(
+      userProfileData.street,
+      userProfileData.houseNumber,
+      userProfileData.city,
+      userProfileData.postalCode,
+      userProfileData.country
+    );
     
     // Renderujeme dáta, ak sú k dispozícii
     return React.createElement(
@@ -182,7 +182,7 @@ function MyDataApp() {
             )
         ),
         // Fakturačné údaje - tento blok teraz obsahuje aj adresu
-        userProfileData.billing && React.createElement(
+        (userProfileData.billing || billingAddress) && React.createElement(
           'div',
           { className: 'space-y-4' },
           React.createElement(
@@ -190,32 +190,32 @@ function MyDataApp() {
             { className: 'text-2xl font-semibold text-gray-800' },
             'Fakturačné údaje'
           ),
-          userProfileData.billing.clubName && React.createElement(
-            'p',
-            { className: 'text-gray-800 text-lg' },
-            React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
-            ` ${userProfileData.billing.clubName}`
-          ),
-          // Fakturačná adresa sa zobrazuje VŽDY v tomto bloku, ak existujú billing údaje
+          // Fakturačná adresa sa teraz berie z top-level polí, ale zobrazuje sa v tomto bloku
           billingAddress && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
             ` ${billingAddress}`
           ),
-          userProfileData.billing.ico && React.createElement(
+          userProfileData.billing && userProfileData.billing.clubName && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
+            ` ${userProfileData.billing.clubName}`
+          ),
+          userProfileData.billing && userProfileData.billing.ico && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'IČO:'),
             ` ${userProfileData.billing.ico}`
           ),
-          userProfileData.billing.dic && React.createElement(
+          userProfileData.billing && userProfileData.billing.dic && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
             ` ${userProfileData.billing.dic}`
           ),
-          userProfileData.billing.icDph && React.createElement(
+          userProfileData.billing && userProfileData.billing.icDph && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
