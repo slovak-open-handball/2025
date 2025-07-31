@@ -24,34 +24,29 @@ window.showGlobalNotification = (message, type = 'success') => {
     // Nastavíme obsah a farbu na základe typu notifikácie
     // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
     const bgColorClass = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-.*?(?=\s|$)/, '') + ` ${bgColorClass}`;
-    
-    // Vytvoríme ikonku na základe typu notifikácie
-    const icon = type === 'success' ? `
+    notificationElement.className = notificationElement.className.replace(/bg-\[#3A8D41\]|bg-red-600/, bgColorClass);
+    notificationElement.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            ${type === 'success'
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            }
         </svg>
-    ` : `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <span>${message}</span>
     `;
-    
-    // Nastavíme HTML obsah notifikácie
-    notificationElement.innerHTML = `${icon}<span>${message}</span>`;
-    
-    // Zobrazíme notifikáciu (nastavíme opacitu na 1 a posunieme ju nadol)
-    notificationElement.classList.remove('opacity-0', '-translate-y-full');
-    notificationElement.classList.add('opacity-100', 'translate-y-0');
 
-    // Po 3 sekundách notifikáciu skryjeme
+    // Zobrazíme notifikáciu
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100', 'translate-y-0');
-        notificationElement.classList.add('opacity-0', '-translate-y-full');
-    }, 3000);
+        notificationElement.classList.remove('opacity-0', 'pointer-events-none');
+    }, 10);
+
+    // Skryjeme notifikáciu po 5 sekundách
+    setTimeout(() => {
+        notificationElement.classList.add('opacity-0', 'pointer-events-none');
+    }, 5000);
 };
 
-// Funkcia na načítanie hlavičky (len HTML štruktúry)
+// Funkcia, ktorá načíta HTML hlavičky pomocou fetch
 async function loadHeader() {
     try {
         const response = await fetch('header.html');
@@ -59,61 +54,83 @@ async function loadHeader() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const headerHtml = await response.text();
-        const headerPlaceholder = document.getElementById('header-placeholder');
-        if (headerPlaceholder) {
-            headerPlaceholder.innerHTML = headerHtml;
-        } else {
-            console.error("header.js: Nenašiel sa '#header-placeholder' element.");
-        }
-    } catch (error) {
-        console.error("header.js: Chyba pri načítaní hlavičky:", error);
+        document.getElementById('header-placeholder').innerHTML = headerHtml;
+        console.log("header.js: Hlavička bola úspešne načítaná a vložená.");
+    } catch (e) {
+        console.error("header.js: Chyba pri načítaní hlavičky:", e);
+        document.getElementById('header-placeholder').innerHTML = '<header class="bg-red-600 text-white p-4 text-center">Chyba pri načítaní navigácie.</header>';
     }
 }
 
 // Funkcia pre odhlásenie
-const handleLogout = async () => {
+async function handleLogout() {
     if (window.auth) {
         try {
             await window.auth.signOut();
-            // Teraz voláme globálnu funkciu, ktorá už existuje
-            window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
+            window.showGlobalNotification('Boli ste úspešne odhlásený.', 'success');
+            console.log("header.js: Používateľ odhlásený.");
+            // Presmerovať na prihlasovaciu stránku alebo domov
+            window.location.href = 'index.html'; 
         } catch (error) {
-            console.error("Chyba pri odhlasovaní:", error);
-            // Teraz voláme globálnu funkciu, ktorá už existuje
-            window.showGlobalNotification('Chyba pri odhlasovaní. Skúste znova.', 'error');
+            console.error("header.js: Chyba pri odhlasovaní:", error);
+            window.showGlobalNotification('Chyba pri odhlasovaní. Skúste to znova.', 'error');
         }
     }
-};
+}
 
-// Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke
+// Funkcia, ktorá dynamicky mení odkazy v hlavičke na základe stavu autentifikácie
 function updateHeaderLinks() {
-    console.log("header.js: Aktualizujem odkazy v hlavičke.");
-    const profileLink = document.getElementById('profile-link');
     const authLink = document.getElementById('auth-link');
-    const registerLink = document.getElementById('register-link');
+    const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+    const header = document.querySelector('header');
 
-    // Zabezpečíme, že všetky prvky existujú pred manipuláciou
-    if (!profileLink || !authLink || !registerLink || !logoutButton) {
-        console.error("header.js: Chýba jeden alebo viac navigačných odkazov v DOM.");
-        return;
+    const user = window.auth ? window.auth.currentUser : null;
+    const userProfileData = window.globalUserProfileData;
+
+    if (header) {
+        // Zmena farby hlavičky na základe typu používateľa
+        if (user && userProfileData && userProfileData.type === 'user') {
+            header.classList.remove('bg-blue-700');
+            header.classList.add('bg-[#9333EA]');
+        } else {
+            header.classList.remove('bg-[#9333EA]');
+            header.classList.add('bg-blue-700');
+        }
     }
 
-    if (window.globalUserProfileData) {
-        // Prihlásený používateľ
-        profileLink.classList.remove('hidden'); // Zobraziť 'Moja zóna'
-        authLink.classList.add('hidden');      // Skryť 'Prihlásenie'
-        registerLink.classList.add('hidden');   // Skryť 'Registrácia na turnaj'
-        logoutButton.classList.remove('hidden');  // Zobraziť 'Odhlásiť'
+    if (user) {
+        // Používateľ je prihlásený
+        if (authLink) authLink.classList.add('hidden');
+        if (profileLink) profileLink.classList.remove('hidden');
+        if (logoutButton) logoutButton.classList.remove('hidden');
+
+        // Podmienka pre zobrazenie "Registrácia na turnaj"
+        if (userProfileData && userProfileData.type === 'user') {
+            if (registerLink) {
+                registerLink.classList.remove('hidden');
+                registerLink.textContent = 'Registrácia na turnaj';
+                registerLink.href = 'logged-in-registration.html';
+            }
+        } else {
+            // Skryť odkaz, ak používateľ nie je typu 'user'
+            if (registerLink) {
+                 registerLink.classList.add('hidden');
+            }
+        }
     } else {
-        // Odhlásený používateľ
-        profileLink.classList.add('hidden');      // Skryť 'Moja zóna'
-        authLink.classList.remove('hidden');      // Zobraziť 'Prihlásenie'
-        registerLink.classList.add('hidden');   // Skryť 'Registrácia na turnaj'
-        logoutButton.classList.add('hidden');   // Skryť 'Odhlásiť'
+        // Používateľ je odhlásený
+        if (authLink) authLink.classList.remove('hidden');
+        if (profileLink) profileLink.classList.add('hidden');
+        if (logoutButton) logoutButton.classList.add('hidden');
+        
+        // Zobraziť odkaz na registráciu pre všetkých, ale s iným textom a odkazom
+        if (registerLink) {
+            registerLink.classList.remove('hidden');
+            registerLink.textContent = 'Registrovať sa';
+            registerLink.href = 'registration.html';
+        }
     }
 }
 
@@ -147,6 +164,6 @@ window.onload = function() {
         updateHeaderLinks();
 
     }).catch(error => {
-        console.error("header.js: Chyba pri inicializácii hlavičky a listenerov:", error);
+        console.error("header.js: Chyba pri načítaní hlavičky alebo inicializácii:", error);
     });
 };
