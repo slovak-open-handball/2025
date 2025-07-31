@@ -11,7 +11,7 @@ window.showGlobalNotification = null;
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ochrana proti zobrazeniu stránky v iframe
@@ -56,7 +56,6 @@ function checkPageAuthorization(userProfile, path) {
 // Inicializácia Firebase
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Použitie poskytnutej config premennej ak globálna neexistuje
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify({
             apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
             authDomain: "soh2025-2s0o2h5.firebaseapp.com",
@@ -74,13 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.db = getFirestore(app);
             console.log("AuthManager: Firebase inicializované.");
 
-            // Prihlásenie používateľa
+            // Prihlásenie používateľa, ak je k dispozícii token
             if (initialAuthToken) {
                 await signInWithCustomToken(window.auth, initialAuthToken);
                 console.log("AuthManager: Prihlásenie s vlastným tokenom prebehlo úspešne.");
             } else {
-                await signInAnonymously(window.auth);
-                console.log("AuthManager: Prihlásenie anonymne prebehlo úspešne.");
+                console.log("AuthManager: Žiadny inicializačný token, prihlásenie preskočené. Očakáva sa existujúci stav autentifikácie.");
             }
         } else {
             console.error("AuthManager: Firebase config nebol nájdený a fallback config je prázdny. Inicializácia preskočená.");
