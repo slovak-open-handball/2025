@@ -305,6 +305,9 @@ function GlobalNotificationHandler() {
   // NOVINKA: Nový stav pre celkovú pripravenosť nastavení a kategórií
   const [settingsAndCategoriesLoaded, setSettingsAndCategoriesLoaded] = React.useState(false);
 
+  // ZMENA: Stav pre loading v rámci GNH (pre logout)
+  const [loadingGNH, setLoadingGNH] = React.useState(false);
+
 
   // NOVINKA: Globálna funkcia na spúšťanie notifikácií z iných komponentov
   // ZMENA: Táto funkcia teraz nastavuje správu pre centrálnu notifikáciu
@@ -633,6 +636,65 @@ function GlobalNotificationHandler() {
     }
   }, [categoriesExist, registrationStartDate, registrationEndDate, user, settingsAndCategoriesLoaded]); // Pridaná závislosť settingsAndCategoriesLoaded
 
+  // NOVINKA: handleLogout funkcia presunutá do GlobalNotificationHandler
+  const handleLogout = React.useCallback(async () => {
+    if (!auth) return;
+    try {
+      setLoadingGNH(true); // Nastavíme loading pre GNH
+      await auth.signOut();
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Úspešne odhlásený.");
+      } else {
+        console.warn("GNH: window.showGlobalNotification nie je definovaná.");
+      }
+      window.location.href = 'login.html';
+      setUser(null); // Explicitne nastaviť user na null
+      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+    } catch (e) {
+      console.error("GNH: Chyba pri odhlásení:", e);
+      setCurrentCenterMessage(`Chyba pri odhlásení: ${e.message}`);
+    } finally {
+      setLoadingGNH(false); // Ukončíme loading pre GNH
+    }
+  }, [auth]);
+
+  // NOVINKA: Effect pre aktualizáciu viditeľnosti odkazov pre prihlásenie/profil/odhlásenie
+  React.useEffect(() => {
+    console.log(`GNH: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    // registerLink je už spravovaný iným useEffectom vyššie
+
+    if (authLink) {
+      if (user) { // Ak je používateľ prihlásený
+        authLink.classList.add('hidden');
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        console.log("GNH: Používateľ prihlásený. Skryté: Prihlásenie. Zobrazené: Moja zóna, Odhlásenie.");
+      } else { // Ak používateľ nie je prihlásený
+        authLink.classList.remove('hidden');
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        console.log("GNH: Používateľ odhlásený. Zobrazené: Prihlásenie. Skryté: Moja zóna, Odhlásenie.");
+      }
+    }
+  }, [user]);
+
+  // NOVINKA: Attach logout handler to the button in the header
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]);
+
+
   return React.createElement(
     React.Fragment,
     null,
@@ -676,11 +738,14 @@ try {
 // Main React component for the logged-in-users.html page
 // ZMENA: Premenované z UsersApp na UsersManagementApp, aby zodpovedalo názvu v logged-in-users.html
 // a presunuté mimo funkcie, aby bolo globálne dostupné.
+// Tento komponent sa už nebude spúšťať v header.js, ale mal by byť v logged-in-users.js
+// Ponechaný tu len pre referenciu, ale nebude sa renderovať.
 function UsersManagementApp() {
   // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
-  if (window.location.pathname.includes('logged-in-users.html')) {
-    console.log("UsersManagementApp (header.js): Detekovaná stránka logged-in-users.html. Nebudem spúšťať komponent z header.js.");
-    return null; // Nespúšťať komponent, ak je na správcovskej stránke
+  // TENTO KOMPONENT SA UŽ NEBUDE RENDEROVAŤ CEZ HEADER.JS, TÁTO KONTROLA JE PRE ISTOTU
+  if (!window.location.pathname.includes('logged-in-users.html')) {
+    console.log("UsersManagementApp (header.js): Nie je na stránke logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+    return null; // Nespúšťať komponent, ak nie je na správcovskej stránke
   }
 
   const [app, setApp] = React.useState(null);
@@ -899,67 +964,67 @@ function UsersManagementApp() {
     };
   }, [isAuthReady, db, user, auth]); // Pridaná závislosť 'auth' pre použitie auth.signOut()
 
-  // Effect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+  // Effect for updating header link visibility - TENTO EFFECT JE TERAZ V GLOBALNOTIFICATIONHANDLER
+  // React.useEffect(() => {
+  //   console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`); // Zmena logu
+  //   const authLink = document.getElementById('auth-link');
+  //   const profileLink = document.getElementById('profile-link');
+  //   const logoutButton = document.getElementById('logout-button');
+  //   const registerLink = document.getElementById('register-link');
 
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden'); // Zabezpečí, že register-link je skrytý, keď je používateľ prihlásený
-        console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        // registerLink sa bude riadiť logikou v GlobalNotificationHandler
-        // registerLink && registerLink.classList.remove('hidden'); 
-        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
-      }
-    }
-  }, [user]);
+  //   if (authLink) {
+  //     if (user) {
+  //       authLink.classList.add('hidden');
+  //       profileLink && profileLink.classList.remove('hidden');
+  //       logoutButton && logoutButton.classList.remove('hidden');
+  //       registerLink && registerLink.classList.add('hidden'); // Zabezpečí, že register-link je skrytý, keď je používateľ prihlásený
+  //       console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie."); // Zmena logu
+  //     } else {
+  //       authLink.classList.remove('hidden');
+  //       profileLink && profileLink.classList.add('hidden');
+  //       logoutButton && logoutButton.classList.add('hidden');
+  //       // registerLink sa bude riadiť logikou v GlobalNotificationHandler
+  //       // registerLink && registerLink.classList.remove('hidden'); 
+  //       console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie. Skryté: Moja zóna, Odhlásenie."); // Zmena logu
+  //     }
+  //   }
+  // }, [user]);
 
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
-      }
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri odhlásení:", e); // Zmena logu
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
+  // Handle logout (needed for the header logout button) - TÁTO FUNKCIA JE TERAZ V GLOBALNOTIFICATIONHANDLER
+  // const handleLogout = React.useCallback(async () => {
+  //   if (!auth) return;
+  //   try {
+  //     setLoading(true);
+  //     await auth.signOut();
+  //     // ZMENA: Používame globálnu funkciu pre centrálnu notifikáciu
+  //     if (typeof window.showGlobalNotification === 'function') {
+  //       window.showGlobalNotification("Úspešne odhlásený.");
+  //     } else {
+  //       console.warn("UsersManagementApp: window.showGlobalNotification nie je definovaná.");
+  //     }
+  //     window.location.href = 'login.html';
+  //     setUser(null); // Explicitne nastaviť user na null
+  //     setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+  //   } catch (e) {
+  //     console.error("UsersManagementApp: Chyba pri odhlásení:", e); // Zmena logu
+  //     setError(`Chyba pri odhlásení: ${e.message}`);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [auth]);
 
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  // Attach logout handler to the button in the header - TENTO EFFECT JE TERAZ V GLOBALNOTIFICATIONHANDLER
+  // React.useEffect(() => {
+  //   const logoutButton = document.getElementById('logout-button');
+  //   if (logoutButton) {
+  //     logoutButton.addEventListener('click', handleLogout);
+  //   }
+  //   return () => {
+  //     if (logoutButton) {
+  //       logoutButton.removeEventListener('click', handleLogout);
+  //     }
+  //   };
+  // }, [handleLogout]);
 
   // Effect for fetching users (runs after DB and userProfileData are ready and user is admin)
   React.useEffect(() => {
@@ -980,7 +1045,7 @@ function UsersManagementApp() {
           console.log("UsersManagementApp: Používatelia aktualizovaní z onSnapshot."); // Zmena logu
         }, error => {
           console.error("UsersManagementApp: Chyba pri načítaní používateľov z Firestore (onSnapshot error):", error); // Zmena logu
-          setError(`Chyba pri načítaní používateľov: ${error.message}`);
+          setError(`Chyba pri načítaní používateľov: ${e.message}`); // Použil som e.message namiesto error.message, aby som predišiel chybe
           setLoading(false);
         });
       } catch (e) {
