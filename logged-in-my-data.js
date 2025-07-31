@@ -1,155 +1,164 @@
 // logged-in-my-data.js
-// Tento súbor predpokladá, že Firebase SDK a React/ReactDOM sú inicializované v <head> logged-in-my-data.html
-// a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
+// Tento súbor definuje hlavný React komponent pre stránku "Moja zóna",
+// ktorý načíta a zobrazuje profilové dáta prihláseného používateľa
+// z Firestore databázy v reálnom čase.
 
-// Main React component for the logged-in-my-data.html page
-const MyDataApp = () => {
-    // Získame referencie na Firebase služby a globálne dáta z authentication.js
+// Používame globálne premenné 'React' a 'ReactDOM' z unpkg.com,
+// a taktiež globálne Firebase inštancie z 'authentication.js'.
+const { useState, useEffect } = React;
+const { getFirestore, doc, onSnapshot } = window.firebase.firestore;
+
+// Hlavný React komponent pre stránku Moja zóna.
+function MyDataApp() {
+    // Stavové premenné pre uloženie dát profilu, stavu načítavania a chýb.
+    const [userProfileData, setUserProfileData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    // Získanie globálnych inštancií Firebase a App ID.
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     const auth = window.auth;
     const db = window.db;
 
-    // Lokálny stav pre používateľské dáta, ktoré sa načítavajú po globálnej autentifikácii
-    const [userProfileData, setUserProfileData] = React.useState(null);
-    const [loading, setLoading] = React.useState(true); // Loading pre dáta v MyDataApp
-    const [error, setError] = React.useState('');
+    // useEffect hook na načítanie používateľských dát z Firestore.
+    // Tento hook sa spustí len raz, pri prvom načítaní komponentu.
+    useEffect(() => {
+        let unsubscribeUserDoc = () => {};
 
-    // Zabezpečíme, že appId je definované (používame globálnu premennú)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Skontrolujeme, či sú globálne Firebase inštancie a používateľ prihlásený.
+        // Až keď je všetko pripravené, môžeme začať s načítavaním dát.
+        if (window.isGlobalAuthReady && auth && db && auth.currentUser) {
+            console.log("MyDataApp: Globálna autentifikácia je pripravená. Načítavam dáta používateľa...");
+            
+            const userId = auth.currentUser.uid;
+            // Cesta k dokumentu používateľa vo Firestore.
+            const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile`, userId);
 
-    // Effect pre načítanie používateľských dát z Firestore
-    // Tento efekt sa spustí, až keď je globálna autentifikácia pripravená.
-    React.useEffect(() => {
-        let unsubscribeUserDoc;
-
-        // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
-        if (window.isGlobalAuthReady && db && auth && auth.currentUser) {
-            console.log(`MyDataApp: Globálna autentifikácia pripravená. Pokúšam sa načítať profil pre používateľa: ${auth.currentUser.uid}`);
-            setLoading(true);
-
-            const userDocRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid);
-
+            // Nastavíme listener na zmeny v dokumente používateľa.
+            // onSnapshot zabezpečí, že ak sa dáta zmenia, UI sa automaticky aktualizuje.
             unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    console.log("MyDataApp: Dáta profilu úspešne načítané.");
-                    setUserProfileData({ id: docSnap.id, ...data });
+                    // Ak dokument existuje, uložíme dáta do stavu.
+                    const userData = docSnap.data();
+                    console.log("MyDataApp: Dáta profilu úspešne načítané:", userData);
+                    setUserProfileData(userData);
                 } else {
-                    console.log("MyDataApp: Žiadne dáta profilu neexistujú.");
+                    // Ak dokument neexistuje, nastavíme stav na null.
+                    console.warn("MyDataApp: Profil pre aktuálneho používateľa nebol nájdený.");
                     setUserProfileData(null);
                 }
-                setLoading(false);
-            }, (error) => {
-                console.error("MyDataApp: Chyba pri načítaní dát profilu:", error);
+                setLoading(false); // Načítavanie je ukončené.
+            }, (err) => {
+                // Spracovanie chyby pri načítavaní dát.
+                console.error("MyDataApp: Chyba pri načítaní dát profilu:", err);
                 setError('Chyba pri načítaní dát profilu. Skúste to prosím neskôr.');
-                setLoading(false);
+                setLoading(false); // Načítavanie je ukončené.
             });
-        } else if (window.isGlobalAuthReady) {
-            // Ak je auth pripravené, ale používateľ nie je prihlásený
+
+        } else if (!window.isGlobalAuthReady) {
+            console.log("MyDataApp: Čakám na inicializáciu globálnej autentifikácie...");
+        } else {
+            console.log("MyDataApp: Používateľ nie je prihlásený, nie je možné načítať dáta.");
             setLoading(false);
             setUserProfileData(null);
         }
 
-        // Cleanup funkcia pre odhlásenie
-        return () => {
-            if (unsubscribeUserDoc) {
-                unsubscribeUserDoc();
-            }
-        };
-    }, [window.isGlobalAuthReady, db, auth]);
+        // Cleanup funkcia pre odhlásenie sa z onSnapshot listenera.
+        // Toto zabráni úniku pamäte.
+        return () => unsubscribeUserDoc();
+    }, [window.isGlobalAuthReady, auth, db]); // Závislosti pre useEffect.
 
+    // Zobrazenie stavu načítavania.
     if (loading) {
-        return React.createElement(
-            'div',
-            { className: 'text-center p-8' },
-            React.createElement('h2', { className: 'text-xl font-semibold' }, 'Načítavam vaše dáta...')
+        return (
+            <div className="flex justify-center items-center h-full">
+                <p className="text-xl text-blue-600">Načítavam vaše údaje...</p>
+            </div>
         );
     }
 
+    // Zobrazenie chyby, ak nastala.
     if (error) {
-        return React.createElement(
-            'div',
-            { className: 'text-center p-8 text-red-600' },
-            React.createElement('h2', { className: 'text-xl font-semibold' }, 'Chyba:'),
-            React.createElement('p', null, error)
+        return (
+            <div className="flex justify-center items-center h-full text-red-500 text-center p-4">
+                <p>{error}</p>
+            </div>
         );
     }
-
+    
+    // Zobrazenie správy, ak nie sú dostupné žiadne údaje.
     if (!userProfileData) {
-        return React.createElement(
-            'div',
-            { className: 'text-center p-8' },
-            React.createElement('h2', { className: 'text-xl font-semibold' }, 'Dáta neboli nájdené'),
-            React.createElement('p', null, 'Zdá sa, že váš profil ešte nebol vytvorený.')
+        return (
+            <div className="flex justify-center items-center h-full text-gray-500 text-center p-4">
+                <p>Nenašli sa žiadne údaje vášho profilu. Skúste sa prihlásiť znova, alebo sa najprv zaregistrujte.</p>
+            </div>
         );
     }
+    
+    // Hlavné vykreslenie používateľských dát.
+    return (
+        <div className="bg-white rounded-xl shadow-lg p-8 m-4 max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-blue-800 mb-6 border-b-2 border-blue-200 pb-2">Moje údaje</h2>
+            
+            {/* Sekcia Osobné údaje */}
+            <div className="mb-8">
+                <h3 className="text-2xl font-semibold text-blue-600 mb-4">Osobné údaje</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Meno:</span> {userProfileData.personalInfo.name}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Priezvisko:</span> {userProfileData.personalInfo.surname}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">E-mail:</span> {userProfileData.email}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Telefón:</span> {userProfileData.personalInfo.phone}</p>
+                </div>
+            </div>
 
-    return React.createElement(
-        'div',
-        { className: "bg-white rounded-xl shadow-lg p-8 mx-auto" },
-        React.createElement(
-            'h1',
-            { className: "text-3xl font-bold text-center text-blue-800 mb-6" },
-            'Moje Údaje'
-        ),
-        React.createElement(
-            'div',
-            { className: "grid grid-cols-1 md:grid-cols-2 gap-8" },
-            // Osobné údaje
-            React.createElement(
-                'div',
-                { className: "bg-blue-50 p-6 rounded-lg shadow-inner" },
-                React.createElement(
-                    'h2',
-                    { className: "text-2xl font-bold text-blue-700 mb-4" },
-                    'Osobné údaje'
-                ),
-                React.createElement('div', { className: 'space-y-2' },
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Meno:'), ` ${userProfileData.firstName}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'), ` ${userProfileData.lastName}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Email:'), ` ${userProfileData.email}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Telefón:'), ` ${userProfileData.phone}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Rola:'), ` ${userProfileData.role}`))
-                )
-            ),
-            // Fakturačné údaje
-            userProfileData.billing && React.createElement(
-                'div',
-                { className: "bg-green-50 p-6 rounded-lg shadow-inner" },
-                React.createElement(
-                    'h2',
-                    { className: "text-2xl font-bold text-green-700 mb-4" },
-                    'Fakturačné údaje'
-                ),
-                React.createElement('div', { className: 'space-y-2' },
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Názov firmy:'), ` ${userProfileData.billing.company}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo:'), ` ${userProfileData.billing.street}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'Mesto:'), ` ${userProfileData.billing.city}`)),
-                    React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'PSČ:'), ` ${userProfileData.billing.zip}`)),
-                    userProfileData.billing.ico && React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'IČO:'), ` ${userProfileData.billing.ico}`)),
-                    userProfileData.billing.dic && React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'DIČ:'), ` ${userProfileData.billing.dic}`)),
-                    userProfileData.billing.icDph && React.createElement('div', null, React.createElement('p', { className: 'text-gray-800 text-lg whitespace-nowrap' }, React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'), ` ${userProfileData.billing.icDph}`))
-                )
-            )
-        )
+            {/* Sekcia Adresa */}
+            <div className="mb-8">
+                <h3 className="text-2xl font-semibold text-blue-600 mb-4">Adresa</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Ulica a číslo:</span> {userProfileData.address.street}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">PSČ:</span> {userProfileData.address.zip}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Mesto:</span> {userProfileData.address.city}</p>
+                    <p className="text-gray-800 text-lg"><span className="font-bold">Krajina:</span> {userProfileData.address.country}</p>
+                </div>
+            </div>
+
+            {/* Sekcia Fakturačné údaje (ak existujú) */}
+            {userProfileData.billing && (
+                <div>
+                    <h3 className="text-2xl font-semibold text-blue-600 mb-4">Fakturačné údaje</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <p className="text-gray-800 text-lg"><span className="font-bold">Názov spoločnosti:</span> {userProfileData.billing.companyName}</p>
+                        {userProfileData.billing.ico && <p className="text-gray-800 text-lg"><span className="font-bold">IČO:</span> {userProfileData.billing.ico}</p>}
+                        {userProfileData.billing.dic && <p className="text-gray-800 text-lg"><span className="font-bold">DIČ:</span> {userProfileData.billing.dic}</p>}
+                        {userProfileData.billing.icDph && <p className="text-gray-800 text-lg"><span className="font-bold">IČ DPH:</span> {userProfileData.billing.icDph}</p>}
+                    </div>
+                </div>
+            )}
+        </div>
     );
+}
+
+// Po načítaní DOM a všetkých skriptov vykreslíme React aplikáciu.
+// Táto logika je kľúčová, aby sa komponent nezačal vykresľovať
+// skôr, než sú dostupné všetky závislosti.
+window.onload = function() {
+    console.log("logged-in-my-data.js: DOM a skripty načítané, spúšťam vykresľovanie React aplikácie.");
+    // Počkáme, kým sa načíta hlavička, a potom vykreslíme aplikáciu.
+    // Týmto zabezpečíme správne poradie načítania a zobrazenia.
+    loadHeader().then(() => {
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(MyDataApp));
+            console.log("logged-in-my-data.js: React App úspešne vykreslená.");
+        } catch (e) {
+            console.error("logged-in-my-data.js: Chyba pri vykresľovaní MyDataApp:", e);
+            document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+        }
+    }).catch(error => {
+        console.error("Chyba pri načítaní hlavičky:", error);
+    });
 };
 
-// Vykreslíme React aplikáciu až keď je skript plne načítaný
-// Tým sa vyhneme chybám s chýbajúcim komponentom MyDataApp
-document.addEventListener('DOMContentLoaded', () => {
-    const rootElement = document.getElementById('root');
-    if (rootElement) {
-        if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof MyDataApp === 'undefined') {
-            console.error("Chyba: React, ReactDOM alebo MyDataApp komponent nie sú načítané. Skontrolujte poradie a typ skriptov.");
-            rootElement.innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-            return;
-        }
-
-        // Vykreslíme React komponent
-        ReactDOM.render(
-            React.createElement(MyDataApp),
-            rootElement
-        );
-        console.log("logged-in-my-data.js: React App vykreslená po načítaní DOM.");
-    }
-});
+// Vytvoríme globálnu referenciu na komponent MyDataApp.
+// To je potrebné pre správne vykreslenie v HTML súbore.
+window.MyDataApp = MyDataApp;
