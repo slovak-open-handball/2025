@@ -374,7 +374,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       React.createElement(
         'div',
         { className: 'text-center text-gray-800 text-lg py-4' },
-        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registrácia je ukončená.'),
+        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár nie je prístupný.'),
         React.createElement(
           'p',
           { className: 'text-md text-gray-700 mt-2' },
