@@ -27,77 +27,55 @@ window.showGlobalNotification = (message, type = 'success') => {
     notificationElement.className = notificationElement.className.replace(/bg-\[#3A8D41\]|bg-red-600/, bgColorClass);
     notificationElement.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success'
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            ${type === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />' 
                 : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
             }
         </svg>
         <span>${message}</span>
     `;
 
-    // Zobrazíme notifikáciu
+    // Zobrazenie notifikácie a jej skrytie po 3 sekundách
     setTimeout(() => {
         notificationElement.classList.remove('opacity-0', 'pointer-events-none');
+        notificationElement.classList.add('opacity-100');
     }, 10);
-
-    // Skryjeme notifikáciu po 5 sekundách
     setTimeout(() => {
+        notificationElement.classList.remove('opacity-100');
         notificationElement.classList.add('opacity-0', 'pointer-events-none');
-    }, 5000);
+    }, 3000);
 };
 
-// Funkcia, ktorá načíta HTML hlavičky pomocou fetch
-async function loadHeader() {
-    try {
-        const response = await fetch('header.html');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const headerHtml = await response.text();
-        document.getElementById('header-placeholder').innerHTML = headerHtml;
-        console.log("header.js: Hlavička bola úspešne načítaná a vložená.");
-    } catch (e) {
-        console.error("header.js: Chyba pri načítaní hlavičky:", e);
-        document.getElementById('header-placeholder').innerHTML = '<header class="bg-red-600 text-white p-4 text-center">Chyba pri načítaní navigácie.</header>';
-    }
-}
 
 // Funkcia pre odhlásenie
-async function handleLogout() {
+const handleLogout = async () => {
     if (window.auth) {
-        try {
-            await window.auth.signOut();
-            window.showGlobalNotification('Boli ste úspešne odhlásený.', 'success');
-            console.log("header.js: Používateľ odhlásený.");
-            // Presmerovať na prihlasovaciu stránku alebo domov
-            window.location.href = 'index.html'; 
-        } catch (error) {
-            console.error("header.js: Chyba pri odhlasovaní:", error);
-            window.showGlobalNotification('Chyba pri odhlasovaní. Skúste to znova.', 'error');
-        }
+        await window.auth.signOut();
+        window.location.href = 'index.html'; // Presmerovanie po odhlásení
+        window.showGlobalNotification('Boli ste úspešne odhlásený.', 'success');
+    } else {
+        console.error('header.js: Firebase Auth inštancia nie je dostupná.');
+        window.showGlobalNotification('Chyba pri odhlasovaní.', 'error');
     }
-}
+};
 
-// Funkcia, ktorá dynamicky mení odkazy v hlavičke na základe stavu autentifikácie
-function updateHeaderLinks() {
-    console.log("header.js: Spúšťam aktualizáciu odkazov hlavičky.");
-    const homeLink = document.getElementById('home-link');
+// Funkcia, ktorá dynamicky mení navigačné odkazy na základe stavu prihlásenia
+const updateHeaderLinks = () => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
 
-    // Najprv skryjeme všetky odkazy
-    const allLinks = [homeLink, authLink, profileLink, logoutButton, registerLink];
-    allLinks.forEach(link => {
-        if (link) {
-            link.classList.add('hidden');
-        }
-    });
-
+    // Inicializácia globálnych premenných, ak ešte neexistujú
     const user = window.auth ? window.auth.currentUser : null;
     const userProfileData = window.globalUserProfileData;
+
+    // Skryť všetky odkazy ako prvé
+    if (authLink) authLink.classList.add('hidden');
+    if (profileLink) profileLink.classList.add('hidden');
+    if (logoutButton) logoutButton.classList.add('hidden');
+    if (registerLink) registerLink.classList.add('hidden');
     
     // Farba hlavičky sa zmení na základe typu používateľa
     if (header) {
@@ -105,67 +83,78 @@ function updateHeaderLinks() {
             header.classList.remove('bg-blue-700');
             header.classList.add('bg-[#9333EA]');
         } else {
+            // Predvolená farba pre neprihlásených a adminov/iných
             header.classList.remove('bg-[#9333EA]');
             header.classList.add('bg-blue-700');
         }
-    }
-
-    // Domov je vždy viditeľný
-    if (homeLink) {
-        homeLink.classList.remove('hidden');
     }
 
     if (user) {
         // Používateľ je prihlásený
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
-
-        // Podmienka pre zobrazenie "Registrácia na turnaj"
+        
+        // Zobrazí odkaz na registráciu iba, ak je používateľ typu 'user'
         if (userProfileData && userProfileData.type === 'user') {
+             if (registerLink) {
+                 registerLink.classList.remove('hidden');
+                 registerLink.textContent = 'Registrácia na turnaj';
+             }
+        } else if (userProfileData && userProfileData.type === 'admin') {
+             if (registerLink) {
+                 registerLink.classList.remove('hidden');
+                 registerLink.textContent = 'Správa registrácií';
+             }
+        } else {
+            // Pre iné typy používateľov, alebo ak dáta ešte nie sú načítané
+            // neukážeme odkaz na registráciu
             if (registerLink) {
-                registerLink.classList.remove('hidden');
-                registerLink.textContent = 'Registrácia na turnaj';
-                registerLink.href = 'logged-in-registration.html';
+                registerLink.classList.add('hidden');
             }
         }
+
     } else {
-        // Používateľ je odhlásený
+        // Používateľ nie je prihlásený
         if (authLink) authLink.classList.remove('hidden');
-        
-        // Zobraziť odkaz na registráciu pre všetkých, ale s iným textom a odkazom
-        if (registerLink) {
-            registerLink.classList.remove('hidden');
-            registerLink.textContent = 'Registrovať sa';
-            registerLink.href = 'registration.html';
-        }
     }
-}
-
-
-// Načítať hlavičku HTML štruktúru ako prvú, potom nastaviť listenery
-window.onload = function() {
-    console.log("header.js: DOM bol načítaný.");
-    
-    // Načíta hlavičku a až potom nastaví listener a zaktualizuje odkazy
-    loadHeader().then(() => {
-        // Po načítaní hlavičky pridajte event listener na tlačidlo odhlásenia
-        const logoutButton = document.getElementById('logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', handleLogout);
-            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
-        }
-
-        // Nastavíme listener na vlastnú udalosť, ktorá signalizuje, že authentication.js
-        // má pripravené globálne dáta. Toto zabezpečí správne načítanie farby hlavičky.
-        window.addEventListener('globalDataUpdated', updateHeaderLinks);
-
-        // Voláme funkciu aj raz na začiatku, ak už sú dáta pripravené (pre prípad race condition)
-        // Používame globálny flag isGlobalAuthReady, ktorý nastavuje authentication.js
-        if (window.isGlobalAuthReady) {
-            updateHeaderLinks();
-        }
-
-    }).catch(error => {
-        console.error("header.js: Chyba pri načítaní hlavičky alebo inicializácii:", error);
-    });
 };
+
+// Funkcia na načítanie hlavičky a nastavenie listenerov
+const loadHeader = async () => {
+    try {
+        const response = await fetch('header.html');
+        if (!response.ok) throw new Error('Chyba pri načítaní header.html');
+        const headerHtml = await response.text();
+        document.getElementById('header-placeholder').innerHTML = headerHtml;
+
+        // Vrátime Promise, ktorá sa vyrieši, keď je hlavička načítaná a listener je nastavený.
+        return new Promise((resolve) => {
+            // Po načítaní hlavičky pridajte event listener na tlačidlo odhlásenia
+            const logoutButton = document.getElementById('logout-button');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', handleLogout);
+                console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
+            }
+
+            // Dôležité: Listener pre zmeny stavu autentifikácie
+            // Toto je spoľahlivý spôsob, ako reagovať na prihlásenie/odhlásenie
+            if (window.auth) {
+                window.auth.onAuthStateChanged(user => {
+                    // Aktualizujeme odkazy a farbu hlavičky hneď po zmene stavu
+                    updateHeaderLinks();
+                });
+            }
+
+            // Inicializácia pre prvý stav, ak už je používateľ prihlásený
+            updateHeaderLinks();
+
+            resolve();
+        });
+
+    } catch (error) {
+        console.error('header.js: Chyba pri načítaní hlavičky:', error);
+    }
+};
+
+// Spustíme načítanie hlavičky pri načítaní DOM
+window.addEventListener('DOMContentLoaded', loadHeader);
