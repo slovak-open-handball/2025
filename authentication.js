@@ -13,7 +13,6 @@ window.formatToDatetimeLocal = null; // Globálna funkcia pre formátovanie dát
 
 // Helper funkcia pre autorizáciu prístupu k stránkam
 const checkPageAuthorization = (userData, currentPath) => {
-    // ... existujúca funkcia checkPageAuthorization ...
     const pageAccessRules = {
       'index.html': { role: 'public', approved: true },
       'login.html': { role: 'public', approved: true },
@@ -44,7 +43,6 @@ const checkPageAuthorization = (userData, currentPath) => {
     }
     if (!userData) {
         console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Používateľ nie je prihlásený.`);
-        // Toto je hlavná zmena - ak používateľ nie je prihlásený, ale snaží sa dostať na chránenú stránku, presmerujeme ho na login.
         return false; 
     }
     if (requiredAccess.approved && !userData.approved) {
@@ -80,7 +78,6 @@ window.formatToDatetimeLocal = (date) => {
 
 // Komponent pre globálne notifikácie v strede obrazovky
 function GlobalNotificationHandler() {
-  // ... existujúci kód GlobalNotificationHandler ...
   const [message, setMessage] = React.useState('');
   const [messageType, setMessageType] = React.useState('info');
   const [error, setError] = React.useState('');
@@ -200,6 +197,9 @@ if (app) {
             console.log("AuthManager: Prístup k stránke zamietnutý, presmerúvam na login.html.");
             window.location.href = 'login.html';
         }
+        
+        // ZMENA: Odoslanie vlastnej udalosti po zmene stavu autentifikácie
+        window.dispatchEvent(new Event('auth-state-changed'));
     });
 
     console.log("AuthManager: Firebase inicializované a listener spustený.");
