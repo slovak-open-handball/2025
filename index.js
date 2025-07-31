@@ -2,8 +2,9 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> index.html
 // a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// Zisťujeme, či už je Firebase SDK importovaný cez globálne premenné z authentication.js,
-// takže lokálne importy už nie sú potrebné.
+// Importujeme potrebné Firebase funkcie. Tieto je potrebné explicitne naimportovať,
+// aj keď je hlavná inštancia Firebase dostupná cez globálne premenné.
+import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Helper funkcia na formátovanie objektu Date do 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
@@ -58,7 +59,7 @@ function App() {
             return;
         }
 
-        console.log("App: Firebase is ready, fetching registration settings.");
+        console.log("App: Firebase je pripravené, načítavam nastavenia registrácie.");
         try {
             const settingsRef = doc(window.db, 'artifacts', appId, 'public', 'settings');
             const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
@@ -146,7 +147,7 @@ function App() {
         );
     }
 
-    if (error) {n
+    if (error) {
         return (
             React.createElement(
                 'div',
