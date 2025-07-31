@@ -12,13 +12,12 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
+            padding-top: 64px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
-        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -42,180 +41,95 @@
             width: 90%;
             position: relative;
         }
-        /* Kontajner pre hlavičku */
         #header-placeholder {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 30; /* Vyšší z-index pre hlavičku */
+            z-index: 30;
         }
-        /* Kontajner pre ľavé menu */
         #left-menu-placeholder {
             position: fixed;
-            top: 64px; /* Pod hlavičkou */
+            top: 64px;
             left: 0;
-            height: calc(100vh - 64px); /* Zaberá zvyšok výšky obrazovky */
-            z-index: 25; /* Vyšší z-index pre ľavé menu */
+            height: calc(100vh - 64px);
+            z-index: 25;
         }
-
-        /* Hlavná oblasť pre obsah React aplikácie */
-        #main-content-area {
-            margin-left: 256px; /* Šírka ľavého menu */
-            padding: 1rem;
+        .main-content {
+            margin-left: 256px; /* Šírka menu 64px + 192px */
             flex-grow: 1;
-            box-sizing: border-box; /* Dôležité pre správne výpočty šírky */
-            display: flex; /* Použijeme flexbox pre centrovanie obsahu */
-            justify-content: center; /* Centrovanie horizontálne */
-            align-items: flex-start; /* Zarovnanie na začiatok vertikálne */
-            overflow-x: auto; /* Pridá horizontálny posuvník pre celú oblasť, ak je obsah príliš široký */
-            /* ZMENA: Odstránené position: relative a z-index: 1, aby NotificationModal fungoval správne */
+            padding: 2rem;
+            width: 100%; /* Zabezpečí, že hlavný obsah zaberie celú dostupnú šírku */
         }
-
-        /* Pre mobilné zariadenia */
         @media (max-width: 768px) {
-            #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
-                width: 100%; /* Na mobiloch zaberie celú šírku */
-                justify-content: center; /* Stále centrovať obsah */
-                align-items: flex-start;
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
             }
         }
-        /* Štýly pre notifikácie (prevzaté z header.html/header.js) */
-        /* Tieto štýly sú teraz riadené priamo v header.js komponente NotificationModal */
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Firebase a React SDK (už načítané v authentication.js) -->
+    <!-- Necháme len odkazy na React a ReactDOM, ak by ich authentication.js neobsahovalo -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
-    <script>
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        // ZMENA: Používame __initial_auth_token z prostredia, ak je definovaný
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        
-        // Inicializácia Firebase aplikácie globálne
-        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-my-data.html: Firebase inicializovaný globálne.");
-            } catch (e) {
-                console.error("logged-in-my-data.html: Chyba pri globálnej inicializácii Firebase:", e);
-            }
-        } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-my-data.html: Firebase už bol inicializovaný.");
-        } else {
-            console.error("logged-in-my-data.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
-        }
-    </script>
 </head>
 <body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
-
-    <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="left-menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area">
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="root"></div>
+    <div id="left-menu-placeholder"></div>
+    <main class="main-content">
+        <div id="root">
+            <div class="flex justify-center items-center h-full">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+            </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Načítanie hlavného skriptu pre túto stránku (MyDataApp) -->
-    <script src="logged-in-my-data.js"></script>
-
-    <!-- Načítanie hlavičky a logiky menu -->
+    <!-- Naše hlavné skripty -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="logged-in-my-data.js"></script>
     <script>
-        // Funkcia na načítanie hlavičky
-        async function loadHeader() {
-            const headerPlaceholder = document.getElementById('header-placeholder');
-            if (headerPlaceholder) {
-                try {
-                    const response = await fetch('header.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const headerHtml = await response.text();
-                    headerPlaceholder.innerHTML = headerHtml;
+        // Nastavíme globálnu funkciu pre notifikácie pred načítaním všetkých skriptov
+        // Je dôležité mať túto funkciu definovanú globálne, aby bola dostupná z iných súborov.
+        window.showGlobalNotification = (message, type = 'success') => {
+            let notificationElement = document.getElementById('global-notification');
 
-                    const headerScript = document.createElement('script');
-                    headerScript.src = 'header.js';
-                    headerScript.onload = () => {
-                        console.log("header.js načítaný a spustený.");
-                        // NOVINKA: Volanie initializeHeaderLogic po načítaní header.js
-                        if (typeof initializeHeaderLogic === 'function') {
-                            initializeHeaderLogic();
-                        }
-                    };
-                    headerScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní header.js:", e);
-                    };
-                    // ZMENA: Pripojíme header.js k document.body namiesto headerPlaceholder
-                    document.body.appendChild(headerScript); 
-                } catch (error) {
-                    console.error("Chyba pri načítaní hlavičky:", error);
-                }
-            }
-        }
-
-        // Funkcia na načítanie ľavého menu
-        async function loadLeftMenu() {
-            const leftMenuPlaceholder = document.getElementById('left-menu-placeholder');
-            if (leftMenuPlaceholder) {
-                try {
-                    const response = await fetch('left-menu.html');
-                    if (!response.ok) throw new Error('Network response was not ok.');
-                    const menuHtml = await response.text();
-                    leftMenuPlaceholder.innerHTML = menuHtml;
-
-                    const menuScript = document.createElement('script');
-                    menuScript.src = 'left-menu.js';
-                    menuScript.onload = () => {
-                        console.log("left-menu.js načítaný a spustený.");
-                        // window.updateMenuItemsVisibility je teraz definované v left-menu.js
-                    };
-                    menuScript.onerror = (e) => {
-                        console.error("Chyba pri načítaní left-menu.js:", e);
-                    };
-                    document.body.appendChild(menuScript);
-                } catch (error) {
-                    console.error("Chyba pri načítaní ľavého menu:", error);
-                }
-            }
-        }
-
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
-        window.onload = async () => {
-            await loadHeader();
-            await loadLeftMenu();
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-            if (typeof MyDataApp === 'undefined') {
-                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
+            if (!notificationElement) {
+                notificationElement = document.createElement('div');
+                notificationElement.id = 'global-notification';
+                notificationElement.className = `
+                    fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+                    p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+                    flex items-center space-x-2
+                    opacity-0 pointer-events-none
+                `;
+                document.body.appendChild(notificationElement);
             }
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MyDataApp, null));
-            console.log("logged-in-my-data.html: React App vykreslená.");
+            const bgColorClass = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
+            notificationElement.className = notificationElement.className.replace(/bg-.*?(?=\s|$)/, '') + ` ${bgColorClass}`;
+
+            const icon = type === 'success' ? `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ` : `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            `;
+            
+            notificationElement.innerHTML = `${icon}<span>${message}</span>`;
+            
+            notificationElement.classList.remove('opacity-0', '-translate-y-full');
+            notificationElement.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                notificationElement.classList.remove('opacity-100', 'translate-y-0');
+                notificationElement.classList.add('opacity-0', '-translate-y-full');
+            }, 3000);
         };
     </script>
 </body>
