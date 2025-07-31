@@ -80,6 +80,7 @@ async function handleLogout() {
 
 // Funkcia, ktorá dynamicky mení odkazy v hlavičke na základe stavu autentifikácie
 function updateHeaderLinks() {
+    console.log("header.js: Spúšťam aktualizáciu odkazov hlavičky.");
     const homeLink = document.getElementById('home-link');
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
@@ -154,20 +155,15 @@ window.onload = function() {
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
-        // Nastavíme listener na zmeny v globalUserProfileData, ktoré indikujú zmeny stavu prihlásenia
-        // Toto zabezpečí, že sa odkazy aktualizujú, hneď ako je používateľ prihlásený/odhlásený
-        Object.defineProperty(window, 'globalUserProfileData', {
-            set: function(value) {
-                this._globalUserProfileData = value;
-                updateHeaderLinks(); // Volať funkciu na aktualizáciu vždy, keď sa dáta zmenia
-            },
-            get: function() {
-                return this._globalUserProfileData;
-            }
-        });
+        // Nastavíme listener na vlastnú udalosť, ktorá signalizuje, že authentication.js
+        // má pripravené globálne dáta. Toto zabezpečí správne načítanie farby hlavičky.
+        window.addEventListener('globalDataUpdated', updateHeaderLinks);
 
-        // Zavolajte funkciu na aktualizáciu hneď po inicializácii pre prvý stav
-        updateHeaderLinks();
+        // Voláme funkciu aj raz na začiatku, ak už sú dáta pripravené (pre prípad race condition)
+        // Používame globálny flag isGlobalAuthReady, ktorý nastavuje authentication.js
+        if (window.isGlobalAuthReady) {
+            updateHeaderLinks();
+        }
 
     }).catch(error => {
         console.error("header.js: Chyba pri načítaní hlavičky alebo inicializácii:", error);
