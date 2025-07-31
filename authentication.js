@@ -12,7 +12,7 @@ window.db = null; // Inštancia Firebase Firestore
 const checkPageAuthorization = (userData, currentPath) => {
     // Definícia prístupových pravidiel pre jednotlivé stránky
     const pageAccessRules = {
-      'index.html': { role: 'public', approved: true },
+      // ZMENA: Odstránené 'index.html' z pravidiel, bude spracované ako verejná stránka
       'logged-in-users.html': { role: 'admin', approved: true },
       'logged-in-tournament-settings.html': { role: 'admin', approved: true },
       'logged-in-add-categories.html': { role: 'admin', approved: true },
@@ -30,8 +30,15 @@ const checkPageAuthorization = (userData, currentPath) => {
     const rule = Object.keys(pageAccessRules).find(key => currentPath.includes(key));
 
     if (!rule) {
-      // Ak stránka nie je v pravidlách (napr. index.html, login.html), povoliť prístup
+      // Ak stránka nie je v pravidlách (napr. index.html, login.html, account.html, register.html, admin-register.html), povoliť prístup
+      console.log(`Auth: Stránka ${currentPath} nie je v pravidlách prístupu, povolený prístup.`);
       return true;
+    }
+
+    // Ak používateľ nie je prihlásený, ale stránka vyžaduje autentifikáciu, zamietni prístup
+    if (!userData) {
+        console.log(`Auth: Používateľ nie je prihlásený a stránka ${currentPath} vyžaduje autentifikáciu. Prístup zamietnutý.`);
+        return false;
     }
 
     const requiredRole = pageAccessRules[rule].role;
@@ -53,6 +60,7 @@ const checkPageAuthorization = (userData, currentPath) => {
 
     // Pre ostatné roly: musí mať požadovanú rolu a byť schválený (ak je to vyžadované)
     if (hasRequiredRole && (requiredApproved ? isApproved : true)) {
+      console.log(`Auth: Používateľ ${userData.email} (rola: ${userData.role}, schválený: ${userData.approved}) má prístup na ${currentPath}.`);
       return true;
     }
 
@@ -80,7 +88,8 @@ function AuthenticationManager() {
       let firebaseApp;
       if (firebase.apps.length === 0) {
         console.log("AuthManager: Inicializujem novú Firebase aplikáciu.");
-        firebaseApp = firebase.initializeApp(firebaseConfig);
+        // firebaseConfig by malo byť definované globálne v HTML pred načítaním tohto skriptu
+        firebaseApp = firebase.initializeApp(firebaseConfig); 
       } else {
         firebaseApp = firebase.app();
         console.warn("AuthManager: Firebase App named '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
@@ -93,14 +102,17 @@ function AuthenticationManager() {
 
       const signIn = async () => {
         try {
+          // initialAuthToken by malo byť definované globálne v HTML pred načítaním tohto skriptu
           if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
             console.log("AuthManager: Pokúšam sa prihlásiť s custom tokenom.");
             await window.auth.signInWithCustomToken(initialAuthToken);
           } else {
-            console.log("AuthManager: initialAuthToken nie je k dispozícii alebo je prázdny.");
+            console.log("AuthManager: initialAuthToken nie je k dispozícii alebo je prázdny. Pokúšam sa prihlásiť anonymne pre verejné stránky.");
+            // NOVINKA: Anonymné prihlásenie pre prístup k verejným dátam (napr. pre index.html)
+            await window.auth.signInAnonymously();
           }
         } catch (e) {
-          console.error("AuthManager: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
+          console.error("AuthManager: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom alebo anonymne):", e);
         }
       };
 
@@ -127,8 +139,48 @@ function AuthenticationManager() {
   // Effect pre načítanie profilových dát používateľa a autorizáciu
   React.useEffect(() => {
     let unsubscribeUserDoc;
-    console.log("AuthManager: Spúšťam useEffect pre načítanie profilu používateľa a autorizáciu. isAuthReady:", isAuthReady, "db:", !!window.db, "user:", !!user);
+    const currentPath = window.location.pathname;
+    console.log("AuthManager: Spúšťam useEffect pre načítanie profilu používateľa a autorizáciu. isAuthReady:", isAuthReady, "db:", !!window.db, "user:", !!user, "currentPath:", currentPath);
 
+    // NOVINKA: Ak je stránka index.html, login.html, account.html, register.html alebo admin-register.html, nepokračujeme v kontrole prihlásenia/presmerovaní
+    if (currentPath.includes('index.html') || currentPath.includes('login.html') || currentPath.includes('account.html') || currentPath.includes('register.html') || currentPath.includes('admin-register.html')) {
+        console.log(`AuthManager: Stránka ${currentPath} je verejná alebo prihlasovacia/registračná. Preskakujem kontrolu prihlásenia/presmerovania.`);
+        // Ak je používateľ null (anonymný) a na verejnej stránke, nastavíme userProfileData na null
+        if (user === null) {
+            setUserProfileData(null);
+            window.globalUserProfileData = null;
+        }
+        // Ak je používateľ prihlásený, ale na verejnej stránke, stále načítame jeho profil
+        if (user && window.db && isAuthReady) {
+            const userDocRef = window.db.collection('users').doc(user.uid);
+            unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+                if (docSnapshot.exists) {
+                    const userData = docSnapshot.data();
+                    setUserProfileData(userData);
+                    window.globalUserProfileData = userData;
+                    console.log("AuthManager: Načítaný profil používateľa na verejnej stránke.");
+                } else {
+                    console.warn("AuthManager: Profil používateľa sa nenašiel na verejnej stránke pre UID:", user.uid);
+                    // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém.
+                    // Pre verejné stránky to nie je kritické, ale môžeme ho odhlásiť.
+                    // window.auth.signOut();
+                    // setUser(null);
+                    // setUserProfileData(null);
+                    // window.globalUserProfileData = null;
+                }
+            }, error => {
+                console.error("AuthManager: Chyba pri načítaní profilu na verejnej stránke:", error);
+                // Pri chybe na verejnej stránke neodhlásime automaticky, len logujeme
+            });
+        }
+        return () => {
+            if (unsubscribeUserDoc) {
+                unsubscribeUserDoc();
+            }
+        }; // Zastavíme ďalšie spracovanie
+    }
+
+    // Pôvodná logika pre stránky vyžadujúce autentifikáciu
     if (isAuthReady && window.db && user !== undefined) {
       if (user === null) {
         console.log("AuthManager: Používateľ je null (nie je prihlásený), presmerovávam na login.html.");
@@ -202,7 +254,7 @@ function AuthenticationManager() {
               }
 
               // NOVÁ LOGIKA: Autorizácia pre konkrétnu stránku
-              const currentPath = window.location.pathname;
+              // currentPath už je definovaný na začiatku useEffect
               if (!checkPageAuthorization(userData, currentPath)) {
                   console.log(`AuthManager: Používateľ ${userData.email} nemá oprávnenie pre stránku ${currentPath}. Presmerovávam na login.html.`);
                   window.auth.signOut();
