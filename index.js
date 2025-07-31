@@ -59,26 +59,23 @@ function App() {
                 setAuth(firebaseAuth);
 
                 // Nastavenie listenera na zmenu stavu autentifikácie
-                // Tento listener sa spustí pri prvom načítaní stránky aj pri zmene stavu.
                 const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (currentUser) => {
                     try {
                         if (currentUser) {
                             setUser(currentUser);
                             console.log("User is signed in:", currentUser.uid);
                         } else {
-                            // Ak nie je prihlásený, skúsime anonymné prihlásenie
                             console.log("User is signed out. Attempting anonymous sign-in...");
                             await signInAnonymously(firebaseAuth);
                         }
-                        setIsAuthReady(true); // Nastavenie pripravenosti po prvom overení
+                        setIsAuthReady(true);
                     } catch (e) {
                         console.error("Authentication failed:", e);
                         setError(`Chyba pri autentifikácii: ${e.message}. Skúste obnoviť stránku.`);
-                        setIsAuthReady(true); // Aj pri chybe nastavíme pripravenosť, aby sa neblokovalo renderovanie
+                        setIsAuthReady(true);
                     }
                 });
                 
-                // Po inicializácii Firebase sa pokúsime prihlásiť
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
                 if (token) {
                     await signInWithCustomToken(firebaseAuth, token);
@@ -107,6 +104,7 @@ function App() {
 
         console.log("App: Firebase db and authentication are ready, fetching registration settings.");
         try {
+            // Správna cesta k dokumentu
             const settingsRef = doc(db, 'artifacts', appId, 'public', 'settings');
             const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -142,6 +140,7 @@ function App() {
             }
             console.log("App: Checking for categories...");
             try {
+                // Správna cesta ku kolekcii
                 const categoriesCollectionRef = collection(db, 'artifacts', appId, 'public', 'categories');
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
                 setCategoriesExist(!categoriesSnap.empty);
