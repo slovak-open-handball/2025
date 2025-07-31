@@ -5,17 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOH 2025 - Moja zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React a ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <style>
-        /* Štýly pre font a hlavný layout */
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box;
-            min-height: 100vh;
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
+            display: flex; /* Použitie flexboxu pre hlavný layout */
+            flex-direction: column; /* Hlavička, potom obsah */
+            min-height: 100vh; /* Minimálna výška na celú obrazovku */
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -25,49 +30,124 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            display: flex;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            display: none; /* Predvolene skryté */
             justify-content: center;
             align-items: center;
+            padding-top: 50px;
         }
+
         .modal-content {
             background-color: #fefefe;
+            margin: auto;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #888;
+            width: 80%;
             max-width: 500px;
-            width: 90%;
-            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation-name: animatetop;
+            animation-duration: 0.4s
+        }
+
+        @keyframes animatetop {
+            from {top: -300px; opacity: 0}
+            to {top: 0; opacity: 1}
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Uistite sa, že hlavný obsah má dostatočný padding, aby ho hlavička nezakrývala */
+        #main-content {
+            flex-grow: 1; /* Nechá obsah vyplniť dostupný priestor */
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- Zástupný element pre dynamicky načítanú hlavičku -->
+    <!-- Kontajner pre hlavičku -->
     <div id="header-placeholder"></div>
 
-    <div id="global-notification-container" class="fixed top-20 right-5 z-50"></div>
+    <div class="flex-1 flex flex-row">
+        <!-- Kontajner pre ľavé menu -->
+        <div id="left-menu-placeholder"></div>
 
-    <div class="flex flex-1">
-        <!-- Hlavný kontajner pre React aplikáciu -->
-        <main id="main-content" class="flex-1 p-6 transition-all duration-300">
-            <div id="root">
-                <!-- React komponent sa vykreslí sem -->
+        <!-- Hlavný obsah stránky, kam sa vykreslí React aplikácia -->
+        <main class="flex-1 overflow-x-auto">
+            <div id="root" class="p-4">
+                <!-- Tu sa bude vykresľovať React aplikácia -->
+                <div class="flex justify-center items-center h-full">
+                    <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Načítanie Firebase a globálnych skriptov (authentication.js a header.js) -->
-    <script type="module" src="authentication.js"></script>
-    <script src="header.js"></script>
-
-    <!-- React, ReactDOM a Babel pre podporu JSX -->
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Načíta a preloží React komponent, ktorý sa následne vykreslí -->
-    <script type="text/babel" src="logged-in-my-data.js"></script>
+    <!-- Modálne okno pre notifikácie -->
+    <div id="global-notification-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <p id="global-notification-text" class="text-center"></p>
+        </div>
+    </div>
     
+    <!-- Skripty -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="left-menu.js"></script>
+    <script type="module" src="logged-in-my-data.js"></script>
+
+    <script type="text/javascript">
+        // Spustíme načítanie hlavičky a menu po načítaní DOM
+        window.onload = async () => {
+            // Načítame HTML pre hlavičku a menu
+            await loadHeader();
+            await loadLeftMenu();
+
+            // Funkcia, ktorá čaká na pripravenosť Firebase autentifikácie
+            const renderReactApp = () => {
+                if (window.isGlobalAuthReady) {
+                    console.log("logged-in-my-data.html: Firebase autentifikácia pripravená. Vykresľujem React App.");
+                    
+                    // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
+                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                        return;
+                    }
+                    if (typeof MyDataApp === 'undefined') {
+                        console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                        return;
+                    }
+
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(MyDataApp, null));
+                    console.log("logged-in-my-data.html: React App vykreslená.");
+                } else {
+                    console.log("logged-in-my-data.html: Čakám na pripravenosť Firebase autentifikácie...");
+                    // Ak autentifikácia nie je pripravená, skúsime to znova o 100ms
+                    setTimeout(renderReactApp, 100);
+                }
+            };
+            
+            // Spustíme čakanie na pripravenosť
+            renderReactApp();
+        };
+    </script>
 </body>
 </html>
