@@ -2,9 +2,8 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> index.html
 // a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// Importy pre Firebase SDK
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, updateDoc, collection, getDocs, where, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Zisťujeme, či už je Firebase SDK importovaný cez globálne premenné z authentication.js,
+// takže lokálne importy už nie sú potrebné.
 
 // Helper funkcia na formátovanie objektu Date do 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
@@ -21,61 +20,80 @@ const formatToDatetimeLocal = (date) => {
 function App() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
-    const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+    const [user, setUser] = React.useState(null);
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
     const [categoriesExist, setCategoriesExist] = React.useState(false);
-    const [user, setUser] = React.useState(null);
+    
+    // Globálny App ID
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    // Nastavenie premenných z globálneho stavu a počúvanie na zmeny
+    // Počúvanie na zmeny stavu autentifikácie a aktualizácia stavu používateľa
     React.useEffect(() => {
         const handleAuthStateChange = () => {
+            console.log("App: auth-state-changed event received.");
             if (window.isGlobalAuthReady) {
                 setUser(window.globalUserProfileData);
-                // Môžeme spustiť aj logiku, ktorá závisí od prihlásenia
+                // Tu môžete spustiť ďalšiu logiku, ktorá závisí od prihlásenia
+            } else {
+                setUser(null);
             }
         };
 
-        const handleDataLoad = async () => {
-            if (!window.db || !window.isGlobalAuthReady) {
-                return;
-            }
-            try {
-                const settingsRef = doc(window.db, 'artifacts', appId, 'public', 'settings');
-                const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate() : null);
-                        setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate() : null);
-                    } else {
-                        console.log("No such document!");
-                    }
-                    setLoading(false);
-                }, (err) => {
-                    console.error("Error getting document:", err);
-                    setError("Chyba pri načítaní nastavení. Skúste obnoviť stránku.");
-                    setLoading(false);
-                });
-                return () => unsubscribe();
-            } catch (e) {
-                console.error("Chyba pri nastavení listenera:", e);
-                setError("Chyba pri načítaní nastavení. Skúste obnoviť stránku.");
-                setLoading(false);
-            }
-        };
+        // Spustíme logiku, ak je už stav pripravený pri prvom vykreslení
+        if (window.isGlobalAuthReady) {
+            handleAuthStateChange();
+        }
 
         window.addEventListener('auth-state-changed', handleAuthStateChange);
-        handleDataLoad(); // Spustíme načítanie dát pri prvom načítaní stránky
-        
         return () => {
             window.removeEventListener('auth-state-changed', handleAuthStateChange);
         };
     }, []);
 
-    // Počúvanie na kategórie
+    // Načítanie nastavení registrácie z Firestore, spúšťa sa, keď je Firebase pripravený
+    React.useEffect(() => {
+        if (!window.isGlobalAuthReady || !window.db) {
+            console.log("App: Waiting for Firebase to be ready...");
+            return;
+        }
+
+        console.log("App: Firebase is ready, fetching registration settings.");
+        try {
+            const settingsRef = doc(window.db, 'artifacts', appId, 'public', 'settings');
+            const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setRegistrationStartDate(data.registrationStartDate ? data.registrationStartDate.toDate() : null);
+                    setRegistrationEndDate(data.registrationEndDate ? data.registrationEndDate.toDate() : null);
+                } else {
+                    console.log("No such settings document!");
+                    setRegistrationStartDate(null);
+                    setRegistrationEndDate(null);
+                }
+                setLoading(false);
+            }, (err) => {
+                console.error("Error getting settings document:", err);
+                setError("Chyba pri načítaní nastavení. Skúste obnoviť stránku.");
+                setLoading(false);
+            });
+
+            return () => unsubscribe();
+        } catch (e) {
+            console.error("Chyba pri nastavení listenera pre nastavenia:", e);
+            setError("Chyba pri inicializácii načítania nastavení. Skúste obnoviť stránku.");
+            setLoading(false);
+        }
+    }, [window.isGlobalAuthReady, window.db, appId]); // Závislosti zabezpečia, že sa spustí, až keď sú služby pripravené
+
+    // Kontrola existencie kategórií, spúšťa sa, keď sú načítané dátumy registrácie
     React.useEffect(() => {
         const checkCategories = async () => {
-            if (!window.db) return;
+            if (!window.db || !window.isGlobalAuthReady) {
+                console.log("App: Waiting for Firebase to be ready before checking categories.");
+                return;
+            }
+            console.log("App: Checking for categories...");
             try {
                 const categoriesCollectionRef = collection(window.db, 'artifacts', appId, 'public', 'categories');
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
@@ -88,7 +106,7 @@ function App() {
         if (registrationStartDate && registrationEndDate) {
             checkCategories();
         }
-    }, [registrationStartDate, registrationEndDate]);
+    }, [registrationStartDate, registrationEndDate, window.isGlobalAuthReady, window.db, appId]);
 
 
     // Funkcia na výpočet odpočtu
@@ -128,7 +146,7 @@ function App() {
         );
     }
 
-    if (error) {
+    if (error) {n
         return (
             React.createElement(
                 'div',
