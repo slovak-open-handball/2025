@@ -53,11 +53,11 @@ function MyDataApp() {
   // Funkcia, ktorá formátuje telefónne číslo
   const formatPhoneNumber = (number) => {
       if (!number) return '';
-      // Odstránime všetky medzery, pomlčky a zátvorky
-      const cleanNumber = number.replace(/[\s-()]/g, '');
+      // Odstránime všetky medzery, pomlčky, zátvorky a iné nečíselné znaky okrem '+'
+      const cleanNumber = number.replace(/[^\d+]/g, '');
 
-      // Ak číslo začína s '+', oddelíme predvoľbu
-      const countryCodeMatch = cleanNumber.match(/^(\+\d{1,4})(.+)/);
+      // Skontrolujeme, či číslo začína predvoľbou "+421"
+      const countryCodeMatch = cleanNumber.match(/^(\+421)(\d+)/);
       if (countryCodeMatch) {
           const countryCode = countryCodeMatch[1];
           const restOfNumber = countryCodeMatch[2];
@@ -66,7 +66,7 @@ function MyDataApp() {
           return `${countryCode} ${formattedRest}`;
       }
 
-      // Ak číslo nezačína predvoľbou, rozdelíme ho na skupiny po troch
+      // Ak číslo nezačína predvoľbou "+421", rozdelíme ho na skupiny po troch
       return cleanNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
   };
 
