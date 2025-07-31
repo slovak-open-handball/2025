@@ -14,9 +14,22 @@ window.auth = null;
 window.db = null;
 window.showGlobalNotification = null;
 
+// Statická konfigurácia Firebase pre prípad, že globálna premenná nie je k dispozícii
+const staticFirebaseConfig = {
+    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+    projectId: "soh2025-2s0o2h5",
+    storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+    messagingSenderId: "572988314768",
+    appId: "1:572988314768:web:781e27eb035179fe34b415"
+};
+
 // Inicializácia Firebase
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const firebaseConfig = typeof __firebase_config !== 'undefined' && Object.keys(JSON.parse(__firebase_config)).length > 0
+    ? JSON.parse(__firebase_config)
+    : staticFirebaseConfig;
+
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // Defenzívna kontrola, či je konfigurácia Firebase platná
