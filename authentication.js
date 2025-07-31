@@ -7,12 +7,17 @@ window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializova
 window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
 window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
+window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 
 // Helper funkcia pre autorizáciu prístupu k stránkam
 const checkPageAuthorization = (userData, currentPath) => {
     // Definícia prístupových pravidiel pre jednotlivé stránky
     const pageAccessRules = {
-      // ZMENA: Odstránené 'index.html' z pravidiel, bude spracované ako verejná stránka
+      'index.html': { role: 'public', approved: true }, // Public page, no specific role needed
+      'login.html': { role: 'public', approved: true },
+      'account.html': { role: 'public', approved: true }, // Public for password reset/email verification
+      'admin-register.html': { role: 'public', approved: true }, // Public for admin registration
+
       'logged-in-users.html': { role: 'admin', approved: true },
       'logged-in-tournament-settings.html': { role: 'admin', approved: true },
       'logged-in-add-categories.html': { role: 'admin', approved: true },
@@ -20,308 +25,280 @@ const checkPageAuthorization = (userData, currentPath) => {
       'logged-in-my-data.html': { role: ['user', 'admin'], approved: true },
       'logged-in-my-settings.html': { role: ['user', 'admin'], approved: true },
       'logged-in-change-name.html': { role: ['user', 'admin'], approved: true },
-      'logged-in-change-email.html': { role: ['user', 'admin'], approved: true },
       'logged-in-change-phone.html': { role: ['user', 'admin'], approved: true },
+      'logged-in-change-email.html': { role: ['user', 'admin'], approved: true },
       'logged-in-change-password.html': { role: ['user', 'admin'], approved: true },
-      'logged-in-change-billing-data.html': { role: ['user', 'admin'], approved: true },
+      'logged-in-notifications.html': { role: ['user', 'admin'], approved: true },
+      'logged-in-soh-chat.html': { role: ['user', 'admin'], approved: true },
     };
 
-    // Získaj pravidlá pre aktuálnu stránku
-    const rule = Object.keys(pageAccessRules).find(key => currentPath.includes(key));
+    const currentPageName = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+    const requiredAccess = pageAccessRules[currentPageName];
 
-    if (!rule) {
-      // Ak stránka nie je v pravidlách (napr. index.html, login.html, account.html, register.html, admin-register.html), povoliť prístup
-      console.log(`Auth: Stránka ${currentPath} nie je v pravidlách prístupu, povolený prístup.`);
-      return true;
+    // Ak stránka nie je v pravidlách (napr. neexistuje), predpokladáme, že je verejná
+    if (!requiredAccess) {
+        console.warn(`AuthManager: Pravidlá prístupu pre stránku ${currentPageName} nenájdené. Predpokladám verejný prístup.`);
+        return true;
     }
 
-    // Ak používateľ nie je prihlásený, ale stránka vyžaduje autentifikáciu, zamietni prístup
+    // Ak je stránka verejná, prístup je povolený pre všetkých (aj neautentifikovaných)
+    if (requiredAccess.role === 'public') {
+        return true;
+    }
+
+    // Pre prihlásené stránky
     if (!userData) {
-        console.log(`Auth: Používateľ nie je prihlásený a stránka ${currentPath} vyžaduje autentifikáciu. Prístup zamietnutý.`);
-        return false;
+        console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Používateľ nie je prihlásený.`);
+        return false; // Používateľ nie je prihlásený
     }
-
-    const requiredRole = pageAccessRules[rule].role;
-    const requiredApproved = pageAccessRules[rule].approved;
-
-    // Kontrola roly
-    const hasRequiredRole = Array.isArray(requiredRole) 
-      ? requiredRole.includes(userData.role) 
-      : userData.role === requiredRole;
 
     // Kontrola schválenia
-    const isApproved = userData.approved === true; // Musí byť explicitne true
+    if (requiredAccess.approved && !userData.approved) {
+        console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Používateľ ${userData.email} nie je schválený.`);
+        return false; // Používateľ nie je schválený
+    }
 
-    // Špeciálne pravidlo pre adminov: ak je rola admin, musí byť aj schválený
-    if (userData.role === 'admin' && !isApproved) {
-        console.log(`Auth: Admin ${userData.email} nie je schválený. Prístup zamietnutý na ${currentPath}.`);
+    // Kontrola roly
+    const userRole = userData.role;
+    if (Array.isArray(requiredAccess.role)) {
+        if (!requiredAccess.role.includes(userRole)) {
+            console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Rola ${userRole} nemá prístup. Vyžaduje sa: ${requiredAccess.role.join(', ')}.`);
+            return false;
+        }
+    } else if (requiredAccess.role !== userRole) {
+        console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Rola ${userRole} nemá prístup. Vyžaduje sa: ${requiredAccess.role}.`);
         return false;
     }
 
-    // Pre ostatné roly: musí mať požadovanú rolu a byť schválený (ak je to vyžadované)
-    if (hasRequiredRole && (requiredApproved ? isApproved : true)) {
-      console.log(`Auth: Používateľ ${userData.email} (rola: ${userData.role}, schválený: ${userData.approved}) má prístup na ${currentPath}.`);
-      return true;
-    }
-
-    console.log(`Auth: Používateľ ${userData.email} (rola: ${userData.role}, schválený: ${userData.approved}) nemá prístup na ${currentPath}.`);
-    return false;
+    console.log(`AuthManager: Prístup povolený pre ${currentPageName} pre rolu ${userRole}.`);
+    return true;
 };
 
-// Hlavný komponent pre globálnu autentifikáciu a správu stavu
-function AuthenticationManager() {
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Lokálny stav pripravenosti autentifikácie
 
-  // Effect pre inicializáciu Firebase a nastavenie Auth Listenera (spustí sa len raz)
+// Global Notification Handler (pre React.createElement)
+function GlobalNotificationHandler() {
+  const [user, setUser] = React.useState(null);
+  const [userProfileData, setUserProfileData] = React.useState(null);
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [message, setMessage] = React.useState('');
+  const [messageType, setMessageType] = React.useState('info');
+  const timerRef = React.useRef(null);
+
+  // Expose showGlobalNotification function globally
   React.useEffect(() => {
-    console.log("AuthManager: Spúšťam inicializáciu Firebase...");
-    let unsubscribeAuth;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("AuthManager: Firebase SDK nie je načítané. Uistite sa, že firebase.js je načítaný pred authentication.js.");
-        return;
+    window.showGlobalNotification = (msg, type = 'info') => {
+      setMessage(msg);
+      setMessageType(type);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
       }
+      timerRef.current = setTimeout(() => {
+        setMessage('');
+        setMessageType('info');
+      }, 10000); // Zobraziť na 10 sekúnd
+    };
 
-      let firebaseApp;
-      if (firebase.apps.length === 0) {
-        console.log("AuthManager: Inicializujem novú Firebase aplikáciu.");
-        // firebaseConfig by malo byť definované globálne v HTML pred načítaním tohto skriptu
-        firebaseApp = firebase.initializeApp(firebaseConfig); 
-      } else {
-        firebaseApp = firebase.app();
-        console.warn("AuthManager: Firebase App named '[DEFAULT]' už existuje. Používam existujúcu inštanciu.");
+    return () => {
+      window.showGlobalNotification = null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
       }
-      
-      window.auth = firebase.auth(firebaseApp); // Nastav globálnu inštanciu auth
-      window.db = firebase.firestore(firebaseApp); // Nastav globálnu inštanciu db
+    };
+  }, []);
 
-      console.log("AuthManager: Firebase inicializované. Nastavujem Auth listener.");
-
-      const signIn = async () => {
-        try {
-          // initialAuthToken by malo byť definované globálne v HTML pred načítaním tohto skriptu
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            console.log("AuthManager: Pokúšam sa prihlásiť s custom tokenom.");
-            await window.auth.signInWithCustomToken(initialAuthToken);
-          } else {
-            console.log("AuthManager: initialAuthToken nie je k dispozícii alebo je prázdny. Pokúšam sa prihlásiť anonymne pre verejné stránky.");
-            // NOVINKA: Anonymné prihlásenie pre prístup k verejným dátam (napr. pre index.html)
-            await window.auth.signInAnonymously();
-          }
-        } catch (e) {
-          console.error("AuthManager: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom alebo anonymne):", e);
-        }
-      };
-
-      unsubscribeAuth = window.auth.onAuthStateChanged(async (currentUser) => {
-        console.log("AuthManager: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser);
-        setIsAuthReady(true); // Autentifikácia je pripravená po prvej kontrole
-        window.isGlobalAuthReady = true; // Nastav globálny stav
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          console.log("AuthManager: Ruším odber onAuthStateChanged.");
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("AuthManager: Nepodarilo sa inicializovať Firebase:", e);
-    }
-  }, []); // Prázdne pole závislostí zabezpečí, že sa spustí len raz
-
-  // Effect pre načítanie profilových dát používateľa a autorizáciu
+  // Firebase Initialization and Auth State Listener
   React.useEffect(() => {
     let unsubscribeUserDoc;
-    const currentPath = window.location.pathname;
-    console.log("AuthManager: Spúšťam useEffect pre načítanie profilu používateľa a autorizáciu. isAuthReady:", isAuthReady, "db:", !!window.db, "user:", !!user, "currentPath:", currentPath);
+    let authInstance, dbInstance; // Používame dočasné názvy, aby sa predišlo kolízii s globálnymi window.auth/db
 
-    // NOVINKA: Ak je stránka index.html, login.html, account.html, register.html alebo admin-register.html, nepokračujeme v kontrole prihlásenia/presmerovaní
-    if (currentPath.includes('index.html') || currentPath.includes('login.html') || currentPath.includes('account.html') || currentPath.includes('register.html') || currentPath.includes('admin-register.html')) {
-        console.log(`AuthManager: Stránka ${currentPath} je verejná alebo prihlasovacia/registračná. Preskakujem kontrolu prihlásenia/presmerovania.`);
-        // Ak je používateľ null (anonymný) a na verejnej stránke, nastavíme userProfileData na null
-        if (user === null) {
-            setUserProfileData(null);
-            window.globalUserProfileData = null;
-        }
-        // Ak je používateľ prihlásený, ale na verejnej stránke, stále načítame jeho profil
-        if (user && window.db && isAuthReady) {
-            const userDocRef = window.db.collection('users').doc(user.uid);
+    try {
+      const app = firebase.initializeApp(firebaseConfig);
+      authInstance = firebase.auth(app);
+      dbInstance = firebase.firestore(app);
+      window.auth = authInstance; // Make auth instance globally available
+      window.db = dbInstance;     // Make db instance globally available
+      console.log("AuthManager: Firebase inicializovaný a globálne premenné nastavené.");
+    } catch (e) {
+      console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
+      setError(`Chyba pri inicializácii aplikácie: ${e.message}`);
+      setIsAuthReady(true); // Nastavíme ako pripravené, aj keď s chybou, aby sa neblokovalo
+      return;
+    }
+
+    const handleAuthStateChange = async (currentUser) => {
+      console.log("AuthManager: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser); // Update local user state
+      window.isGlobalAuthReady = true; // Auth je pripravené
+      setIsAuthReady(true); // Update local isAuthReady state
+
+      // Clear previous user profile data and unsubscribe if user changes
+      setUserProfileData(null);
+      window.globalUserProfileData = null;
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+        unsubscribeUserDoc = null;
+      }
+
+      if (currentUser) {
+        // Check passwordLastChanged only for non-anonymous users
+        if (!currentUser.isAnonymous) {
+            // Check passwordLastChanged
+            const userDocRef = dbInstance.collection('users').doc(currentUser.uid);
             unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
                 if (docSnapshot.exists) {
                     const userData = docSnapshot.data();
+                    // console.log("AuthManager: Používateľský dokument existuje, dáta:", userData); // Removed for brevity
+
+                    // Validate passwordLastChanged
+                    if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                        console.error("AuthManager: passwordLastChanged NIE JE platný Timestamp objekt! Odhlasujem používateľa.");
+                        authInstance.signOut();
+                        window.location.href = 'login.html';
+                        localStorage.removeItem(`passwordLastChanged_${currentUser.uid}`);
+                        return;
+                    }
+
+                    const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+                    const localStorageKey = `passwordLastChanged_${currentUser.uid}`;
+                    let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+                    if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                        console.log("AuthManager: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                        authInstance.signOut();
+                        window.location.href = 'login.html';
+                        localStorage.removeItem(localStorageKey);
+                        return;
+                    } else {
+                        // Update localStorage to ensure it's current
+                        localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                    }
+
+                    // Check if admin user is approved
+                    if (userData.role === 'admin' && userData.approved === false) {
+                        console.log("AuthManager: Používateľ je admin a nie je schválený. Odhlasujem.");
+                        authInstance.signOut();
+                        window.location.href = 'login.html';
+                        return;
+                    }
+
                     setUserProfileData(userData);
                     window.globalUserProfileData = userData;
-                    console.log("AuthManager: Načítaný profil používateľa na verejnej stránke.");
+                    setError(''); // Clear any previous errors
+                    // Trigger custom event for other components to react to profile data changes
+                    window.dispatchEvent(new CustomEvent('globalProfileDataChanged'));
+
                 } else {
-                    console.warn("AuthManager: Profil používateľa sa nenašiel na verejnej stránke pre UID:", user.uid);
-                    // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém.
-                    // Pre verejné stránky to nie je kritické, ale môžeme ho odhlásiť.
-                    // window.auth.signOut();
-                    // setUser(null);
-                    // setUserProfileData(null);
-                    // window.globalUserProfileData = null;
+                    console.warn("AuthManager: Používateľský dokument sa nenašiel pre UID:", currentUser.uid, "Odhlásenie.");
+                    // If profile doesn't exist for a non-anonymous user, log them out
+                    authInstance.signOut();
+                    window.location.href = 'login.html';
                 }
             }, error => {
-                console.error("AuthManager: Chyba pri načítaní profilu na verejnej stránke:", error);
-                // Pri chybe na verejnej stránke neodhlásime automaticky, len logujeme
-            });
-        }
-        return () => {
-            if (unsubscribeUserDoc) {
-                unsubscribeUserDoc();
-            }
-        }; // Zastavíme ďalšie spracovanie
-    }
-
-    // Pôvodná logika pre stránky vyžadujúce autentifikáciu
-    if (isAuthReady && window.db && user !== undefined) {
-      if (user === null) {
-        console.log("AuthManager: Používateľ je null (nie je prihlásený), presmerovávam na login.html.");
-        window.location.href = 'login.html';
-        return;
-      }
-
-      if (user) {
-        try {
-          const userDocRef = window.db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("AuthManager: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("AuthManager: Používateľský profil načítaný:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("AuthManager: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("AuthManager: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  window.auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  window.globalUserProfileData = null; // Resetuj globálny profil
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`AuthManager: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("AuthManager: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("AuthManager: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  window.auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  window.globalUserProfileData = null; // Resetuj globálny profil
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("AuthManager: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  window.auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  window.globalUserProfileData = null; // Resetuj globálny profil
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("AuthManager: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  window.auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  window.globalUserProfileData = null; // Resetuj globálny profil
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              // NOVÁ LOGIKA: Autorizácia pre konkrétnu stránku
-              // currentPath už je definovaný na začiatku useEffect
-              if (!checkPageAuthorization(userData, currentPath)) {
-                  console.log(`AuthManager: Používateľ ${userData.email} nemá oprávnenie pre stránku ${currentPath}. Presmerovávam na login.html.`);
-                  window.auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null);
-                  setUserProfileData(null);
-                  window.globalUserProfileData = null;
-                  return;
-              }
-
-              setUserProfileData(userData); // Nastav lokálny stav
-              window.globalUserProfileData = userData; // Nastav globálny stav
-              
-            } else {
-              console.warn("AuthManager: Používateľský profil sa nenašiel pre UID:", user.uid);
-              // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém. Odhlásime ho.
-              console.log("AuthManager: Používateľský profil sa nenašiel. Odhlasujem používateľa.");
-              window.auth.signOut();
-              window.location.href = 'login.html';
-              setUser(null);
-              setUserProfileData(null);
-              window.globalUserProfileData = null;
-            }
-
-          }, error => {
-            console.error("AuthManager: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied' || error.code === 'unauthenticated') {
-                 console.log("AuthManager: Chyba oprávnení/autentifikácie. Odhlasujem používateľa.");
-                 window.auth.signOut();
-                 window.location.href = 'login.html';
-            } else {
-                console.error(`AuthManager: Neznáma chyba pri načítaní používateľských dát: ${error.message}. Odhlasujem.`);
-                window.auth.signOut();
+                console.error("AuthManager: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                // If there's a permission error, it might be due to security rules.
+                // For non-anonymous users, this is a critical error.
+                authInstance.signOut();
                 window.location.href = 'login.html';
-            }
-            setUser(null);
-            setUserProfileData(null);
-            window.globalUserProfileData = null;
-          });
-        } catch (e) {
-          console.error("AuthManager: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          window.auth.signOut();
-          window.location.href = 'login.html';
-          setUser(null);
-          setUserProfileData(null);
-          window.globalUserProfileData = null;
+            });
+        } else {
+            // Anonymous user, do not fetch userProfileData from Firestore
+            console.log("AuthManager: Prihlásený anonymný používateľ. Nebudú sa načítavať profilové dáta z Firestore.");
+            setUserProfileData({ role: 'anonymous', approved: true }); // Provide a minimal profile for anonymous users
+            window.globalUserProfileData = { role: 'anonymous', approved: true };
+            window.dispatchEvent(new CustomEvent('globalProfileDataChanged'));
         }
+      } else {
+        // User is null (not logged in or logged out)
+        console.log("AuthManager: Používateľ nie je prihlásený, resetujem globálny profil.");
+        setUserProfileData(null);
+        window.globalUserProfileData = null;
+        window.dispatchEvent(new CustomEvent('globalProfileDataChanged'));
       }
-    } else if (isAuthReady && user === null) {
-      console.log("AuthManager: Používateľ nie je prihlásený, resetujem globálny profil.");
-      setUserProfileData(null);
-      window.globalUserProfileData = null;
-    }
 
-    return () => {
-      if (unsubscribeUserDoc) {
-        console.log("AuthManager: Ruším odber onSnapshot pre používateľský dokument.");
-        unsubscribeUserDoc();
+      // After auth state changes and data is potentially loaded, check page authorization
+      const currentPath = window.location.pathname;
+      const isAuthorized = checkPageAuthorization(window.globalUserProfileData, currentPath);
+
+      if (!isAuthorized) {
+        console.log(`AuthManager: Používateľ nemá prístup k ${currentPath}. Presmerovávam.`);
+        // Redirect based on whether user is logged in or not
+        if (currentUser) {
+          // Logged in but unauthorized (e.g., non-admin trying to access admin page)
+          window.location.href = 'logged-in-my-data.html';
+        } else {
+          // Not logged in and trying to access a restricted page
+          window.location.href = 'login.html';
+        }
       }
     };
-  }, [isAuthReady, user]); // Závisí od lokálnych stavov user a isAuthReady
 
-  // Tento komponent nič nevykresľuje do DOMu, len spravuje globálny stav
-  return null;
+    // Main listener for Firebase Auth state changes
+    const unsubscribeAuth = authInstance.onAuthStateChanged(handleAuthStateChange);
+
+    // Initial sign-in (anonymous or custom token)
+    // Only attempt initial sign-in if no user is currently authenticated
+    if (!authInstance.currentUser) {
+        console.log("AuthManager: Žiadny aktuálny používateľ, pokúšam sa o počiatočné prihlásenie.");
+        (async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await authInstance.signInWithCustomToken(__initial_auth_token);
+                    console.log("AuthManager: Prihlásenie s custom tokenom úspešné.");
+                } else {
+                    await authInstance.signInAnonymously();
+                    console.log("AuthManager: Anonymné prihlásenie úspešné.");
+                }
+            } catch (e) {
+                console.error("AuthManager: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom alebo anonymne):", e);
+                // If anonymous sign-in fails, it's a critical issue for public pages.
+                // Display error and prevent further operations.
+                setError(`Chyba pri prihlásení: ${e.message}. Skúste to prosím neskôr.`);
+                // Do not redirect here, let the onAuthStateChanged handle the null user.
+            }
+        })();
+    } else {
+        // If already authenticated, manually trigger the handler to process the current user
+        // and ensure page authorization is checked.
+        console.log("AuthManager: Používateľ už je prihlásený, spúšťam handleAuthStateChange manuálne.");
+        handleAuthStateChange(authInstance.currentUser);
+    }
+
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+      }
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      window.showGlobalNotification = null; // Clean up global function
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
+  // This component renders the global notification modal
+  return React.createElement(
+    'div',
+    {
+      className: `fixed top-0 left-0 right-0 z-[9999] flex justify-center p-4 transition-transform duration-500 ease-out ${
+        (message || error) ? 'translate-y-0' : '-translate-y-full'
+      }`,
+      style: { pointerEvents: 'none' }
+    },
+    React.createElement(
+      'div',
+      {
+        className: `${messageType === 'success' ? 'bg-[#3A8D41]' : messageType === 'error' ? 'bg-red-600' : 'bg-blue-500'} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+        style: { pointerEvents: 'auto' }
+      },
+      React.createElement('p', { className: 'font-semibold' }, message || error)
+    )
+  );
 }
 
-// Vykreslíme AuthenticationManager do skrytého DOM elementu
+// Vykreslíme GlobalNotificationHandler do skrytého DOM elementu
 // Vytvoríme koreňový element pre React komponent, ak ešte neexistuje
 let authRoot = document.getElementById('authentication-root');
 if (!authRoot) {
@@ -334,13 +311,13 @@ if (!authRoot) {
   console.log("AuthManager: 'authentication-root' div už existuje.");
 }
 
-// Vykreslíme AuthenticationManager do tohto koreňového elementu
+// Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
 try {
   ReactDOM.render(
-    React.createElement(AuthenticationManager),
+    React.createElement(GlobalNotificationHandler),
     authRoot
   );
-  console.log("AuthManager: AuthenticationManager úspešne vykreslený.");
+  console.log("AuthManager: GlobalNotificationHandler vykreslený do 'authentication-root'.");
 } catch (e) {
-  console.error("AuthManager: Chyba pri vykresľovaní AuthenticationManager:", e);
+  console.error("AuthManager: Chyba pri vykresľovaní GlobalNotificationHandler:", e);
 }
