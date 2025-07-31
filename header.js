@@ -106,7 +106,7 @@ function updateHeaderLinks() {
         // Prihlásený používateľ
         profileLink.classList.remove('hidden'); // Zobraziť 'Moja zóna'
         authLink.classList.add('hidden');      // Skryť 'Prihlásenie'
-        registerLink.classList.remove('hidden');  // Zobraziť 'Registrácia na turnaj'
+        registerLink.classList.add('hidden');   // Skryť 'Registrácia na turnaj'
         logoutButton.classList.remove('hidden');  // Zobraziť 'Odhlásiť'
     } else {
         // Odhlásený používateľ
