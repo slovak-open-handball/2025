@@ -98,18 +98,18 @@ function MyDataApp() {
 
     // Funkcia na spojenie adresy do jedného riadku z top-level polí
     const formatAddress = (street, houseNumber, city, postalCode, country) => {
-        const parts = [];
-        if (street) parts.push(street);
-        if (houseNumber) parts.push(houseNumber);
-        const streetAndNumber = parts.join(' ');
+        const streetParts = [];
+        if (street) streetParts.push(street);
+        if (houseNumber) streetParts.push(houseNumber);
+        const streetAndNumber = streetParts.join(' ');
 
-        const addressParts = [];
-        if (streetAndNumber) addressParts.push(streetAndNumber);
-        if (postalCode) addressParts.push(formatPostalCode(postalCode));
-        if (city) addressParts.push(city);
-        const cityAndPostalCode = addressParts.join(' ');
-        
+        const cityParts = [];
+        if (postalCode) cityParts.push(formatPostalCode(postalCode));
+        if (city) cityParts.push(city);
+        const cityAndPostalCode = cityParts.join(' ');
+
         const finalAddressParts = [];
+        if (streetAndNumber) finalAddressParts.push(streetAndNumber);
         if (cityAndPostalCode) finalAddressParts.push(cityAndPostalCode);
         if (country) finalAddressParts.push(country);
 
