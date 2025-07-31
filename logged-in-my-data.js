@@ -79,9 +79,14 @@ function MyDataApp() {
         );
     }
     
-    // Formátovanie dátumu registrácie
-    const registrationDate = userProfileData.registrationDate ? 
-      new Date(userProfileData.registrationDate.seconds * 1000).toLocaleDateString() : 'N/A';
+    // Formátovanie dátumu registrácie na zobrazenie dátumu a času
+    let registrationDateAndTime = 'N/A';
+    if (userProfileData.registrationDate) {
+        const dateObject = new Date(userProfileData.registrationDate.seconds * 1000);
+        const formattedDate = dateObject.toLocaleDateString();
+        const formattedTime = dateObject.toLocaleTimeString();
+        registrationDateAndTime = `${formattedDate}, ${formattedTime}`;
+    }
 
     // Renderujeme dáta, ak sú k dispozícii
     return React.createElement(
@@ -203,8 +208,8 @@ function MyDataApp() {
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Dátum registrácie:'),
-                ` ${registrationDate}`
+                React.createElement('span', { className: 'font-bold' }, 'Dátum a čas registrácie:'),
+                ` ${registrationDateAndTime}`
             )
         ),
         // Fakturačné údaje, ak existujú
