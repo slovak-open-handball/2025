@@ -10,6 +10,7 @@ window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 window.formatToDatetimeLocal = null; // Globálna funkcia pre formátovanie dátumu
+window.registrationSettings = {}; // Nastavenia registrácie - bude vyplnené z index.js
 
 // Helper funkcia pre autorizáciu prístupu k stránkam
 const checkPageAuthorization = (userData, currentPath) => {
