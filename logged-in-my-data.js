@@ -136,12 +136,13 @@ function MyDataApp() {
       ),
       React.createElement(
         'div',
-        // Rozloženie v jednom stĺpci s medzerou medzi sekciami
+        // Rozloženie v jednom stĺpci s menšou medzerou medzi sekciami
         { className: 'space-y-6 md:space-y-8' },
         // Kontaktné údaje
         (userProfileData.firstName || userProfileData.lastName || userProfileData.email || userProfileData.contactPhoneNumber || userProfileData.registrationDate) && React.createElement(
             'div',
-            { className: 'space-y-4' },
+            // Menšia medzera medzi položkami v tejto sekcii
+            { className: 'space-y-2' },
             React.createElement(
                 'h2',
                 { className: 'text-2xl font-semibold text-gray-800' },
@@ -176,7 +177,8 @@ function MyDataApp() {
         // Fakturačné údaje
         (userProfileData.billing || billingAddress) && React.createElement(
           'div',
-          { className: 'space-y-4' },
+          // Menšia medzera medzi položkami v tejto sekcii
+          { className: 'space-y-2' },
           React.createElement(
             'h2',
             { className: 'text-2xl font-semibold text-gray-800' },
