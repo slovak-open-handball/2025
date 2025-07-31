@@ -119,8 +119,14 @@ function App() {
                 }
                 setLoading(false);
             }, (err) => {
-                console.error("Error getting settings document:", err);
-                setError("Chyba pri načítaní nastavení. Skúste obnoviť stránku.");
+                // Konkrétna chyba o povoleniach
+                if (err.code === 'permission-denied') {
+                    console.error("Chyba pri načítaní nastavení: Nedostatočné oprávnenia. Skontrolujte vaše Firebase Security Rules.", err);
+                    setError("Chyba pri načítaní nastavení. Skontrolujte bezpečnostné pravidlá vo vašej databáze.");
+                } else {
+                    console.error("Chyba pri načítaní nastavení dokumentu:", err);
+                    setError("Chyba pri načítaní nastavení. Skúste obnoviť stránku.");
+                }
                 setLoading(false);
             });
 
@@ -147,7 +153,12 @@ function App() {
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
                 setCategoriesExist(!categoriesSnap.empty);
             } catch (e) {
-                console.error("Chyba pri kontrole kategórií:", e);
+                // Konkrétna chyba o povoleniach
+                if (e.code === 'permission-denied') {
+                    console.error("Chyba pri kontrole kategórií: Nedostatočné oprávnenia. Skontrolujte vaše Firebase Security Rules.", e);
+                } else {
+                    console.error("Chyba pri kontrole kategórií:", e);
+                }
             }
         };
 
