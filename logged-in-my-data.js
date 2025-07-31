@@ -116,15 +116,7 @@ function MyDataApp() {
         return finalAddressParts.join(', ');
     };
 
-    // Priprava dat pre adresy
-    const userAddress = formatAddress(
-      userProfileData.street,
-      userProfileData.houseNumber,
-      userProfileData.city,
-      userProfileData.postalCode,
-      userProfileData.country
-    );
-
+    // Priprava dat pre billing adresy
     const billingAddress = userProfileData.billing ? formatAddress(
       userProfileData.billing.street,
       userProfileData.billing.houseNumber,
@@ -173,22 +165,6 @@ function MyDataApp() {
                 ` ${userProfileData.contactPhoneNumber}`
             )
         ),
-        // Adresa (iba používateľská adresa, ak existuje a nie sú fakturačné údaje)
-        !userProfileData.billing && userAddress && React.createElement(
-          'div',
-          { className: 'space-y-4' },
-          React.createElement(
-            'h2',
-            { className: 'text-2xl font-semibold text-gray-800' },
-            'Adresa'
-          ),
-          React.createElement(
-            'p',
-            { className: 'text-gray-800 text-lg' },
-            React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-            ` ${userAddress}`
-          )
-        ),
         // Ďalšie údaje
         userProfileData.registrationDate && React.createElement(
             'div',
@@ -205,7 +181,7 @@ function MyDataApp() {
                 ` ${registrationDateAndTime}`
             )
         ),
-        // Fakturačné údaje
+        // Fakturačné údaje - tento blok teraz obsahuje aj adresu
         userProfileData.billing && React.createElement(
           'div',
           { className: 'space-y-4' },
@@ -220,7 +196,7 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
             ` ${userProfileData.billing.clubName}`
           ),
-          // Presunutie fakturačnej adresy sem a kontrola, či adresa nie je prázdna
+          // Fakturačná adresa sa zobrazuje VŽDY v tomto bloku, ak existujú billing údaje
           billingAddress && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
