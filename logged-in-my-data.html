@@ -65,28 +65,10 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Skripty pre našu aplikáciu, ktoré MUSIA byť načítané PO Reacte a Babeli -->
-    <script type="text/babel" src="logged-in-my-data.js"></script>
     <!-- Načíta hlavičku -->
     <script src="header.js"></script>
+    <!-- Skripty pre našu aplikáciu, ktoré MUSIA byť načítané PO Reacte a Babeli -->
+    <script type="text/babel" src="logged-in-my-data.js"></script>
     
-    <script>
-        // Spustíme renderovanie React aplikácie po načítaní DOM
-        window.onload = () => {
-            // Skontrolujeme, či sú React a ReactDOM k dispozícii
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof MyDataApp === 'undefined') {
-                console.error("Chyba: React, ReactDOM alebo MyDataApp komponent nie sú načítané. Skontrolujte poradie a typ skriptov.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                return;
-            }
-
-            // Vykreslíme React komponent
-            ReactDOM.render(
-                React.createElement(MyDataApp),
-                document.getElementById('root')
-            );
-            console.log("logged-in-my-data.html: React App vykreslená.");
-        };
-    </script>
 </body>
 </html>
