@@ -25,6 +25,7 @@ function App() {
     const [user, setUser] = React.useState(null);
     const [db, setDb] = React.useState(null);
     const [auth, setAuth] = React.useState(null);
+    const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
     const [categoriesExist, setCategoriesExist] = React.useState(false);
@@ -57,41 +58,54 @@ function App() {
                 setDb(firestoreDb);
                 setAuth(firebaseAuth);
 
-                // Sign in with custom token if available, otherwise sign in anonymously
+                // Nastavenie listenera na zmenu stavu autentifikácie
+                // Tento listener sa spustí pri prvom načítaní stránky aj pri zmene stavu.
+                const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (currentUser) => {
+                    try {
+                        if (currentUser) {
+                            setUser(currentUser);
+                            console.log("User is signed in:", currentUser.uid);
+                        } else {
+                            // Ak nie je prihlásený, skúsime anonymné prihlásenie
+                            console.log("User is signed out. Attempting anonymous sign-in...");
+                            await signInAnonymously(firebaseAuth);
+                        }
+                        setIsAuthReady(true); // Nastavenie pripravenosti po prvom overení
+                    } catch (e) {
+                        console.error("Authentication failed:", e);
+                        setError(`Chyba pri autentifikácii: ${e.message}. Skúste obnoviť stránku.`);
+                        setIsAuthReady(true); // Aj pri chybe nastavíme pripravenosť, aby sa neblokovalo renderovanie
+                    }
+                });
+                
+                // Po inicializácii Firebase sa pokúsime prihlásiť
                 const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
                 if (token) {
                     await signInWithCustomToken(firebaseAuth, token);
-                } else {
-                    await signInAnonymously(firebaseAuth);
                 }
 
-                onAuthStateChanged(firebaseAuth, (currentUser) => {
-                    if (currentUser) {
-                        setUser(currentUser);
-                        console.log("User is signed in:", currentUser.uid);
-                    } else {
-                        setUser(null);
-                        console.log("User is signed out.");
-                    }
-                });
+                return () => {
+                    unsubscribeAuth();
+                };
 
             } catch (e) {
                 console.error("Firebase initialization failed:", e);
                 setError(`Chyba pri inicializácii Firebase: ${e.message}. Skúste obnoviť stránku.`);
+                setIsAuthReady(true);
             }
         };
 
         initFirebase();
     }, []);
 
-    // Načítanie nastavení registrácie z Firestore, spúšťa sa, keď je Firebase pripravený
+    // Načítanie nastavení registrácie z Firestore, spúšťa sa, keď je Firebase a autentifikácia pripravená
     React.useEffect(() => {
-        if (!db) {
-            console.log("App: Waiting for Firebase db to be ready...");
+        if (!db || !isAuthReady) {
+            console.log("App: Waiting for Firebase db and authentication to be ready...");
             return;
         }
 
-        console.log("App: Firebase db is ready, fetching registration settings.");
+        console.log("App: Firebase db and authentication are ready, fetching registration settings.");
         try {
             const settingsRef = doc(db, 'artifacts', appId, 'public', 'settings');
             const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
@@ -117,12 +131,12 @@ function App() {
             setError("Chyba pri inicializácii načítania nastavení. Skúste obnoviť stránku.");
             setLoading(false);
         }
-    }, [db, appId]);
+    }, [db, isAuthReady, appId]);
 
     // Kontrola existencie kategórií, spúšťa sa, keď sú načítané dátumy registrácie
     React.useEffect(() => {
         const checkCategories = async () => {
-            if (!db) {
+            if (!db || !isAuthReady) {
                 console.log("App: Waiting for Firebase to be ready before checking categories.");
                 return;
             }
@@ -139,7 +153,7 @@ function App() {
         if (registrationStartDate && registrationEndDate) {
             checkCategories();
         }
-    }, [registrationStartDate, registrationEndDate, db, appId]);
+    }, [registrationStartDate, registrationEndDate, db, isAuthReady, appId]);
 
 
     // Funkcia na výpočet odpočtu
