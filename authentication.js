@@ -47,7 +47,7 @@ if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
     }
 }
 
-// Funkcia na overenie a prihlásenie pomocou custom tokenu alebo anonymne
+// Funkcia na overenie a prihlásenie pomocou custom tokenu
 const authenticateUser = async () => {
     if (!window.auth) {
         console.error("AuthManager: Firebase Auth nie je inicializovaný. Preskakujem autentifikáciu.");
@@ -58,14 +58,11 @@ const authenticateUser = async () => {
             await signInWithCustomToken(window.auth, initialAuthToken);
             console.log("AuthManager: Prihlásenie pomocou custom tokenu úspešné.");
         } else {
-            await signInAnonymously(window.auth);
-            console.log("AuthManager: Prihlásenie anonymne úspešné.");
+            console.warn("AuthManager: Globálny autentifikačný token nie je k dispozícii. Prihlásenie preskočené.");
+            // Ak nie je token, neprihlasujeme sa anonymne, ale čakáme na manuálne prihlásenie
         }
     } catch (error) {
         console.error("AuthManager: Chyba pri autentifikácii:", error);
-        if (window.auth) {
-            await signInAnonymously(window.auth);
-        }
     }
 };
 
