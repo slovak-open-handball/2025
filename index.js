@@ -30,7 +30,7 @@ function App() {
     const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
     const [categoriesExist, setCategoriesExist] = React.useState(false);
 
-    // Globálny App ID
+    // Globálny App ID (už nie je nutný pre tieto cesty, ale pre istotu ho necháme)
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
     // Firebase initialization and authentication
@@ -105,7 +105,8 @@ function App() {
         console.log("App: Firebase db and authentication are ready, fetching registration settings.");
         try {
             // Správna cesta k dokumentu
-            const settingsRef = doc(db, 'artifacts', appId, 'public', 'settings');
+            // Cesta: settings/registration
+            const settingsRef = doc(db, 'settings', 'registration');
             const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -141,7 +142,8 @@ function App() {
             console.log("App: Checking for categories...");
             try {
                 // Správna cesta ku kolekcii
-                const categoriesCollectionRef = collection(db, 'artifacts', appId, 'public', 'categories');
+                // Cesta: settings/categories
+                const categoriesCollectionRef = collection(db, 'settings', 'categories');
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
                 setCategoriesExist(!categoriesSnap.empty);
             } catch (e) {
