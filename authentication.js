@@ -11,7 +11,7 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Deklarácia premenných v globálnom dosahu pre prístup z listenerov
@@ -91,13 +91,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Opravená logika prihlásenia: buď s custom tokenom, alebo anonymne
+        // Prihlásenie s custom tokenom, ak je k dispozícii
         if (initialAuthToken) {
             await signInWithCustomToken(window.auth, initialAuthToken);
             console.log("AuthManager: Úspešné prihlásenie pomocou custom tokenu.");
         } else {
-            await signInAnonymously(window.auth);
-            console.log("AuthManager: Úspešné anonymné prihlásenie.");
+            console.log("AuthManager: Žiadny token na prihlásenie nie je k dispozícii. Používateľ zostane odhlásený.");
         }
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase alebo prihlásení:", e);
@@ -139,6 +138,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.globalUserProfileData = null;
             
             // Kontrola autorizácie stránky po odhlásení
+            // Ak neprihlásený používateľ je na verejnej stránke, nič sa nedeje.
+            // Ak je na chránenej, bude presmerovaný.
             if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
                 window.location.href = 'index.html';
             }
