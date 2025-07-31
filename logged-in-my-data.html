@@ -97,7 +97,6 @@
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Nastavíme globálnu funkciu pre notifikácie
         window.showGlobalNotification = (message, type = 'success') => {
             let notificationElement = document.getElementById('global-notification');
             if (!notificationElement) {
@@ -136,31 +135,43 @@
             }, 3000);
         };
         
-        // Zabezpečí, že inicializácia Firebase a renderovanie Reactu sa vykoná až po načítaní všetkého
         window.onload = async () => {
-            // Inicializácia Firebase z globálnych premenných
-            const firebaseConfig = JSON.parse(window.__firebase_config);
-            const app = initializeApp(firebaseConfig);
-            window.auth = getAuth(app);
-            window.db = getFirestore(app);
-
-            // Prihlásenie používateľa
-            try {
-                if (typeof window.__initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(window.auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(window.auth);
+            // Check if firebase config is available
+            if (typeof window.__firebase_config === 'undefined') {
+                console.error("Firebase config is not available. Cannot initialize Firebase.");
+                const rootElement = document.getElementById('root');
+                if (rootElement) {
+                    rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba: Firebase konfigurácia chýba.</div>';
                 }
-                window.isGlobalAuthReady = true;
-                console.log("logged-in-my-data.html: Autentifikácia úspešná.");
-            } catch (error) {
-                console.error("logged-in-my-data.html: Chyba pri autentifikácii:", error);
-                window.isGlobalAuthReady = true; // Aj tak označíme ako pripravené, ale používateľ bude odhlásený
+                return;
             }
 
-            // Až po prihlásení môžeme spustiť našu aplikáciu
+            // Initialize Firebase from global variables
+            try {
+                const firebaseConfig = JSON.parse(window.__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                window.auth = getAuth(app);
+                window.db = getFirestore(app);
+
+                // Sign in the user
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                    await signInWithCustomToken(window.auth, window.__initial_auth_token);
+                    console.log("logged-in-my-data.html: Signed in with custom token.");
+                } else {
+                    await signInAnonymously(window.auth);
+                    console.log("logged-in-my-data.html: Signed in anonymously.");
+                }
+                window.isGlobalAuthReady = true;
+                console.log("logged-in-my-data.html: Authentication successful.");
+            } catch (error) {
+                console.error("logged-in-my-data.html: Error during authentication:", error);
+                window.isGlobalAuthReady = true; // Mark as ready even with an error
+                // The React component will handle the case where the user is not logged in
+            }
+
+            // After authentication, render the React app
             if (typeof window.MyDataApp === 'undefined') {
-                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                console.error("Error: MyDataApp component is not defined. Check logged-in-my-data.js.");
                 const rootElement = document.getElementById('root');
                 if (rootElement) {
                     rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba pri načítaní aplikácie.</div>';
@@ -170,7 +181,7 @@
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(MyDataApp, null));
-            console.log("logged-in-my-data.html: React App vykreslená.");
+            console.log("logged-in-my-data.html: React App rendered.");
         };
     </script>
 </body>
