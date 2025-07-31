@@ -67,7 +67,7 @@ const updateHeaderLinks = () => {
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
 
-    // Inicializácia globálnych premenných
+    // Inicializácia globálnych premenných, ktoré sú nastavené v authentication.js
     const user = window.auth ? window.auth.currentUser : null;
     const userProfileData = window.globalUserProfileData;
 
@@ -122,25 +122,29 @@ const updateHeaderLinks = () => {
 // Funkcia na načítanie hlavičky a nastavenie listenerov
 const loadHeader = async () => {
     try {
+        // Načítanie hlavičky HTML
         const response = await fetch('header.html');
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
         document.getElementById('header-placeholder').innerHTML = headerHtml;
 
-        // Po načítaní hlavičky pridajte event listener na tlačidlo odhlásenia
+        // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
-        // Pridáme listener na globálnu udalosť, ktorá sa odosiela po načítaní profilových dát
+        // Kľúčová časť: Pridáme listener na udalosť, ktorú posiela 'authentication.js'
+        // Týmto sa zabezpečí, že hlavička sa aktualizuje, až keď sú dáta z databázy
+        // načítané a globálna premenná 'globalUserProfileData' je dostupná.
         window.addEventListener('globalDataUpdated', () => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             updateHeaderLinks();
         });
 
-        // Inicializácia pre prvý stav pri prvom načítaní stránky
+        // Zavoláme funkciu hneď po načítaní, pre prípad, že dáta boli načítané
+        // pred pripojením listenera. Ak nie, listener to zachytí neskôr.
         updateHeaderLinks();
         
     } catch (error) {
