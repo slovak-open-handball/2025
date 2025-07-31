@@ -1,6 +1,6 @@
 // account.js
 // Tento súbor predpokladá, že Firebase SDK je už načítané a inicializované
-// v account.html.
+// v account.html a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
 // Pomocná funkcia na získanie URL parametrov
 function getUrlParams() {
