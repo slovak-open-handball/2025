@@ -704,7 +704,8 @@ function App() {
             countdownMessage: countdown,
             registrationStartDate: registrationStartDate,
             isRecaptchaReady: isRecaptchaReady,
-            isRegistrationClosed: isRegistrationClosed // NOVINKA: Odovzdávame stav registrácie
+            isRegistrationClosed: isRegistrationClosed, // Odovzdávame stav registrácie
+            registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
           }) :
           React.createElement(Page2Form, {
             formData: formData,
