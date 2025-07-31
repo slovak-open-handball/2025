@@ -101,7 +101,9 @@
     <div id="left-menu-placeholder"></div>
 
     <!-- NOVINKA: Element pre globálne notifikácie z header.js -->
-    <div id="global-notification-root"></div>
+    <div id="header-notification-root"></div>
+    <div id="authentication-root"></div>
+
 
     <div id="main-content-area"> <!-- Odstránené flex-1 p-4, presunuté do style -->
         <div id="root">
@@ -111,6 +113,7 @@
 
     <!-- Načítanie header.js a account.js -->
     <!-- DÔLEŽITÁ ZMENA: header.js sa načítava po DOM elementoch, ktoré potrebuje -->
+    <script src="authentication.js"></script>
     <script src="header.js"></script>
     <script src="account.js"></script>
 
@@ -141,6 +144,8 @@
                     titleElement.textContent = 'SOH 2025 - Potvrdenie e-mailovej adresy';
                 } else if (mode === 'resetPassword') {
                     titleElement.textContent = 'SOH 2025 - Reset hesla';
+                } else if (mode === 'recoverEmail') { // NOVINKA: Pridaný režim pre obnovenie e-mailu
+                    titleElement.textContent = 'SOH 2025 - Obnovenie e-mailovej adresy';
                 } else {
                     titleElement.textContent = 'SOH 2025 - Account'; // Predvolený názov
                 }
