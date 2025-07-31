@@ -4,11 +4,7 @@
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-  // Získame referencie na Firebase služby a globálne dáta z authentication.js
-  const auth = window.auth;
-  const db = window.db;
-
-  // Lokálny stav pre používateľské dáta
+  // Lokálny stav pre používateľské dáta, ktoré sa načítajú po globálnej autentifikácii
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
   const [error, setError] = React.useState('');
@@ -16,58 +12,40 @@ function MyDataApp() {
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // Effect pre načítanie používateľských dát z Firestore
-  // Tento effect sa spúšťa len raz, po prihlásení používateľa
+  // Effect pre nastavenie event listenera na globálnu udalosť
   React.useEffect(() => {
-    let unsubscribeUserDoc;
-    
-    // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
-    // Používame setTimeout, aby sme sa uistili, že `window.auth` a `window.db` sú už inicializované z `authentication.js`
-    const checkAuthAndFetchData = () => {
-        if (window.isGlobalAuthReady && window.auth && window.auth.currentUser) {
-            console.log(`MyDataApp: Globálna autentifikácia pripravená. Spúšťam vlastný Firestore listener.`);
-            const userId = window.auth.currentUser.uid;
-            const userDocRef = doc(window.db, 'users', userId);
-
-            // Nastavíme real-time listener na dáta používateľa
-            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    console.log("MyDataApp: Dáta používateľa z Firestore načítané.");
-                    setUserProfileData(docSnap.data());
-                    setLoading(false);
-                    setError('');
-                } else {
-                    console.warn("MyDataApp: Profil používateľa nebol nájdený.");
-                    setUserProfileData(null);
-                    setLoading(false);
-                    setError('Profil používateľa nebol nájdený.');
-                }
-            }, (err) => {
-                console.error("MyDataApp: Chyba pri načítaní dát:", err);
-                setError('Chyba pri načítaní profilu.');
-                setLoading(false);
-            });
-        } else {
-            // Ak ešte nie je prihlásený, opakujeme kontrolu o 100ms neskôr
-            if (!window.isGlobalAuthReady) {
-                setTimeout(checkAuthAndFetchData, 100);
-            } else {
-                console.log("MyDataApp: Používateľ nie je prihlásený, nebudeme načítavať dáta.");
-                setUserProfileData(null);
-                setLoading(false);
-            }
-        }
+    // Funkcia, ktorá sa zavolá, keď sa dáta aktualizujú
+    const handleDataUpdate = () => {
+      console.log('MyDataApp: Prijatá udalosť "globalDataUpdated". Aktualizujem stav.');
+      if (window.isGlobalAuthReady) {
+          if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+            setLoading(false);
+            setError('');
+          } else {
+            // Ak sú dáta null, ale autentifikácia je hotová, nie sú žiadne dáta.
+            setUserProfileData(null);
+            setLoading(false);
+            setError('Profil používateľa nebol nájdený alebo nie ste prihlásený.');
+          }
+      }
     };
     
-    // Spustíme prvú kontrolu
-    checkAuthAndFetchData();
+    // Pridáme listener na udalosť 'globalDataUpdated'
+    window.addEventListener('globalDataUpdated', handleDataUpdate);
+    
+    // Pri inicializácii komponentu skontrolujeme aj aktuálny stav, pre prípad, že dáta boli načítané ešte predtým,
+    // ako sa nastavil listener
+    if (window.isGlobalAuthReady) {
+      handleDataUpdate();
+    } else {
+      // Ak globálna autentifikácia nie je hotová, nastavíme loading na true
+      setLoading(true);
+    }
 
-    // Vrátime funkciu na odhlásenie listeneru
+    // Funkcia na vyčistenie, ktorá sa volá, keď sa komponent odmontuje
     return () => {
-      if (unsubscribeUserDoc) {
-        console.log("MyDataApp: Odhlásenie od Firestore listeneru.");
-        unsubscribeUserDoc();
-      }
+      window.removeEventListener('globalDataUpdated', handleDataUpdate);
     };
 
   }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí len raz
