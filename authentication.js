@@ -28,28 +28,37 @@ if (window.self !== window.top) {
 
 // Funkcia na kontrolu oprávnení na základe cesty
 const checkPageAuthorization = (userProfile, path) => {
-    // Definícia ciest pre rôzne typy stránok
-    const publicPages = ['/', '/index.html', '/login.html'];
-    const loggedInOnlyPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
-
-    // Získať názov súboru z cesty pre porovnanie
+    // Získame názov súboru z cesty pre porovnanie
     const pageName = path.split('/').pop();
+
+    // Whitelist verejných stránok, na ktoré má prístup každý
+    const publicPages = ['index.html'];
+    // Stránky pre neprihlásených používateľov (login)
+    const authPages = ['login.html'];
+    // Stránky pre prihlásených používateľov
+    const loggedInOnlyPages = ['logged-in-my-data.html', 'logged-in-registration.html'];
 
     // Ak používateľ nie je prihlásený
     if (!userProfile) {
-        // Povolí prístup len na verejné stránky
-        return publicPages.includes(pageName) || publicPages.includes(path);
-    } 
+        // Ak sa pokúša o prístup na stránku pre prihlásených, presmerujeme ho na index
+        if (loggedInOnlyPages.includes(pageName)) {
+            console.warn("AuthManager: Neprihlásený používateľ nemá prístup. Presmerovanie na domovskú stránku.");
+            window.location.href = 'index.html';
+            return false;
+        }
+        // Inak je prístup na verejné stránky a login povolený
+        return true;
+    }
     // Ak je používateľ prihlásený
     else {
-        // Presmerovať z verejných stránok na stránku pre prihlásených
-        if (publicPages.includes(pageName) || publicPages.includes(path)) {
-            console.log("AuthManager: Používateľ je prihlásený, presmerovanie z verejnej stránky.");
+        // Ak sa pokúša o prístup na stránku login, presmerujeme ho na jeho profil
+        if (authPages.includes(pageName)) {
+            console.warn("AuthManager: Prihlásený používateľ nemá prístup na prihlasovaciu stránku. Presmerovanie na profil.");
             window.location.href = 'logged-in-my-data.html';
-            return false; // zabráni ďalšiemu vykonávaniu
+            return false;
         }
-        // Povolí prístup na stránky pre prihlásených
-        return loggedInOnlyPages.includes(pageName) || loggedInOnlyPages.includes(path);
+        // Inak má prístup na všetky stránky (vrátane indexu a stránok pre prihlásených)
+        return true;
     }
 };
 
@@ -108,8 +117,7 @@ const handleAuthState = async () => {
                 
                 // Kontrola autorizácie stránky po načítaní profilu
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization,
-                    // takže tu už nič nerobíme, len logujeme.
+                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
                     console.warn("AuthManager: Autorizácia zlyhala alebo prebehlo presmerovanie.");
                 }
                 
