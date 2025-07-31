@@ -11,7 +11,7 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ochrana proti zobrazeniu stránky v iframe
@@ -22,26 +22,26 @@ if (window.self !== window.top) {
 
     const errorMessageDiv = document.createElement('div');
     errorMessageDiv.textContent = 'Táto aplikácia nemôže byť zobrazená v rámčeku (iframe).';
-    errorMessageDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; color: #000; font-family: sans-serif; font-size: 20px; text-align: center;';
+    errorMessageDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-align: center; color: #000; font-family: sans-serif; font-size: 20px; text-align: center;';
     document.body.appendChild(errorMessageDiv);
 }
 
 // Funkcia na kontrolu oprávnení na základe cesty
 const checkPageAuthorization = (userProfile, path) => {
     // Vytvorenie whitelistu pre verejné stránky
-    const publicPages = ['/', '/index.html', '/login.html', '/about.html', '/contact.html'];
-    
+    const publicPages = ['/', '/index.html', '/login.html'];
+
     // Ak je používateľ odhlásený, povoliť prístup len na verejné stránky
     if (!userProfile) {
         return publicPages.includes(path) || publicPages.includes(path.split('/').pop());
     }
-    
+
     // Ak je používateľ prihlásený, povoliť prístup na všetky stránky okrem login/registrácie pre neprihlásených
     const loggedInOnlyPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
     if (loggedInOnlyPages.includes(path) || loggedInOnlyPages.includes(path.split('/').pop())) {
         return true;
     }
-    
+
     // Odmietnuť prístup na prihlasovacie stránky, ak je používateľ už prihlásený
     const authPages = ['/login.html'];
     if (authPages.includes(path) || authPages.includes(path.split('/').pop())) {
@@ -54,12 +54,16 @@ const checkPageAuthorization = (userProfile, path) => {
 // Vytvorenie a inicializácia Firebase aplikácie
 const setupFirebase = () => {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        if (Object.keys(firebaseConfig).length === 0) {
-            console.error("AuthManager: Firebase config nie je definovaný.");
-            return;
-        }
-
+        // Pevne definovaná konfigurácia Firebase podľa požiadavky používateľa
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+            authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+            projectId: "soh2025-2s0o2h5",
+            storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+            messagingSenderId: "572988314768",
+            appId: "1:572988314768:web:781e27eb035179fe34b415"
+        };
+        
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
@@ -87,7 +91,7 @@ const handleAuthState = async () => {
 
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const appId = "soh2025-2s0o2h5"; // Použijeme pevne definované app ID z konfigurácie
             const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, user.uid);
 
             unsubscribe = onSnapshot(userDocRef, (docSnap) => {
