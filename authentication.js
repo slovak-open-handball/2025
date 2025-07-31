@@ -124,9 +124,11 @@ const handleAuthState = () => {
                     console.log("AuthManager: Profil používateľa načítaný v reálnom čase.");
                     // VÝPIS DÁT POUŽÍVATEĽA DO KONZOLY
                     console.log("Údaje používateľa:", window.globalUserProfileData);
+                    window.dispatchEvent(new Event('globalDataUpdated'));
                 } else {
                     window.globalUserProfileData = null;
                     console.warn("AuthManager: Profil používateľa neexistuje v databáze.");
+                    window.dispatchEvent(new Event('globalDataUpdated'));
                 }
                 
                 // Kontrola autorizácie stránky po každej aktualizácii profilu
@@ -136,6 +138,7 @@ const handleAuthState = () => {
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
+                window.dispatchEvent(new Event('globalDataUpdated'));
                 // Kontrola autorizácie aj pri chybe načítania profilu
                 checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
             });
