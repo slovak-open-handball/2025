@@ -1,66 +1,9 @@
 // logged-in-add-categories.js
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-add-categories.html.
+// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-add-categories.html
+// a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
-
-  if (!show && !message) return null;
-
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Zelená
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Červená
-  } else {
-    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
-  }
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
+// ODSTRÁNENÝ: NotificationModal Component - teraz spravuje header.js
+// function NotificationModal({ message, onClose, type = 'info' }) { ... }
 
 // AddCategoryModal Component
 function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage, existingCategories }) {
@@ -86,11 +29,12 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Pridať novú kategóriu'),
-      notificationMessage && React.createElement(NotificationModal, {
-        message: notificationMessage,
-        onClose: () => setNotificationMessage(''),
-        type: error ? 'error' : 'success'
-      }),
+      // ODSTRÁNENÝ: NotificationModal - teraz spravuje header.js
+      // notificationMessage && React.createElement(NotificationModal, {
+      //   message: notificationMessage,
+      //   onClose: () => setNotificationMessage(''),
+      //   type: error ? 'error' : 'success'
+      // }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -159,11 +103,12 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Upraviť kategóriu: ${category.name}`),
-      notificationMessage && React.createElement(NotificationModal, {
-        message: notificationMessage,
-        onClose: () => setNotificationMessage(''),
-        type: error ? 'error' : 'success'
-      }),
+      // ODSTRÁNENÝ: NotificationModal - teraz spravuje header.js
+      // notificationMessage && React.createElement(NotificationModal, {
+      //   message: notificationMessage,
+      //   onClose: () => setNotificationMessage(''),
+      //   type: error ? 'error' : 'success'
+      // }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -210,7 +155,7 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 
   return React.createElement(
     'div',
-    { className: 'fixed inset-0 bg-gray-600 bg-opacity50 flex justify-center items-center z-50' },
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50' },
     React.createElement(
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
@@ -245,15 +190,20 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  // NOVÉ: Získame referencie na Firebase služby priamo
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
+  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Inicializovať s aktuálnym používateľom
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+
+  const [loading, setLoading] = React.useState(true); // Loading pre dáta v AddCategoriesApp
   const [error, setError] = React.useState('');
-  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  // ODSTRÁNENÉ: userNotificationMessage - použijeme window.showGlobalNotification
+  // const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [categories, setCategories] = React.useState([]); // Stav pre zoznam kategórií
   const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
@@ -265,191 +215,84 @@ function AddCategoriesApp() {
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NOVÉ: Lokálny Auth Listener pre AddCategoriesApp
+  // Tento listener zabezpečí, že AddCategoriesApp reaguje na zmeny autentifikácie,
+  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("AddCategoriesApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-add-categories.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("AddCategoriesApp: Lokálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
+      if (!currentUser) {
+        console.log("AddCategoriesApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Závisí od auth inštancie
 
-      let firebaseApp;
-      // Skontrolujte, či už existuje predvolená aplikácia Firebase
-      if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
-      } else {
-        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
-      }
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
-          }
-        } catch (e) {
-          console.error("AddCategoriesApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("AddCategoriesApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("AddCategoriesApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
+  // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
+  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) {
-        console.log("AddCategoriesApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Spustí sa len ak je používateľ prihlásený a db je k dispozícii
+      console.log(`AddCategoriesApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+      setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
-      if (user) {
-        console.log(`AddCategoriesApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true);
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("AddCategoriesApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("AddCategoriesApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("AddCategoriesApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`AddCategoriesApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("AddCategoriesApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("AddCategoriesApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("AddCategoriesApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("AddCategoriesApp: Timestampy sú rovnaké, aktualizujem localStorage.");
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("AddCategoriesApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData);
-              
-              setLoading(false);
-              setError('');
-
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("AddCategoriesApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("AddCategoriesApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false);
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-            }
-          }, error => {
-            console.error("AddCategoriesApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
-            } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
-            }
+            setUserProfileData(userData);
+            
             setLoading(false);
-            console.log("AddCategoriesApp: Načítanie používateľských dát zlyhalo, loading: false");
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+            setError('');
+
+            // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("AddCategoriesApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
+            }
+
+            console.log("AddCategoriesApp: Načítanie používateľských dát dokončené, loading: false");
+          } else {
+            console.warn("AddCategoriesApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+            // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém. Odhlásime ho.
+            setError("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.");
+            setLoading(false);
+            auth.signOut(); // Odhlásiť používateľa
+            setUser(null);
+            setUserProfileData(null);
+          }
+        }, error => {
+          console.error("AddCategoriesApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+          setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
           setLoading(false);
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
-      }
-    } else if (isAuthReady && user === undefined) {
-        console.log("AddCategoriesApp: Auth ready, user undefined. Nastavujem loading na false.");
+          // Pri chybe odhlásime používateľa, pretože dáta profilu sú kritické
+          auth.signOut();
+          setUser(null);
+          setUserProfileData(null);
+        });
+      } catch (e) {
+        console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
         setLoading(false);
+        auth.signOut();
+        setUser(null);
+        setUserProfileData(null);
+      }
+    } else if (user === null) {
+        // Ak je user null (a už nie undefined), znamená to, že bol odhlásený.
+        // Presmerovanie už by mal spraviť GlobalNotificationHandler.
+        // Tu len zabezpečíme, že loading je false a dáta sú vyčistené.
+        setLoading(false);
+        setUserProfileData(null);
     }
 
     return () => {
@@ -458,7 +301,8 @@ function AddCategoriesApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [user, db, auth]); // Závisí od user a db (a auth pre signOut)
+
 
   // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
@@ -531,61 +375,14 @@ function AddCategoriesApp() {
     };
   }, [db, userProfileData, getCategoriesDocRef]);
 
-  // Effect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`AddCategoriesApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
+  // ODSTRÁNENÉ: Effect for updating header link visibility - spravuje header.js
+  // React.useEffect(() => { ... }, [user]);
 
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("AddCategoriesApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("AddCategoriesApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
+  // ODSTRÁNENÉ: Handle logout - spravuje header.js
+  // const handleLogout = React.useCallback(async () => { ... }, [auth]);
 
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("AddCategoriesApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  // ODSTRÁNENÉ: Attach logout handler - spravuje header.js
+  // React.useEffect(() => { ... }, [handleLogout]);
 
   // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (message) => {
@@ -616,12 +413,16 @@ function AddCategoriesApp() {
     const trimmedCategoryName = categoryName.trim();
     if (trimmedCategoryName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.");
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ODSTRÁNENÉ: setUserNotificationMessage('');
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -634,6 +435,10 @@ function AddCategoriesApp() {
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
         setError(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
+        // Použijeme globálnu notifikáciu pre chyby
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
+        }
         setLoading(false);
         return;
       }
@@ -647,7 +452,10 @@ function AddCategoriesApp() {
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
-      setUserNotificationMessage("Kategória úspešne pridaná!");
+      // Použijeme globálnu notifikáciu pre úspech
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Kategória úspešne pridaná!");
+      }
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -657,6 +465,10 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       setError(`Chyba pri pridávaní kategórie: ${e.message}`);
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri pridávaní kategórie: ${e.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -666,17 +478,25 @@ function AddCategoriesApp() {
   const handleEditCategorySubmit = async (categoryId, newName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na úpravu kategórie.");
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Nemáte oprávnenie na úpravu kategórie.");
+      }
       return;
     }
     const trimmedNewName = newName.trim();
     if (trimmedNewName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.");
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ODSTRÁNENÉ: setUserNotificationMessage('');
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -690,6 +510,10 @@ function AddCategoriesApp() {
       // categoryId je tu náhodné ID, newName je nová hodnota
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
         setError(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
+        // Použijeme globálnu notifikáciu pre chyby
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
+        }
         setLoading(false);
         return;
       }
@@ -702,7 +526,10 @@ function AddCategoriesApp() {
         [categoryId]: trimmedNewName
       });
 
-      setUserNotificationMessage("Kategória úspešne aktualizovaná!");
+      // Použijeme globálnu notifikáciu pre úspech
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Kategória úspešne aktualizovaná!");
+      }
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
 
@@ -713,6 +540,10 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
       setError(`Chyba pri aktualizácii kategórie: ${e.message}`);
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri aktualizácii kategórie: ${e.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -728,12 +559,16 @@ function AddCategoriesApp() {
   const handleDeleteCategory = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
       setError("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage('');
+    // ODSTRÁNENÉ: setUserNotificationMessage('');
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
@@ -745,7 +580,10 @@ function AddCategoriesApp() {
         [categoryToDelete.id]: firebase.firestore.FieldValue.delete()
       });
 
-      setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
+      // Použijeme globálnu notifikáciu pre úspech
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
+      }
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -755,30 +593,36 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
       setError(`Chyba pri mazaní kategórie: ${e.message}`);
+      // Použijeme globálnu notifikáciu pre chyby
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri mazaní kategórie: ${e.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
-        console.log("AddCategoriesApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return null;
-    }
+  // Zobraz loading, ak user nie je prihlásený, alebo ak sú dáta profilu ešte načítavané
+  if (!user || loading) {
+    // Ak user nie je prihlásený, presmerovanie už by mal spraviť GlobalNotificationHandler.
+    // Tu len zabezpečíme zobrazenie loading správy.
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
-    } else if (loading) {
-        loadingMessage = 'Načítavam...';
-    }
-
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
     );
+  }
+
+  // Ak sa dostaneme sem, user je prihlásený a userProfileData by mali byť načítané.
+  // Ak userProfileData stále chýbajú, je to chyba, ktorú by mal ošetriť error state.
+  if (!userProfileData) {
+      return React.createElement(
+        'div',
+        { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+        React.createElement('div', { className: 'text-xl font-semibold text-red-700' }, error || 'Chyba pri načítaní profilových dát.')
+      );
   }
 
   // If user is not admin, redirect
@@ -791,30 +635,33 @@ function AddCategoriesApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    React.createElement(NotificationModal, {
-        message: userNotificationMessage,
-        onClose: () => setUserNotificationMessage(''),
-        type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
-    }),
+    // ODSTRÁNENÉ: Vykreslenie NotificationModal - teraz spravuje header.js
+    // React.createElement(NotificationModal, {
+    //     message: userNotificationMessage,
+    //     onClose: () => setUserNotificationMessage(''),
+    //     type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
+    // }),
     React.createElement(AddCategoryModal, {
         show: showAddCategoryModal,
-        onClose: () => setUserNotificationMessage('') || setShowAddCategoryModal(false), // ZMENA: Pridané vyčistenie notifikácie
+        onClose: () => setShowAddCategoryModal(false), // ZMENA: Odstránené vyčistenie notifikácie, to spraví GNH
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
         error: error,
-        notificationMessage: userNotificationMessage,
-        setNotificationMessage: setUserNotificationMessage, // Pre odovzdanie funkcie na reset notifikácie
+        // ODSTRÁNENÉ: notificationMessage a setNotificationMessage - teraz spravuje GNH
+        // notificationMessage: userNotificationMessage,
+        // setNotificationMessage: setUserNotificationMessage, 
         existingCategories: categories // NOVINKA: Odovzdávame existujúce kategórie
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
-        onClose: () => { setUserNotificationMessage(''); setShowEditCategoryModal(false); setCategoryToEdit(null); }, // ZMENA: Pridané vyčistenie notifikácie
+        onClose: () => { setShowEditCategoryModal(false); setCategoryToEdit(null); }, // ZMENA: Odstránené vyčistenie notifikácie, to spraví GNH
         onSaveCategory: handleEditCategorySubmit,
         loading: loading,
         category: categoryToEdit,
         error: error,
-        notificationMessage: userNotificationMessage,
-        setNotificationMessage: setUserNotificationMessage // Pre odovzdanie funkcie na reset notifikácie
+        // ODSTRÁNENÉ: notificationMessage a setNotificationMessage - teraz spravuje GNH
+        // notificationMessage: userNotificationMessage,
+        // setNotificationMessage: setUserNotificationMessage 
     }),
     React.createElement(ConfirmationModal, { // NOVINKA: ConfirmationModal
         show: showConfirmDeleteModal,
