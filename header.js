@@ -619,10 +619,15 @@ function GlobalNotificationHandler() {
     // 1. Používateľ NIE JE prihlásený (user === null)
     // 2. Existujú kategórie (categoriesExist je true)
     // 3. A (je pred začiatkom registrácie ALEBO je v období registrácie)
-    if (user === null && categoriesExist && (isBeforeRegistration || isRegistrationPeriod)) {
-      registerLink.classList.remove('hidden');
-      console.log("GNH: 'Registrácia na turnaj' je zobrazená.");
-    } else {
+    // NOVINKA: Pridaná podmienka, že sa odkaz nezobrazí, ak je aktuálny čas skorší ako dátum začiatku registrácie.
+    if (user === null && categoriesExist && isRegistrationPeriod) {
+        registerLink.classList.remove('hidden');
+        console.log("GNH: 'Registrácia na turnaj' je zobrazená.");
+    } else if (user === null && categoriesExist && isBeforeRegistration) {
+        registerLink.classList.add('hidden');
+        console.log("GNH: 'Registrácia na turnaj' je skrytá, pretože registrácia ešte nezačala.");
+    }
+    else {
       registerLink.classList.add('hidden');
       console.log("GNH: 'Registrácia na turnaj' je skrytá.");
     }
