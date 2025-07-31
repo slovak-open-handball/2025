@@ -132,7 +132,7 @@ function MyDataApp() {
       userProfileData.billing.zipCode,
       userProfileData.billing.country
     ) : null;
-
+    
     // Renderujeme dáta, ak sú k dispozícii
     return React.createElement(
       'div',
@@ -220,7 +220,7 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
             ` ${userProfileData.billing.clubName}`
           ),
-          // Presunutie fakturačnej adresy sem
+          // Presunutie fakturačnej adresy sem a kontrola, či adresa nie je prázdna
           billingAddress && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
