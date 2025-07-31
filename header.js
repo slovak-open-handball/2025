@@ -31,10 +31,6 @@ if (window.self !== window.top) {
     throw new Error('Page cannot be displayed in an iframe.');
 }
 
-// Global application ID and Firebase configuration
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-
 // Komponenty pre notifikácie a modálne okná
 function TopRightNotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [isVisible, setIsVisible] = React.useState(!!message);
