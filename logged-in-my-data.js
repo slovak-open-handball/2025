@@ -65,17 +65,24 @@ function MyDataApp() {
 
   }, [db, auth]); // Spustí sa, keď sa zmenia db alebo auth inštancie
 
-  // Nový effect, ktorý sa spustí, keď je globálna autentifikácia pripravená
+  // Nový effect, ktorý sa spustí, keď sa zmení globálna premenná globalUserProfileData
   React.useEffect(() => {
-    if (window.isGlobalAuthReady) {
-      console.log("MyDataApp: Globálny stav autentifikácie sa zmenil.");
-      // Pri zmene globálneho stavu vynútime aktualizáciu komponentu
-      // Použijeme fiktívny stav na vynútenie re-renderu
-      // Alternatívne by sa dal použiť aj useReducer, ale pre jednoduchosť stačí toto
-      setUserProfileData(window.globalUserProfileData);
-      setLoading(!window.globalUserProfileData);
+    // Sledujeme zmeny v globálnej premennej a aktualizujeme stav komponentu
+    if (window.globalUserProfileData) {
+        console.log("MyDataApp: Globálne dáta používateľa boli aktualizované.");
+        setUserProfileData(window.globalUserProfileData);
+        setLoading(false);
+    } else {
+        // Ak sú dáta null, znamená to, že buď ešte nie sú načítané, alebo používateľ nie je prihlásený.
+        // Ponecháme loading, ak je isGlobalAuthReady false, inak ho vypneme.
+        if (window.isGlobalAuthReady) {
+            setLoading(false);
+            setUserProfileData(null);
+        } else {
+            setLoading(true);
+        }
     }
-  }, [window.isGlobalAuthReady, window.globalUserProfileData]);
+  }, [window.globalUserProfileData, window.isGlobalAuthReady]);
 
 
   // Funkcia, ktorá renderuje buď loading obrazovku, error, alebo dáta
