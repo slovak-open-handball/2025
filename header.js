@@ -1,9 +1,11 @@
-// header.js
 // Ochrana proti zobrazeniu stránky v iframe
+// Tento kód zabráni načítaniu obsahu stránky v iframe a namiesto toho zobrazí chybovú správu.
 if (window.self !== window.top) {
-    document.body.innerHTML = '';
-    document.body.style.margin = '0';
-    document.body.style.overflow = 'hidden';
+    // Ak je stránka načítaná v iframe, zabránime jej zobrazeniu
+    document.body.innerHTML = ''; // Vymaže všetok existujúci obsah tela
+    document.body.style.margin = '0'; // Odstráni okraje tela
+    document.body.style.overflow = 'hidden'; // Zabraňuje posúvaniu
+
     const errorMessageDiv = document.createElement('div');
     errorMessageDiv.textContent = 'Túto webovú stránku nie je možné zobraziť.';
     errorMessageDiv.style.cssText = `
@@ -21,244 +23,165 @@ if (window.self !== window.top) {
         font-weight: bold;
         text-align: center;
         z-index: 9999;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', sans-serif; /* Používame font Inter pre konzistenciu */
     `;
     document.body.appendChild(errorMessageDiv);
+
+    // Zastavíme načítanie ďalších skriptov a obsahu, ak je to možné
     throw new Error('Page cannot be displayed in an iframe.');
 }
 
-// Dôležité: Všetky globálne premenné a funkcie sú teraz definované v `authentication.js`
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
+// Global application ID and Firebase configuration
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 
-// Komponent pre notifikácie v pravom hornom rohu
+// Komponenty pre notifikácie a modálne okná
 function TopRightNotificationModal({ message, onClose, displayNotificationsEnabled }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
+  const [isVisible, setIsVisible] = React.useState(!!message);
 
   React.useEffect(() => {
-    console.log("TopRightNotificationModal (header.js): useEffect triggered. Message:", message, "Display Enabled:", displayNotificationsEnabled); 
-    if (message && displayNotificationsEnabled) {
-      console.log("TopRightNotificationModal (header.js): Showing notification because message and display are enabled."); 
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        console.log("TopRightNotificationModal (header.js): Hiding notification after timeout."); 
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
+    let timer;
+    if (message) {
+      setIsVisible(true);
+      timer = setTimeout(() => {
+        setIsVisible(false);
+        onClose();
+      }, 5000); // Zobrazí sa na 5 sekúnd
     } else {
-      console.log("TopRightNotificationModal (header.js): Hiding notification (either no message or display is disabled)."); 
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      setIsVisible(false);
     }
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose, displayNotificationsEnabled]);
+    return () => clearTimeout(timer);
+  }, [message, onClose]);
 
-  console.log("TopRightNotificationModal (header.js): render. Current show state:", show, "Message:", message, "Display Enabled:", displayNotificationsEnabled); 
-
-  if ((!show && !message) || !displayNotificationsEnabled) {
-    console.log("TopRightNotificationModal (header.js): Returning null (not rendering the UI)."); 
+  if (!displayNotificationsEnabled || !isVisible) {
     return null;
   }
+
   return React.createElement(
     'div',
     {
-      className: `fixed top-4 right-4 z-50 flex justify-end p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-x-0' : 'translate-x-full'
-      }`,
-      style: { pointerEvents: 'none', maxWidth: 'calc(100% - 32px)' }
+      className: `fixed top-2 right-2 z-[100] flex justify-end p-4 transition-transform duration-500 ease-out ${
+        isVisible ? 'translate-x-0' : 'translate-x-full'
+      }`
     },
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-xs w-full text-center',
-        style: { pointerEvents: 'auto' }
+        className: 'bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg max-w-sm w-full text-center'
       },
       React.createElement('p', { className: 'font-semibold' }, message)
     )
   );
 }
 
-// Komponent pre potvrdzovacie modálne okná v strede obrazovky
-function CenterConfirmationModal({ message, onClose }) {
-  // ... existujúci kód CenterConfirmationModal ...
-  const [show, setShow] = React.useState(false);
-  const handleClose = () => {
-      setShow(false);
-      onClose(); // Call the parent's onClose handler
-  };
+
+function CenterConfirmationModal({ message, onClose, onConfirm }) {
+  const [isVisible, setIsVisible] = React.useState(!!message);
 
   React.useEffect(() => {
-      if (message) {
-          setShow(true);
-      } else {
-          setShow(false);
-      }
+    setIsVisible(!!message);
   }, [message]);
 
-  if (!show) {
-      return null;
+  if (!isVisible) {
+    return null;
   }
 
   return React.createElement(
+    'div',
+    {
+      className: `fixed inset-0 z-[100] flex items-center justify-center p-4 transition-transform duration-500 ease-out`,
+      style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' }
+    },
+    React.createElement(
       'div',
-      { className: 'modal' },
-      React.createElement(
-          'div',
-          { className: 'modal-content' },
-          React.createElement('p', { className: 'text-xl font-bold' }, message),
-          React.createElement(
-              'button',
-              {
-                  onClick: handleClose,
-                  className: 'mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200'
-              },
-              'Zatvoriť'
-          )
+      { className: 'bg-white text-gray-800 px-6 py-4 rounded-lg shadow-xl max-w-sm w-full text-center' },
+      React.createElement('p', { className: 'font-semibold mb-4' }, message),
+      React.createElement('div', { className: 'flex justify-around' },
+        React.createElement('button', {
+          onClick: onConfirm,
+          className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+        }, 'Áno'),
+        React.createElement('button', {
+          onClick: onClose,
+          className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+        }, 'Zrušiť')
       )
+    )
   );
 }
 
-// Hlavný komponent, ktorý spravuje stav a notifikácie
+
+// Hlavný globálny komponent, ktorý sa bude renderovať do hlavičky
 function GlobalHeaderAndNotifications() {
-    const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady);
-    const [user, setUser] = React.useState(window.globalUserProfileData);
-    const [currentTopRightMessage, setCurrentTopRightMessage] = React.useState('');
-    const [currentCenterMessage, setCurrentCenterMessage] = React.useState('');
-    const [displayTopRightNotificationsEnabled, setDisplayTopRightNotificationsEnabled] = React.useState(true);
+  const [currentTopRightMessage, setCurrentTopRightMessage] = React.useState('');
+  const [currentCenterMessage, setCurrentCenterMessage] = React.useState('');
+  const [displayTopRightNotificationsEnabled, setDisplayTopRightNotificationsEnabled] = React.useState(false);
 
-    const checkAndShowLinks = React.useCallback((currentUser) => {
-        const registerLink = document.getElementById('register-link');
-        const profileLink = document.getElementById('profile-link');
-        const authLink = document.getElementById('auth-link');
-        const logoutButton = document.getElementById('logout-button');
-        const adminLinks = document.querySelectorAll('.admin-link');
 
-        if (registerLink) { registerLink.classList.remove('hidden'); }
-        if (currentUser) {
-            if (profileLink) { profileLink.classList.remove('hidden'); }
-            if (authLink) { authLink.classList.add('hidden'); }
-            if (logoutButton) { logoutButton.classList.remove('hidden'); }
-            // Skryť registračné tlačidlo, ak je používateľ prihlásený, ak je to potrebné
-            if (registerLink) { registerLink.classList.add('hidden'); }
-
-            // Zobraziť admin linky len pre adminov
-            adminLinks.forEach(link => {
-                if (currentUser.role === 'admin') {
-                    link.classList.remove('hidden');
-                } else {
-                    link.classList.add('hidden');
-                }
-            });
-        } else {
-            if (profileLink) { profileLink.classList.add('hidden'); }
-            if (authLink) { authLink.classList.remove('hidden'); }
-            if (logoutButton) { logoutButton.classList.add('hidden'); }
-            adminLinks.forEach(link => link.classList.add('hidden'));
+  // Funkcia na odhlásenie používateľa
+  const handleLogout = React.useCallback(async () => {
+    if (window.auth) {
+      try {
+        await window.auth.signOut();
+        console.log("Header: Používateľ bol úspešne odhlásený.");
+        // Presmerovanie na login.html je teraz spracované v authentication.js cez onAuthStateChanged
+      } catch (error) {
+        console.error("Header: Chyba pri odhlásení:", error);
+        // showGlobalNotification je definované v authentication.js a dostupné globálne
+        if (window.showGlobalNotification) {
+            window.showGlobalNotification(`Chyba pri odhlásení: ${error.message}`, 'error');
         }
-    }, []);
+      }
+    } else {
+      console.error("Header: Inštancia Firebase Auth nie je k dispozícii.");
+    }
+  }, []);
 
-    const handleLogout = React.useCallback(async () => {
-        if (!window.auth) {
-            console.error("Firebase Auth nie je inicializovaný.");
-            return;
-        }
-        try {
-            await firebase.signOut(window.auth);
-            console.log("Používateľ bol úspešne odhlásený.");
-            window.location.href = 'index.html';
-        } catch (error) {
-            console.error("Chyba pri odhlasovaní:", error);
-        }
-    }, []);
+  React.useEffect(() => {
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+      logoutButton.addEventListener('click', handleLogout);
+    }
+    return () => {
+      if (logoutButton) {
+        logoutButton.removeEventListener('click', handleLogout);
+      }
+    };
+  }, [handleLogout]);
 
-    React.useEffect(() => {
-        // Zabezpečíme, že globálny listener je nastavený iba raz v authentication.js
-        const handleAuthChange = (user) => {
-            console.log("GlobalHeaderAndNotifications: Prijal som zmenu stavu autentifikácie.");
-            setUser(window.globalUserProfileData);
-            setIsAuthReady(window.isGlobalAuthReady);
-            checkAndShowLinks(window.globalUserProfileData);
-        };
-        // Keďže `onAuthStateChanged` je spustený v `authentication.js`,
-        // tento komponent už len reaguje na zmeny globálnych premenných.
-        const interval = setInterval(() => {
-            if (window.isGlobalAuthReady) {
-                // Toto zabezpečí, že sa komponent aktualizuje, keď sa zmenia globálne premenné.
-                setUser(window.globalUserProfileData);
-                setIsAuthReady(true);
-                checkAndShowLinks(window.globalUserProfileData);
-                clearInterval(interval);
-            }
-        }, 100);
-
-        // Nastavíme globálne funkcie pre notifikácie
-        // Toto prepíše placeholder funkciu a nastaví skutočný handler
-        window.showTopRightNotification = (message) => {
-            setCurrentTopRightMessage(message);
-        };
-        window.showCenterConfirmation = (message) => {
-            setCurrentCenterMessage(message);
-        };
-
-        const logoutButton = document.getElementById('logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', handleLogout);
-        }
-
-        return () => {
-            if (logoutButton) {
-                logoutButton.removeEventListener('click', handleLogout);
-            }
-        };
-    }, [checkAndShowLinks, handleLogout]);
-
-    React.useEffect(() => {
-        checkAndShowLinks(user);
-    }, [user, checkAndShowLinks]);
-
-    return React.createElement(
-        React.Fragment,
-        null,
-        React.createElement(TopRightNotificationModal, {
-            message: currentTopRightMessage,
-            onClose: () => setCurrentTopRightMessage(''),
-            displayNotificationsEnabled: displayTopRightNotificationsEnabled
-        }),
-        React.createElement(CenterConfirmationModal, {
-            message: currentCenterMessage,
-            onClose: () => setCurrentCenterMessage('')
-        })
-    );
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(TopRightNotificationModal, {
+      message: currentTopRightMessage,
+      onClose: () => setCurrentTopRightMessage(''),
+      displayNotificationsEnabled: displayTopRightNotificationsEnabled
+    }),
+    React.createElement(CenterConfirmationModal, {
+      message: currentCenterMessage,
+      onClose: () => setCurrentCenterMessage('')
+    })
+  );
 }
 
 // Render GlobalHeaderAndNotifications do špecifického DOM elementu
 let headerRoot = document.getElementById('header-notification-root');
 if (!headerRoot) {
-    headerRoot = document.createElement('div');
-    headerRoot.id = 'header-notification-root';
-    document.body.appendChild(headerRoot);
-    console.log("Header: Vytvoril som a pridal 'header-notification-root' div do tela dokumentu.");
+  headerRoot = document.createElement('div');
+  headerRoot.id = 'header-notification-root';
+  document.body.appendChild(headerRoot);
+  console.log("Header: Vytvoril som a pridal 'header-notification-root' div do tela dokumentu.");
 } else {
-    console.log("Header: 'header-notification-root' div už existuje.");
+  console.log("Header: 'header-notification-root' div už existuje.");
 }
 
-// === ZMENA: Používame createRoot pre React 18 ===
 try {
-    const root = ReactDOM.createRoot(headerRoot);
-    root.render(
-        React.createElement(GlobalHeaderAndNotifications)
-    );
-    console.log("Header: GlobalHeaderAndNotifications úspešne vykreslený pomocou createRoot.");
+  // Používame createRoot pre React 18
+  const root = ReactDOM.createRoot(headerRoot);
+  root.render(
+    React.createElement(GlobalHeaderAndNotifications)
+  );
+  console.log("Header: GlobalHeaderAndNotifications úspešne vykreslený pomocou createRoot.");
 } catch (e) {
-    console.error("Header: Chyba pri vykresľovaní GlobalHeaderAndNotifications:", e);
+  console.error("Header: Chyba pri vykresľovaní GlobalHeaderAndNotifications:", e);
 }
