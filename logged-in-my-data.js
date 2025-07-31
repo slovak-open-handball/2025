@@ -190,18 +190,19 @@ function MyDataApp() {
             { className: 'text-2xl font-semibold text-gray-800' },
             'Fakturačné údaje'
           ),
+          // Zobrazenie názvu klubu na prvom mieste
+          userProfileData.billing && userProfileData.billing.clubName && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
+            ` ${userProfileData.billing.clubName}`
+          ),
           // Fakturačná adresa sa teraz berie z top-level polí, ale zobrazuje sa v tomto bloku
           billingAddress && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
             ` ${billingAddress}`
-          ),
-          userProfileData.billing && userProfileData.billing.clubName && React.createElement(
-            'p',
-            { className: 'text-gray-800 text-lg' },
-            React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
-            ` ${userProfileData.billing.clubName}`
           ),
           userProfileData.billing && userProfileData.billing.ico && React.createElement(
             'p',
