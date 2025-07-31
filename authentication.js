@@ -45,10 +45,18 @@ if (window.self !== window.top) {
 
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// Inicializácia Firebase
+// Funkcia pre inicializáciu Firebase
 const initFirebase = async () => {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const firebaseConfig = JSON.parse(firebaseConfigString);
+
+        // Kľúčová kontrola pred inicializáciou!
+        if (!firebaseConfig.projectId) {
+            console.error("AuthManager: 'projectId' nie je poskytnuté v __firebase_config. Inicializácia Firebase zlyhala.");
+            return null;
+        }
+
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
         window.auth = getAuth(app);
@@ -61,8 +69,10 @@ const initFirebase = async () => {
         }
 
         console.log("AuthManager: Firebase inicializované.");
+        return app;
     } catch (e) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
+        return null;
     }
 };
 
@@ -104,54 +114,62 @@ const dispatchGlobalStateChanged = () => {
 // Dôležité: Vykonáva sa raz po načítaní DOM
 window.addEventListener('DOMContentLoaded', async () => {
     // Inicilaizácia Firebase
-    await initFirebase();
-    
-    // Listener pre zmeny stavu autentifikácie
-    onAuthStateChanged(window.auth, (user) => {
-        window.isGlobalAuthReady = true;
-        if (user) {
-            console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
-            const userDocRef = doc(window.db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-            
-            // onSnapshot pre real-time aktualizácie profilu
-            const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    window.globalUserProfileData = { id: docSnap.id, ...docSnap.data(), isLoggedIn: true };
-                    console.log("AuthManager: Načítaný profil používateľa:", window.globalUserProfileData);
-                } else {
-                    window.globalUserProfileData = { isLoggedIn: true, id: user.uid }; // Anonymný používateľ alebo bez profilu
-                    console.log("AuthManager: Žiadny profil používateľa nenájdený, nastavený anonymný profil.");
-                }
+    const firebaseApp = await initFirebase();
+
+    // Nastavíme listener len ak sa Firebase úspešne inicializovalo
+    if (firebaseApp) {
+        onAuthStateChanged(window.auth, (user) => {
+            window.isGlobalAuthReady = true;
+            if (user) {
+                console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
+                const userDocRef = doc(window.db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                
+                // onSnapshot pre real-time aktualizácie profilu
+                const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        window.globalUserProfileData = { id: docSnap.id, ...docSnap.data(), isLoggedIn: true };
+                        console.log("AuthManager: Načítaný profil používateľa:", window.globalUserProfileData);
+                    } else {
+                        window.globalUserProfileData = { isLoggedIn: true, id: user.uid }; // Anonymný používateľ alebo bez profilu
+                        console.log("AuthManager: Žiadny profil používateľa nenájdený, nastavený anonymný profil.");
+                    }
+                    
+                    // Upozorníme ostatné skripty na zmenu stavu
+                    dispatchGlobalStateChanged();
+                    
+                    // Kontrola autorizácie stránky po načítaní profilu
+                    if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
+                        console.warn("AuthManager: Používateľ nemá oprávnenie pre túto stránku. Presmerovanie na domovskú stránku.");
+                        window.location.href = 'index.html';
+                    }
+                }, (error) => {
+                    console.error("AuthManager: Chyba pri načítaní profilu:", error);
+                    window.globalUserProfileData = { isLoggedIn: true }; // Pokusíme sa aspoň nastaviť, že je prihlásený
+                    dispatchGlobalStateChanged();
+                });
+
+                // Čistenie pri odhlásení
+                return () => unsubscribe();
+            } else {
+                console.log("AuthManager: Používateľ odhlásený.");
+                window.globalUserProfileData = null;
                 
                 // Upozorníme ostatné skripty na zmenu stavu
                 dispatchGlobalStateChanged();
                 
-                // Kontrola autorizácie stránky po načítaní profilu
+                // Kontrola autorizácie stránky po odhlásení
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    console.warn("AuthManager: Používateľ nemá oprávnenie pre túto stránku. Presmerovanie na domovskú stránku.");
                     window.location.href = 'index.html';
                 }
-            }, (error) => {
-                console.error("AuthManager: Chyba pri načítaní profilu:", error);
-                window.globalUserProfileData = { isLoggedIn: true }; // Pokusíme sa aspoň nastaviť, že je prihlásený
-                dispatchGlobalStateChanged();
-            });
-
-            // Čistenie pri odhlásení
-            return () => unsubscribe();
-        } else {
-            console.log("AuthManager: Používateľ odhlásený.");
-            window.globalUserProfileData = null;
-            
-            // Upozorníme ostatné skripty na zmenu stavu
-            dispatchGlobalStateChanged();
-            
-            // Kontrola autorizácie stránky po odhlásení
-            if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                window.location.href = 'index.html';
             }
-        }
-    });
+        });
 
-    console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
+        console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
+    } else {
+        // Ak sa Firebase nenačítalo, nastavíme globálny stav na ready
+        // a odosleeme udalosť, aby sa UI aktualizovalo (napr. zostane zobrazený len odkaz na prihlásenie)
+        window.isGlobalAuthReady = true;
+        dispatchGlobalStateChanged();
+        console.error("AuthManager: Listener pre zmeny stavu autentifikácie nebol nastavený kvôli chybe inicializácie Firebase.");
+    }
 });
