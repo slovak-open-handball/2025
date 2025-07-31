@@ -1,4 +1,9 @@
-function NotificationModal({ message, onClose }) {
+// logged-in-notifications.js
+// Tento súbor obsahuje React komponent pre správu notifikácií prihláseného používateľa.
+// Predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-notifications.html.
+
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -18,10 +23,25 @@ function NotificationModal({ message, onClose }) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
   }, [message, onClose]);
 
   if (!show && !message) return null;
+
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-[#3A8D41]'; // Green
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Red
+  } else {
+    bgColorClass = 'bg-blue-500'; // Default blue for info
+  }
 
   return React.createElement(
     'div',
@@ -34,7 +54,7 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -42,7 +62,7 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// NOVÝ KOMPONENT: ConfirmationModal pre potvrdzovanie akcií
+// NEW COMPONENT: ConfirmationModal for action confirmation
 function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCheckbox, checkboxLabel, onCheckboxChange, checkboxChecked }) {
   if (!show) return null;
 
@@ -94,282 +114,187 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading, showCh
 
 // Main React component for the logged-in-notifications.html page
 function NotificationsApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  // NEW: Get references to Firebase services directly
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NEW: Local state for the current user and their profile data
+  // These states will be updated by the local onAuthStateChanged and onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Loading for data in NotificationsApp
   const [error, setError] = React.useState('');
+  // Retained: userNotificationMessage for local notifications
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [notifications, setNotifications] = React.useState([]);
-  const [allAdminUids, setAllAdminUids] = React.useState([]); // Nový stav pre ukladanie UID všetkých administrátorov
+  const [allAdminUids, setAllAdminUids] = React.useState([]); // New state for storing UIDs of all administrators
 
-  // NOVÉ STAVY PRE MODÁLNE OKNO VYMAZANIA VŠETKÝCH UPOZORNENÍ
+  // NEW STATES FOR DELETE ALL NOTIFICATIONS MODAL
   const [showDeleteAllConfirmationModal, setShowDeleteAllConfirmationModal] = React.useState(false);
   const [deleteUnreadToo, setDeleteUnreadToo] = React.useState(false);
 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NEW: Local Auth Listener for NotificationsApp
+  // This listener ensures that NotificationsApp reacts to authentication changes,
+  // but primary logout/redirection is handled by GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("NotificationsApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-notifications.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("NotificationsApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // If user is not logged in, redirect (even if GNH should handle it)
+      if (!currentUser) {
+        console.log("NotificationsApp: User is not logged in, redirecting to login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Depends on auth instance
 
-      let firebaseApp;
-      // Skontrolujte, či už existuje predvolená aplikácia Firebase
-      if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
-      } else {
-        // Ak už predvolená aplikácia existuje, použite ju
-        firebaseApp = firebase.app();
-        console.warn("NotificationsApp: Firebase App named '[DEFAULT]' already exists. Using existing app instance.");
-      }
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          // Používame globálne __initial_auth_token
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
-          }
-        } catch (e) {
-          console.error("NotificationsApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("NotificationsApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("NotificationsApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // NEW: Local Effect for loading user data from Firestore
+  // This effect will run when the user is logged in and db is available.
+  // It assumes that passwordLastChanged and approved status are already verified in header.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
-        console.log("NotificationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Only runs if user is logged in and db is available
+      console.log(`NotificationsApp: Attempting to load user document for UID: ${user.uid}`);
+      setLoading(true); // Set loading to true while profile data is being loaded
 
-      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
-      if (user) {
-        console.log(`NotificationsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true); // Nastavíme loading na true tu
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          console.log("NotificationsApp: onSnapshot for user document triggered.");
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("NotificationsApp: User document exists, data:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("NotificationsApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("NotificationsApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("NotificationsApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("NotificationsApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`NotificationsApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("NotificationsApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("NotificationsApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("NotificationsApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("NotificationsApp: Timestampy sú rovnaké, aktualizujem localStorage.");
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("NotificationsApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData);
-              
-              setLoading(false); // Stop loading po načítaní používateľských dát
-              setError(''); // Vymazať chyby po úspešnom načítaní
-
-              // NOVINKA: Aktualizácia viditeľnosti menu po načítaní roly
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("NotificationsApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("NotificationsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
+            // This is added logic that runs immediately after data is loaded.
+            // If passwordLastChanged is invalid or missing, log out.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("NotificationsApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
+                console.log("NotificationsApp: Immediately logging out user due to invalid password change timestamp.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
             }
-          }, error => {
-            console.error("NotificationsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
+
+            // Normal processing if passwordLastChanged is valid
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`NotificationsApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("NotificationsApp: Initializing passwordLastChanged in localStorage (first load).");
+                // Do not continue here, continue with normal data processing for first load
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                // Password was changed on another device/session
+                console.log("NotificationsApp: Password change detected on another device/session. Logging out user.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                // This ideally should not happen if Firestore is the source of truth
+                console.warn("NotificationsApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`); // Používame e.message pre konzistentnosť
+                // Times are the same, ensure localStorage is up-to-date
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("NotificationsApp: Timestamps are the same, updating localStorage.");
             }
-            setLoading(false); // Stop loading aj pri chybe
-            console.log("NotificationsApp: Načítanie používateľských dát zlyhalo, loading: false");
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("NotificationsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // Stop loading aj pri chybe
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
+
+            // NEW LOGIC: Logout if user is admin and not approved
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("NotificationsApp: User is admin and not approved. Logging out.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
+            }
+
+            setUserProfileData(userData); // Update userProfileData state
+            
+            setLoading(false); // Stop loading after user data is loaded
+            setError(''); // Clear errors after successful load
+
+            // Update menu visibility after role is loaded (call global function from left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("NotificationsApp: Function updateMenuItemsVisibility is not defined.");
+            }
+
+            console.log("NotificationsApp: User data loading complete, loading: false");
+          } else {
+            console.warn("NotificationsApp: User document not found for UID:", user.uid);
+            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
+            setLoading(false); // Stop loading so error can be displayed
+            setUser(null); // Explicitly set user to null
+            setUserProfileData(null); // Explicitly set userProfileData to null
+          }
+        }, error => {
+          console.error("NotificationsApp: Error loading user data from Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Authentication error: You are not logged in. Please try logging in again.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitly set user to null
+                  setUserProfileData(null); // Explicitly set userProfileData to null
+               }
+          } else {
+              setError(`Error loading user data: ${error.message}`);
+          }
+          setLoading(false); // Stop loading even on error
+          console.log("NotificationsApp: User data loading failed, loading: false");
+          setUser(null); // Explicitly set user to null
+          setUserProfileData(null); // Explicitly set userProfileData to null
+        });
+      } catch (e) {
+        console.error("NotificationsApp: Error setting up onSnapshot for user data (try-catch):", e);
+        setError(`Error setting up listener for user data: ${e.message}`);
+        setLoading(false); // Stop loading even on error
+        setUser(null); // Explicitly set user to null
+        setUserProfileData(null); // Explicitly set userProfileData to null
       }
-    } else if (isAuthReady && user === undefined) {
-        console.log("NotificationsApp: Auth ready, user undefined. Nastavujem loading na false.");
+    } else if (user === null) {
+        // If user is null (and not undefined), it means they have been logged out.
+        // Redirection should already be handled by GlobalNotificationHandler.
+        // Here, we just ensure loading is false and data is cleared.
         setLoading(false);
+        setUserProfileData(null);
     }
 
-
     return () => {
-      // Zrušíme odber onSnapshot pri unmount
+      // Unsubscribe from onSnapshot on unmount
       if (unsubscribeUserDoc) {
-        console.log("NotificationsApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("NotificationsApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
-
-  // Effect for updating header link visibility (remains for consistency)
-  React.useEffect(() => {
-    console.log(`NotificationsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) { // Ak je používateľ prihlásený
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("NotificationsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else { // Ak používateľ nie je prihlásený
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); // Zobraziť registračný odkaz, ak nie je prihlásený
-        console.log("NotificationsApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("NotificationsApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
+  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
 
   // Effect for fetching all admin Uids
   React.useEffect(() => {
@@ -385,12 +310,12 @@ function NotificationsApp() {
               adminUids.push(doc.id);
             });
             setAllAdminUids(adminUids);
-            console.log("NotificationsApp: Zoznam schválených administrátorov aktualizovaný:", adminUids);
+            console.log("NotificationsApp: List of approved administrators updated:", adminUids);
           }, error => {
-            console.error("NotificationsApp: Chyba pri načítaní zoznamu administrátorov:", error);
+            console.error("NotificationsApp: Error loading list of administrators:", error);
           });
       } catch (e) {
-        console.error("NotificationsApp: Chyba pri nastavovaní poslucháča pre administrátorov:", e);
+        console.error("NotificationsApp: Error setting up listener for administrators:", e);
       }
     }
     return () => {
@@ -405,75 +330,74 @@ function NotificationsApp() {
   React.useEffect(() => {
     let unsubscribeNotifications;
 
-    // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-    const appId = 'default-app-id'; 
+    // Use fixed 'default-app-id' for notification path
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
     if (db && userProfileData && userProfileData.role === 'admin' && userProfileData.approved === true && user && allAdminUids.length > 0) {
-      console.log("NotificationsApp: Prihlásený používateľ je schválený administrátor. Načítavam notifikácie.");
+      console.log("NotificationsApp: Logged-in user is an approved administrator. Loading notifications.");
       setLoading(true);
       try {
-        // Načítanie notifikácií pre tohto admina, alebo pre 'all_admins', zoradené podľa timestampu (najnovšie prvé)
+        // Load notifications for this admin, or for 'all_admins', sorted by timestamp (newest first)
         unsubscribeNotifications = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications')
-          .where('recipientId', 'in', [user.uid, 'all_admins']) // Filtrovať podľa ID aktuálneho admina ALEBO 'all_admins'
+          .where('recipientId', 'in', [user.uid, 'all_admins']) // Filter by current admin's ID OR 'all_admins'
           .onSnapshot(snapshot => {
             const fetchedNotifications = [];
             snapshot.forEach(doc => {
               const data = doc.data();
-              // Zobrazíme notifikáciu len vtedy, ak nie je označená ako zmazaná pre aktuálneho používateľa
+              // Display notification only if it's not marked as deleted for the current user
               const isDeletedForCurrentUser = data.deletedFor && data.deletedFor.includes(user.uid);
               if (!isDeletedForCurrentUser) {
                 fetchedNotifications.push({
                   id: doc.id,
                   ...data,
-                  timestamp: data.timestamp ? data.timestamp.toDate() : null // Konvertovať Timestamp na Date objekt
+                  timestamp: data.timestamp ? data.timestamp.toDate() : null // Convert Timestamp to Date object
                 });
               }
             });
-            // Zoradiť notifikácie od najnovších po najstaršie
+            // Sort notifications from newest to oldest
             fetchedNotifications.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
             setNotifications(fetchedNotifications);
             setLoading(false);
             setError('');
-            console.log("NotificationsApp: Notifikácie aktualizované z onSnapshot.");
+            console.log("NotificationsApp: Notifications updated from onSnapshot.");
           }, error => {
-            console.error("NotificationsApp: Chyba pri načítaní notifikácií z Firestore (onSnapshot error):", error);
-            setError(`Chyba pri načítaní notifikácií: ${error.message}`);
+            console.error("NotificationsApp: Error loading notifications from Firestore (onSnapshot error):", error);
+            setError(`Error loading notifications: ${error.message}`);
             setLoading(false);
           });
       } catch (e) {
-        console.error("NotificationsApp: Chyba pri nastavovaní onSnapshot pre notifikácie (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre notifikácie: ${e.message}`);
+        console.error("NotificationsApp: Error setting up onSnapshot for notifications (try-catch):", e);
+        setError(`Error setting up listener for notifications: ${e.message}`);
         setLoading(false);
       }
     } else {
-        setNotifications([]); // Vyčisti notifikácie, ak nie je admin
+        setNotifications([]); // Clear notifications if not admin
     }
 
     return () => {
       if (unsubscribeNotifications) {
-        console.log("NotificationsApp: Ruším odber onSnapshot pre notifikácie.");
+        console.log("NotificationsApp: Unsubscribing onSnapshot for notifications.");
         unsubscribeNotifications();
       }
     };
-  }, [db, userProfileData, user, allAdminUids]); // Závisí od db, userProfileData (pre rolu admina), user (pre UID) a allAdminUids
+  }, [db, userProfileData, user, allAdminUids]); // Depends on db, userProfileData (for admin role), user (for UID) and allAdminUids
 
   const handleMarkAsRead = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na označenie notifikácie ako prečítanej.");
+      setError("You do not have permission to mark the notification as read.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
-      const appId = 'default-app-id';
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId).update({
         read: true
       });
-      setUserNotificationMessage("Notifikácia označená ako prečítaná.");
+      setUserNotificationMessage("Notification marked as read.");
     } catch (e) {
-      console.error("NotificationsApp: Chyba pri označovaní notifikácie ako prečítanej:", e);
-      setError(`Chyba pri označovaní notifikácie ako prečítanej: ${e.message}`);
+      console.error("NotificationsApp: Error marking notification as read:", e);
+      setError(`Error marking notification as read: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -481,19 +405,19 @@ function NotificationsApp() {
 
   const handleDeleteNotification = async (notificationId) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
-      setError("Nemáte oprávnenie na vymazanie notifikácie.");
+      setError("You do not have permission to delete the notification.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const appId = 'default-app-id';
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notificationId);
 
-      // Načítaj aktuálny stav notifikácie
+      // Load current state of the notification
       const doc = await notificationRef.get();
       if (!doc.exists) {
-        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
+        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
         setLoading(false);
         return;
       }
@@ -501,51 +425,51 @@ function NotificationsApp() {
       const notificationData = doc.data();
       let deletedFor = notificationData.deletedFor || [];
 
-      // Pridaj ID aktuálneho administrátora do zoznamu 'deletedFor'
+      // Add the current administrator's ID to the 'deletedFor' list
       if (!deletedFor.includes(user.uid)) {
         deletedFor.push(user.uid);
       }
 
-      // Ak všetci administrátori "vymazali" túto notifikáciu, vymaž ju úplne
+      // If all administrators "deleted" this notification, delete it completely
       if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
         await notificationRef.delete();
-        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
-        console.log(`Notifikácia ${notificationId} bola úplne vymazaná z databázy.`);
+        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
+        console.log(`Notification ${notificationId} has been completely deleted from the database.`);
       } else {
-        // Inak aktualizuj len pole 'deletedFor'
+        // Otherwise, just update the 'deletedFor' field
         await notificationRef.update({
           deletedFor: deletedFor
         });
-        setUserNotificationMessage("Notifikácia bola pre vás vymazaná."); // Updated message
-        console.log(`Notifikácia ${notificationId} bola skrytá pre používateľa ${user.uid}.`);
+        setUserNotificationMessage("Notification has been deleted for you."); // Updated message
+        console.log(`Notification ${notificationId} has been hidden for user ${user.uid}.`);
       }
     } catch (e) {
-      console.error("NotificationsApp: Chyba pri vymazávaní notifikácie:", e);
-      setError(`Chyba pri vymazávaní notifikácie: ${e.message}`);
+      console.error("NotificationsApp: Error deleting notification:", e);
+      setError(`Error deleting notification: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // NOVÁ FUNKCIA: Označiť všetky neprečítané notifikácie ako prečítané
+  // NEW FUNCTION: Mark all unread notifications as read
   const handleMarkAllAsRead = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      setError("Nemáte oprávnenie na označenie notifikácií ako prečítaných.");
+      setError("You do not have permission to mark notifications as read.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const appId = 'default-app-id';
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       const unreadNotifications = notifications.filter(n => !n.read);
 
       if (unreadNotifications.length === 0) {
-        setUserNotificationMessage("Žiadne neprečítané upozornenia na označenie.");
+        setUserNotificationMessage("No unread notifications to mark.");
         setLoading(false);
         return;
       }
 
-      // Vytvorenie batch operácie pre efektívnejšie aktualizácie
+      // Create a batch operation for more efficient updates
       const batch = db.batch();
       unreadNotifications.forEach(notification => {
         const notificationRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').doc(notification.id);
@@ -553,39 +477,39 @@ function NotificationsApp() {
       });
 
       await batch.commit();
-      setUserNotificationMessage("Všetky neprečítané upozornenia boli označené ako prečítané.");
+      setUserNotificationMessage("All unread notifications have been marked as read.");
     } catch (e) {
-      console.error("NotificationsApp: Chyba pri označovaní všetkých notifikácií ako prečítaných:", e);
-      setError(`Chyba pri označovaní všetkých notifikácií ako prečítaných: ${e.message}`);
+      console.error("NotificationsApp: Error marking all notifications as read:", e);
+      setError(`Error marking all notifications as read: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Pôvodná funkcia handleDeleteAllNotifications, ktorá teraz otvorí modálne okno
+  // Original handleDeleteAllNotifications function, now opens the modal
   const handleDeleteAllNotificationsClick = () => {
     setShowDeleteAllConfirmationModal(true);
-    setDeleteUnreadToo(false); // Resetovať checkbox pri otvorení modalu
+    setDeleteUnreadToo(false); // Reset checkbox when modal opens
   };
 
-  // NOVÁ FUNKCIA: Vymazať všetky notifikácie (potvrdená akcia)
+  // NEW FUNCTION: Delete all notifications (confirmed action)
   const confirmDeleteAllNotifications = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !user.uid) {
-      setError("Nemáte oprávnenie na vymazanie všetkých notifikácií.");
+      setError("You do not have permission to delete all notifications.");
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const appId = 'default-app-id';
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
       
       let notificationsToProcess = notifications;
       if (!deleteUnreadToo) {
-        notificationsToProcess = notifications.filter(n => n.read); // Vymazať len prečítané
+        notificationsToProcess = notifications.filter(n => n.read); // Delete only read ones
       }
 
       if (notificationsToProcess.length === 0) {
-        setUserNotificationMessage("Žiadne upozornenia na vymazanie.");
+        setUserNotificationMessage("No notifications to delete.");
         setLoading(false);
         setShowDeleteAllConfirmationModal(false);
         return;
@@ -601,18 +525,18 @@ function NotificationsApp() {
         }
 
         if (allAdminUids.length > 0 && deletedFor.length >= allAdminUids.length) {
-          batch.delete(notificationRef); // Úplné vymazanie
+          batch.delete(notificationRef); // Complete deletion
         } else {
-          batch.update(notificationRef, { deletedFor: deletedFor }); // Aktualizácia deletedFor
+          batch.update(notificationRef, { deletedFor: deletedFor }); // Update deletedFor
         }
       });
 
       await batch.commit();
-      setUserNotificationMessage("Všetky vybrané upozornenia boli vymazané.");
-      setShowDeleteAllConfirmationModal(false); // Zatvoriť modálne okno po úspešnej akcii
+      setUserNotificationMessage("All selected notifications have been deleted.");
+      setShowDeleteAllConfirmationModal(false); // Close modal after successful action
     } catch (e) {
-      console.error("NotificationsApp: Chyba pri vymazávaní všetkých notifikácií:", e);
-      setError(`Chyba pri vymazávaní všetkých notifikácií: ${e.message}`);
+      console.error("NotificationsApp: Error deleting all notifications:", e);
+      setError(`Error deleting all notifications: ${e.message}`);
     } finally {
       setLoading(false);
     }
@@ -620,17 +544,17 @@ function NotificationsApp() {
 
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
-        console.log("NotificationsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+  if (!user || (user && !userProfileData) || loading) {
+    if (user === null) {
+        console.log("NotificationsApp: User is null, redirecting to login.html");
         window.location.href = 'login.html';
         return null;
     }
-    let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+    let loadingMessage = 'Loading...';
+    if (user && !userProfileData) {
+        loadingMessage = 'Loading...';
     } else if (loading) {
-        loadingMessage = 'Načítavam...';
+        loadingMessage = 'Loading...';
     }
 
     return React.createElement(
@@ -642,12 +566,12 @@ function NotificationsApp() {
 
   // If user is not admin, redirect
   if (userProfileData && (userProfileData.role !== 'admin' || userProfileData.approved !== true)) {
-    console.log("NotificationsApp: Používateľ nie je schválený administrátor, presmerovávam.");
-    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
+    console.log("NotificationsApp: User is not an approved administrator, redirecting.");
+    window.location.href = 'logged-in-my-data.html'; // Redirect to logged-in-my-data.html
     return null;
   }
 
-  // Podmienky pre zobrazenie tlačidiel
+  // Conditions for displaying buttons
   const hasAtLeastTwoNotifications = notifications.length >= 2;
   const hasAtLeastTwoUnreadNotifications = notifications.filter(n => !n.read).length >= 2;
 
@@ -660,12 +584,12 @@ function NotificationsApp() {
     }),
     React.createElement(ConfirmationModal, {
         show: showDeleteAllConfirmationModal,
-        message: "Naozaj si prajete vymazať všetky upozornenia?",
+        message: "Are you sure you want to delete all notifications?",
         onConfirm: confirmDeleteAllNotifications,
         onCancel: () => setShowDeleteAllConfirmationModal(false),
         loading: loading,
-        showCheckbox: notifications.some(n => !n.read), // Zobraziť checkbox len ak existujú neprečítané notifikácie
-        checkboxLabel: "Vymazať aj neprečítané upozornenia",
+        showCheckbox: notifications.some(n => !n.read), // Show checkbox only if unread notifications exist
+        checkboxLabel: "Delete unread notifications too",
         onCheckboxChange: (e) => setDeleteUnreadToo(e.target.checked),
         checkboxChecked: deleteUnreadToo
     }),
@@ -683,7 +607,7 @@ function NotificationsApp() {
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Upozornenia'
         ),
-        // NOVINKA: Tlačidlá "Označiť všetky ako prečítané" a "Vymazať všetky"
+        // NEW: "Mark all as read" and "Delete all" buttons
         (hasAtLeastTwoNotifications || hasAtLeastTwoUnreadNotifications) && React.createElement(
           'div',
           { className: 'flex justify-center space-x-4 mb-6' },
@@ -699,7 +623,7 @@ function NotificationsApp() {
           hasAtLeastTwoNotifications && React.createElement(
             'button',
             {
-              onClick: handleDeleteAllNotificationsClick, // ZMENA: Volá novú funkciu pre otvorenie modalu
+              onClick: handleDeleteAllNotificationsClick, // CHANGE: Calls new function to open modal
               className: 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
               disabled: loading,
             },
@@ -746,7 +670,7 @@ function NotificationsApp() {
                                     className: 'bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
                                     disabled: loading,
                                 },
-                                'Vymazať' // ZMENA: Text tlačidla
+                                'Vymazať' // CHANGE: Button text
                             )
                         )
                     )
@@ -758,5 +682,5 @@ function NotificationsApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
+// Explicitly expose the component globally
 window.NotificationsApp = NotificationsApp;
