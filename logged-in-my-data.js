@@ -220,18 +220,6 @@ function MyDataApp() {
               )
             )
           )
-        ),
-        React.createElement(
-            'div',
-            { className: 'mt-8 flex justify-center' },
-            React.createElement(
-                'a',
-                { 
-                    href: 'logged-in-registration.html', 
-                    className: 'inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 text-center' 
-                },
-                'Registrovať sa na turnaj'
-            )
         )
       )
     )
