@@ -164,25 +164,16 @@ function MyDataApp() {
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                 ` ${userProfileData.contactPhoneNumber}`
-            )
-        ),
-        // Ďalšie údaje
-        userProfileData.registrationDate && React.createElement(
-            'div',
-            { className: 'space-y-4' },
-            React.createElement(
-                'h2',
-                { className: 'text-2xl font-semibold text-gray-800' },
-                'Ďalšie údaje'
             ),
-            React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Dátum a čas registrácie:'),
-                ` ${registrationDateAndTime}`
+            // Presunutá sekcia s dátumom a časom registrácie
+            userProfileData.registrationDate && React.createElement(
+              'p',
+              { className: 'text-gray-800 text-lg' },
+              React.createElement('span', { className: 'font-bold' }, 'Dátum a čas registrácie:'),
+              ` ${registrationDateAndTime}`
             )
         ),
-        // Fakturačné údaje - tento blok teraz obsahuje aj adresu
+        // Fakturačné údaje
         (userProfileData.billing || billingAddress) && React.createElement(
           'div',
           { className: 'space-y-4' },
