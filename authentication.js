@@ -122,6 +122,8 @@ const handleAuthState = () => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = docSnap.data();
                     console.log("AuthManager: Profil používateľa načítaný v reálnom čase.");
+                    // VÝPIS DÁT POUŽÍVATEĽA DO KONZOLY
+                    console.log("Údaje používateľa:", window.globalUserProfileData);
                 } else {
                     window.globalUserProfileData = null;
                     console.warn("AuthManager: Profil používateľa neexistuje v databáze.");
