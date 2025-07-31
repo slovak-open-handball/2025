@@ -3,15 +3,15 @@
 // overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
 
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
-window.isGlobalAuthReady = false;
-window.globalUserProfileData = null;
-window.auth = null;
-window.db = null;
-window.showGlobalNotification = null;
+window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
+window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
+window.auth = null; // Inštancia Firebase Auth
+window.db = null; // Inštancia Firebase Firestore
+window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ochrana proti zobrazeniu stránky v iframe
@@ -21,96 +21,81 @@ if (window.self !== window.top) {
     document.body.style.overflow = 'hidden';
 
     const errorMessageDiv = document.createElement('div');
-    errorMessageDiv.textContent = 'Táto stránka nesmie byť zobrazená v ráme (iframe).';
-    errorMessageDiv.style.color = 'red';
-    errorMessageDiv.style.fontSize = '20px';
-    errorMessageDiv.style.textAlign = 'center';
-    errorMessageDiv.style.paddingTop = '50px';
+    errorMessageDiv.textContent = 'Táto aplikácia nemôže byť zobrazená v rámčeku (iframe).';
+    errorMessageDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; color: #000; font-family: sans-serif; font-size: 20px; text-align: center;';
     document.body.appendChild(errorMessageDiv);
 }
 
-// Funkcia na overenie prístupu na základe roly používateľa
-function checkPageAuthorization(userProfile, path) {
-    // Definujte zoznam verejných stránok
-    const publicPages = ['/', '/index.html', '/login.html', '/register.html'];
-    if (publicPages.includes(path)) {
+// Funkcia na kontrolu oprávnení na základe cesty
+const checkPageAuthorization = (userProfile, path) => {
+    // Vytvorenie whitelistu pre verejné stránky
+    const publicPages = ['/', '/index.html', '/login.html', '/about.html', '/contact.html'];
+    
+    // Ak je používateľ odhlásený, povoliť prístup len na verejné stránky
+    if (!userProfile) {
+        return publicPages.includes(path) || publicPages.includes(path.split('/').pop());
+    }
+    
+    // Ak je používateľ prihlásený, povoliť prístup na všetky stránky okrem login/registrácie pre neprihlásených
+    const loggedInOnlyPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
+    if (loggedInOnlyPages.includes(path) || loggedInOnlyPages.includes(path.split('/').pop())) {
         return true;
     }
-
-    // Stránky dostupné len pre prihlásených používateľov (vrátane adminov)
-    const loggedInPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
-    if (loggedInPages.includes(path)) {
-        return userProfile !== null;
+    
+    // Odmietnuť prístup na prihlasovacie stránky, ak je používateľ už prihlásený
+    const authPages = ['/login.html'];
+    if (authPages.includes(path) || authPages.includes(path.split('/').pop())) {
+        return false;
     }
 
-    // Stránky dostupné len pre adminov
-    const adminPages = ['/logged-in-admin.html']; // Príklad
-    if (adminPages.includes(path)) {
-        return userProfile && userProfile.role === 'admin';
-    }
-
-    // Predvolene, ak stránka nie je špecifikovaná, prístup je povolený
     return true;
-}
+};
 
-// Inicializácia Firebase
-document.addEventListener('DOMContentLoaded', async () => {
+// Vytvorenie a inicializácia Firebase aplikácie
+const setupFirebase = () => {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify({
-            apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-            authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-            projectId: "soh2025-2s0o2h5",
-            storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-            messagingSenderId: "572988314768",
-            appId: "1:572988314768:web:781e27eb035179fe34b415"
-        }));
-
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        if (Object.keys(firebaseConfig).length > 0) {
-            const app = initializeApp(firebaseConfig);
-            window.auth = getAuth(app);
-            window.db = getFirestore(app);
-            console.log("AuthManager: Firebase inicializované.");
-
-            // Prihlásenie používateľa, ak je k dispozícii token
-            if (initialAuthToken) {
-                await signInWithCustomToken(window.auth, initialAuthToken);
-                console.log("AuthManager: Prihlásenie s vlastným tokenom prebehlo úspešne.");
-            } else {
-                console.log("AuthManager: Žiadny inicializačný token, prihlásenie preskočené. Očakáva sa existujúci stav autentifikácie.");
-            }
-        } else {
-            console.error("AuthManager: Firebase config nebol nájdený a fallback config je prázdny. Inicializácia preskočená.");
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        if (Object.keys(firebaseConfig).length === 0) {
+            console.error("AuthManager: Firebase config nie je definovaný.");
+            return;
         }
-    } catch (error) {
-        console.error("AuthManager: Chyba pri inicializácii alebo prihlásení:", error);
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        console.log("AuthManager: Firebase služby inicializované.");
+    } catch (e) {
+        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
-});
+};
 
+// Spracovanie autentifikácie a načítania profilu používateľa
+const handleAuthState = async () => {
+    const auth = window.auth;
+    const db = window.db;
 
-// Nastavenie globálneho listenera pre zmeny stavu autentifikácie
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.auth) {
-        console.error("AuthManager: Firebase Auth nie je inicializované. Skontrolujte inicializačný skript.");
+    if (!auth || !db) {
+        console.error("AuthManager: Firebase služby nie sú inicializované.");
         return;
     }
 
-    onAuthStateChanged(window.auth, (user) => {
-        window.isGlobalAuthReady = true;
+    // Nastavíme listener na zmeny stavu autentifikácie
+    onAuthStateChanged(auth, async (user) => {
+        window.isGlobalAuthReady = true; // Sme pripravení po prvej kontrole stavu
+        
+        let unsubscribe = () => {};
 
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, user.uid);
 
-            // Správna cesta k profilu používateľa je 'users/{userId}'
-            const userProfileRef = doc(window.db, `users/${user.uid}`);
-
-            const unsubscribe = onSnapshot(userProfileRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    window.globalUserProfileData = { id: snapshot.id, ...snapshot.data() };
+            unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
                     console.log("AuthManager: Načítaný profil používateľa:", window.globalUserProfileData);
                 } else {
-                    console.warn("AuthManager: Žiadny profil používateľa nenájdený na ceste 'users/{userId}'.");
+                    console.log("AuthManager: Žiadny profil používateľa nenájdený.");
                     window.globalUserProfileData = null;
                 }
                 
@@ -119,13 +104,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("AuthManager: Používateľ nemá oprávnenie pre túto stránku. Presmerovanie na domovskú stránku.");
                     window.location.href = 'index.html';
                 }
+                
+                // Ak existuje globálna funkcia na inicializáciu aplikácie (napr. z logged-in-my-data.js), zavoláme ju.
+                if (window.initMyDataApp) {
+                    window.initMyDataApp();
+                }
+                
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
+                // Kontrola autorizácie aj pri chybe načítania profilu
+                if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
+                    window.location.href = 'index.html';
+                }
             });
 
-            // Čistenie pri odhlásení
-            return () => unsubscribe();
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
             window.globalUserProfileData = null;
@@ -134,8 +127,44 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
                 window.location.href = 'index.html';
             }
+            
+            // Ak sa používateľ odhlási, a je funkcia na inicializáciu, zavoláme ju tiež,
+            // aby sa aplikácia správne vyčistila a zobrazila stav "nie je prihlásený".
+            if (window.initMyDataApp) {
+                 window.initMyDataApp();
+            }
         }
     });
 
     console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
+};
+
+
+// Spustenie autentifikácie po načítaní DOM
+window.addEventListener('DOMContentLoaded', async () => {
+    // Inicializácia Firebase
+    setupFirebase();
+    // Spustenie logiky pre autentifikáciu
+    handleAuthState();
+
+    const auth = window.auth;
+    if (!auth) {
+        console.error("AuthManager: Authentication služby nie sú dostupné.");
+        return;
+    }
+    
+    // Získanie tokenu a prihlásenie
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    try {
+        if (initialAuthToken) {
+            await signInWithCustomToken(auth, initialAuthToken);
+            console.log("AuthManager: Prihlásenie pomocou custom tokenu bolo úspešné.");
+        } else {
+            await signInAnonymously(auth);
+            console.log("AuthManager: Prihlásenie ako anonymný používateľ bolo úspešné.");
+        }
+    } catch (error) {
+        console.error("AuthManager: Chyba pri prihlasovaní:", error);
+    }
 });
