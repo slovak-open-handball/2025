@@ -9,7 +9,6 @@ const handleLogout = async () => {
         try {
             await window.auth.signOut();
             window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
-            // Presmerovanie po úspešnom odhlásení
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1000);
@@ -37,7 +36,6 @@ const updateHeaderState = () => {
     });
 
     // Kontrola, či je používateľ prihlásený
-    // Používame globálne dáta, ktoré by mala nastaviť iná časť aplikácie
     if (window.globalUserProfileData && window.globalUserProfileData.isLoggedIn) {
         // Používateľ je prihlásený, zobrazíme odkazy pre prihláseného používateľa
         if (registerLink) registerLink.classList.remove('hidden');
