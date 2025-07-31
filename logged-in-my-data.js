@@ -145,7 +145,7 @@ function MyDataApp() {
       React.createElement(
         'div',
         { className: 'grid md:grid-cols-2 gap-6 md:gap-8' },
-        // Kontaktné údaje - presunuté sem, ako bolo požadované
+        // Kontaktné údaje
         (userProfileData.firstName || userProfileData.lastName || userProfileData.email || userProfileData.contactPhoneNumber) && React.createElement(
             'div',
             { className: 'space-y-4' },
