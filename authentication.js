@@ -2,134 +2,190 @@
 // Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
 // overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
-window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
-window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
-window.auth = null; // Inštancia Firebase Auth
-window.db = null; // Inštancia Firebase Firestore
-window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
+window.isGlobalAuthReady = false;
+window.globalUserProfileData = null;
+window.auth = null;
+window.db = null;
+window.showGlobalNotification = null;
+
+// Inicializácia Firebase
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+const app = initializeApp(firebaseConfig);
+window.auth = getAuth(app);
+window.db = getFirestore(app);
+
+// Funkcia na overenie a prihlásenie pomocou custom tokenu alebo anonymne
+const authenticateUser = async () => {
+    try {
+        if (initialAuthToken) {
+            await signInWithCustomToken(window.auth, initialAuthToken);
+            console.log("AuthManager: Prihlásenie pomocou custom tokenu úspešné.");
+        } else {
+            await signInAnonymously(window.auth);
+            console.log("AuthManager: Prihlásenie anonymne úspešné.");
+        }
+    } catch (error) {
+        console.error("AuthManager: Chyba pri autentifikácii:", error);
+        await signInAnonymously(window.auth);
+    }
+};
 
 // Helper funkcia pre autorizáciu prístupu k stránkam
 const checkPageAuthorization = (userData, currentPath) => {
-  // Definícia prístupových pravidiel pre jednotlivé stránky
-  // `role` môže byť 'public', 'user', 'admin'
-  // `approved` sa používa pre adminov, aby sa zabezpečilo, že ich účet bol schválený
-  const pageAccessRules = {
-    'index.html': { role: 'public', approved: true },
-    'login.html': { role: 'public', approved: true },
-    'account.html': { role: 'user', approved: true },
-    'admin-register.html': { role: 'public', approved: true }, 
-    'register.html': { role: 'user', approved: true },
-    'logged-in-users.html': { role: 'admin', approved: true },
-    'logged-in-tournament-settings.html': { role: 'admin', approved: true },
-    'logged-in-add-categories.html': { role: 'admin', approved: true },
-    'logged-in-all-registrations.html': { role: 'admin', approved: true },
-    'logged-in-my-data.html': { role: 'user', approved: true },
-    'logged-in-my-team.html': { role: 'user', approved: true },
-    'logged-in-registrations.html': { role: 'user', approved: true },
-    'logged-in-team-settings.html': { role: 'user', approved: true },
-    'logged-in-create-team.html': { role: 'user', approved: true },
-  };
+    const pageAccessRules = {
+        'index.html': { role: 'public', approved: true },
+        'login.html': { role: 'public', approved: true },
+        'account.html': { role: 'user', approved: true },
+        'admin-register.html': { role: 'public', approved: true }, 
+        'register.html': { role: 'user', approved: true },
+        'logged-in-users.html': { role: 'admin', approved: true },
+        'logged-in-tournament-settings.html': { role: 'admin', approved: true },
+        'logged-in-add-categories.html': { role: 'admin', approved: true },
+        'logged-in-all-registrations.html': { role: 'admin', approved: true },
+        'logged-in-my-data.html': { role: 'user', approved: true },
+        'logged-in-my-team.html': { role: 'user', approved: true },
+        'logged-in-registrations.html': { role: 'user', approved: true },
+        'logged-in-team-settings.html': { role: 'user', approved: true },
+        'logged-in-create-team.html': { role: 'user', approved: true },
+    };
 
-  const page = currentPath.substring(currentPath.lastIndexOf('/') + 1);
-  const rule = pageAccessRules[page];
+    const page = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+    const rule = pageAccessRules[page];
 
-  // Ak pre stránku neexistuje žiadne pravidlo, predpokladáme, že je prístupná pre všetkých.
-  if (!rule) {
-    console.log(`AuthManager: Žiadne pravidlo pre stránku ${page}. Prístup povolený.`);
-    return true;
-  }
-  
-  // === OPRAVA: ZABEZPEČENIE PRÍSTUPU K VEREJNÝM STRÁNKAM PRE NEPRIHLÁSENÝCH POUŽÍVATEĽOV ===
-  if (rule.role === 'public') {
-      console.log(`AuthManager: Stránka ${page} je verejná. Prístup povolený.`);
-      return true;
-  }
-  
-  // Ak je používateľ odhlásený, ale stránka nie je verejná, presmerujeme ho na login
-  if (!userData) {
-      console.log(`AuthManager: Používateľ je odhlásený a stránka ${page} nie je verejná. Presmerujem na login.`);
-      return false;
-  }
+    if (!rule) {
+        console.log(`AuthManager: Žiadne pravidlo pre stránku ${page}. Prístup povolený.`);
+        return true;
+    }
+    
+    if (rule.role === 'public') {
+        console.log(`AuthManager: Stránka ${page} je verejná. Prístup povolený.`);
+        return true;
+    }
+    
+    if (!userData) {
+        console.log(`AuthManager: Používateľ je odhlásený a stránka ${page} nie je verejná. Presmerujem na login.`);
+        return false;
+    }
 
-  // Kontrola prístupu na základe roly a schválenia
-  if (userData.role === rule.role && userData.approved === rule.approved) {
-    console.log(`AuthManager: Prístup k stránke ${page} povolený pre rolu ${userData.role}.`);
-    return true;
-  } else if (userData.role === 'admin' && rule.role === 'user' && rule.approved) {
-    // Admin má vždy prístup k stránkam pre bežných používateľov
-    console.log(`AuthManager: Admin prístup k stránke ${page} povolený.`);
-    return true;
-  }
+    if (userData.role === rule.role && userData.approved === rule.approved) {
+        console.log(`AuthManager: Prístup k stránke ${page} povolený pre rolu ${userData.role}.`);
+        return true;
+    } else if (userData.role === 'admin' && rule.role === 'user' && rule.approved) {
+        console.log(`AuthManager: Admin prístup k stránke ${page} povolený.`);
+        return true;
+    }
 
-  console.log(`AuthManager: Prístup k stránke ${page} odmietnutý pre rolu ${userData.role}.`);
-  return false;
+    console.log(`AuthManager: Prístup k stránke ${page} odmietnutý pre rolu ${userData.role}.`);
+    return false;
 };
 
-// Funkcia na presmerovanie na domovskú stránku
 const redirectToHome = () => {
     window.location.href = 'index.html';
 };
 
-// === NOVÁ ČASŤ: Vytvorenie a správa globálnych notifikácií ===
+// Vytvorenie a správa globálnych notifikácií
 const { useEffect, useState } = React;
 const GlobalNotificationHandler = () => {
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState('info');
-  const [error, setError] = useState('');
-  
-  // Exportuje globálnu funkciu pre notifikácie
-  useEffect(() => {
-    window.showGlobalNotification = (msg, type = 'info', err = '') => {
-      setMessage(msg);
-      setMessageType(type);
-      setError(err);
-      setTimeout(() => {
-        setMessage('');
-        setError('');
-      }, 5000); // Notifikácia zmizne po 5 sekundách
-    };
-  }, []);
+    const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState('info');
+    const [error, setError] = useState('');
+    
+    useEffect(() => {
+        window.showGlobalNotification = (msg, type = 'info', err = '') => {
+            setMessage(msg);
+            setMessageType(type);
+            setError(err);
+            setTimeout(() => {
+                setMessage('');
+                setError('');
+            }, 5000);
+        };
+    }, []);
 
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-[999] flex justify-center p-4 transition-transform duration-500 ease-out ${
-        (message || error) ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: `${messageType === 'success' ? 'bg-[#3A8D41]' : messageType === 'error' ? 'bg-red-600' : 'bg-blue-500'} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message || error)
-    )
-  );
-}
+    return React.createElement(
+        'div',
+        {
+            className: `fixed top-0 left-0 right-0 z-[999] flex justify-center p-4 transition-transform duration-500 ease-out ${
+                (message || error) ? 'translate-y-0' : '-translate-y-full'
+            }`,
+            style: { pointerEvents: 'none' }
+        },
+        React.createElement(
+            'div',
+            {
+                className: `${messageType === 'success' ? 'bg-[#3A8D41]' : messageType === 'error' ? 'bg-red-600' : 'bg-blue-500'} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+                style: { pointerEvents: 'auto' }
+            },
+            React.createElement('p', { className: 'font-semibold' }, message || error)
+        )
+    );
+};
 
-// Vykreslíme GlobalNotificationHandler do skrytého DOM elementu
-// Vytvoríme koreňový element pre React komponent, ak ešte neexistuje
 let authRoot = document.getElementById('authentication-root');
 if (!authRoot) {
-  authRoot = document.createElement('div');
-  authRoot.id = 'authentication-root';
-  authRoot.style.display = 'none'; // Skryť element
-  document.body.appendChild(authRoot);
-  console.log("AuthManager: Vytvoril som a pridal 'authentication-root' div do tela dokumentu.");
+    authRoot = document.createElement('div');
+    authRoot.id = 'authentication-root';
+    authRoot.style.display = 'none';
+    document.body.appendChild(authRoot);
+    console.log("AuthManager: Vytvoril som a pridal 'authentication-root' div do tela dokumentu.");
 } else {
-  console.log("AuthManager: 'authentication-root' div už existuje.");
+    console.log("AuthManager: 'authentication-root' div už existuje.");
 }
 
-// Vykreslíme GlobalNotificationHandler do tohto koreňového elementu
 try {
-  ReactDOM.render(
-    React.createElement(GlobalNotificationHandler),
-    authRoot
-  );
-  console.log("AuthManager: GlobalNotificationHandler úspešne vykreslený.");
+    ReactDOM.render(
+        React.createElement(GlobalNotificationHandler),
+        authRoot
+    );
+    console.log("AuthManager: GlobalNotificationHandler úspešne vykreslený.");
 } catch (e) {
-  console.error("AuthManager: Chyba pri vykreslení GlobalNotificationHandler:", e);
+    console.error("AuthManager: Chyba pri vykreslení GlobalNotificationHandler:", e);
 }
+
+// Pridáme logiku pre kontrolu autorizácie pri zmene stavu autentifikácie
+onAuthStateChanged(window.auth, async (user) => {
+    console.log("AuthManager: Stav autentifikácie sa zmenil.", user);
+
+    let profileData = null;
+    if (user) {
+        const userDocRef = doc(window.db, 'users', user.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                profileData = userDoc.data();
+            } else {
+                console.log("AuthManager: Dokument používateľa neexistuje, nastavujem defaultný profil.");
+                profileData = { role: 'user', approved: false, email: user.email };
+            }
+        } catch (e) {
+            console.error("AuthManager: Chyba pri načítavaní profilu používateľa:", e);
+        }
+    }
+    
+    window.globalUserProfileData = profileData;
+    window.isGlobalAuthReady = true;
+
+    // Odpálime udalosť, aby ostatné skripty vedeli, že sa môžu spustiť
+    window.dispatchEvent(new Event('auth-state-changed'));
+
+    const currentPath = window.location.pathname;
+    const isAuthorized = checkPageAuthorization(window.globalUserProfileData, currentPath);
+
+    if (!isAuthorized) {
+        if (!user) {
+            window.location.href = 'login.html';
+        } else {
+            redirectToHome();
+        }
+    }
+});
+
+authenticateUser();
