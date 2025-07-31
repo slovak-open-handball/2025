@@ -1,24 +1,9 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-// Tieto konštanty sú teraz definované v <head> logged-in-change-phone.html
-// const appId = '1:26454452024:web:6954b4f90f87a3a1eb43cd';
-// const firebaseConfig = { ... };
-// const initialAuthToken = null;
+// logged-in-change-phone.js
+// Tento súbor obsahuje React komponent pre zmenu telefónneho čísla prihláseného používateľa.
+// Predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-change-phone.html.
 
-//const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
-
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = (date.getMinutes()).toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
-
-// NotificationModal Component for displaying temporary messages (converted to React.createElement)
-function NotificationModal({ message, onClose }) {
+// Komponent NotificationModal pre zobrazovanie dočasných správ
+function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -49,6 +34,15 @@ function NotificationModal({ message, onClose }) {
 
   if (!show && !message) return null;
 
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-[#3A8D41]'; // Green
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Red
+  } else {
+    bgColorClass = 'bg-blue-500'; // Default blue for info
+  }
+
   return React.createElement(
     'div',
     {
@@ -60,7 +54,7 @@ function NotificationModal({ message, onClose }) {
     React.createElement(
       'div',
       {
-        className: 'bg-[#3A8D41] text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center',
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
         style: { pointerEvents: 'auto' }
       },
       React.createElement('p', { className: 'font-semibold' }, message)
@@ -311,17 +305,17 @@ const countryCodes = [
   { code: 'ZA', dialCode: '+27' },
   { code: 'ZM', dialCode: '+260' },
   { code: 'ZW', dialCode: '+263' },
-].sort((a, b) => a.code.localeCompare(b.code)); // Zoradenie podľa kódu krajiny
+].sort((a, b) => a.code.localeCompare(b.code)); // Sort by country code
 
 // CountryCodeModal Component
-function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled }) { // Pridaný disabled prop
+function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled }) { // Added disabled prop
   const [searchTerm, setSearchTerm] = React.useState('');
-  // Nový stav pre dočasne vybranú predvoľbu
+  // New state for temporarily selected dial code
   const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
   const modalRef = React.useRef(null);
 
   React.useEffect(() => {
-    // Inicializujeme tempSelectedCode s aktuálnou vybranou predvoľbou, keď sa modal otvorí
+    // Initialize tempSelectedCode with the currently selected dial code when the modal opens
     if (isOpen) {
       setTempSelectedCode(selectedCode);
     }
@@ -330,7 +324,7 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
   React.useEffect(() => {
     const handleOutsideClick = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
-        onClose(); // Zavrieť bez uloženia, ak sa klikne mimo
+        onClose(); // Close without saving if clicked outside
       }
     };
 
@@ -352,10 +346,10 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
     country.dialCode.includes(searchTerm)
   );
 
-  // Funkcia pre tlačidlo OK - aplikuje dočasne vybranú predvoľbu a zatvorí modálne okno
+  // Function for OK button - applies the temporarily selected dial code and closes the modal
   const handleConfirm = () => {
-    onSelect(tempSelectedCode); // Aplikuje dočasnú predvoľbu
-    onClose(); // Zavrie modálne okno
+    onSelect(tempSelectedCode); // Apply temporary dial code
+    onClose(); // Close modal
   };
 
   return React.createElement(
@@ -381,19 +375,19 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
       }),
       React.createElement(
         'div',
-        { className: 'grid grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2' }, // Zmenené na grid-cols-4 a odstránené border
+        { className: 'grid grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2' }, // Changed to grid-cols-4 and border removed
         filteredCountries.map((country) =>
           React.createElement(
             'button', 
             {
               key: country.code,
-              // Porovnávame s tempSelectedCode pre vizuálnu indikáciu výberu
+              // Compare with tempSelectedCode for visual selection indication
               className: `p-2 text-sm rounded-lg border transition-colors duration-200 
                           ${tempSelectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`, 
               onClick: () => {
-                setTempSelectedCode(country.dialCode); // Nastaví dočasnú predvoľbu
+                setTempSelectedCode(country.dialCode); // Set temporary dial code
               },
-              disabled: disabled, // Tlačidlá sú disabled, ak je modálne okno disabled
+              disabled: disabled, // Buttons are disabled if the modal is disabled
             },
             `${country.code} ${country.dialCode}` 
           )
@@ -401,20 +395,20 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
       ),
       React.createElement(
         'div',
-        { className: 'flex justify-end space-x-4 mt-6' }, // Tlačidlá OK a Zatvoriť, s mt-6
+        { className: 'flex justify-end space-x-4 mt-6' }, // OK and Close buttons, with mt-6
         React.createElement(
           'button',
           {
-            onClick: onClose, // Používame priamo onClose prop, zahodí zmeny
+            onClick: onClose, // Use onClose prop directly, discards changes
             className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
-          'Zatvoriť' // Zmenený text tlačidla
+          'Zatvoriť' // Changed button text
         ),
         React.createElement(
           'button',
           {
-            onClick: handleConfirm, // Voláme handleConfirm, ktorá aplikuje zmeny a zatvorí
+            onClick: handleConfirm, // Call handleConfirm, which applies changes and closes
             className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
@@ -427,346 +421,283 @@ function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled })
 
 // Main React component for the logged-in-change-phone.html page
 function ChangePhoneApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  // NEW: Get references to Firebase services directly
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NEW: Local state for the current user and their profile data
+  // These states will be updated by the local onAuthStateChanged and onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Loading for data in ChangePhoneApp
   const [error, setError] = React.useState('');
+  // Retained: userNotificationMessage for local notifications
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
+  // User Data States - These states will be updated from userProfileData
   const [contactPhoneNumber, setContactPhoneNumber] = React.useState('');
-  const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
-  const [role, setRole] = React.useState('');
-  const [isApproved, setIsApproved] = React.useState(false);
-
   // States for country code selection
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421'); // Default to Slovakia
 
-  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  // NEW: State for data editing deadline
   const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
-  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  // NEW: Memoized value for allowing data edits
   const isDataEditingAllowed = React.useMemo(() => {
-    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    // If user is admin, always allow edits
+    if (userProfileData && userProfileData.role === 'admin') {
+      return true;
+    }
+    // Otherwise, apply the original deadline logic
+    if (!settingsLoaded || !dataEditDeadline) return true; // If settings are not loaded or date is not defined, allow edits
     const now = new Date();
     const deadline = new Date(dataEditDeadline);
     return now <= deadline;
-  }, [settingsLoaded, dataEditDeadline]);
+  }, [settingsLoaded, dataEditDeadline, userProfileData]); // Added userProfileData to dependencies
 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NEW: Local Auth Listener for ChangePhoneApp
+  // This listener ensures that ChangePhoneApp reacts to authentication changes,
+  // but primary logout/redirection is handled by GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("ChangePhoneApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-phone.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("ChangePhoneApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // If user is not logged in, redirect (even if GNH should handle it)
+      if (!currentUser) {
+        console.log("ChangePhoneApp: User is not logged in, redirecting to login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Depends on auth instance
 
-      let firebaseApp;
-      // Skontrolujte, či už existuje predvolená aplikácia Firebase
-      if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
-      } else {
-        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
-      }
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
-          }
-        } catch (e) {
-          console.error("ChangePhoneApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("ChangePhoneApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("ChangePhoneApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // NEW: Local Effect for loading user data from Firestore
+  // This effect will run when the user is logged in and db is available.
+  // It assumes that passwordLastChanged and approved status are already verified in header.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) {
-        console.log("ChangePhoneApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Only runs if user is logged in and db is available
+      console.log(`ChangePhoneApp: Attempting to load user document for UID: ${user.uid}`);
+      setLoading(true); // Set loading to true while profile data is being loaded
 
-      if (user) {
-        console.log(`ChangePhoneApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true);
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          console.log("ChangePhoneApp: onSnapshot for user document triggered.");
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("ChangePhoneApp: User document exists, data:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangePhoneApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("ChangePhoneApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("ChangePhoneApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("ChangePhoneApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`ChangePhoneApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangePhoneApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("ChangePhoneApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("ChangePhoneApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangePhoneApp: Timestampy sú rovnaké, aktualizujem localStorage.");
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              setUserProfileData(userData);
-              
-              // Aktualizujeme lokálne stavy z userProfileData
-              // Rozdelíme telefónne číslo na predvoľbu a samotné číslo
-              const fullPhoneNumber = userData.contactPhoneNumber || '';
-              let initialDialCode = '+421'; // Predvolená hodnota pre Slovensko
-              let initialPhoneNumber = fullPhoneNumber;
-
-              // Skúsime nájsť zhodnú predvoľbu a oddeliť ju od čísla
-              for (const country of countryCodes) { // Zmenené z COUNTRIES na countryCodes
-                if (fullPhoneNumber.startsWith(country.dialCode)) { // Zmenené z dial_code na dialCode
-                  initialDialCode = country.dialCode; // Zmenené z dial_code na dialCode
-                  initialPhoneNumber = fullPhoneNumber.substring(country.dialCode.length); // Zmenené z dial_code na dialCode
-                  break;
-                }
-              }
-              setSelectedCountryDialCode(initialDialCode);
-              setContactPhoneNumber(initialPhoneNumber); // Nastavíme len samotné číslo
-
-              setEmail(userData.email || user.email || '');
-              setRole(userData.role || 'user');
-              setIsApproved(userData.approved || false);
-              
-              setLoading(false);
-              setError('');
-
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("ChangePhoneApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("ChangePhoneApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false);
+            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
+            // This is added logic that runs immediately after data is loaded.
+            // If passwordLastChanged is invalid or missing, log out.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("ChangePhoneApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
+                console.log("ChangePhoneApp: Immediately logging out user due to invalid password change timestamp.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
             }
-          }, error => {
-            console.error("ChangePhoneApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                 }
+
+            // Normal processing if passwordLastChanged is valid
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`ChangePhoneApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangePhoneApp: Initializing passwordLastChanged in localStorage (first load).");
+                // Do not continue here, continue with normal data processing for first load
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                // Password was changed on another device/session
+                console.log("ChangePhoneApp: Password change detected on another device/session. Logging out user.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                // This ideally should not happen if Firestore is the source of truth
+                console.warn("ChangePhoneApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                // Times are the same, ensure localStorage is up-to-date
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangePhoneApp: Timestamps are the same, updating localStorage.");
             }
-            setLoading(false);
-            console.log("ChangePhoneApp: Načítanie používateľských dát zlyhalo, loading: false");
-          });
-        } catch (e) {
-          console.error("ChangePhoneApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false);
-        }
+
+            // NEW LOGIC: Logout if user is admin and not approved
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("ChangePhoneApp: User is admin and not approved. Logging out.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
+            }
+
+            setUserProfileData(userData); // Update userProfileData state
+            
+            // Update local states from userProfileData
+            // Split phone number into dial code and actual number
+            const fullPhoneNumber = userData.contactPhoneNumber || '';
+            let initialDialCode = '+421'; // Default to Slovakia
+            let initialPhoneNumber = fullPhoneNumber;
+
+            // Try to find a matching dial code and separate it from the number
+            for (const country of countryCodes) {
+              if (fullPhoneNumber.startsWith(country.dialCode)) {
+                initialDialCode = country.dialCode;
+                initialPhoneNumber = fullPhoneNumber.substring(country.dialCode.length);
+                break;
+              }
+            }
+            setSelectedCountryDialCode(initialDialCode);
+            setContactPhoneNumber(initialPhoneNumber); // Set only the number
+
+            setLoading(false); // Stop loading after user data is loaded
+            setError(''); // Clear errors after successful load
+
+            // Update menu visibility after role is loaded (call global function from left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("ChangePhoneApp: Function updateMenuItemsVisibility is not defined.");
+            }
+
+            console.log("ChangePhoneApp: User data loading complete, loading: false");
+          } else {
+            console.warn("ChangePhoneApp: User document not found for UID:", user.uid);
+            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
+            setLoading(false); // Stop loading so error can be displayed
+            setUser(null); // Explicitly set user to null
+            setUserProfileData(null); // Explicitly set userProfileData to null
+          }
+        }, error => {
+          console.error("ChangePhoneApp: Error loading user data from Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Authentication error: You are not logged in. Please try logging in again.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitly set user to null
+                  setUserProfileData(null); // Explicitly set userProfileData to null
+               }
+          } else {
+              setError(`Error loading user data: ${error.message}`);
+          }
+          setLoading(false); // Stop loading even on error
+          console.log("ChangePhoneApp: User data loading failed, loading: false");
+          setUser(null); // Explicitly set user to null
+          setUserProfileData(null); // Explicitly set userProfileData to null
+        });
+      } catch (e) {
+        console.error("ChangePhoneApp: Error setting up onSnapshot for user data (try-catch):", e);
+        setError(`Error setting up listener for user data: ${e.message}`);
+        setLoading(false); // Stop loading even on error
+        setUser(null); // Explicitly set user to null
+        setUserProfileData(null); // Explicitly set userProfileData to null
       }
-    } else if (isAuthReady && user === undefined) {
-        console.log("ChangePhoneApp: Auth ready, user undefined. Nastavujem loading na false.");
+    } else if (user === null) {
+        // If user is null (and not undefined), it means they have been logged out.
+        // Redirection should already be handled by GlobalNotificationHandler.
+        // Here, we just ensure loading is false and data is cleared.
         setLoading(false);
+        setUserProfileData(null);
     }
 
-
     return () => {
+      // Unsubscribe from onSnapshot on unmount
       if (unsubscribeUserDoc) {
-        console.log("ChangePhoneApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("ChangePhoneApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
 
-  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  // NEW: Effect for loading settings (data editing deadline)
   React.useEffect(() => {
+    let unsubscribeSettings;
     const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
-        console.log("ChangePhoneApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+      if (!db) {
+        console.log("ChangePhoneApp: Waiting for DB to load settings.");
         return;
       }
       try {
-          console.log("ChangePhoneApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          console.log("ChangePhoneApp: Attempting to load registration settings for data editing deadline.");
           const settingsDocRef = db.collection('settings').doc('registration');
-          const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangePhoneApp: onSnapshot pre nastavenia registrácie spustený.");
+          unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+            console.log("ChangePhoneApp: onSnapshot for registration settings triggered.");
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
-                console.log("ChangePhoneApp: Nastavenia registrácie existujú, dáta:", data);
-                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Používame ISO string pre konzistentnosť
+                console.log("ChangePhoneApp: Registration settings exist, data:", data);
+                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Use ISO string for consistency
             } else {
-                console.log("ChangePhoneApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                console.log("ChangePhoneApp: Registration settings not found in Firestore. Data editing deadline is not defined.");
                 setDataEditDeadline(null);
             }
             setSettingsLoaded(true);
-            console.log("ChangePhoneApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+            console.log("ChangePhoneApp: Settings loading complete, settingsLoaded: true.");
           }, error => {
-            console.error("ChangePhoneApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            console.error("ChangePhoneApp: Error loading registration settings (onSnapshot error):", error);
+            setError(`Error loading settings: ${error.message}`);
             setSettingsLoaded(true);
           });
 
           return () => {
             if (unsubscribeSettings) {
-                console.log("ChangePhoneApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                console.log("ChangePhoneApp: Unsubscribing onSnapshot for registration settings.");
                 unsubscribeSettings();
             }
           };
       } catch (e) {
-          console.error("ChangePhoneApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          console.error("ChangePhoneApp: Error setting up onSnapshot for registration settings (try-catch):", e);
+          setError(`Error setting up listener for settings: ${e.message}`);
           setSettingsLoaded(true);
       }
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db]); // Depends only on 'db'
 
-  // useEffect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`ChangePhoneApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("ChangePhoneApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("ChangePhoneApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-    } catch (e) {
-      console.error("ChangePhoneApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
 
   const handleUpdatePhoneNumber = async (e) => {
     e.preventDefault();
-    // NOVINKA: Kontrola povolenia úprav dát
+    // NEW: Check for data editing permission
     if (!isDataEditingAllowed) {
-      setError("Úpravy telefónneho čísla sú po uzávierke zakázané.");
+      setError("Editing phone number is forbidden after the deadline.");
       return;
     }
 
-    // NOVINKA: Kontrola, či je telefónne číslo prázdne pred odoslaním
+    // NEW: Check if phone number is empty before submitting
     if (contactPhoneNumber.trim() === '') {
-        setError("Telefónne číslo nesmie byť prázdne.");
+        setError("Phone number cannot be empty.");
         return;
     }
 
     if (!db || !user || !userProfileData) {
-      setError("Databáza alebo používateľ nie je k dispozícii.");
+      setError("Database or user is not available.");
       return;
     }
     setLoading(true);
@@ -781,22 +712,22 @@ function ChangePhoneApp() {
       await userDocRef.update({
         contactPhoneNumber: fullPhoneNumber, // Save the combined number
       });
-      setUserNotificationMessage("Telefónne číslo úspešne aktualizované!");
+      setUserNotificationMessage("Phone number successfully updated!");
 
-      // --- Logika pre ukladanie notifikácie pre administrátorov ---
+      // --- Logic for saving notification for administrators ---
       try {
-          // Používame pevne zadané 'default-app-id' pre cestu k notifikáciám
+          // Use fixed 'default-app-id' for notification path
           const appId = 'default-app-id'; 
           let notificationMessage = '';
           let notificationRecipientId = '';
 
-          // Konkrétna správa o zmene telefónneho čísla
+          // Specific message about phone number change
           if (userProfileData.role === 'user') {
-              notificationMessage = `Používateľ ${userProfileData.email} si zmenil telefónne číslo na ${fullPhoneNumber}.`;
-              notificationRecipientId = 'all_admins'; // Notifikácia pre všetkých administrátorov
+              notificationMessage = `User ${userProfileData.email} changed their phone number to ${fullPhoneNumber}.`;
+              notificationRecipientId = 'all_admins'; // Notification for all administrators
           } else if (userProfileData.role === 'admin') {
-              notificationMessage = `Administrátor ${userProfileData.email} si zmenil telefónne číslo na ${fullPhoneNumber}.`;
-              notificationRecipientId = user.uid; // Notifikácia pre tohto konkrétneho administrátora
+              notificationMessage = `Administrator ${userProfileData.email} changed their phone number to ${fullPhoneNumber}.`;
+              notificationRecipientId = user.uid; // Notification for this specific administrator
           }
 
           if (notificationMessage) {
@@ -806,35 +737,35 @@ function ChangePhoneApp() {
                   recipientId: notificationRecipientId,
                   read: false
               });
-              console.log("Notifikácia o zmene telefónneho čísla úspešne uložená do Firestore.");
+              console.log("Notification about phone number change successfully saved to Firestore.");
           }
       } catch (e) {
-          console.error("ChangePhoneApp: Chyba pri ukladaní notifikácie o zmene telefónneho čísla:", e);
+          console.error("ChangePhoneApp: Error saving notification about phone number change:", e);
       }
-      // --- Koniec logiky pre ukladania notifikácie ---
+      // --- End of notification saving logic ---
 
     } catch (e) {
-      console.error("ChangePhoneApp: Chyba pri aktualizácii telefónneho čísla:", e);
-      setError(`Chyba pri aktualizácii telefónneho čísla: ${e.message}`);
+      console.error("ChangePhoneApp: Error updating phone number:", e);
+      setError(`Error updating phone number: ${e.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // NOVINKA: Kontrola, či je formulár platný pre povolenie tlačidla
+  // NEW: Check if the form is valid to enable the button
   const isFormValid = contactPhoneNumber.trim() !== '';
 
   // Display loading state
-  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
-        console.log("ChangePhoneApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+  if (!user || (user && !userProfileData) || !settingsLoaded || loading) {
+    if (user === null) {
+        console.log("ChangePhoneApp: User is null, redirecting to login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+    if (user && !settingsLoaded) { // NEW: Waiting for settings to load
         loadingMessage = 'Načítavam nastavenia...';
-    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
+    } else if (user && settingsLoaded && !userProfileData) {
         loadingMessage = 'Načítavam profilové dáta...';
     } else if (loading) {
         loadingMessage = 'Ukladám zmeny...';
@@ -847,10 +778,10 @@ function ChangePhoneApp() {
     );
   }
 
-  // Pre používateľov s rolou 'admin' alebo neschválených používateľov, presmerovať na 'logged-in-my-data.html'
+  // Redirect for users with 'admin' role or unapproved users
   if (userProfileData && (userProfileData.role !== 'user' || userProfileData.approved !== true)) {
-    console.log("ChangePhoneApp: Používateľ nie je schválený používateľ, presmerovávam.");
-    window.location.href = 'logged-in-my-data.html'; // Presmerovanie na logged-in-my-data.html
+    console.log("ChangePhoneApp: User is not an approved user, redirecting.");
+    window.location.href = 'logged-in-my-data.html'; // Redirect to logged-in-my-data.html
     return null;
   }
 
@@ -858,7 +789,7 @@ function ChangePhoneApp() {
   const ChevronDown = React.createElement(
     'svg',
     {
-      xmlns: 'http://www.w3.org/24/04/svg',
+      xmlns: 'http://www.w3.org/2000/svg',
       width: '24',
       height: '24',
       viewBox: '0 0 24 24',
@@ -872,12 +803,12 @@ function ChangePhoneApp() {
     React.createElement('path', { d: 'm6 9 6 6 6-6' })
   );
 
-  // Dynamické triedy pre tlačidlo na základe stavu disabled
+  // Dynamic classes for the button based on disabled state
   const buttonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200
-    ${loading || !isDataEditingAllowed || !isFormValid // ZMENA: Pridaná kontrola isFormValid
-      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
-      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    ${loading || !isDataEditingAllowed || !isFormValid // CHANGE: Added isFormValid check
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Disabled state
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Active state
     }
   `;
 
@@ -896,8 +827,8 @@ function ChangePhoneApp() {
         { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         error
       ),
-      // NOVINKA: Správa o uzávierke úprav
-      !isDataEditingAllowed && React.createElement(
+      // NEW: Data editing deadline message
+      !isDataEditingAllowed && userProfileData && userProfileData.role !== 'admin' && React.createElement(
         'div',
         { className: 'bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
         `Úpravy telefónneho čísla sú povolené len do ${dataEditDeadline ? new Date(dataEditDeadline).toLocaleDateString('sk-SK') + ' ' + new Date(dataEditDeadline).toLocaleTimeString('sk-SK') : 'nedefinovaného dátumu'}.`
@@ -906,7 +837,7 @@ function ChangePhoneApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Zmeniť telefónne číslo' // Hlavný nadpis
+          'Zmeniť telefónne číslo' // Main heading
         ),
         // Change Phone Number Section
         React.createElement(
@@ -927,20 +858,20 @@ function ChangePhoneApp() {
                   {
                     type: 'button',
                     onClick: () => setIsCountryCodeModalOpen(true),
-                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex-shrink-0 flex items-center', // Pridané flex items-center
-                    disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded-l-lg border border-r-0 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 flex-shrink-0 flex items-center', // Added flex items-center
+                    disabled: loading || !isDataEditingAllowed, // NEW: Disabled if after deadline
                   },
-                  selectedCountryDialCode, // Zobrazí vybranú predvoľbu
-                  ChevronDown // Pridanie ikony šípky
+                  selectedCountryDialCode, // Display selected dial code
+                  ChevronDown // Add chevron icon
                 ),
                 React.createElement('input', {
-                  type: 'tel', // Používame type="tel" pre telefónne čísla
+                  type: 'tel', // Use type="tel" for phone numbers
                   id: 'contact-phone-number',
                   className: 'shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                  value: contactPhoneNumber, // Už len samotné číslo
+                  value: contactPhoneNumber, // Only the number itself
                   onChange: (e) => setContactPhoneNumber(e.target.value),
                   required: true,
-                  disabled: loading || !isDataEditingAllowed, // NOVINKA: Disabled ak je po uzávierke
+                  disabled: loading || !isDataEditingAllowed, // NEW: Disabled if after deadline
                   placeholder: 'Zadajte telefónne číslo'
                 })
               )
@@ -949,8 +880,8 @@ function ChangePhoneApp() {
               'button',
               {
                 type: 'submit',
-                className: buttonClasses, // Použitie dynamických tried
-                disabled: loading || !isDataEditingAllowed || !isFormValid, // ZMENA: Disabled ak je po uzávierke alebo formulár nie je platný
+                className: buttonClasses, // Use dynamic classes
+                disabled: loading || !isDataEditingAllowed || !isFormValid, // CHANGE: Disabled if after deadline or form is invalid
               },
               loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
@@ -964,10 +895,10 @@ function ChangePhoneApp() {
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
-      disabled: loading || !isDataEditingAllowed, // Pass the loading state to disable buttons in modal, NOVINKA: Disabled ak je po uzávierke
+      disabled: loading || !isDataEditingAllowed, // Pass the loading state to disable buttons in modal, NEW: Disabled if after deadline
     })
   );
 }
 
-// Explicitne sprístupniť komponent globálne
+// Explicitly expose the component globally
 window.ChangePhoneApp = ChangePhoneApp;
