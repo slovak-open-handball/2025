@@ -3,61 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Slovak Open Handball</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>SOH 2025 - Hlavná stránka</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Používame React 17, ako ste požadovali -->
-    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <!-- Google Fonts - Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-        }
-        /* Štýly pre modálne okná */
-        .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
-        /* Prispôsobenie pre oddeľovač hlavičky */
-        #header-placeholder {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 20;
         }
     </style>
 </head>
-<body class="bg-gray-100 font-inter">
-    <div id="header-placeholder"></div>
-    <div id="header-notification-root"></div>
-    <div id="authentication-root"></div>
-    <div id="root"></div>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Skopírovaný obsah z header.html -->
+    <header class="bg-white shadow-md rounded-b-lg sticky top-0 z-50">
+        <nav class="container mx-auto p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <img src="https://placehold.co/40x40/0A2C49/white?text=SOH" alt="Logo SOH 2025" class="h-10 w-10 rounded-full" />
+                <a href="index.html" class="text-2xl font-bold text-gray-800">SOH 2025</a>
+            </div>
+            <!-- Desktop menu -->
+            <div class="hidden md:flex space-x-6 items-center">
+                <a href="index.html" class="text-gray-600 hover:text-gray-900 transition-colors duration-200">Domov</a>
+                <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors duration-200">Turnaj</a>
+                <a href="#" class="text-gray-600 hover:text-gray-900 transition-colors duration-200">Tímy</a>
+                <a href="login.html" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+                    <span>Prihlásenie</span>
+                </a>
+            </div>
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                </button>
+            </div>
+        </nav>
+        <!-- Mobile menu content -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white p-4 shadow-inner">
+            <a href="index.html" class="block py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 border-b border-gray-200">Domov</a>
+            <a href="#" class="block py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 border-b border-gray-200">Turnaj</a>
+            <a href="#" class="block py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 border-b border-gray-200">Tímy</a>
+            <a href="login.html" class="block py-2 mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg text-center transition-colors duration-200">
+                Prihlásenie
+            </a>
+        </div>
+    </header>
+    
+    <main class="flex-grow flex items-center justify-center p-8">
+        <div class="container mx-auto p-4">
+            <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-2xl mx-auto">
+                <h1 class="text-4xl font-bold text-gray-800">Vitajte na SOH 2025!</h1>
+                <p class="text-lg text-gray-600 mt-4">Slovak Open Handball 2025 sa blíži! Pripravte sa na najväčší hádzanársky turnaj na Slovensku.</p>
+                <div id="main-content" class="mt-8">
+                    <!-- Tu sa bude dynamicky generovať obsah pomocou JS -->
+                    <div id="loading" class="flex justify-center items-center">
+                        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-    <!-- Načítavame len jeden hlavný modul, ktorý sa postará o všetko -->
-    <script src="index.js" defer type="module"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Vlastná logika pre túto stránku
+        document.addEventListener('DOMContentLoaded', async () => {
+            const mainContentDiv = document.getElementById('main-content');
+            const loadingDiv = document.getElementById('loading');
+
+            const firebaseConfig = JSON.parse(
+                '{"apiKey":"AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4","authDomain":"soh2025-2s0o2h5.firebaseapp.com","projectId":"soh2025-2s0o2h5","storageBucket":"soh2025-2s0o2h5.firebasestorage.app","messagingSenderId":"572988314768","appId":"1:572988314768:web:781e27eb035179fe34b415"}'
+            );
+
+            if (!firebaseConfig.projectId) {
+                mainContentDiv.innerHTML = `<p class="text-red-500">Chyba: Konfigurácia Firebase je neplatná.</p>`;
+                return;
+            }
+
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            let isAuthReady = false;
+            let userId = null;
+
+            if (typeof __initial_auth_token !== 'undefined') {
+                try {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } catch (e) {
+                    console.error("Custom token sign-in failed:", e);
+                    await signInAnonymously(auth);
+                }
+            } else {
+                await signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, (currentUser) => {
+                if (currentUser) {
+                    userId = currentUser.uid;
+                    console.log("User is signed in:", userId);
+                } else {
+                    console.log("User is signed out.");
+                }
+                isAuthReady = true;
+            });
+
+            // Čakanie, kým je autentifikácia pripravená, predtým ako začnete pracovať s databázou
+            function waitForAuthReady(callback) {
+                if (isAuthReady) {
+                    callback();
+                } else {
+                    setTimeout(() => waitForAuthReady(callback), 100);
+                }
+            }
+
+            waitForAuthReady(async () => {
+                try {
+                    const settingsRef = doc(db, 'settings', 'registration');
+                    onSnapshot(settingsRef, (docSnap) => {
+                        const renderContent = async () => {
+                            let registrationStartDate = null;
+                            let registrationEndDate = null;
+                            if (docSnap.exists()) {
+                                const data = docSnap.data();
+                                registrationStartDate = data.registrationStartDate ? data.registrationStartDate.toDate() : null;
+                                registrationEndDate = data.registrationEndDate ? data.registrationEndDate.toDate() : null;
+                            }
+
+                            const now = new Date().getTime();
+                            const regStart = registrationStartDate ? registrationStartDate.getTime() : null;
+                            const regEnd = registrationEndDate ? registrationEndDate.getTime() : null;
+
+                            let categoriesExist = false;
+                            try {
+                                const categoriesCollectionRef = collection(db, 'categories');
+                                const categoriesSnap = await getDocs(categoriesCollectionRef);
+                                categoriesExist = !categoriesSnap.empty;
+                            } catch (e) {
+                                console.error("Chyba pri kontrole kategórií:", e);
+                                // Ignorovať chybu, ak chýbajú kategórie, zobrazí sa príslušná správa
+                            }
+
+                            let content = '';
+                            if (categoriesExist && regStart && regEnd && now >= regStart && now <= regEnd) {
+                                content = `
+                                    <p class="text-xl text-green-600 font-semibold">Registrácia prebieha!</p>
+                                    <p class="text-lg text-gray-500">Registrácia končí: ${new Date(registrationEndDate).toLocaleDateString('sk-SK')} o ${new Date(registrationEndDate).toLocaleTimeString('sk-SK')}</p>
+                                    <div class="mt-6">
+                                        <a href="login.html" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200">Prihlásenie</a>
+                                    </div>
+                                `;
+                            } else if (categoriesExist && regStart && now < regStart) {
+                                // Zobrazenie odpočítavania
+                                const countdownInterval = setInterval(() => {
+                                    const nowInInterval = new Date().getTime();
+                                    const diff = regStart - nowInInterval;
+
+                                    if (diff > 0) {
+                                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                                        const countdownHtml = `
+                                            <p class="text-xl text-red-600 font-semibold">Registrácia sa ešte nezačala.</p>
+                                            <p class="text-md text-gray-500 mt-2">Registrácia začne o: ${days}d ${hours}h ${minutes}m ${seconds}s</p>
+                                        `;
+                                        mainContentDiv.innerHTML = countdownHtml;
+                                    } else {
+                                        clearInterval(countdownInterval);
+                                        // Znova spustíme render, aby sa zobrazil správny stav (registrácia aktívna)
+                                        renderContent();
+                                    }
+                                }, 1000);
+                            } else if (categoriesExist && regEnd && now > regEnd) {
+                                content = `
+                                    <p class="text-md text-gray-500 mt-2">Registrácia skončila: ${new Date(registrationEndDate).toLocaleDateString('sk-SK')} o ${new Date(registrationEndDate).toLocaleTimeString('sk-SK')}</p>
+                                `;
+                            } else {
+                                content = `
+                                    <p class="text-md text-red-500 mt-2">Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.</p>
+                                `;
+                            }
+
+                            if (!now < regStart) {
+                                mainContentDiv.innerHTML = content;
+                            }
+                        };
+                        renderContent();
+                    }, (err) => {
+                        console.error("Chyba pri načítaní nastavení: ", err);
+                        mainContentDiv.innerHTML = `<p class="text-red-500">Chyba pri načítaní nastavení. Skontrolujte bezpečnostné pravidlá databázy.</p>`;
+                    });
+                } catch (e) {
+                    console.error("Chyba pri inicializácii listenera pre nastavenia:", e);
+                    mainContentDiv.innerHTML = `<p class="text-red-500">Chyba pri inicializácii načítania nastavení. Skúste obnoviť stránku.</p>`;
+                }
+            });
+        });
+    </script>
+    <script src="header.js"></script>
 </body>
 </html>
