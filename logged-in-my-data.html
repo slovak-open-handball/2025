@@ -14,10 +14,8 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
-            display: flex; /* Použitie flexboxu pre hlavný layout */
-            flex-direction: column; /* Hlavička, potom obsah */
-            min-height: 100vh; /* Minimálna výška na celú obrazovku */
+            box-sizing: border-box;
+            min-height: 100vh;
         }
         /* Štýly pre modálne okná */
         .modal {
@@ -51,11 +49,8 @@
     <div id="global-notification-container" class="fixed top-20 right-5 z-50"></div>
 
     <div class="flex flex-1">
-        <!-- Zástupný element pre dynamicky načítané ľavé menu -->
-        <div id="left-menu-placeholder"></div>
-
-        <main id="main-content" class="flex-1 p-6 transition-all duration-300 ml-0 md:ml-64">
-            <!-- Toto je hlavný kontajner pre React aplikáciu -->
+        <!-- Hlavný kontajner pre React aplikáciu -->
+        <main id="main-content" class="flex-1 p-6 transition-all duration-300">
             <div id="root">
                 <!-- React komponent sa vykreslí sem -->
             </div>
@@ -64,56 +59,32 @@
 
     <!-- Firebase a globálne skripty -->
     <script type="module" src="authentication.js"></script>
-    <!-- React a ReactDOM -->
+    
+    <!-- React, ReactDOM a Babel pre podporu JSX -->
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <!-- Skripty pre našu aplikáciu, ktoré MUSIA byť načítané PO Reacte -->
-    <script src="logged-in-my-data.js"></script>
-    <!-- Načíta hlavičku a menu -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Skripty pre našu aplikáciu, ktoré MUSIA byť načítané PO Reacte a Babeli -->
+    <script type="text/babel" src="logged-in-my-data.js"></script>
+    <!-- Načíta hlavičku -->
     <script src="header.js"></script>
     
     <script>
-        // Funkcia na dynamické načítanie ľavého menu
-        async function loadLeftMenu() {
-            try {
-                const response = await fetch('logged-in-left-menu.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const menuHtml = await response.text();
-                const menuPlaceholder = document.getElementById('left-menu-placeholder');
-                if (menuPlaceholder) {
-                    menuPlaceholder.innerHTML = menuHtml;
-                }
-                // Načítať aj JavaScript pre menu, ak existuje
-                const menuScript = document.createElement('script');
-                menuScript.src = 'logged-in-left-menu.js';
-                menuScript.type = 'text/javascript';
-                document.body.appendChild(menuScript);
-            } catch (error) {
-                console.error("Chyba pri načítaní ľavého menu:", error);
-            }
-        }
-
-        // Spustíme načítanie menu a renderovanie React aplikácie po načítaní DOM
-        window.onload = async () => {
-            // Hlavička sa načíta cez header.js
-            await loadLeftMenu();
-
-            // Renderujeme React aplikáciu až po načítaní DOM a všetkých skriptov
-            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+        // Spustíme renderovanie React aplikácie po načítaní DOM
+        window.onload = () => {
+            // Skontrolujeme, či sú React a ReactDOM k dispozícii
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined' || typeof MyDataApp === 'undefined') {
+                console.error("Chyba: React, ReactDOM alebo MyDataApp komponent nie sú načítané. Skontrolujte poradie a typ skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            if (typeof MyDataApp === 'undefined') {
-                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                return;
-            }
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MyDataApp, null));
+            // Vykreslíme React komponent
+            ReactDOM.render(
+                React.createElement(MyDataApp),
+                document.getElementById('root')
+            );
             console.log("logged-in-my-data.html: React App vykreslená.");
         };
     </script>
