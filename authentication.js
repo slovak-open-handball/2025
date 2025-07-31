@@ -14,6 +14,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Pevne definovaná konfigurácia Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+    projectId: "soh2025-2s0o2h5",
+    storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+    messagingSenderId: "572988314768",
+    appId: "1:572988314768:web:781e27eb035179fe34b415"
+};
+
 // Ochrana proti zobrazeniu stránky v iframe
 if (window.self !== window.top) {
     document.body.innerHTML = '';
@@ -26,17 +36,13 @@ if (window.self !== window.top) {
     document.body.appendChild(errorMessageDiv);
 }
 
-// Zabezpečíme, že appId a Firebase Config sú definované
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-
 // Inicializácia Firebase
 const setupFirebase = () => {
     try {
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
-        console.log("AuthManager: Firebase služby inicializované.");
+        console.log("AuthManager: Firebase služby inicializované s pevnou konfiguráciou.");
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
     }
@@ -88,6 +94,7 @@ const handleAuthState = () => {
         window.isGlobalAuthReady = true;
 
         // Prihlásenie anonymným používateľom, ak token nie je k dispozícii
+        // Používame `__initial_auth_token` ak existuje, inak anonymné prihlásenie
         if (typeof __initial_auth_token !== 'undefined' && !user) {
             try {
                 await signInWithCustomToken(window.auth, __initial_auth_token);
