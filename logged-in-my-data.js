@@ -116,27 +116,21 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
             ` ${userProfileData.lastName}`
           ),
-          React.createElement(
+          userProfileData.displayName && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' }, 
-            React.createElement('span', { className: 'font-bold' }, 'E-mail:'),
-            ` ${userProfileData.email}`
+            React.createElement('span', { className: 'font-bold' }, 'Zobrazované meno:'),
+            ` ${userProfileData.displayName}`
           ),
           userProfileData.uid && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'UID:'),
             ` ${userProfileData.uid}`
-          ),
-          userProfileData.displayName && React.createElement(
-            'p',
-            { className: 'text-gray-800 text-lg' }, 
-            React.createElement('span', { className: 'font-bold' }, 'Zobrazované meno:'),
-            ` ${userProfileData.displayName}`
           )
         ),
         // Adresa
-        (userProfileData.street || userProfileData.city || userProfileData.postalCode) && React.createElement(
+        (userProfileData.street || userProfileData.houseNumber || userProfileData.city || userProfileData.postalCode || userProfileData.country) && React.createElement(
           'div',
           { className: 'space-y-4' },
           React.createElement(
@@ -150,6 +144,12 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Ulica:'),
             ` ${userProfileData.street}`
           ),
+          userProfileData.houseNumber && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Číslo domu:'),
+            ` ${userProfileData.houseNumber}`
+          ),
           userProfileData.city && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
@@ -161,10 +161,16 @@ function MyDataApp() {
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'PSČ:'),
             ` ${userProfileData.postalCode}`
+          ),
+          userProfileData.country && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Krajina:'),
+            ` ${userProfileData.country}`
           )
         ),
         // Kontaktné údaje
-        (userProfileData.phone || userProfileData.countryPhoneNumbers) && React.createElement(
+        (userProfileData.email || userProfileData.contactPhoneNumber) && React.createElement(
             'div',
             { className: 'space-y-4' },
             React.createElement(
@@ -172,20 +178,18 @@ function MyDataApp() {
                 { className: 'text-2xl font-semibold text-gray-800' },
                 'Kontaktné údaje'
             ),
-            userProfileData.phone && React.createElement(
+            userProfileData.email && React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'E-mail:'),
+                ` ${userProfileData.email}`
+            ),
+            userProfileData.contactPhoneNumber && React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Telefón:'),
-                ` ${userProfileData.phone}`
+                ` ${userProfileData.contactPhoneNumber}`
             ),
-            userProfileData.countryPhoneNumbers && Object.keys(userProfileData.countryPhoneNumbers).map(country => (
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg', key: country },
-                    React.createElement('span', { className: 'font-bold' }, `Telefón (${country.toUpperCase()}):`),
-                    ` ${userProfileData.countryPhoneNumbers[country]}`
-                )
-            ))
         ),
         // Ďalšie údaje
         (userProfileData.clubName || userProfileData.registrationDate) && React.createElement(
