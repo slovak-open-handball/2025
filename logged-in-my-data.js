@@ -4,11 +4,28 @@
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-  // Získame referencie na globálne dáta z authentication.js
-  const userProfileData = window.globalUserProfileData;
+  // Lokálny stav pre používateľské dáta a stav načítania
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [loading, setLoading] = React.useState(true); 
 
-  // Ak sa dáta ešte nenačítali, zobrazíme loading stav
-  if (!userProfileData) {
+  // Efekt, ktorý čaká na globálne dáta a aktualizuje lokálny stav
+  React.useEffect(() => {
+    // Sledujeme zmeny v globálnych dátach z authentication.js
+    const checkData = setInterval(() => {
+      if (window.isGlobalAuthReady && window.globalUserProfileData) {
+        setUserProfileData(window.globalUserProfileData);
+        setLoading(false);
+        clearInterval(checkData); // Zastavíme interval po načítaní dát
+        console.log("MyDataApp: Lokálny stav aktualizovaný s globálnymi dátami.");
+      }
+    }, 100); // Kontrolujeme každých 100ms
+
+    // Funkcia na vyčistenie intervalu, keď sa komponent odpojí
+    return () => clearInterval(checkData);
+  }, []);
+
+  // Ak sa dáta ešte načítavajú, zobrazíme spinner
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
