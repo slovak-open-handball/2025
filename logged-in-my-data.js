@@ -104,13 +104,13 @@ function MyDataApp() {
             { className: 'text-2xl font-semibold text-gray-800' },
             'Osobné údaje'
           ),
-          React.createElement(
+          userProfileData.firstName && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' }, 
             React.createElement('span', { className: 'font-bold' }, 'Meno:'),
             ` ${userProfileData.firstName}`
           ),
-          React.createElement(
+          userProfileData.lastName && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' }, 
             React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
@@ -192,7 +192,7 @@ function MyDataApp() {
             ),
         ),
         // Ďalšie údaje
-        (userProfileData.clubName || userProfileData.registrationDate) && React.createElement(
+        userProfileData.registrationDate && React.createElement(
             'div',
             { className: 'space-y-4' },
             React.createElement(
@@ -200,13 +200,7 @@ function MyDataApp() {
                 { className: 'text-2xl font-semibold text-gray-800' },
                 'Ďalšie údaje'
             ),
-            userProfileData.clubName && React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
-                ` ${userProfileData.clubName}`
-            ),
-            userProfileData.registrationDate && React.createElement(
+            React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Dátum registrácie:'),
@@ -227,6 +221,12 @@ function MyDataApp() {
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
             ` ${userProfileData.billing.companyName}`
+          ),
+          userProfileData.billing.clubName && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
+            ` ${userProfileData.billing.clubName}`
           ),
           userProfileData.billing.street && React.createElement(
             'p',
