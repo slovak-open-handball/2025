@@ -94,19 +94,45 @@ const handleAuthState = async () => {
         console.error("AuthManager: Firebase služby nie sú inicializované.");
         return;
     }
+    
+    // Získanie tokenu z globálnej premennej
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
     // Nastavíme listener na zmeny stavu autentifikácie
+    // Táto funkcia sa spustí okamžite s aktuálnym stavom a potom pri každej zmene
     onAuthStateChanged(auth, async (user) => {
-        window.isGlobalAuthReady = true; // Sme pripravení po prvej kontrole stavu
-        
-        let unsubscribe = () => {};
+        // Ak už prebehla prvá kontrola stavu, nič nerobíme (aby sa predišlo duplicitnému prihlasovaniu)
+        if (window.isGlobalAuthReady) {
+            return;
+        }
 
-        if (user) {
+        // Ak nie je používateľ prihlásený, pokúsime sa ho prihlásiť
+        if (!user) {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("AuthManager: Prihlásenie pomocou custom tokenu bolo úspešné.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("AuthManager: Prihlásenie ako anonymný používateľ bolo úspešné.");
+                }
+            } catch (error) {
+                console.error("AuthManager: Chyba pri prihlasovaní:", error);
+                // Nastavíme isGlobalAuthReady aj pri chybe, aby sme sa vyhli zacykleniu
+                window.isGlobalAuthReady = true; 
+            }
+        }
+        
+        // Nastavíme isGlobalAuthReady, aby sa tento blok kódu nespustil znova
+        window.isGlobalAuthReady = true;
+
+        // Teraz spracujeme načítanie profilu a autorizáciu
+        if (auth.currentUser) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
             const appId = "soh2025-2s0o2h5"; // Použijeme pevne definované app ID z konfigurácie
-            const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile`, user.uid);
+            const userDocRef = doc(db, `artifacts/${appId}/users/${auth.currentUser.uid}/profile`, auth.currentUser.uid);
 
-            unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
                     console.log("AuthManager: Načítaný profil používateľa:", window.globalUserProfileData);
@@ -117,13 +143,7 @@ const handleAuthState = async () => {
                 
                 // Kontrola autorizácie stránky po načítaní profilu
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
                     console.warn("AuthManager: Autorizácia zlyhala alebo prebehlo presmerovanie.");
-                }
-                
-                // Ak existuje globálna funkcia na inicializáciu aplikácie (napr. z logged-in-my-data.js), zavoláme ju.
-                if (window.initMyDataApp) {
-                    window.initMyDataApp();
                 }
                 
             }, (error) => {
@@ -131,7 +151,6 @@ const handleAuthState = async () => {
                 window.globalUserProfileData = null;
                 // Kontrola autorizácie aj pri chybe načítania profilu
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
                 }
             });
 
@@ -141,13 +160,6 @@ const handleAuthState = async () => {
             
             // Kontrola autorizácie stránky po odhlásení
             if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                 // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
-            }
-            
-            // Ak sa používateľ odhlási, a je funkcia na inicializáciu, zavoláme ju tiež,
-            // aby sa aplikácia správne vyčistila a zobrazila stav "nie je prihlásený".
-            if (window.initMyDataApp) {
-                 window.initMyDataApp();
             }
         }
     });
@@ -156,31 +168,10 @@ const handleAuthState = async () => {
 };
 
 
-// Spustenie autentifikácie po načítaní DOM
+// Spustenie inicializácie po načítaní DOM
 window.addEventListener('DOMContentLoaded', async () => {
     // Inicializácia Firebase
     setupFirebase();
-    // Spustenie logiky pre autentifikáciu
+    // Spustenie logiky pre autentifikáciu (ktorá teraz spúšťa listener)
     handleAuthState();
-
-    const auth = window.auth;
-    if (!auth) {
-        console.error("AuthManager: Authentication služby nie sú dostupné.");
-        return;
-    }
-    
-    // Získanie tokenu a prihlásenie
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    
-    try {
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-            console.log("AuthManager: Prihlásenie pomocou custom tokenu bolo úspešné.");
-        } else {
-            await signInAnonymously(auth);
-            console.log("AuthManager: Prihlásenie ako anonymný používateľ bolo úspešné.");
-        }
-    } catch (error) {
-        console.error("AuthManager: Chyba pri prihlasovaní:", error);
-    }
 });
