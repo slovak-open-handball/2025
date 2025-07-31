@@ -7,15 +7,15 @@
 // const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
-//const formatToDatetimeLocal = (date) => {
-//  if (!date) return '';
-//  const year = date.getFullYear();
-//  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//  const day = date.getDate().toString().padStart(2, '0');
-//  const hours = date.getHours().toString().padStart(2, '0');
-//  const minutes = date.getMinutes().toString().padStart(2, '0');
-//  return `${year}-${month}-${day}T${hours}:${minutes}`;
-//};
+const formatToDatetimeLocal = (date) => {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
@@ -70,14 +70,18 @@ function NotificationModal({ message, onClose }) {
 
 // Main React component for the logged-in-tournament-settings.html page
 function TournamentSettingsApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  // NEW: Get references to Firebase services directly
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NEW: Local state for the current user and their profile data
+  // These states will be updated by the local onAuthStateChanged and onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Loading for data in TournamentSettingsApp
   const [error, setError] = React.useState('');
+  // Retained: userNotificationMessage for local notifications
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // States for date and time settings
@@ -137,205 +141,172 @@ function TournamentSettingsApp() {
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }, [registrationStartDate]);
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NEW: Local Auth Listener for TournamentSettingsApp
+  // This listener ensures that TournamentSettingsApp reacts to authentication changes,
+  // but primary logout/redirection is handled by GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("TournamentSettingsApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-tournament-settings.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("TournamentSettingsApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // If user is not logged in, redirect (even if GNH should handle it)
+      if (!currentUser) {
+        console.log("TournamentSettingsApp: User is not logged in, redirecting to login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Depends on auth instance
 
-      const firebaseApp = firebase.app();
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          }
-        } catch (e) {
-          console.error("TournamentSettingsApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("TournamentSettingsApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("TournamentSettingsApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // NEW: Local Effect for loading user data from Firestore
+  // This effect will run when the user is logged in and db is available.
+  // It assumes that passwordLastChanged and approved status are already verified by a global handler.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    // Spustí sa len ak je Auth pripravené, DB je k dispozícii a user je definovaný (nie undefined)
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) { // Ak je používateľ null (nie je prihlásený), presmeruj
-        console.log("TournamentSettingsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Only runs if user is logged in and db is available
+      console.log(`TournamentSettingsApp: Attempting to load user document for UID: ${user.uid}`);
+      setLoading(true); // Set loading to true while profile data is being loaded
 
-      // Ak je používateľ prihlásený, pokús sa načítať jeho dáta z Firestore
-      if (user) {
-        console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true); // Nastavíme loading na true tu
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          console.log("TournamentSettingsApp: onSnapshot for user document triggered.");
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("TournamentSettingsApp: User document exists, data:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("TournamentSettingsApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("TournamentSettingsApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("TournamentSettingsApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("TournamentSettingsApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`TournamentSettingsApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("TournamentSettingsApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("TournamentSettingsApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("TournamentSettingsApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("TournamentSettingsApp: Timestampy sú rovnaké, aktualizujem localStorage.");
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("TournamentSettingsApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData); // Aktualizujeme nový stav userProfileData
-              
-              setLoading(false); // Stop loading po načítaní používateľských dát
-              setError(''); // Vymazať chyby po úspešnom načítaní
-
-              // NOVINKA: Aktualizácia viditeľnosti menu po načítaní roly
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("TournamentSettingsApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
+            // This is added logic that runs immediately after data is loaded.
+            // If passwordLastChanged is invalid or missing, log out.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("TournamentSettingsApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
+                console.log("TournamentSettingsApp: Immediately logging out user due to invalid password change timestamp.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
             }
-          }, error => {
-            console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
+
+            // Normal processing if passwordLastChanged is valid
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`TournamentSettingsApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("TournamentSettingsApp: Initializing passwordLastChanged in localStorage (first load).");
+                // Do not continue here, continue with normal data processing for first load
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                // Password was changed on another device/session
+                console.log("TournamentSettingsApp: Password change detected on another device/session. Logging out user.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                // This ideally should not happen if Firestore is the source of truth
+                console.warn("TournamentSettingsApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                // Times are the same, ensure localStorage is up-to-date
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("TournamentSettingsApp: Timestamps are the same, updating localStorage.");
             }
-            setLoading(false); // Stop loading aj pri chybe
-            console.log("TournamentSettingsApp: Načítanie používateľských dát zlyhalo, loading: false");
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false); // Stop loading aj pri chybe
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
+
+            // NEW LOGIC: Logout if user is admin and not approved
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("TournamentSettingsApp: User is admin and not approved. Logging out.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
+            }
+
+            setUserProfileData(userData); // Update userProfileData state
+            
+            setLoading(false); // Stop loading after user data is loaded
+            setError(''); // Clear errors after successful load
+
+            // Update menu visibility after role is loaded (call global function from left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("TournamentSettingsApp: Function updateMenuItemsVisibility is not defined.");
+            }
+
+            console.log("TournamentSettingsApp: User data loading complete, loading: false");
+          } else {
+            console.warn("TournamentSettingsApp: User document not found for UID:", user.uid);
+            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
+            setLoading(false); // Stop loading so error can be displayed
+            setUser(null); // Explicitly set user to null
+            setUserProfileData(null); // Explicitly set userProfileData to null
+          }
+        }, error => {
+          console.error("TournamentSettingsApp: Error loading user data from Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Authentication error: You are not logged in. Please try logging in again.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitly set user to null
+                  setUserProfileData(null); // Explicitly set userProfileData to null
+               }
+          } else {
+              setError(`Error loading user data: ${error.message}`);
+          }
+          setLoading(false); // Stop loading even on error
+          console.log("TournamentSettingsApp: User data loading failed, loading: false");
+          setUser(null); // Explicitly set user to null
+          setUserProfileData(null); // Explicitly set userProfileData to null
+        });
+      } catch (e) {
+        console.error("TournamentSettingsApp: Error setting up onSnapshot for user data (try-catch):", e);
+        setError(`Error setting up listener for user data: ${e.message}`);
+        setLoading(false); // Stop loading even on error
+        setUser(null); // Explicitly set user to null
+        setUserProfileData(null); // Explicitly set userProfileData to null
       }
-    } else if (isAuthReady && user === undefined) {
-        console.log("TournamentSettingsApp: Auth ready, user undefined. Nastavujem loading na false.");
+    } else if (user === null) {
+        // If user is null (and not undefined), it means they have been logged out.
+        // Redirection should already be handled by GlobalNotificationHandler.
+        // Here, we just ensure loading is false and data is cleared.
         setLoading(false);
+        setUserProfileData(null);
     }
 
-
     return () => {
-      // Zrušíme odber onSnapshot pri unmount
+      // Unsubscribe from onSnapshot on unmount
       if (unsubscribeUserDoc) {
-        console.log("TournamentSettingsApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("TournamentSettingsApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
 
   // Effect for loading settings (runs after DB and Auth are initialized)
   React.useEffect(() => {
     const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
-        console.log("TournamentSettingsApp: Čakám na DB alebo Auth pre načítanie nastavení.");
-        return; // Wait for DB and Auth to be initialized
+      if (!db) {
+        console.log("TournamentSettingsApp: Čakám na DB pre načítanie nastavení.");
+        return; // Wait for DB to be initialized
       }
       try {
           console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia registrácie.");
@@ -376,7 +347,7 @@ function TournamentSettingsApp() {
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db]);
 
   // Effect for countdown (runs when registrationStartDate changes)
   React.useEffect(() => {
@@ -408,67 +379,6 @@ function TournamentSettingsApp() {
 
     return () => clearInterval(interval);
   }, []);
-
-  // useEffect for updating header link visibility (remains for consistency)
-  React.useEffect(() => {
-    console.log(`TournamentSettingsApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}, isRegistrationOpen: ${isRegistrationOpen}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) { // Ak je používateľ prihlásený
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("TournamentSettingsApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else { // Ak používateľ nie je prihlásený
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        if (isRegistrationOpen) {
-          registerLink && registerLink.classList.remove('hidden');
-          console.log("TournamentSettingsApp: Používateľ odhlásený, registrácia otvorená. Zobrazené: Prihlásenie, Registrácia.");
-        } else {
-          registerLink && registerLink.classList.add('hidden');
-          console.log("TournamentSettingsApp: Používateľ odhlásený, registrácia zatvorená. Zobrazené: Prihlásenie. Skryté: Registrácia.");
-        }
-      }
-    }
-  }, [user, isRegistrationOpen]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("TournamentSettingsApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
 
   const handleUpdateRegistrationSettings = async (e) => {
     e.preventDefault();
@@ -531,18 +441,18 @@ function TournamentSettingsApp() {
   };
 
   // Display loading state
-  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
-        console.log("TournamentSettingsApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+  if (!user || (user && !userProfileData) || !settingsLoaded || loading) {
+    if (user === null) {
+        console.log("TournamentSettingsApp: User is null, redirecting to login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !settingsLoaded) {
+    if (user && !userProfileData) {
         loadingMessage = 'Načítavam...';
-    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
-        loadingMessage = 'Načítavam...'; // Špecifická správa pre profilové dáta
-    } else if (loading) { // Všeobecný stav načítavania, napr. pri odosielaní formulára
+    } else if (!settingsLoaded) {
+        loadingMessage = 'Načítavam nastavenia...';
+    } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
 
@@ -638,3 +548,6 @@ function TournamentSettingsApp() {
     )
   );
 }
+
+// Explicitne sprístupniť komponent globálne
+window.TournamentSettingsApp = TournamentSettingsApp;
