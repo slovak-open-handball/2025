@@ -44,7 +44,8 @@ const checkPageAuthorization = (userData, currentPath) => {
     }
     if (!userData) {
         console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Používateľ nie je prihlásený.`);
-        return false;
+        // Toto je hlavná zmena - ak používateľ nie je prihlásený, ale snaží sa dostať na chránenú stránku, presmerujeme ho na login.
+        return false; 
     }
     if (requiredAccess.approved && !userData.approved) {
         console.log(`AuthManager: Prístup zamietnutý pre ${currentPageName}. Používateľ ${userData.email} nie je schválený.`);
@@ -182,6 +183,10 @@ if (app) {
         } else {
             console.log("AuthManager: Používateľ nie je prihlásený. Globálny profil je null.");
             window.globalUserProfileData = null;
+            // Presmerovanie na login.html po odhlásení
+            if (window.location.pathname.endsWith('login.html') === false) {
+                 window.location.href = 'login.html';
+            }
         }
 
         // Nastavíme globálny stav pripravenosti
