@@ -109,6 +109,7 @@ function RoleEditModal({ show, user, onClose, onSave, loading }) {
           React.createElement('option', { value: 'admin' }, 'Administrátor')
         )
       ),
+      // ODSTRÁNENÉ: Checkbox pre schválenie sa už nezobrazuje
       React.createElement(
         'div',
         { className: 'flex justify-end space-x-4' },
@@ -354,63 +355,6 @@ function UsersManagementApp() {
     };
   }, [isAuthReady, db, user, auth]);
 
-  // Effect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`UsersManagementApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("UsersManagementApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("UsersManagementApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      // ZMENA: Používam setUserNotificationMessage
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("UsersManagementApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
-
   // Effect for fetching users (runs after DB and userProfileData are ready and user is admin)
   React.useEffect(() => {
     let unsubscribeUsers;
@@ -451,7 +395,6 @@ function UsersManagementApp() {
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu admina)
 
   const openConfirmationModal = (user) => {
-    // ZMENA: Používam setUserNotificationMessage
     setUserNotificationMessage(`Používateľ ${user.email} bude zmazaný. Je potrebné ho manuálne zmazať aj vo Firebase Console.`, 'info');
   };
 
@@ -515,11 +458,12 @@ function UsersManagementApp() {
     try {
       const userDocRef = db.collection('users').doc(userId);
       
+      // Ak sa rola mení na 'user', approved sa nastaví na true.
+      // Ak sa rola mení na 'admin', approved sa nastaví na false.
       const approvedStatus = (newRole === 'user') ? true : false; 
 
       await userDocRef.update({ role: newRole, approved: approvedStatus });
       
-      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Rola používateľa ${userToEditRole.email} bola zmenená na ${newRole}.`, 'success');
       
       closeRoleEditModal();
@@ -566,7 +510,6 @@ function UsersManagementApp() {
       console.log(`Používateľ ${userToConfirmDelete.email} zmazaný z Firestore.`);
 
       // Aktualizácia notifikačnej správy
-      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Prosím, manuálne ho zmažte aj vo Firebase Authentication Console.`, 'success');
       
       // Otvoriť Firebase Console Authentication v novej záložke pre manuálne zmazanie
@@ -579,7 +522,7 @@ function UsersManagementApp() {
 
       // Uložiť notifikáciu pre všetkých administrátorov
       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-        message: `Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj vo Firebase Authentication Console.`,
+        message: `Používateľ ${userToConfirmDelete.email} bol zmazaný z databázy. Je potrebné ho manuálne zmazať aj z autentifikácie.`,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         recipientId: 'all_admins',
         read: false
@@ -589,7 +532,6 @@ function UsersManagementApp() {
     } catch (e) {
       console.error("UsersManagementApp: Chyba pri mazaní používateľa (Firestore):", e);
       setError(`Chyba pri mazaní používateľa z databázy: ${e.message}.`);
-      // ZMENA: Používam setUserNotificationMessage
       setUserNotificationMessage(`Chyba pri mazaní používateľa z databázy: ${e.message}.`, 'error');
     } finally {
       setLoading(false);
@@ -703,21 +645,20 @@ function UsersManagementApp() {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                  onClick: () => openRoleEditModal(u),
-                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
-                                                  disabled: loading,
-                                                },
-                                                'Upraviť rolu'
-                                            ),
-                                            // Tlačidlo na schválenie/odobratie prístupu pre adminov
-                                            u.role === 'admin' && React.createElement(
-                                                'button',
-                                                {
                                                   onClick: () => handleToggleAdminApproval(u),
                                                   className: `${u.approved ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'} text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200`,
                                                   disabled: loading,
                                                 },
                                                 u.approved ? 'Odobrať prístup' : 'Schváliť' // ZMENA TU
+                                            ),
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                  onClick: () => openRoleEditModal(u),
+                                                  className: 'bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-lg text-sm transition-colors duration-200',
+                                                  disabled: loading,
+                                                },
+                                                'Upraviť rolu'
                                             ),
                                             React.createElement(
                                                 'button',
