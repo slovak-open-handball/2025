@@ -1,6 +1,6 @@
-// logged-in-change-name.js
+// logged-in-template.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-change-name.html.
+// sú globálne definované v <head> logged-in-template.html.
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
 function NotificationModal({ message, onClose }) {
@@ -53,362 +53,256 @@ function NotificationModal({ message, onClose }) {
   );
 }
 
-// Main React component for the logged-in-change-name.html page
-function ChangeNameApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+// Main React component for the logged-in-template.html page
+function ChangeNameApp() { // Renamed from MyTemplateApp to ChangeNameApp to match the original file's component name
+  // NEW: Get references to Firebase services directly
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NEW: Local state for the current user and their profile data
+  // These states will be updated by the local onAuthStateChanged and onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Initialize with current user
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true); // Loading for data in ChangeNameApp
   const [error, setError] = React.useState('');
+  // Retained: userNotificationMessage for local notifications
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [firstName, setFirstName] = React.useState('');
-  const [lastName, setLastName] = React.useState('');
-  const [email, setEmail] = React.useState(''); // Bude nastavený z user.email alebo userProfileData.email
-  const [role, setRole] = React.useState('');
-  const [isApproved, setIsApproved] = React.useState(false);
-
-  // NOVINKA: Stav pre dátum uzávierky úprav dát
+  // NEW: State for data editing deadline
   const [dataEditDeadline, setDataEditDeadline] = React.useState(null);
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
-  // NOVINKA: Memoizovaná hodnota pre povolenie úprav dát
+  // NEW: Memoized value for allowing data edits
   const isDataEditingAllowed = React.useMemo(() => {
-    // Ak je používateľ admin, vždy povoliť úpravy
+    // If user is admin, always allow edits
     if (userProfileData && userProfileData.role === 'admin') {
       return true;
     }
-    // Inak platí pôvodná logika pre dátum uzávierky
-    if (!settingsLoaded || !dataEditDeadline) return true; // Ak nastavenia nie sú načítané alebo dátum nie je definovaný, povoliť úpravy
+    // Otherwise, apply original deadline logic
+    if (!settingsLoaded || !dataEditDeadline) return true; // If settings not loaded or date not defined, allow edits
     const now = new Date();
     const deadline = new Date(dataEditDeadline);
     return now <= deadline;
-  }, [settingsLoaded, dataEditDeadline, userProfileData]); // Pridaný userProfileData do závislostí
+  }, [settingsLoaded, dataEditDeadline, userProfileData]); // Added userProfileData to dependencies
 
-
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NEW: Local Auth Listener for ChangeNameApp
+  // This listener ensures that ChangeNameApp reacts to authentication changes,
+  // but primary logout/redirection is handled by GlobalNotificationHandler (if it exists).
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("ChangeNameApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-name.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("ChangeNameApp: Local onAuthStateChanged - User:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // If user is not logged in, redirect (even if GNH should handle it)
+      if (!currentUser) {
+        console.log("ChangeNameApp: User is not logged in, redirecting to login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Depends on auth instance
 
-      let firebaseApp;
-      // Skontrolujte, či už existuje predvolená aplikácia Firebase
-      if (firebase.apps.length === 0) {
-        // Používame globálne __firebase_config
-        firebaseApp = firebase.initializeApp(JSON.parse(__firebase_config));
-      } else {
-        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
-      }
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await authInstance.signInWithCustomToken(__initial_auth_token);
-          }
-        } catch (e) {
-          console.error("ChangeNameApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("ChangeNameApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("ChangeNameApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+  // NEW: Local Effect for loading user data from Firestore
+  // This effect will run when the user is logged in and db is available.
+  // It assumes that passwordLastChanged and approved status are already verified by a global handler.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) {
-        console.log("ChangeNameApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Only runs if user is logged in and db is available
+      console.log(`ChangeNameApp: Attempting to load user document for UID: ${user.uid}`);
+      setLoading(true); // Set loading to true while profile data is being loaded
 
-      if (user) {
-        console.log(`ChangeNameApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true);
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          console.log("ChangeNameApp: onSnapshot for user document triggered.");
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("ChangeNameApp: User document exists, data:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangeNameApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("ChangeNameApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("ChangeNameApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("ChangeNameApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`ChangeNameApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangeNameApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("ChangeNameApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("ChangeNameApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangeNameApp: Timestampy sú rovnaké, aktualizujem localStorage.");
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("ChangeNameApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData);
-              
-              // Aktualizujeme lokálne stavy z userProfileData
-              setFirstName(userData.firstName || '');
-              setLastName(userData.lastName || '');
-              setEmail(userData.email || user.email || '');
-              setRole(userData.role || 'user');
-              setIsApproved(userData.approved || false);
-              
-              setLoading(false);
-              setError('');
-
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  window.updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("ChangeNameApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("ChangeNameApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false);
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            // --- IMMEDIATE LOGOUT IF passwordLastChanged IS NOT A VALID TIMESTAMP ---
+            // This is added logic that runs immediately after data is loaded.
+            // If passwordLastChanged is invalid or missing, log out.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("ChangeNameApp: passwordLastChanged IS NOT a valid Timestamp object! Type:", typeof userData.passwordLastChanged, "Value:", userData.passwordLastChanged);
+                console.log("ChangeNameApp: Immediately logging out user due to invalid password change timestamp.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Clear localStorage
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
             }
-          }, error => {
-            console.error("ChangeNameApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
+
+            // Normal processing if passwordLastChanged is valid
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`ChangeNameApp: Firestore passwordLastChanged (converted): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                // First load for this user/browser, initialize localStorage and DO NOT LOG OUT
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangeNameApp: Initializing passwordLastChanged in localStorage (first load).");
+                // Do not continue here, continue with normal data processing for first load
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                // Password was changed on another device/session
+                console.log("ChangeNameApp: Password change detected on another device/session. Logging out user.");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey); // Clear localStorage after logout
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                // This ideally should not happen if Firestore is the source of truth
+                console.warn("ChangeNameApp: Detected older timestamp from Firestore than stored. Logging out user (potential mismatch).");
+                auth.signOut(); // Use auth from React state
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return;
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                // Times are the same, ensure localStorage is up-to-date
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangeNameApp: Timestamps are the same, updating localStorage.");
             }
-            setLoading(false);
-            console.log("ChangeNameApp: Načítanie používateľských dát zlyhalo, loading: false");
-            setUser(null); // Explicitne nastaviť user na null
-            setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("ChangeNameApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false);
-          setUser(null); // Explicitne nastaviť user na null
-          setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
+
+            // NEW LOGIC: Logout if user is admin and not approved
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("ChangeNameApp: User is admin and not approved. Logging out.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitly set user to null
+                setUserProfileData(null); // Explicitly set userProfileData to null
+                return; // Stop further processing
+            }
+
+            setUserProfileData(userData); // Update userProfileData state
+            
+            setLoading(false); // Stop loading after user data is loaded
+            setError(''); // Clear errors after successful load
+
+            // Update menu visibility after role is loaded (call global function from left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("ChangeNameApp: Function updateMenuItemsVisibility is not defined.");
+            }
+
+            console.log("ChangeNameApp: User data loading complete, loading: false");
+          } else {
+            console.warn("ChangeNameApp: User document not found for UID:", user.uid);
+            setError("Error: User profile not found or you do not have sufficient permissions. Please try logging in again.");
+            setLoading(false); // Stop loading so error can be displayed
+            setUser(null); // Explicitly set user to null
+            setUserProfileData(null); // Explicitly set userProfileData to null
+          }
+        }, error => {
+          console.error("ChangeNameApp: Error loading user data from Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Permission error: You do not have access to your profile. Please try logging in again or contact support.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Connection error: Firestore service is unavailable. Please try again later.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Authentication error: You are not logged in. Please try logging in again.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitly set user to null
+                  setUserProfileData(null); // Explicitly set userProfileData to null
+               }
+          } else {
+              setError(`Error loading user data: ${error.message}`);
+          }
+          setLoading(false); // Stop loading even on error
+          console.log("ChangeNameApp: User data loading failed, loading: false");
+          setUser(null); // Explicitly set user to null
+          setUserProfileData(null); // Explicitly set userProfileData to null
+        });
+      } catch (e) {
+        console.error("ChangeNameApp: Error setting up onSnapshot for user data (try-catch):", e);
+        setError(`Error setting up listener for user data: ${e.message}`);
+        setLoading(false); // Stop loading even on error
+        setUser(null); // Explicitly set user to null
+        setUserProfileData(null); // Explicitly set userProfileData to null
       }
-    } else if (isAuthReady && user === undefined) {
-        console.log("ChangeNameApp: Auth ready, user undefined. Nastavujem loading na false.");
+    } else if (user === null) {
+        // If user is null (and not undefined), it means they have been logged out.
+        // Redirection should already be handled by GlobalNotificationHandler.
+        // Here, we just ensure loading is false and data is cleared.
         setLoading(false);
+        setUserProfileData(null);
     }
 
-
     return () => {
+      // Unsubscribe from onSnapshot on unmount
       if (unsubscribeUserDoc) {
-        console.log("ChangeNameApp: Ruším odber onSnapshot pre používateľský dokument.");
+        console.log("ChangeNameApp: Unsubscribing onSnapshot for user document.");
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [user, db, auth]); // Depends on user and db (and auth for signOut)
 
-  // NOVINKA: Effect pre načítanie nastavení (dátum uzávierky úprav)
+  // NEW: Effect for loading settings (data editing deadline)
   React.useEffect(() => {
     const fetchSettings = async () => {
-      if (!db || !isAuthReady) {
-        console.log("ChangeNameApp: Čakám na DB alebo Auth pre načítanie nastavení.");
+      if (!db) {
+        console.log("ChangeNameApp: Waiting for DB for loading settings.");
         return;
       }
       try {
-          console.log("ChangeNameApp: Pokúšam sa načítať nastavenia registrácie pre dátum uzávierky.");
+          console.log("ChangeNameApp: Attempting to load registration settings for data editing deadline.");
           const settingsDocRef = db.collection('settings').doc('registration');
           const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangeNameApp: onSnapshot pre nastavenia registrácie spustený.");
+            console.log("ChangeNameApp: onSnapshot for registration settings triggered.");
             if (docSnapshot.exists) {
                 const data = docSnapshot.data();
-                console.log("ChangeNameApp: Nastavenia registrácie existujú, dáta:", data);
-                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Používame ISO string pre konzistentnosť
+                console.log("ChangeNameApp: Registration settings exist, data:", data);
+                setDataEditDeadline(data.dataEditDeadline ? data.dataEditDeadline.toDate().toISOString() : null); // Use ISO string for consistency
             } else {
-                console.log("ChangeNameApp: Nastavenia registrácie sa nenašli v Firestore. Dátum uzávierky úprav nie je definovaný.");
+                console.log("ChangeNameApp: Registration settings not found in Firestore. Data editing deadline is not defined.");
                 setDataEditDeadline(null);
             }
             setSettingsLoaded(true);
-            console.log("ChangeNameApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+            console.log("ChangeNameApp: Settings loading complete, settingsLoaded: true.");
           }, error => {
-            console.error("ChangeNameApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            console.error("ChangeNameApp: Error loading registration settings (onSnapshot error):", error);
+            setError(`Error loading settings: ${error.message}`);
             setSettingsLoaded(true);
           });
 
           return () => {
             if (unsubscribeSettings) {
-                console.log("ChangeNameApp: Ruším odber onSnapshot pre nastavenia registrácie.");
+                console.log("ChangeNameApp: Unsubscribing onSnapshot for registration settings.");
                 unsubscribeSettings();
             }
           };
       } catch (e) {
-          console.error("ChangeNameApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          console.error("ChangeNameApp: Error setting up onSnapshot for registration settings (try-catch):", e);
+          setError(`Error setting up listener for settings: ${e.message}`);
           setSettingsLoaded(true);
       }
     };
 
     fetchSettings();
-  }, [db, isAuthReady]);
+  }, [db]);
 
-  // useEffect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`ChangeNameApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("ChangeNameApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("ChangeNameApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      setUserNotificationMessage("Úspešne odhlásený.");
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("ChangeNameApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
-
-  // Removed handleUpdateName function as it's no longer needed
-
-  // Removed isFormValid as it's no longer needed
 
   // Display loading state
-  if (!isAuthReady || user === undefined || !settingsLoaded || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) {
-        console.log("ChangeNameApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+  if (!user || (user && !userProfileData) || !settingsLoaded || loading) {
+    if (user === null) {
+        console.log("ChangeNameApp: User is null, redirecting to login.html");
         window.location.href = 'login.html';
         return null;
     }
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !settingsLoaded) { // NOVINKA: Čakanie na načítanie nastavení
+    if (user && !userProfileData) {
         loadingMessage = 'Načítavam...';
-    } else if (isAuthReady && user && settingsLoaded && !userProfileData) {
-        loadingMessage = 'Načítavam...';
+    } else if (!settingsLoaded) {
+        loadingMessage = 'Načítavam nastavenia...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
     }
@@ -419,8 +313,6 @@ function ChangeNameApp() {
       React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
     );
   }
-
-  // Removed buttonClasses as it's no longer needed
 
   return React.createElement(
     'div',
@@ -441,10 +333,12 @@ function ChangeNameApp() {
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Šablóna' // Hlavný nadpis
+          'Šablóna' // Main heading
         )
-        // Removed the form section for changing name and surname
       )
     )
   );
 }
+
+// Explicitly expose the component globally
+window.ChangeNameApp = ChangeNameApp; // Changed to ChangeNameApp to match the original file's component name
