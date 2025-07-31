@@ -5,7 +5,8 @@
 // Importy pre Firebase SDK musia byť explicitne definované pre moduly
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Opravil som importy pre Firestore tak, aby obsahovali aj `collection`.
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
 window.isGlobalAuthReady = false;
