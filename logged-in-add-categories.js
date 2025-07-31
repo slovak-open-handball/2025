@@ -2,8 +2,66 @@
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-add-categories.html
 // a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// ODSTRÁNENÝ: NotificationModal Component - teraz spravuje header.js
-// function NotificationModal({ message, onClose, type = 'info' }) { ... }
+// NotificationModal Component for displaying temporary messages (converted to React.createElement)
+// Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
+function NotificationModal({ message, onClose, type = 'info' }) {
+  const [show, setShow] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (message) {
+      setShow(true);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        setShow(false);
+        setTimeout(onClose, 500);
+      }, 10000);
+    } else {
+      setShow(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [message, onClose]);
+
+  if (!show && !message) return null;
+
+  let bgColorClass;
+  if (type === 'success') {
+    bgColorClass = 'bg-[#3A8D41]'; // Zelená
+  } else if (type === 'error') {
+    bgColorClass = 'bg-red-600'; // Červená
+  } else {
+    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+  }
+
+  return React.createElement(
+    'div',
+    {
+      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
+        show ? 'translate-y-0' : '-translate-y-full'
+      }`,
+      style: { pointerEvents: 'none' }
+    },
+    React.createElement(
+      'div',
+      {
+        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
+        style: { pointerEvents: 'auto' }
+      },
+      React.createElement('p', { className: 'font-semibold' }, message)
+    )
+  );
+}
 
 // AddCategoryModal Component
 function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage, existingCategories }) {
@@ -29,12 +87,12 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Pridať novú kategóriu'),
-      // ODSTRÁNENÝ: NotificationModal - teraz spravuje header.js
-      // notificationMessage && React.createElement(NotificationModal, {
-      //   message: notificationMessage,
-      //   onClose: () => setNotificationMessage(''),
-      //   type: error ? 'error' : 'success'
-      // }),
+      // Ponechané pre zobrazenie notifikácií v rámci modálneho okna
+      notificationMessage && React.createElement(NotificationModal, {
+        message: notificationMessage,
+        onClose: () => setNotificationMessage(''),
+        type: error ? 'error' : 'success'
+      }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -103,12 +161,12 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Upraviť kategóriu: ${category.name}`),
-      // ODSTRÁNENÝ: NotificationModal - teraz spravuje header.js
-      // notificationMessage && React.createElement(NotificationModal, {
-      //   message: notificationMessage,
-      //   onClose: () => setNotificationMessage(''),
-      //   type: error ? 'error' : 'success'
-      // }),
+      // Ponechané pre zobrazenie notifikácií v rámci modálneho okna
+      notificationMessage && React.createElement(NotificationModal, {
+        message: notificationMessage,
+        onClose: () => setNotificationMessage(''),
+        type: error ? 'error' : 'success'
+      }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -202,8 +260,8 @@ function AddCategoriesApp() {
 
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v AddCategoriesApp
   const [error, setError] = React.useState('');
-  // ODSTRÁNENÉ: userNotificationMessage - použijeme window.showGlobalNotification
-  // const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
+  // PONECHANÉ: userNotificationMessage pre lokálne notifikácie
+  const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   const [categories, setCategories] = React.useState([]); // Stav pre zoznam kategórií
   const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
@@ -375,15 +433,6 @@ function AddCategoriesApp() {
     };
   }, [db, userProfileData, getCategoriesDocRef]);
 
-  // ODSTRÁNENÉ: Effect for updating header link visibility - spravuje header.js
-  // React.useEffect(() => { ... }, [user]);
-
-  // ODSTRÁNENÉ: Handle logout - spravuje header.js
-  // const handleLogout = React.useCallback(async () => { ... }, [auth]);
-
-  // ODSTRÁNENÉ: Attach logout handler - spravuje header.js
-  // React.useEffect(() => { ... }, [handleLogout]);
-
   // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (message) => {
     if (!db || !appId) {
@@ -408,21 +457,19 @@ function AddCategoriesApp() {
   const handleAddCategorySubmit = async (categoryName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na pridanie kategórie.");
+      setUserNotificationMessage("Nemáte oprávnenie na pridanie kategórie."); // Použijeme lokálnu notifikáciu
       return;
     }
     const trimmedCategoryName = categoryName.trim();
     if (trimmedCategoryName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.");
-      }
+      setUserNotificationMessage("Názov kategórie nemôže byť prázdny."); // Použijeme lokálnu notifikáciu
       return;
     }
 
     setLoading(true);
     setError('');
-    // ODSTRÁNENÉ: setUserNotificationMessage('');
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -435,10 +482,7 @@ function AddCategoriesApp() {
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
         setError(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
-        // Použijeme globálnu notifikáciu pre chyby
-        if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
-        }
+        setUserNotificationMessage(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`); // Použijeme lokálnu notifikáciu
         setLoading(false);
         return;
       }
@@ -452,10 +496,7 @@ function AddCategoriesApp() {
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
-      // Použijeme globálnu notifikáciu pre úspech
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Kategória úspešne pridaná!");
-      }
+      setUserNotificationMessage("Kategória úspešne pridaná!"); // Použijeme lokálnu notifikáciu
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -465,10 +506,7 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       setError(`Chyba pri pridávaní kategórie: ${e.message}`);
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri pridávaní kategórie: ${e.message}`);
-      }
+      setUserNotificationMessage(`Chyba pri pridávaní kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
     } finally {
       setLoading(false);
     }
@@ -478,25 +516,19 @@ function AddCategoriesApp() {
   const handleEditCategorySubmit = async (categoryId, newName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na úpravu kategórie.");
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na úpravu kategórie.");
-      }
+      setUserNotificationMessage("Nemáte oprávnenie na úpravu kategórie."); // Použijeme lokálnu notifikáciu
       return;
     }
     const trimmedNewName = newName.trim();
     if (trimmedNewName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.");
-      }
+      setUserNotificationMessage("Názov kategórie nemôže byť prázdny."); // Použijeme lokálnu notifikáciu
       return;
     }
 
     setLoading(true);
     setError('');
-    // ODSTRÁNENÉ: setUserNotificationMessage('');
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -510,10 +542,7 @@ function AddCategoriesApp() {
       // categoryId je tu náhodné ID, newName je nová hodnota
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
         setError(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
-        // Použijeme globálnu notifikáciu pre chyby
-        if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
-        }
+        setUserNotificationMessage(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`); // Použijeme lokálnu notifikáciu
         setLoading(false);
         return;
       }
@@ -526,10 +555,7 @@ function AddCategoriesApp() {
         [categoryId]: trimmedNewName
       });
 
-      // Použijeme globálnu notifikáciu pre úspech
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Kategória úspešne aktualizovaná!");
-      }
+      setUserNotificationMessage("Kategória úspešne aktualizovaná!"); // Použijeme lokálnu notifikáciu
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
 
@@ -540,10 +566,7 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
       setError(`Chyba pri aktualizácii kategórie: ${e.message}`);
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri aktualizácii kategórie: ${e.message}`);
-      }
+      setUserNotificationMessage(`Chyba pri aktualizácii kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
     } finally {
       setLoading(false);
     }
@@ -559,16 +582,13 @@ function AddCategoriesApp() {
   const handleDeleteCategory = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
       setError("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
-      }
+      setUserNotificationMessage("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná."); // Použijeme lokálnu notifikáciu
       return;
     }
 
     setLoading(true);
     setError('');
-    // ODSTRÁNENÉ: setUserNotificationMessage('');
+    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
@@ -580,10 +600,7 @@ function AddCategoriesApp() {
         [categoryToDelete.id]: firebase.firestore.FieldValue.delete()
       });
 
-      // Použijeme globálnu notifikáciu pre úspech
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`);
-      }
+      setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`); // Použijeme lokálnu notifikáciu
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -593,10 +610,7 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
       setError(`Chyba pri mazaní kategórie: ${e.message}`);
-      // Použijeme globálnu notifikáciu pre chyby
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri mazaní kategórie: ${e.message}`);
-      }
+      setUserNotificationMessage(`Chyba pri mazaní kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
     } finally {
       setLoading(false);
     }
@@ -635,33 +649,31 @@ function AddCategoriesApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ODSTRÁNENÉ: Vykreslenie NotificationModal - teraz spravuje header.js
-    // React.createElement(NotificationModal, {
-    //     message: userNotificationMessage,
-    //     onClose: () => setUserNotificationMessage(''),
-    //     type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
-    // }),
+    // PONECHANÉ: Vykreslenie NotificationModal pre lokálne správy
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage(''),
+        type: error ? 'error' : 'success' // Ak je error, zobrazí sa ako chyba, inak ako úspech
+    }),
     React.createElement(AddCategoryModal, {
         show: showAddCategoryModal,
-        onClose: () => setShowAddCategoryModal(false), // ZMENA: Odstránené vyčistenie notifikácie, to spraví GNH
+        onClose: () => { setUserNotificationMessage(''); setShowAddCategoryModal(false); }, // ZMENA: Pridané vyčistenie notifikácie
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
         error: error,
-        // ODSTRÁNENÉ: notificationMessage a setNotificationMessage - teraz spravuje GNH
-        // notificationMessage: userNotificationMessage,
-        // setNotificationMessage: setUserNotificationMessage, 
+        notificationMessage: userNotificationMessage, // Ponechané
+        setNotificationMessage: setUserNotificationMessage, // Ponechané
         existingCategories: categories // NOVINKA: Odovzdávame existujúce kategórie
     }),
     React.createElement(EditCategoryModal, {
         show: showEditCategoryModal,
-        onClose: () => { setShowEditCategoryModal(false); setCategoryToEdit(null); }, // ZMENA: Odstránené vyčistenie notifikácie, to spraví GNH
+        onClose: () => { setUserNotificationMessage(''); setShowEditCategoryModal(false); setCategoryToEdit(null); }, // ZMENA: Pridané vyčistenie notifikácie
         onSaveCategory: handleEditCategorySubmit,
         loading: loading,
         category: categoryToEdit,
         error: error,
-        // ODSTRÁNENÉ: notificationMessage a setNotificationMessage - teraz spravuje GNH
-        // notificationMessage: userNotificationMessage,
-        // setNotificationMessage: setUserNotificationMessage 
+        notificationMessage: userNotificationMessage, // Ponechané
+        setNotificationMessage: setUserNotificationMessage // Ponechané
     }),
     React.createElement(ConfirmationModal, { // NOVINKA: ConfirmationModal
         show: showConfirmDeleteModal,
