@@ -1,9 +1,9 @@
 // logged-in-all-registrations.js
-// Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
-// sú globálne definované v <head> logged-in-all-registrations.html.
+// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-all-registrations.html
+// a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
 
 // NotificationModal Component for displaying temporary messages (converted to React.createElement)
-// Pridaný prop 'displayNotificationsEnabled'
+// Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
 function NotificationModal({ message, onClose, displayNotificationsEnabled }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -208,21 +208,21 @@ function ColumnVisibilityModal({ isOpen, onClose, columns, onSaveColumnVisibilit
 
 // Main React component for the logged-in-all-registrations.html page
 function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
-  // Nový stav pre dáta používateľského profilu z Firestore
-  const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
+  // NOVÉ: Získame referencie na Firebase služby z globálnych premenných
+  const auth = window.auth;
+  const db = window.db;
+
+  // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
+  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
+  // Používame window.globalUserProfileData pre počiatočný stav
+  const [user, setUser] = React.useState(window.auth.currentUser); 
+  const [userProfileData, setUserProfileData] = React.useState(window.globalUserProfileData); 
+  const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); // Získame globálny stav pripravenosti
+
   const [loadingUsers, setLoadingUsers] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie používateľov
   const [loadingColumnOrder, setLoadingColumnOrder] = React.useState(true); // NOVINKA: Oddelený stav pre načítanie poradia stĺpcov
   const [error, setError] = React.useState('');
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
-
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [role, setRole] = React.useState('');
-  const [isApproved, setIsApproved] = React.useState(false);
 
   // Deklarácia stavov pre používateľov a filtrovanie
   const [allUsers, setAllUsers] = React.useState([]); 
@@ -257,63 +257,47 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = React.useState(false);
 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NOVÉ: Lokálny Auth Listener pre AllRegistrationsApp
+  // Tento listener zabezpečí, že AllRegistrationsApp reaguje na zmeny autentifikácie,
+  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("AllRegistrationsApp: Firebase SDK nie je načítané."); // Zmena logu
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-all-registrations.html."); // Zmena logu
-        setLoadingUsers(false); // Nastavíme na false, ak Firebase nie je načítané
-        setLoadingColumnOrder(false); // Nastavíme na false, ak Firebase nie je načítané
-        return;
-      }
-
-      const firebaseApp = firebase.app();
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          }
-          // Ak initialAuthToken nie je k dispozícii, jednoducho sa spoliehame na onAuthStateChanged,
-          // ktoré detekuje pretrvávajúci stav prihlásenia (napr. z login.html).
-        } catch (e) {
-          console.error("AllRegistrationsApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e); // Zmena logu
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("AllRegistrationsApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null"); // Zmena logu
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("AllRegistrationsApp: Nepodarilo sa inicializovať Firebase:", e); // Zmena logu
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoadingUsers(false); // Nastavíme na false aj pri chybe inicializácie
-      setLoadingColumnOrder(false); // Nastavíme na false aj pri chybe inicializácie
+    // Akonáhle je globálna autentifikácia pripravená, nastavíme lokálny stav
+    if (window.isGlobalAuthReady) {
+      setIsAuthReady(true);
+      setUser(window.auth.currentUser);
+      setUserProfileData(window.globalUserProfileData);
     }
-  }, []);
 
-  // NOVÝ EFFECT: Načítanie používateľských dát z Firestore po inicializácii Auth a DB
+    // Nastavíme listener na zmeny globálneho stavu autentifikácie
+    const unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
+      console.log("AllRegistrationsApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
+      if (!currentUser) {
+        console.log("AllRegistrationsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Nastavíme listener na zmeny globálneho profilu používateľa
+    const unsubscribeGlobalProfile = () => {
+      // Táto funkcia sa zavolá, keď sa zmení globalUserProfileData
+      // V AuthenticationManageri už je onSnapshot, takže tu len preberáme dáta
+      setUserProfileData(window.globalUserProfileData);
+    };
+    // Pridáme vlastný event listener, ak ho GlobalNotificationHandler poskytuje
+    window.addEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+
+
+    return () => {
+      unsubscribeGlobalAuth();
+      window.removeEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+    };
+  }, []); // Závisí od auth inštancie
+
+  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
+  // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
+  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
@@ -403,8 +387,8 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
               setError(''); // Vymazať chyby po úspešnom načítaní
 
               // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
-              if (typeof updateMenuItemsVisibility === 'function') {
-                  updateMenuItemsVisibility(userData.role);
+              if (typeof window.updateMenuItemsVisibility === 'function') {
+                  window.updateMenuItemsVisibility(userData.role);
               } else {
                   console.warn("AllRegistrationsApp: Funkcia updateMenuItemsVisibility nie je definovaná."); // Zmena logu
               }
@@ -467,7 +451,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
     let unsubscribeAllUsers;
     let unsubscribeColumnOrder;
     // appId by mal byť globálne dostupný z HTML
-    // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Už nepotrebné pre novú cestu
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] Triggered.");
     console.log("AllRegistrationsApp: [Effect: ColumnOrder/AllUsers] State Snapshot - db:", !!db, "user:", !!user, "user.uid:", user ? user.uid : "N/A", "userProfileData:", !!userProfileData, "role:", userProfileData ? userProfileData.role : "N/A", "approved:", userProfileData ? userProfileData.approved : "N/A");
@@ -964,7 +948,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                                         }, '←'),
                                         React.createElement('button', { 
                                             onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); }, 
-                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${hoveredColumn === col.id ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
+                                            className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200` // ZMENA: Opacity na tlačidlách
                                         }, '⚙️'),
                                         index < columnOrder.filter(c => c.visible).length - 1 && React.createElement('button', { // Šípka doprava
                                             onClick: (e) => { e.stopPropagation(); moveColumn(col.id, 'right'); },
@@ -973,12 +957,7 @@ function AllRegistrationsApp() { // Zmena: MyDataApp na AllRegistrationsApp
                                     ),
                                     React.createElement('span', { onClick: () => handleSort(col.id), className: 'flex items-center' }, // Kliknutie na text pre triedenie, pridaný flex pre ikonu filtra
                                         col.label,
-                                        currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼'),
-                                        activeFilters[col.id] && activeFilters[col.id].length > 0 && React.createElement( // NOVINKA: Ikona filtra
-                                            'svg',
-                                            { className: 'w-4 h-4 ml-1 text-blue-500', fill: 'currentColor', viewBox: '0 0 20 20', xmlns: 'http://www.w3.org/2000/svg' },
-                                            React.createElement('path', { fillRule: 'evenodd', d: 'M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z', clipRule: 'evenodd' })
-                                        )
+                                        currentSort.column === col.id && React.createElement('span', { className: 'ml-1' }, currentSort.direction === 'asc' ? '▲' : '▼')
                                     )
                                 )
                             ))
