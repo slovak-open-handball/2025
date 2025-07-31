@@ -2,10 +2,6 @@
 // This file is now self-contained and does not rely on global window variables from authentication.js.
 // It initializes Firebase and handles authentication on its own.
 
-// Import React and ReactDOM from CDN for a standalone script
-import React from 'https://cdn.skypack.dev/react@17.0.2';
-import ReactDOM from 'https://cdn.skypack.dev/react-dom@17.0.2';
-
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -249,8 +245,7 @@ function App() {
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(App));
+    ReactDOM.render(React.createElement(App), rootElement);
 } else {
     console.error("Failed to find the root element to render the application.");
 }
