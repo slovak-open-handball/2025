@@ -1,182 +1,233 @@
 // logged-in-my-data.js
-// Tento súbor spravuje dynamické zobrazenie používateľských dát po prihlásení.
+// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-my-data.html
+// a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
-// Pre React potrebujeme definovať hlavný komponent.
+// Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-  const [userProfileData, setUserProfileData] = React.useState(null);
-  const [loading, setLoading] = React.useState(true); // Začíname v stave načítavania
+  // Získame referencie na Firebase služby a globálne dáta z authentication.js
+  const auth = window.auth;
+  const db = window.db;
+
+  // Lokálny stav pre používateľské dáta
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
   const [error, setError] = React.useState('');
 
-  // Efekt na nastavenie poslucháča udalostí po prvom vykreslení
+  // Zabezpečíme, že appId je definované (používame globálnu premennú)
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
+
+  // Effect pre načítanie používateľských dát z Firestore
   React.useEffect(() => {
-    const handleProfileDataLoaded = () => {
-      console.log("MyDataApp: Udalosť 'profileDataLoaded' bola prijatá.");
-      const data = window.globalUserProfileData;
-      if (data) {
-        setUserProfileData(data);
-        setLoading(false);
+    let unsubscribeUserDoc;
+
+    // Funkcia na nastavenie listeneru
+    const setupListener = () => {
+      // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
+      if (window.isGlobalAuthReady && db && auth && auth.currentUser) {
+        console.log(`MyDataApp: Globálna autentifikácia pripravená. Pokúšame sa načítať dáta.`);
+        const userId = auth.currentUser.uid;
+        const userDocRef = doc(db, 'users', userId);
+
+        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            console.log("MyDataApp: Dáta používateľa z Firestore načítané.");
+            setUserProfileData(docSnap.data());
+            setLoading(false);
+            setError('');
+          } else {
+            console.warn("MyDataApp: Profil používateľa nebol nájdený.");
+            setUserProfileData(null);
+            setLoading(false);
+            setError('Profil používateľa nebol nájdený.');
+          }
+        }, (err) => {
+          console.error("MyDataApp: Chyba pri načítaní dát:", err);
+          setError('Chyba pri načítaní profilu.');
+          setLoading(false);
+        });
       } else {
-        setError('Chyba: Dáta profilu neboli k dispozícii.');
-        setLoading(false);
+        // Ak ešte nie je prihlásený, nastavíme načítanie na true a dáta na null
+        setUserProfileData(null);
+        setLoading(true);
       }
     };
 
-    // Pridá poslucháč na globálnu udalosť
-    window.addEventListener('profileDataLoaded', handleProfileDataLoaded);
+    // Priamo zavoláme funkciu na nastavenie listeneru
+    setupListener();
 
-    // Ak už sú dáta profilu k dispozícii v čase renderovania (napríklad pri horúcej výmene modulov), použijeme ich.
-    if (window.globalUserProfileData) {
-        handleProfileDataLoaded();
-    }
-
-    // Funkcia na vyčistenie poslucháča
+    // Vrátime funkciu na odhlásenie listeneru
     return () => {
-      window.removeEventListener('profileDataLoaded', handleProfileDataLoaded);
+      if (unsubscribeUserDoc) {
+        console.log("MyDataApp: Odhlásenie od Firestore listeneru.");
+        unsubscribeUserDoc();
+      }
     };
-  }, []); // Prázdne pole závislostí zabezpečí, že sa spustí len raz
 
-  // Zobrazenie načítavania
-  if (loading) {
-    return React.createElement(
-      'div',
-      { className: 'flex justify-center items-center h-full' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500' })
-    );
-  }
+  }, [db, auth]); // Spustí sa, keď sa zmenia db alebo auth inštancie
 
-  // Zobrazenie chyby
-  if (error) {
-    return React.createElement(
-      'div',
-      { className: 'text-center text-red-500 p-8' },
-      React.createElement('p', { className: 'text-xl font-semibold' }, error)
-    );
-  }
+  // Nový effect, ktorý sa spustí, keď je globálna autentifikácia pripravená
+  React.useEffect(() => {
+    if (window.isGlobalAuthReady) {
+      console.log("MyDataApp: Globálny stav autentifikácie sa zmenil.");
+      // Pri zmene globálneho stavu vynútime aktualizáciu komponentu
+      // Použijeme fiktívny stav na vynútenie re-renderu
+      // Alternatívne by sa dal použiť aj useReducer, ale pre jednoduchosť stačí toto
+      setUserProfileData(window.globalUserProfileData);
+      setLoading(!window.globalUserProfileData);
+    }
+  }, [window.isGlobalAuthReady, window.globalUserProfileData]);
 
-  // Zobrazenie dát, ak existujú
-  if (!userProfileData) {
-    return React.createElement(
+
+  // Funkcia, ktorá renderuje buď loading obrazovku, error, alebo dáta
+  function renderContent() {
+    if (loading) {
+      return React.createElement(
         'div',
-        { className: 'text-center text-gray-500 p-8' },
-        React.createElement('p', { className: 'text-xl font-semibold' }, 'Žiadne údaje profilu neboli nájdené.')
-      );
-  }
-
-  // Ak sú dáta načítané, vykreslíme profil
-  return React.createElement(
-    'div',
-    { className: 'min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8' },
-    React.createElement(
-      'div',
-      { className: 'max-w-4xl mx-auto' },
-      React.createElement(
-        'div',
-        { className: 'bg-white shadow-xl rounded-2xl p-6 sm:p-8 lg:p-10' },
-        React.createElement(
-          'h1',
-          { className: 'text-3xl sm:text-4xl font-bold text-blue-800 mb-6 sm:mb-8 text-center' },
-          'Moja zóna'
-        ),
+        { className: 'flex justify-center items-center h-full' },
         React.createElement(
           'div',
-          { className: 'grid grid-cols-1 md:grid-cols-2 gap-8' },
-          // Osobné údaje
-          React.createElement(
+          { className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900' }
+        )
+      );
+    }
+
+    if (error) {
+      return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-full text-red-500 text-xl' },
+        error
+      );
+    }
+
+    if (!userProfileData) {
+        return React.createElement(
             'div',
-            { className: 'bg-gray-50 rounded-xl p-6 shadow-inner' },
-            React.createElement(
-              'h2',
-              { className: 'text-2xl font-semibold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2' },
-              'Osobné údaje'
-            ),
-            React.createElement(
-              'div',
-              { className: 'space-y-4' },
-              React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                React.createElement('span', { className: 'font-bold' }, 'ID používateľa:'),
-                ` ${userProfileData.uid}`
-              ),
-              React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                React.createElement('span', { className: 'font-bold' }, 'Email:'),
-                ` ${userProfileData.email}`
-              ),
-              React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                React.createElement('span', { className: 'font-bold' }, 'Meno:'),
-                ` ${userProfileData.firstName}`
-              ),
-              React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
-                ` ${userProfileData.lastName}`
-              )
-            )
+            { className: 'flex justify-center items-center h-full text-gray-500 text-xl' },
+            'Žiadne dáta profilu na zobrazenie.'
+        );
+    }
+
+    // Renderujeme dáta, ak sú k dispozícii
+    return React.createElement(
+      'div',
+      { className: 'bg-white p-6 md:p-8 rounded-xl shadow-lg w-full max-w-4xl mx-auto' },
+      React.createElement(
+        'h1',
+        { className: 'text-3xl md:text-4xl font-bold text-gray-900 mb-6 border-b-2 pb-4' },
+        'Môj Profil'
+      ),
+      React.createElement(
+        'div',
+        { className: 'grid md:grid-cols-2 gap-6 md:gap-8' },
+        // Osobné údaje
+        React.createElement(
+          'div',
+          { className: 'space-y-4' },
+          React.createElement(
+            'h2',
+            { className: 'text-2xl font-semibold text-gray-800' },
+            'Osobné údaje'
           ),
-          // Fakturačné údaje
           React.createElement(
-            'div',
-            { className: 'bg-gray-50 rounded-xl p-6 shadow-inner' },
-            React.createElement(
-              'h2',
-              { className: 'text-2xl font-semibold text-blue-700 mb-4 border-b-2 border-blue-200 pb-2' },
-              'Fakturačné údaje'
-            ),
-            React.createElement(
-              'div',
-              { className: 'space-y-4' },
-              userProfileData.billing.companyName && React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                  React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                  ` ${userProfileData.billing.companyName}`
-                )
-              ),
-              userProfileData.billing.ico && React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                  React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                  ` ${userProfileData.billing.ico}`
-                )
-              ),
-              userProfileData.billing.dic && React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                  React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                  ` ${userProfileData.billing.dic}`
-                )
-              ),
-              userProfileData.billing.icDph && React.createElement(
-                'div',
-                null,
-                React.createElement(
-                  'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
-                  React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                  ` ${userProfileData.billing.icDph}`
-                )
-              )
-            )
+            'p',
+            { className: 'text-gray-800 text-lg' }, 
+            React.createElement('span', { className: 'font-bold' }, 'Meno:'),
+            ` ${userProfileData.firstName}`
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' }, 
+            React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
+            ` ${userProfileData.lastName}`
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' }, 
+            React.createElement('span', { className: 'font-bold' }, 'E-mail:'),
+            ` ${userProfileData.email}`
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' }, 
+            React.createElement('span', { className: 'font-bold' }, 'UID:'),
+            ` ${userProfileData.uid}`
+          ),
+          userProfileData.displayName && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' }, 
+            React.createElement('span', { className: 'font-bold' }, 'Zobrazované meno:'),
+            ` ${userProfileData.displayName}`
+          )
+        ),
+        // Fakturačné údaje, ak existujú
+        userProfileData.billing && React.createElement(
+          'div',
+          { className: 'space-y-4' },
+          React.createElement(
+            'h2',
+            { className: 'text-2xl font-semibold text-gray-800' },
+            'Fakturačné údaje'
+          ),
+          userProfileData.billing.companyName && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
+            ` ${userProfileData.billing.companyName}`
+          ),
+          userProfileData.billing.street && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Ulica:'),
+            ` ${userProfileData.billing.street}`
+          ),
+          userProfileData.billing.city && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Mesto:'),
+            ` ${userProfileData.billing.city}`
+          ),
+          userProfileData.billing.zipCode && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'PSČ:'),
+            ` ${userProfileData.billing.zipCode}`
+          ),
+          userProfileData.billing.country && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Krajina:'),
+            ` ${userProfileData.billing.country}`
+          ),
+          userProfileData.billing.ico && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'IČO:'),
+            ` ${userProfileData.billing.ico}`
+          ),
+          userProfileData.billing.dic && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
+            ` ${userProfileData.billing.dic}`
+          ),
+          userProfileData.billing.icDph && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
+            ` ${userProfileData.billing.icDph}`
           )
         )
       )
-    )
+    );
+  }
+
+  // Hlavné renderovanie komponentu
+  return React.createElement(
+    'div',
+    { className: 'flex-1 p-4 md:p-8' },
+    renderContent()
   );
 }
 
-// Exportujeme komponent pre globálne použitie
+// Explicitne sprístupniť komponent globálne
 window.MyDataApp = MyDataApp;
