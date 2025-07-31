@@ -17,19 +17,8 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- Toto je obsah vášho header.html, vložený priamo do tohto súboru. -->
-    <!-- Hlavička je fixná a responzívna vďaka Tailwind CSS. -->
-    <header class="w-full bg-blue-700 text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center">
-        <div class="flex items-center space-x-6">
-            <a href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
-            <a id="register-link" href="logged-in-registration.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Registrácia na turnaj</a>
-        </div>
-        <div class="flex items-center space-x-6">
-            <a id="profile-link" href="logged-in-my-data.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Moja zóna</a>
-            <a id="auth-link" href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Prihlásenie</a>
-            <button id="logout-button" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Odhlásiť</button>
-        </div>
-    </header>
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
+    <div id="header-placeholder"></div>
 
     <main class="container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl text-center">
         <h1 class="text-4xl font-bold mb-4 text-blue-800">Slovak Open Handball 2025</h1>
