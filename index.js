@@ -141,9 +141,9 @@ function App() {
             }
             console.log("App: Checking for categories...");
             try {
-                // Správna cesta ku kolekcii
-                // Cesta: settings/categories
-                const categoriesCollectionRef = collection(db, 'settings', 'categories');
+                // Opravená cesta ku kolekcii
+                // Cesta: categories (na rovnakej úrovni ako "settings")
+                const categoriesCollectionRef = collection(db, 'categories');
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
                 setCategoriesExist(!categoriesSnap.empty);
             } catch (e) {
