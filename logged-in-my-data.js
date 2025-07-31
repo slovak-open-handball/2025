@@ -1,81 +1,52 @@
 // logged-in-my-data.js
 // Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> logged-in-my-data.html
-// a GlobalNotificationHandler v header.js spravuje globálnu autentifikáciu a stav používateľa.
-
-// ODSTRÁNENÝ: NotificationModal Component - teraz spravuje header.js
-// function NotificationModal({ message, onClose, type = 'info' }) { ... }
+// a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-  // NOVÉ: Získame referencie na Firebase služby priamo
-  const app = firebase.app();
-  const auth = firebase.auth(app);
-  const db = firebase.firestore(app);
+  // Získame referencie na Firebase služby a globálne dáta z authentication.js
+  const auth = window.auth;
+  const db = window.db;
 
-  // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
-  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
-  const [user, setUser] = React.useState(auth.currentUser); // Inicializovať s aktuálnym používateľom
+  // Lokálny stav pre používateľské dáta, ktoré sa načítavajú po globálnej autentifikácii
   const [userProfileData, setUserProfileData] = React.useState(null); 
-
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v MyDataApp
   const [error, setError] = React.useState('');
-  // ODSTRÁNENÉ: userNotificationMessage - použijeme window.showGlobalNotification
-  // const [userNotificationMessage, setUserNotificationMessage] = React.useState(''); 
-
-  // User Data States - Tieto stavy sa budú aktualizovať z userProfileData
-  const [role, setRole] = React.useState('');
-  const [isApproved, setIsApproved] = React.useState(false);
 
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // NOVÉ: Lokálny Auth Listener pre MyDataApp
-  // Tento listener zabezpečí, že MyDataApp reaguje na zmeny autentifikácie,
-  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
-  React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
-      console.log("MyDataApp: Lokálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-      setUser(currentUser);
-      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
-      if (!currentUser) {
-        console.log("MyDataApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
-        window.location.href = 'login.html';
-      }
-    });
-    return () => unsubscribeAuth();
-  }, [auth]); // Závisí od auth inštancie
-
-  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
-  // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
-  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
+  // Effect pre načítanie používateľských dát z Firestore
+  // Tento efekt sa spustí, až keď je globálna autentifikácia pripravená.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (user && db) { // Spustí sa len ak je používateľ prihlásený a db je k dispozícii
-      console.log(`MyDataApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+    // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
+    if (window.isGlobalAuthReady && db && auth && auth.currentUser) {
+      console.log(`MyDataApp: Globálna autentifikácia pripravená. Pokúšam sa načítať používateľský dokument pre UID: ${auth.currentUser.uid}`);
       setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
       try {
-        const userDocRef = db.collection('users').doc(user.uid);
+        const userDocRef = db.collection('users').doc(auth.currentUser.uid);
         unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
           if (docSnapshot.exists) {
             const userData = docSnapshot.data();
             console.log("MyDataApp: Používateľský dokument existuje, dáta:", userData);
 
-            // NOVINKA: Aktualizácia emailu vo Firestore, ak sa nezhoduje s Auth emailom
-            if (user && user.email && userData.email !== user.email) {
-              console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${user.email}. Aktualizujem Firestore.`);
-              userDocRef.update({ email: user.email })
+            // Aktualizácia emailu vo Firestore, ak sa nezhoduje s Auth emailom
+            if (auth.currentUser && auth.currentUser.email && userData.email !== auth.currentUser.email) {
+              console.log(`MyDataApp: Detekovaný nesúlad emailov. Firestore: ${userData.email}, Auth: ${auth.currentUser.email}. Aktualizujem Firestore.`);
+              userDocRef.update({ email: auth.currentUser.email })
                 .then(async () => {
                   console.log("MyDataApp: Email vo Firestore úspešne aktualizovaný na základe Auth emailu.");
                   // Použijeme globálnu notifikáciu
                   if (typeof window.showGlobalNotification === 'function') {
                     window.showGlobalNotification("E-mailová adresa bola úspešne aktualizovaná!");
                   }
-                  // NOVINKA: Uloženie notifikácie pre administrátorov do Firestore
+                  // Uloženie notifikácie pre administrátorov do Firestore
                   try {
                       await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('adminNotifications').add({
-                          message: `E-mail používateľa ${user.email} bol automaticky aktualizovaný.`,
+                          message: `E-mail používateľa ${auth.currentUser.email} bol automaticky aktualizovaný.`,
                           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                           recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
                           read: false
@@ -94,48 +65,28 @@ function MyDataApp() {
             setLoading(false); // Stop loading po načítaní používateľských dát
             setError(''); // Vymazať chyby po úspešnom načítaní
 
-            // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
-            if (typeof updateMenuItemsVisibility === 'function') {
-                updateMenuItemsVisibility(userData.role);
-            } else {
-                console.warn("MyDataApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
-            }
-
-            console.log("MyDataApp: Načítanie používateľských dát dokončené, loading: false");
           } else {
-            console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém. Odhlásime ho.
+            console.warn("MyDataApp: Používateľský dokument sa nenašiel pre UID:", auth.currentUser.uid);
             setError("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.");
             setLoading(false);
-            auth.signOut(); // Odhlásiť používateľa
-            setUser(null);
-            setUserProfileData(null);
           }
         }, error => {
           console.error("MyDataApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
           setLoading(false);
-          // Pri chybe odhlásime používateľa, pretože dáta profilu sú kritické
-          auth.signOut();
-          setUser(null);
-          setUserProfileData(null);
         });
       } catch (e) {
         console.error("MyDataApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
         setLoading(false);
-        auth.signOut();
-        setUser(null);
-        setUserProfileData(null);
       }
-    } else if (user === null) {
-        // Ak je user null (a už nie undefined), znamená to, že bol odhlásený.
-        // Presmerovanie už by mal spraviť GlobalNotificationHandler.
-        // Tu len zabezpečíme, že loading je false a dáta sú vyčistené.
+    } else if (window.isGlobalAuthReady && (!auth || !auth.currentUser)) {
+        // Ak je globálna autentifikácia pripravená, ale používateľ nie je prihlásený (alebo auth nie je nastavené)
         setLoading(false);
         setUserProfileData(null);
+        console.log("MyDataApp: Globálna autentifikácia pripravená, ale používateľ nie je prihlásený.");
+        // Presmerovanie na login.html by mal spraviť AuthenticationManager
     }
-
 
     return () => {
       if (unsubscribeUserDoc) {
@@ -143,16 +94,7 @@ function MyDataApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [user, db, auth]); // Závisí od user a db (a auth pre signOut)
-
-  // ODSTRÁNENÉ: useEffect pre aktualizáciu odkazov hlavičky - spravuje header.js
-  // React.useEffect(() => { ... }, [user]);
-
-  // ODSTRÁNENÉ: Handle logout - spravuje header.js
-  // const handleLogout = React.useCallback(async () => { ... }, [auth]);
-
-  // ODSTRÁNENÉ: Attach logout handler - spravuje header.js
-  // React.useEffect(() => { ... }, [handleLogout]);
+  }, [window.isGlobalAuthReady, db, auth, appId]); // Závisí od globálnych stavov a firebase inštancií
 
   // Helper function to format postal code
   const formatPostalCode = (code) => {
@@ -163,11 +105,14 @@ function MyDataApp() {
   };
 
   // Display loading state
-  // Zobraz loading, ak user nie je prihlásený, alebo ak sú dáta profilu ešte načítavané
-  if (!user || loading) {
-    // Ak user nie je prihlásený, presmerovanie už by mal spraviť GlobalNotificationHandler.
-    // Tu len zabezpečíme zobrazenie loading správy.
+  // Zobraz loading, kým nie je globálna autentifikácia pripravená alebo kým sa načítavajú dáta profilu
+  if (!window.isGlobalAuthReady || loading) {
     let loadingMessage = 'Načítavam...';
+    if (!window.isGlobalAuthReady) {
+        loadingMessage = 'Inicializujem autentifikáciu...';
+    } else if (loading) {
+        loadingMessage = 'Načítavam vaše údaje...';
+    }
     return React.createElement(
       'div',
       { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
@@ -175,13 +120,13 @@ function MyDataApp() {
     );
   }
 
-  // Ak sa dostaneme sem, user je prihlásený a userProfileData by mali byť načítané.
-  // Ak userProfileData stále chýbajú, je to chyba, ktorú by mal ošetriť error state.
+  // Ak sa dostaneme sem, globálna autentifikácia je pripravená a používateľ je prihlásený.
+  // Ak userProfileData stále chýbajú, je to chyba.
   if (!userProfileData) {
       return React.createElement(
         'div',
         { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-        React.createElement('div', { className: 'text-xl font-semibold text-red-700' }, error || 'Chyba pri načítaní profilových dát.')
+        React.createElement('div', { className: 'text-xl font-semibold text-red-700' }, error || 'Chyba pri načítaní profilových dát. Skúste sa znova prihlásiť.')
       );
   }
 
@@ -198,8 +143,10 @@ function MyDataApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // ODSTRÁNENÉ: Vykreslenie NotificationModal - teraz spravuje header.js
-    // React.createElement(NotificationModal, { ... }), 
+    React.createElement(NotificationModal, {
+        message: userNotificationMessage,
+        onClose: () => setUserNotificationMessage('')
+    }),
     React.createElement(
       'div',
       { className: 'w-full px-4 mt-20 mb-10' }, 
@@ -247,7 +194,7 @@ function MyDataApp() {
                 'p',
                 { className: 'text-gray-800 text-lg whitespace-nowrap' }, 
                 React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                ` ${userProfileData.email || user.email || ''}`
+                ` ${userProfileData.email || auth.currentUser.email || ''}`
               )
             ),
             userProfileData.role === 'user' && userProfileData.billing && React.createElement(
