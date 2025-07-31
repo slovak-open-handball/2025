@@ -4,7 +4,7 @@
 // Pre React potrebujeme definovať hlavný komponent.
 function MyDataApp() {
   // Lokálne stavy pre dáta používateľa, stav načítavania a chyby.
-  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [userProfileData, setUserProfileData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
 
@@ -12,66 +12,62 @@ function MyDataApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   // Efekt pre načítanie používateľských dát z Firestore.
-  // Tento efekt sa spustí, až keď je globálna autentifikácia pripravená
-  // a je zistený prihlásený používateľ.
+  // Tento efekt sa spustí, keď je globálna autentifikácia pripravená,
+  // alebo keď sa zmenia globálne dáta profilu.
   React.useEffect(() => {
     let unsubscribeUserDoc;
-
-    // Počkáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
-    // Akonáhle je pripravená, spustíme logiku načítania.
-    if (window.isGlobalAuthReady) {
-        const auth = window.auth;
+    
+    // Zistíme, či je autentifikácia a globálny profil pripravený
+    if (window.isGlobalAuthReady && window.globalUserProfileData) {
+        console.log("MyDataApp: Globálne dáta profilu sú už dostupné, použijem ich.");
+        // Použijeme už načítané globálne dáta, aby sme predišli zdržaniu
+        setUserProfileData(window.globalUserProfileData);
+        setLoading(false);
+    } else if (window.isGlobalAuthReady && window.auth && window.auth.currentUser) {
+        // Ak globálne dáta ešte nie sú pripravené, ale autentifikácia áno, spustíme listener
+        console.log(`MyDataApp: Používateľ je prihlásený (${window.auth.currentUser.uid}). Načítavam profil z Firestore...`);
         const db = window.db;
+        const userId = window.auth.currentUser.uid;
+        
+        // Cesta k dokumentu v Firestore
+        const userDocPath = `/artifacts/${appId}/users/${userId}/profile/data`;
+        const userDocRef = window.doc(db, userDocPath);
 
-        if (auth.currentUser) {
-            console.log(`MyDataApp: Používateľ je prihlásený (${auth.currentUser.uid}). Načítavam profil...`);
-            const userId = auth.currentUser.uid;
-            
-            // Cesta k dokumentu v Firestore
-            const userDocPath = `/artifacts/${appId}/users/${userId}/profile/data`;
-            const userDocRef = window.doc(db, userDocPath);
-
-            // Nastavíme listener na zmeny v dokumente
-            unsubscribeUserDoc = window.onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    console.log("MyDataApp: Dáta profilu boli úspešne načítané:", data);
-                    setUserProfileData(data);
-                } else {
-                    console.warn("MyDataApp: Dokument s používateľskými dátami neexistuje. Vytváram prázdny dokument.");
-                    // Ak dokument neexistuje, vytvoríme ho s prázdnymi hodnotami
-                    window.setDoc(userDocRef, {
-                        email: auth.currentUser.email,
-                        firstName: '',
-                        lastName: '',
-                        billing: {
-                            companyName: '',
-                            ico: '',
-                            dic: '',
-                            icDph: ''
-                        }
-                    }).then(() => {
-                        console.log("MyDataApp: Prázdny dokument bol vytvorený.");
-                    }).catch(err => {
-                        console.error("MyDataApp: Chyba pri vytváraní dokumentu:", err);
-                        setError('Chyba pri vytváraní profilu používateľa.');
-                    });
-                }
-                setLoading(false);
-            }, (error) => {
-                console.error("MyDataApp: Chyba pri načítaní profilu používateľa:", error);
-                setError('Chyba pri načítaní profilu. Skúste to prosím znova.');
-                setLoading(false);
-            });
-        } else {
-            // Ak nie je prihlásený, nastavíme stav ako nenačítaný a chybový.
-            console.error("MyDataApp: Používateľ nie je prihlásený, nemôžem načítať profil.");
-            setError('Nie ste prihlásený. Prosím, prihláste sa.');
+        // Nastavíme listener na zmeny v dokumente
+        unsubscribeUserDoc = window.onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log("MyDataApp: Dáta profilu boli úspešne načítané z Firestore:", data);
+                setUserProfileData(data);
+            } else {
+                console.warn("MyDataApp: Dokument s používateľskými dátami neexistuje. Vytváram prázdny dokument.");
+                // Ak dokument neexistuje, vytvoríme ho s prázdnymi hodnotami
+                window.setDoc(userDocRef, {
+                    email: window.auth.currentUser.email,
+                    firstName: '',
+                    lastName: '',
+                    billing: {
+                        companyName: '',
+                        ico: '',
+                        dic: '',
+                        icDph: ''
+                    }
+                }).then(() => {
+                    console.log("MyDataApp: Prázdny dokument bol vytvorený.");
+                }).catch(err => {
+                    console.error("MyDataApp: Chyba pri vytváraní dokumentu:", err);
+                    setError('Chyba pri vytváraní profilu používateľa.');
+                });
+            }
             setLoading(false);
-        }
+        }, (error) => {
+            console.error("MyDataApp: Chyba pri načítaní profilu používateľa:", error);
+            setError('Chyba pri načítaní profilu. Skúste to prosím znova.');
+            setLoading(false);
+        });
     } else {
-        // Ak ešte nie je globálna autentifikácia pripravená, skúsime to znova neskôr.
-        console.log("MyDataApp: Čakám na pripravenosť globálnej autentifikácie...");
+        // Ak ešte nie je globálna autentifikácia pripravená, počkáme
+        console.log("MyDataApp: Čakám na pripravenosť globálnej autentifikácie a globálnych dát...");
     }
 
     // Funkcia pre odhlásenie listenera
@@ -81,7 +77,7 @@ function MyDataApp() {
             unsubscribeUserDoc();
         }
     };
-  }, [window.isGlobalAuthReady]); // Spustí sa, keď sa zmení stav pripravenosti autentifikácie
+  }, [window.isGlobalAuthReady, window.globalUserProfileData]); // Reaguje na zmenu pripravenosti autentifikácie alebo globálnych dát
 
   // Zobrazenie načítavania
   if (loading) {
@@ -183,7 +179,7 @@ function MyDataApp() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' }, 
+                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
                   React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
                   ` ${userProfileData.billing.companyName}`
                 )
@@ -193,7 +189,7 @@ function MyDataApp() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' }, 
+                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
                   React.createElement('span', { className: 'font-bold' }, 'IČO:'),
                   ` ${userProfileData.billing.ico}`
                 )
@@ -203,7 +199,7 @@ function MyDataApp() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' }, 
+                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
                   React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                   ` ${userProfileData.billing.dic}`
                 )
@@ -213,7 +209,7 @@ function MyDataApp() {
                 null,
                 React.createElement(
                   'p',
-                  { className: 'text-gray-800 text-lg whitespace-nowrap' }, 
+                  { className: 'text-gray-800 text-lg whitespace-nowrap' },
                   React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                   ` ${userProfileData.billing.icDph}`
                 )
