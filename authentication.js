@@ -12,7 +12,7 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ochrana proti zobrazeniu stránky v iframe
 if (window.self !== window.top) {
@@ -39,42 +39,6 @@ const setupFirebase = () => {
         console.log("AuthManager: Firebase služby inicializované.");
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
-    }
-};
-
-// Funkcia na vytvorenie používateľského profilu
-const createUserProfile = async (user) => {
-    if (!window.db) {
-        console.error("AuthManager: Firestore nie je inicializovaný, nemožno vytvoriť profil.");
-        return;
-    }
-    const userDocRef = doc(window.db, 'users', user.uid);
-    const initialProfileData = {
-        email: user.email || '',
-        firstName: '',
-        lastName: '',
-        role: 'user', // Predvolená rola
-        approved: true, // Automatické schválenie
-        billing: {
-            ico: '',
-            dic: '',
-            icDph: '',
-            companyName: '',
-            street: '',
-            houseNumber: '',
-            city: '',
-            postalCode: '',
-            country: ''
-        },
-        contactPhoneNumber: '',
-        displayNotifications: true,
-        passwordLastChanged: new Date().toISOString()
-    };
-    try {
-        await setDoc(userDocRef, initialProfileData, { merge: true });
-        console.log("AuthManager: Nový profil používateľa vytvorený.");
-    } catch (error) {
-        console.error("AuthManager: Chyba pri vytváraní profilu používateľa:", error);
     }
 };
 
@@ -146,26 +110,14 @@ const handleAuthState = () => {
             
             const userDocRef = doc(window.db, 'users', user.uid);
             
-            try {
-                const docSnap = await getDoc(userDocRef);
-                if (!docSnap.exists()) {
-                    console.log("AuthManager: Profil používateľa neexistuje. Vytváram nový...");
-                    await createUserProfile(user);
-                } else {
-                    console.log("AuthManager: Profil používateľa overený.");
-                }
-            } catch (error) {
-                console.error("AuthManager: Chyba pri overovaní profilu používateľa:", error);
-            }
-
-            // Teraz nastavíme real-time listener, ktorý bude spúšťať aktualizácie
+            // Nastavíme real-time listener, ktorý bude spúšťať aktualizácie
             unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = docSnap.data();
                     console.log("AuthManager: Profil používateľa načítaný v reálnom čase.");
                 } else {
                     window.globalUserProfileData = null;
-                    console.warn("AuthManager: Dokument používateľa bol odstránený.");
+                    console.warn("AuthManager: Profil používateľa neexistuje v databáze.");
                 }
                 
                 // Kontrola autorizácie stránky po každej aktualizácii profilu
