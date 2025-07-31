@@ -57,17 +57,16 @@
         </main>
     </div>
 
-    <!-- Firebase a globálne skripty -->
+    <!-- Načítanie Firebase a globálnych skriptov (authentication.js a header.js) -->
     <script type="module" src="authentication.js"></script>
-    
+    <script src="header.js"></script>
+
     <!-- React, ReactDOM a Babel pre podporu JSX -->
     <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Načíta hlavičku -->
-    <script src="header.js"></script>
-    <!-- Skripty pre našu aplikáciu, ktoré MUSIA byť načítané PO Reacte a Babeli -->
+    <!-- Načíta a preloží React komponent, ktorý sa následne vykreslí -->
     <script type="text/babel" src="logged-in-my-data.js"></script>
     
 </body>
