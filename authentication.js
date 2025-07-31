@@ -124,8 +124,10 @@ const handleAuthState = async () => {
         // Teraz spracujeme načítanie profilu a autorizáciu
         if (auth.currentUser) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
-            const appId = "soh2025-2s0o2h5"; // Použijeme pevne definované app ID z konfigurácie
-            const userDocRef = doc(db, `artifacts/${appId}/users/${auth.currentUser.uid}/profile`, auth.currentUser.uid);
+            
+            // Pôvodne: const userDocRef = doc(db, `artifacts/${appId}/users/${auth.currentUser.uid}/profile`, auth.currentUser.uid);
+            // Opravené: Používame priamu cestu do kolekcie 'users'
+            const userDocRef = doc(db, `users`, auth.currentUser.uid);
 
             onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
