@@ -101,6 +101,7 @@
                 }
                 const headerHtml = await response.text();
                 document.getElementById('header-placeholder').innerHTML = headerHtml;
+                window.dispatchEvent(new Event('header-loaded'));
             } catch (error) {
                 console.error("Chyba pri načítaní hlavičky:", error);
                 document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
