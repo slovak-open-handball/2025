@@ -22,34 +22,37 @@ if (window.self !== window.top) {
 
     const errorMessageDiv = document.createElement('div');
     errorMessageDiv.textContent = 'Táto aplikácia nemôže byť zobrazená v rámčeku (iframe).';
-    errorMessageDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-align: center; color: #000; font-family: sans-serif; font-size: 20px; text-align: center;';
+    errorMessageDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: flex; justify-content: center; align-items: center; color: #000; font-family: sans-serif; font-size: 20px; text-align: center;';
     document.body.appendChild(errorMessageDiv);
 }
 
 // Funkcia na kontrolu oprávnení na základe cesty
 const checkPageAuthorization = (userProfile, path) => {
-    // Vytvorenie whitelistu pre verejné stránky
+    // Definícia ciest pre rôzne typy stránok
     const publicPages = ['/', '/index.html', '/login.html'];
-
-    // Ak je používateľ odhlásený, povoliť prístup len na verejné stránky
-    if (!userProfile) {
-        return publicPages.includes(path) || publicPages.includes(path.split('/').pop());
-    }
-
-    // Ak je používateľ prihlásený, povoliť prístup na všetky stránky okrem login/registrácie pre neprihlásených
     const loggedInOnlyPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
-    if (loggedInOnlyPages.includes(path) || loggedInOnlyPages.includes(path.split('/').pop())) {
-        return true;
-    }
 
-    // Odmietnuť prístup na prihlasovacie stránky, ak je používateľ už prihlásený
-    const authPages = ['/login.html'];
-    if (authPages.includes(path) || authPages.includes(path.split('/').pop())) {
-        return false;
-    }
+    // Získať názov súboru z cesty pre porovnanie
+    const pageName = path.split('/').pop();
 
-    return true;
+    // Ak používateľ nie je prihlásený
+    if (!userProfile) {
+        // Povolí prístup len na verejné stránky
+        return publicPages.includes(pageName) || publicPages.includes(path);
+    } 
+    // Ak je používateľ prihlásený
+    else {
+        // Presmerovať z verejných stránok na stránku pre prihlásených
+        if (publicPages.includes(pageName) || publicPages.includes(path)) {
+            console.log("AuthManager: Používateľ je prihlásený, presmerovanie z verejnej stránky.");
+            window.location.href = 'logged-in-my-data.html';
+            return false; // zabráni ďalšiemu vykonávaniu
+        }
+        // Povolí prístup na stránky pre prihlásených
+        return loggedInOnlyPages.includes(pageName) || loggedInOnlyPages.includes(path);
+    }
 };
+
 
 // Vytvorenie a inicializácia Firebase aplikácie
 const setupFirebase = () => {
@@ -105,8 +108,9 @@ const handleAuthState = async () => {
                 
                 // Kontrola autorizácie stránky po načítaní profilu
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    console.warn("AuthManager: Používateľ nemá oprávnenie pre túto stránku. Presmerovanie na domovskú stránku.");
-                    window.location.href = 'index.html';
+                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization,
+                    // takže tu už nič nerobíme, len logujeme.
+                    console.warn("AuthManager: Autorizácia zlyhala alebo prebehlo presmerovanie.");
                 }
                 
                 // Ak existuje globálna funkcia na inicializáciu aplikácie (napr. z logged-in-my-data.js), zavoláme ju.
@@ -119,7 +123,7 @@ const handleAuthState = async () => {
                 window.globalUserProfileData = null;
                 // Kontrola autorizácie aj pri chybe načítania profilu
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                    window.location.href = 'index.html';
+                    // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
                 }
             });
 
@@ -129,7 +133,7 @@ const handleAuthState = async () => {
             
             // Kontrola autorizácie stránky po odhlásení
             if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                window.location.href = 'index.html';
+                 // Ak autorizácia zlyhá, presmerovanie už prebehlo vo vnútri checkPageAuthorization
             }
             
             // Ak sa používateľ odhlási, a je funkcia na inicializáciu, zavoláme ju tiež,
