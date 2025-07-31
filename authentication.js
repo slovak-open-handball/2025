@@ -4,7 +4,7 @@
 
 // Importy pre Firebase SDK musia byť explicitne definované pre moduly
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 // Opravil som importy pre Firestore tak, aby obsahovali aj `collection`.
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -72,7 +72,7 @@ const checkPageAuthorization = (userData, currentPath) => {
         'index.html': { role: 'public', approved: true },
         'login.html': { role: 'public', approved: true },
         'account.html': { role: 'user', approved: true },
-        'admin-register.html': { role: 'public', approved: true }, 
+        'admin-register.html': { role: 'public', approved: true },
         'register.html': { role: 'user', approved: true },
         'logged-in-users.html': { role: 'admin', approved: true },
         'logged-in-tournament-settings.html': { role: 'admin', approved: true },
@@ -92,12 +92,12 @@ const checkPageAuthorization = (userData, currentPath) => {
         console.log(`AuthManager: Žiadne pravidlo pre stránku ${page}. Prístup povolený.`);
         return true;
     }
-    
+
     if (rule.role === 'public') {
         console.log(`AuthManager: Stránka ${page} je verejná. Prístup povolený.`);
         return true;
     }
-    
+
     if (!userData) {
         console.log(`AuthManager: Používateľ je odhlásený a stránka ${page} nie je verejná. Presmerujem na login.`);
         return false;
@@ -125,7 +125,7 @@ const GlobalNotificationHandler = () => {
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('info');
     const [error, setError] = useState('');
-    
+
     useEffect(() => {
         window.showGlobalNotification = (msg, type = 'info', err = '') => {
             setMessage(msg);
@@ -158,21 +158,26 @@ const GlobalNotificationHandler = () => {
 };
 
 // Vykreslíme GlobalNotificationHandler do skrytého DOM elementu
-let authRoot = document.getElementById('authentication-root');
-if (!authRoot) {
-    authRoot = document.createElement('div');
-    authRoot.id = 'authentication-root';
-    authRoot.style.display = 'none';
-    document.body.appendChild(authRoot);
-}
+// Používame DOMContentLoaded, aby sme sa uistili, že celý DOM je pripravený,
+// predtým, ako sa pokúsime renderovať React komponent.
+document.addEventListener('DOMContentLoaded', () => {
+    let authRoot = document.getElementById('authentication-root');
+    if (!authRoot) {
+        authRoot = document.createElement('div');
+        authRoot.id = 'authentication-root';
+        authRoot.style.display = 'none';
+        document.body.appendChild(authRoot);
+    }
 
-try {
-    // OPRAVA: Použitie createRoot namiesto render pre React 18
-    const root = ReactDOM.createRoot(authRoot);
-    root.render(React.createElement(GlobalNotificationHandler));
-} catch (e) {
-    console.error("AuthManager: Chyba pri vykreslení GlobalNotificationHandler:", e);
-}
+    try {
+        // OPRAVA: Použitie createRoot namiesto render pre React 18
+        const root = ReactDOM.createRoot(authRoot);
+        root.render(React.createElement(GlobalNotificationHandler));
+    } catch (e) {
+        console.error("AuthManager: Chyba pri vykreslení GlobalNotificationHandler:", e);
+    }
+});
+
 
 // Pridáme logiku pre kontrolu autorizácie pri zmene stavu autentifikácie
 // Uistíme sa, že onAuthStateChanged sa zavolá iba ak je auth inicializované
@@ -195,7 +200,7 @@ if (window.auth) {
                 console.error("AuthManager: Chyba pri načítavaní profilu používateľa:", e);
             }
         }
-        
+
         window.globalUserProfileData = profileData;
         window.isGlobalAuthReady = true;
 
