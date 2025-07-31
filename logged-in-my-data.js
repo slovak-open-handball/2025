@@ -12,22 +12,19 @@ function MyDataApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   // Efekt pre načítanie používateľských dát z Firestore.
-  // Tento efekt sa spustí, keď je globálna autentifikácia pripravená,
-  // alebo keď sa zmenia globálne dáta profilu.
+  // Reaguje na zmenu pripravenosti globálnej autentifikácie.
   React.useEffect(() => {
     let unsubscribeUserDoc;
     
-    // Zistíme, či je autentifikácia a globálny profil pripravený
-    if (window.isGlobalAuthReady && window.globalUserProfileData) {
-        console.log("MyDataApp: Globálne dáta profilu sú už dostupné, použijem ich.");
-        // Použijeme už načítané globálne dáta, aby sme predišli zdržaniu
-        setUserProfileData(window.globalUserProfileData);
-        setLoading(false);
-    } else if (window.isGlobalAuthReady && window.auth && window.auth.currentUser) {
-        // Ak globálne dáta ešte nie sú pripravené, ale autentifikácia áno, spustíme listener
-        console.log(`MyDataApp: Používateľ je prihlásený (${window.auth.currentUser.uid}). Načítavam profil z Firestore...`);
-        const db = window.db;
-        const userId = window.auth.currentUser.uid;
+    // Čakáme, kým bude globálna autentifikácia pripravená
+    if (window.isGlobalAuthReady) {
+      const auth = window.auth;
+      const db = window.db;
+
+      // Ak je používateľ prihlásený, pokračujeme v načítaní
+      if (auth.currentUser) {
+        console.log(`MyDataApp: Používateľ je prihlásený (${auth.currentUser.uid}). Načítavam profil...`);
+        const userId = auth.currentUser.uid;
         
         // Cesta k dokumentu v Firestore
         const userDocPath = `/artifacts/${appId}/users/${userId}/profile/data`;
@@ -35,49 +32,56 @@ function MyDataApp() {
 
         // Nastavíme listener na zmeny v dokumente
         unsubscribeUserDoc = window.onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                console.log("MyDataApp: Dáta profilu boli úspešne načítané z Firestore:", data);
-                setUserProfileData(data);
-            } else {
-                console.warn("MyDataApp: Dokument s používateľskými dátami neexistuje. Vytváram prázdny dokument.");
-                // Ak dokument neexistuje, vytvoríme ho s prázdnymi hodnotami
-                window.setDoc(userDocRef, {
-                    email: window.auth.currentUser.email,
-                    firstName: '',
-                    lastName: '',
-                    billing: {
-                        companyName: '',
-                        ico: '',
-                        dic: '',
-                        icDph: ''
-                    }
-                }).then(() => {
-                    console.log("MyDataApp: Prázdny dokument bol vytvorený.");
-                }).catch(err => {
-                    console.error("MyDataApp: Chyba pri vytváraní dokumentu:", err);
-                    setError('Chyba pri vytváraní profilu používateľa.');
-                });
-            }
-            setLoading(false);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            console.log("MyDataApp: Dáta profilu boli úspešne načítané z Firestore:", data);
+            setUserProfileData(data);
+          } else {
+            console.warn("MyDataApp: Dokument s používateľskými dátami neexistuje. Vytváram prázdny dokument.");
+            // Ak dokument neexistuje, vytvoríme ho s prázdnymi hodnotami
+            window.setDoc(userDocRef, {
+              email: auth.currentUser.email,
+              firstName: '',
+              lastName: '',
+              billing: {
+                companyName: '',
+                ico: '',
+                dic: '',
+                icDph: ''
+              }
+            }).then(() => {
+              console.log("MyDataApp: Prázdny dokument bol vytvorený.");
+            }).catch(err => {
+              console.error("MyDataApp: Chyba pri vytváraní dokumentu:", err);
+              setError('Chyba pri vytváraní profilu používateľa.');
+            });
+          }
+          setLoading(false); // Načítavanie dokončené, či už dáta existujú alebo nie
         }, (error) => {
-            console.error("MyDataApp: Chyba pri načítaní profilu používateľa:", error);
-            setError('Chyba pri načítaní profilu. Skúste to prosím znova.');
-            setLoading(false);
+          console.error("MyDataApp: Chyba pri načítaní profilu používateľa:", error);
+          setError('Chyba pri načítaní profilu. Skúste to prosím znova.');
+          setLoading(false);
         });
+      } else {
+        // Ak nie je prihlásený, zobrazíme chybu
+        console.error("MyDataApp: Používateľ nie je prihlásený.");
+        setError('Nie ste prihlásený. Prosím, prihláste sa.');
+        setLoading(false);
+      }
     } else {
-        // Ak ešte nie je globálna autentifikácia pripravená, počkáme
-        console.log("MyDataApp: Čakám na pripravenosť globálnej autentifikácie a globálnych dát...");
+        // Zatiaľ čo nie je globálna autentifikácia pripravená, komponent zostane v stave načítavania
+        console.log("MyDataApp: Čakám na pripravenosť globálnej autentifikácie...");
+        setLoading(true);
     }
 
     // Funkcia pre odhlásenie listenera
     return () => {
-        if (unsubscribeUserDoc) {
-            console.log("MyDataApp: Odhlasujem listener z Firestore.");
-            unsubscribeUserDoc();
-        }
+      if (unsubscribeUserDoc) {
+        console.log("MyDataApp: Odhlasujem listener z Firestore.");
+        unsubscribeUserDoc();
+      }
     };
-  }, [window.isGlobalAuthReady, window.globalUserProfileData]); // Reaguje na zmenu pripravenosti autentifikácie alebo globálnych dát
+  }, [window.isGlobalAuthReady]); // Spustí sa, keď sa zmení stav pripravenosti autentifikácie
 
   // Zobrazenie načítavania
   if (loading) {
