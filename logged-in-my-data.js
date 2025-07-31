@@ -78,6 +78,10 @@ function MyDataApp() {
             'Žiadne dáta profilu na zobrazenie.'
         );
     }
+    
+    // Formátovanie dátumu registrácie
+    const registrationDate = userProfileData.registrationDate ? 
+      new Date(userProfileData.registrationDate.seconds * 1000).toLocaleDateString() : 'N/A';
 
     // Renderujeme dáta, ak sú k dispozícii
     return React.createElement(
@@ -118,9 +122,9 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'E-mail:'),
             ` ${userProfileData.email}`
           ),
-          React.createElement(
+          userProfileData.uid && React.createElement(
             'p',
-            { className: 'text-gray-800 text-lg' }, 
+            { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'UID:'),
             ` ${userProfileData.uid}`
           ),
@@ -130,6 +134,80 @@ function MyDataApp() {
             React.createElement('span', { className: 'font-bold' }, 'Zobrazované meno:'),
             ` ${userProfileData.displayName}`
           )
+        ),
+        // Adresa
+        (userProfileData.street || userProfileData.city || userProfileData.postalCode) && React.createElement(
+          'div',
+          { className: 'space-y-4' },
+          React.createElement(
+            'h2',
+            { className: 'text-2xl font-semibold text-gray-800' },
+            'Adresa'
+          ),
+          userProfileData.street && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Ulica:'),
+            ` ${userProfileData.street}`
+          ),
+          userProfileData.city && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Mesto:'),
+            ` ${userProfileData.city}`
+          ),
+          userProfileData.postalCode && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'PSČ:'),
+            ` ${userProfileData.postalCode}`
+          )
+        ),
+        // Kontaktné údaje
+        (userProfileData.phone || userProfileData.countryPhoneNumbers) && React.createElement(
+            'div',
+            { className: 'space-y-4' },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-semibold text-gray-800' },
+                'Kontaktné údaje'
+            ),
+            userProfileData.phone && React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'Telefón:'),
+                ` ${userProfileData.phone}`
+            ),
+            userProfileData.countryPhoneNumbers && Object.keys(userProfileData.countryPhoneNumbers).map(country => (
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg', key: country },
+                    React.createElement('span', { className: 'font-bold' }, `Telefón (${country.toUpperCase()}):`),
+                    ` ${userProfileData.countryPhoneNumbers[country]}`
+                )
+            ))
+        ),
+        // Ďalšie údaje
+        (userProfileData.clubName || userProfileData.registrationDate) && React.createElement(
+            'div',
+            { className: 'space-y-4' },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl font-semibold text-gray-800' },
+                'Ďalšie údaje'
+            ),
+            userProfileData.clubName && React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'Názov klubu:'),
+                ` ${userProfileData.clubName}`
+            ),
+            userProfileData.registrationDate && React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'Dátum registrácie:'),
+                ` ${registrationDate}`
+            )
         ),
         // Fakturačné údaje, ak existujú
         userProfileData.billing && React.createElement(
