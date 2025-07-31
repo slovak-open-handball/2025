@@ -28,7 +28,7 @@ function App() {
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
     const [categoriesExist, setCategoriesExist] = React.useState(false);
-    
+
     // Globálny App ID
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -36,16 +36,24 @@ function App() {
     React.useEffect(() => {
         const initFirebase = async () => {
             try {
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                // Používame pevnú konfiguráciu Firebase, ktorú poskytol používateľ
+                const firebaseConfig = {
+                    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+                    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+                    projectId: "soh2025-2s0o2h5",
+                    storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+                    messagingSenderId: "572988314768",
+                    appId: "1:572988314768:web:781e27eb035179fe34b415"
+                };
 
                 if (!firebaseConfig.projectId) {
-                    throw new Error("Firebase configuration 'projectId' is missing. Please ensure '__firebase_config' is correctly provided.");
+                    throw new Error("Firebase configuration 'projectId' is missing.");
                 }
 
                 const app = initializeApp(firebaseConfig);
                 const firestoreDb = getFirestore(app);
                 const firebaseAuth = getAuth(app);
-                
+
                 setDb(firestoreDb);
                 setAuth(firebaseAuth);
 
