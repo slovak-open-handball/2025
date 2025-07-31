@@ -11,7 +11,7 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Ochrana proti zobrazeniu stránky v iframe
@@ -106,18 +106,13 @@ const handleAuthState = async () => {
             return;
         }
 
-        // Ak nie je používateľ prihlásený, pokúsime sa ho prihlásiť
-        if (!user) {
+        // Ak nie je používateľ prihlásený, pokúsime sa ho prihlásiť, len ak máme custom token
+        if (!user && initialAuthToken) {
             try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("AuthManager: Prihlásenie pomocou custom tokenu bolo úspešné.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("AuthManager: Prihlásenie ako anonymný používateľ bolo úspešné.");
-                }
+                await signInWithCustomToken(auth, initialAuthToken);
+                console.log("AuthManager: Prihlásenie pomocou custom tokenu bolo úspešné.");
             } catch (error) {
-                console.error("AuthManager: Chyba pri prihlasovaní:", error);
+                console.error("AuthManager: Chyba pri prihlasovaní s tokenom:", error);
                 // Nastavíme isGlobalAuthReady aj pri chybe, aby sme sa vyhli zacykleniu
                 window.isGlobalAuthReady = true; 
             }
