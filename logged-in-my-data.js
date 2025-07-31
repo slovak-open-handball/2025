@@ -46,6 +46,11 @@ function MyDataApp() {
           <p className="text-lg">
             <span className="font-bold">E-mail:</span> {userProfileData.email}
           </p>
+          {userProfileData.contactPhoneNumber && (
+            <p className="text-lg">
+              <span className="font-bold">Telefón:</span> {userProfileData.contactPhoneNumber}
+            </p>
+          )}
           <p className="text-lg">
             <span className="font-bold">Rola:</span> {userProfileData.role}
           </p>
@@ -65,24 +70,14 @@ function MyDataApp() {
                 <span className="font-bold">Názov firmy:</span> {userProfileData.billing.companyName}
               </p>
             )}
-            {userProfileData.billing.street && (
+            {/* Zobrazenie kompletnej fakturačnej adresy */}
+            {(userProfileData.billing.street || userProfileData.billing.city || userProfileData.billing.zip || userProfileData.billing.country) && (
               <p className="text-lg">
-                <span className="font-bold">Ulica:</span> {userProfileData.billing.street}
-              </p>
-            )}
-            {userProfileData.billing.city && (
-              <p className="text-lg">
-                <span className="font-bold">Mesto:</span> {userProfileData.billing.city}
-              </p>
-            )}
-            {userProfileData.billing.zip && (
-              <p className="text-lg">
-                <span className="font-bold">PSČ:</span> {userProfileData.billing.zip}
-              </p>
-            )}
-            {userProfileData.billing.country && (
-              <p className="text-lg">
-                <span className="font-bold">Krajina:</span> {userProfileData.billing.country}
+                <span className="font-bold">Adresa:</span>
+                {userProfileData.billing.street && ` ${userProfileData.billing.street},`}
+                {userProfileData.billing.city && ` ${userProfileData.billing.city},`}
+                {userProfileData.billing.zip && ` ${userProfileData.billing.zip}`}
+                {userProfileData.billing.country && ` (${userProfileData.billing.country})`}
               </p>
             )}
             {userProfileData.billing.ico && (
