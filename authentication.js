@@ -2,6 +2,7 @@
 // Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
 // overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
 
+// Importy pre Firebase SDK musia byť explicitne definované pre moduly
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -18,23 +19,30 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-const app = initializeApp(firebaseConfig);
-window.auth = getAuth(app);
-window.db = getFirestore(app);
+try {
+    const app = initializeApp(firebaseConfig);
+    window.auth = getAuth(app);
+    window.db = getFirestore(app);
+} catch (e) {
+    console.error("AuthManager: Chyba pri inicializácii Firebase. Skontrolujte konfiguráciu.", e);
+}
+
 
 // Funkcia na overenie a prihlásenie pomocou custom tokenu alebo anonymne
 const authenticateUser = async () => {
     try {
-        if (initialAuthToken) {
+        if (initialAuthToken && window.auth) {
             await signInWithCustomToken(window.auth, initialAuthToken);
             console.log("AuthManager: Prihlásenie pomocou custom tokenu úspešné.");
-        } else {
+        } else if (window.auth) {
             await signInAnonymously(window.auth);
             console.log("AuthManager: Prihlásenie anonymne úspešné.");
         }
     } catch (error) {
         console.error("AuthManager: Chyba pri autentifikácii:", error);
-        await signInAnonymously(window.auth);
+        if (window.auth) {
+            await signInAnonymously(window.auth);
+        }
     }
 };
 
@@ -129,23 +137,18 @@ const GlobalNotificationHandler = () => {
     );
 };
 
+// Vykreslíme GlobalNotificationHandler do skrytého DOM elementu
 let authRoot = document.getElementById('authentication-root');
 if (!authRoot) {
     authRoot = document.createElement('div');
     authRoot.id = 'authentication-root';
     authRoot.style.display = 'none';
     document.body.appendChild(authRoot);
-    console.log("AuthManager: Vytvoril som a pridal 'authentication-root' div do tela dokumentu.");
-} else {
-    console.log("AuthManager: 'authentication-root' div už existuje.");
 }
 
 try {
-    ReactDOM.render(
-        React.createElement(GlobalNotificationHandler),
-        authRoot
-    );
-    console.log("AuthManager: GlobalNotificationHandler úspešne vykreslený.");
+    const root = ReactDOM.createRoot(authRoot);
+    root.render(React.createElement(GlobalNotificationHandler));
 } catch (e) {
     console.error("AuthManager: Chyba pri vykreslení GlobalNotificationHandler:", e);
 }
