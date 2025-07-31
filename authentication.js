@@ -13,10 +13,10 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 const checkPageAuthorization = (userData, currentPath) => {
     // Definícia prístupových pravidiel pre jednotlivé stránky
     const pageAccessRules = {
-      'index.html': { role: 'public', approved: true }, // Public page, no specific role needed
+      'index.html': { role: 'public', approved: true },
       'login.html': { role: 'public', approved: true },
-      'account.html': { role: 'public', approved: true }, // Public for password reset/email verification
-      'admin-register.html': { role: 'public', approved: true }, // Public for admin registration
+      'account.html': { role: 'public', approved: true },
+      'admin-register.html': { role: 'public', approved: true }, 
 
       'logged-in-users.html': { role: 'admin', approved: true },
       'logged-in-tournament-settings.html': { role: 'admin', approved: true },
