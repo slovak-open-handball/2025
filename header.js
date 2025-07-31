@@ -1,25 +1,7 @@
 // header.js
-// Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
+// Tento skript spravuje dynamické zobrazovanie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-
-// Funkcia na načítanie hlavičky (len HTML štruktúry)
-async function loadHeader() {
-    try {
-        const response = await fetch('header.html');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const headerHtml = await response.text();
-        const headerPlaceholder = document.getElementById('header-placeholder');
-        if (headerPlaceholder) {
-            headerPlaceholder.innerHTML = headerHtml;
-        } else {
-            console.error("header.js: Nenašiel sa '#header-placeholder' element.");
-        }
-    } catch (error) {
-        console.error("header.js: Chyba pri načítaní hlavičky:", error);
-    }
-}
+// Predpokladá, že header.html je vložený priamo do každej stránky.
 
 // Funkcia pre odhlásenie
 const handleLogout = async () => {
@@ -27,6 +9,7 @@ const handleLogout = async () => {
         try {
             await window.auth.signOut();
             window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
+            // Presmerovanie po úspešnom odhlásení
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1000);
@@ -34,98 +17,60 @@ const handleLogout = async () => {
             console.error("Chyba pri odhlasovaní:", error);
             window.showGlobalNotification('Chyba pri odhlasovaní. Skúste znova.', 'error');
         }
+    } else {
+        console.error("Firebase auth nie je dostupný.");
     }
 };
 
-// React komponent na obsluhu dynamických prvkov hlavičky a notifikácií
-function GlobalHeaderAndNotifications() {
-  const [user, setUser] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+// Funkcia na aktualizáciu stavu hlavičky
+const updateHeaderState = () => {
+    // Získanie referencií na navigačné prvky
+    const registerLink = document.getElementById('register-link');
+    const profileLink = document.getElementById('profile-link');
+    const authLink = document.getElementById('auth-link');
+    const logoutButton = document.getElementById('logout-button');
 
-  React.useEffect(() => {
-    // Čakáme, kým bude pripravená globálna autentifikácia
-    const checkAuthStatus = setInterval(() => {
-      if (window.isGlobalAuthReady) {
-        setIsAuthReady(true);
-        setUser(window.globalUserProfileData);
-        clearInterval(checkAuthStatus);
+    // Inicializácia: všetky prvky skryjeme, aby sa predišlo preblikávaniu
+    const allLinks = [registerLink, profileLink, authLink, logoutButton];
+    allLinks.forEach(link => {
+        if (link) link.classList.add('hidden');
+    });
 
-        // Nastavíme listener na zmeny v globálnom stave
-        const handleGlobalStateChange = () => {
-          setUser(window.globalUserProfileData);
-        };
-        window.addEventListener('globalStateChanged', handleGlobalStateChange);
-        
-        return () => {
-            window.removeEventListener('globalStateChanged', handleGlobalStateChange);
-        };
-      }
-    }, 100);
-  }, []);
-
-  React.useEffect(() => {
-    if (isAuthReady) {
-      // Zobrazí alebo skryje navigačné odkazy na základe stavu používateľa
-      const profileLink = document.getElementById('profile-link');
-      const authLink = document.getElementById('auth-link');
-      const logoutButton = document.getElementById('logout-button');
-      
-      if (profileLink) profileLink.classList.add('hidden');
-      if (authLink) authLink.classList.add('hidden');
-      if (logoutButton) logoutButton.classList.add('hidden');
-      
-      if (user) {
-        // Používateľ je prihlásený
+    // Kontrola, či je používateľ prihlásený
+    // Používame globálne dáta, ktoré by mala nastaviť iná časť aplikácie
+    if (window.globalUserProfileData && window.globalUserProfileData.isLoggedIn) {
+        // Používateľ je prihlásený, zobrazíme odkazy pre prihláseného používateľa
+        if (registerLink) registerLink.classList.remove('hidden');
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
-      } else {
-        // Používateľ nie je prihlásený
+    } else {
+        // Používateľ nie je prihlásený, zobrazíme odkaz na prihlásenie
         if (authLink) authLink.classList.remove('hidden');
-      }
     }
-  }, [user, isAuthReady]);
+};
 
-  // Pridanie poslucháča udalosti pre tlačidlo odhlásenia
-  React.useEffect(() => {
+// Počkáme na načítanie celého DOM
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("header.js: DOM bol načítaný.");
+    
+    // Pridáme poslucháča pre tlačidlo odhlásenia
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
+        logoutButton.addEventListener('click', handleLogout);
+        console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
     }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, []);
 
-  return null; // Tento komponent sa stará len o logiku, nevytvára DOM elementy
-}
+    // Nastavíme listener na zmeny v globálnom stave, aby sa hlavička aktualizovala
+    // pri prihlásení/odhlásení
+    window.addEventListener('globalStateChanged', updateHeaderState);
 
-// Render GlobalHeaderAndNotifications do špecifického DOM elementu
-let headerRoot = document.getElementById('header-notification-root');
-if (!headerRoot) {
-  headerRoot = document.createElement('div');
-  headerRoot.id = 'header-notification-root';
-  document.body.appendChild(headerRoot);
-  console.log("Header: Vytvoril som a pridal 'header-notification-root' div do tela dokumentu.");
-} else {
-  console.log("Header: 'header-notification-root' div už existuje.");
-}
+    // Aktualizujeme stav hlavičky pri prvom načítaní
+    updateHeaderState();
+});
 
-// Načítať hlavičku HTML štruktúru ako prvú, potom vykresliť React komponent
-window.onload = function() {
-    loadHeader().then(() => {
-        try {
-            // Používame ReactDOM.render pre kompatibilitu s React 17
-            ReactDOM.render(
-                React.createElement(GlobalHeaderAndNotifications),
-                headerRoot
-            );
-            console.log("Header: GlobalHeaderAndNotifications úspešne vykreslený.");
-        } catch (e) {
-            console.error("Header: Chyba pri vykresľovaní GlobalHeaderAndNotifications:", e);
-        }
-    }).catch(error => {
-        console.error("Chyba pri inicializácii hlavičky:", error);
-    });
+// Pomocná funkcia na zobrazenie globálnych notifikácií (pre lepšie UI)
+window.showGlobalNotification = (message, type) => {
+    // Táto funkcia by mala byť implementovaná vo vašom hlavnom JS
+    // a spravovať zobrazenie notifikačných správ
+    console.log(`[Notifikácia] ${type}: ${message}`);
 };
