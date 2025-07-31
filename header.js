@@ -145,6 +145,52 @@ function GlobalHeaderAndNotifications() {
     };
   }, [handleLogout]);
 
+  // ZMENA: Nová funkcia a useEffect pre zobrazenie/skrytie navigačných odkazov
+  const updateHeaderLinks = () => {
+    const profileLink = document.getElementById('profile-link');
+    const authLink = document.getElementById('auth-link');
+    const logoutButton = document.getElementById('logout-button');
+    const registerLink = document.getElementById('register-link');
+
+    if (window.isGlobalAuthReady) {
+      if (window.globalUserProfileData) {
+        // Používateľ je prihlásený
+        profileLink && profileLink.classList.remove('hidden');
+        logoutButton && logoutButton.classList.remove('hidden');
+        authLink && authLink.classList.add('hidden');
+        registerLink && registerLink.classList.remove('hidden');
+        console.log("Header: Používateľ je prihlásený, zobrazujem odkazy 'Moja zóna' a 'Odhlásenie'.");
+      } else {
+        // Používateľ nie je prihlásený
+        profileLink && profileLink.classList.add('hidden');
+        logoutButton && logoutButton.classList.add('hidden');
+        authLink && authLink.classList.remove('hidden');
+        registerLink && registerLink.classList.remove('hidden');
+        console.log("Header: Používateľ nie je prihlásený, zobrazujem odkaz 'Prihlásenie'.");
+      }
+    } else {
+      console.log("Header: Autentifikácia ešte nie je pripravená, skryjem všetky odkazy okrem 'Domov'.");
+      profileLink && profileLink.classList.add('hidden');
+      logoutButton && logoutButton.classList.add('hidden');
+      authLink && authLink.classList.add('hidden');
+      registerLink && registerLink.classList.add('hidden');
+    }
+  };
+
+  // Zmena: Sledujeme zmeny stavu autentifikácie pomocou vlastnej udalosti
+  React.useEffect(() => {
+    // Okamžitá kontrola pri prvom načítaní
+    updateHeaderLinks();
+
+    // Pridanie poslucháča udalosti pre dynamické zmeny
+    window.addEventListener('auth-state-changed', updateHeaderLinks);
+    
+    // Cleanup funkcia
+    return () => {
+      window.removeEventListener('auth-state-changed', updateHeaderLinks);
+    };
+  }, []);
+
   return React.createElement(
     React.Fragment,
     null,
