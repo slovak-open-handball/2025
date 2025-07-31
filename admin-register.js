@@ -1,14 +1,4 @@
-// Global application ID and Firebase configuration (should be consistent across all React apps)
-const appId = '1:572988314768:web:781e27eb035179fe34b415';
-const firebaseConfig = {
-  apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-  authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-  projectId: "soh2025-2s0o2h5",
-  storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-  messagingSenderId: "572988314768",
-  appId: "1:572988314768:web:781e27eb035179fe34b415"
-};
-const initialAuthToken = null; // Global authentication token
+// admin-register.js (teraz používa globálne Firebase inštancie z authentication.js)
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
@@ -49,9 +39,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
         className: `shadow appearance-none border ${borderClass} rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 pr-10`,
         value: value,
         onChange: onChange,
-        onCopy: onCopy,
-        onPaste: onPaste,
-        onCut: onCut,
+        onCopy: (e) => e.preventDefault(), // Prevent copying
+        onPaste: (e) => e.preventDefault(), // Prevent pasting
+        onCut: (e) => e.preventDefault(),   // Prevent cutting
         required: true,
         placeholder: placeholder,
         autoComplete: autoComplete,
@@ -160,11 +150,12 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
 
 // Main React component for the admin registration page
 function App() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(null);
-  const [isAuthReady, setIsAuthReady] = React.useState(false);
+  // Získame referencie na Firebase služby a globálne dáta z authentication.js
+  const auth = window.auth;
+  const db = window.db;
+  const user = window.globalUserProfileData; // Používame globálny profil používateľa
+  const isAuthReady = window.isGlobalAuthReady; // Používame globálny stav pripravenosti autentifikácie
+
   const [pageLoading, setPageLoading] = React.useState(true); // New state for initial page loading
   const [formSubmitting, setFormSubmitting] = React.useState(false); // New state for form submission
 
@@ -199,56 +190,14 @@ function App() {
 
   // Effect for Firebase initialization and Auth Listener setup (runs only once)
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        setErrorMessage("Firebase SDK nie je načítané. Skontrolujte admin-register.html.");
-        setPageLoading(false); // Stop loading on critical error
-        return;
-      }
-
-      const firebaseApp = firebase.initializeApp(firebaseConfig);
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          } else {
-            // No anonymous sign-in for admin-register.js, user will explicitly register
-          }
-        } catch (e) {
-          console.error("Chyba pri počiatočnom prihlásení Firebase:", e);
-          setErrorMessage(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        setUser(currentUser);
-        setIsAuthReady(true);
-        setPageLoading(false); // Page is now fully loaded (auth is ready)
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("Nepodarilo sa inicializovať Firebase:", e);
-      setErrorMessage(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setPageLoading(false); // Stop loading on critical error
+    // Čakáme, kým budú auth a db inštancie dostupné z authentication.js
+    if (auth && db) {
+      setPageLoading(false); // Page is now fully loaded (auth and db are ready)
+    } else {
+        console.log("AdminRegisterApp: Čakám na inicializáciu Auth a DB v authentication.js.");
     }
-  }, []); // Empty dependency array - runs only once on component mount
+  }, [auth, db]); // Závisí od auth a db (globálnych inštancií)
+
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
@@ -434,7 +383,7 @@ function App() {
 
       // Now sign out and redirect after a delay
       await auth.signOut();
-      setUser(null); // Explicitne set user to null after logout
+      // user will be null after signOut, no need to set explicitly
 
       // Redirect after 5 seconds
       setTimeout(() => {
@@ -652,3 +601,6 @@ function App() {
     )
   );
 }
+
+// Export the component globally to be rendered by admin-register.html
+window.App = App;
