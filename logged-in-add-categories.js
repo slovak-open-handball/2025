@@ -248,15 +248,16 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
-  // NOVÉ: Získame referencie na Firebase služby priamo
-  const app = firebase.app();
-  const auth = firebase.auth(app);
-  const db = firebase.firestore(app);
+  // NOVÉ: Získame referencie na Firebase služby z globálnych premenných
+  const auth = window.auth;
+  const db = window.db;
 
   // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
-  const [user, setUser] = React.useState(auth.currentUser); // Inicializovať s aktuálnym používateľom
-  const [userProfileData, setUserProfileData] = React.useState(null); 
+  // Používame window.globalUserProfileData pre počiatočný stav
+  const [user, setUser] = React.useState(window.auth.currentUser); 
+  const [userProfileData, setUserProfileData] = React.useState(window.globalUserProfileData); 
+  const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); // Získame globálny stav pripravenosti
 
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v AddCategoriesApp
   const [error, setError] = React.useState('');
@@ -276,9 +277,18 @@ function AddCategoriesApp() {
   // NOVÉ: Lokálny Auth Listener pre AddCategoriesApp
   // Tento listener zabezpečí, že AddCategoriesApp reaguje na zmeny autentifikácie,
   // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
+  // Aktualizácia: Už nepotrebujeme lokálny onAuthStateChanged, spoliehame sa na globálny stav.
   React.useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
-      console.log("AddCategoriesApp: Lokálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+    // Akonáhle je globálna autentifikácia pripravená, nastavíme lokálny stav
+    if (window.isGlobalAuthReady) {
+      setIsAuthReady(true);
+      setUser(window.auth.currentUser);
+      setUserProfileData(window.globalUserProfileData);
+    }
+
+    // Nastavíme listener na zmeny globálneho stavu autentifikácie
+    const unsubscribeGlobalAuth = window.auth.onAuthStateChanged(currentUser => {
+      console.log("AddCategoriesApp: Globálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
       setUser(currentUser);
       // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
       if (!currentUser) {
@@ -286,8 +296,22 @@ function AddCategoriesApp() {
         window.location.href = 'login.html';
       }
     });
-    return () => unsubscribeAuth();
-  }, [auth]); // Závisí od auth inštancie
+
+    // Nastavíme listener na zmeny globálneho profilu používateľa
+    const unsubscribeGlobalProfile = () => {
+      // Táto funkcia sa zavolá, keď sa zmení globalUserProfileData
+      // V AuthenticationManageri už je onSnapshot, takže tu len preberáme dáta
+      setUserProfileData(window.globalUserProfileData);
+    };
+    // Pridáme vlastný event listener, ak ho GlobalNotificationHandler poskytuje
+    window.addEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+
+
+    return () => {
+      unsubscribeGlobalAuth();
+      window.removeEventListener('globalProfileDataChanged', unsubscribeGlobalProfile);
+    };
+  }, []); // Závisí od auth inštancie
 
   // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
   // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
@@ -295,7 +319,7 @@ function AddCategoriesApp() {
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (user && db) { // Spustí sa len ak je používateľ prihlásený a db je k dispozícii
+    if (user && db && isAuthReady) { // Spustí sa len ak je používateľ prihlásený a db je k dispozícii
       console.log(`AddCategoriesApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
@@ -324,7 +348,7 @@ function AddCategoriesApp() {
             // Ak sa profil nenájde, ale používateľ je prihlásený, môže to byť problém. Odhlásime ho.
             setError("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.");
             setLoading(false);
-            auth.signOut(); // Odhlásiť používateľa
+            window.auth.signOut(); // Odhlásiť používateľa
             setUser(null);
             setUserProfileData(null);
           }
@@ -333,7 +357,7 @@ function AddCategoriesApp() {
           setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
           setLoading(false);
           // Pri chybe odhlásime používateľa, pretože dáta profilu sú kritické
-          auth.signOut();
+          window.auth.signOut();
           setUser(null);
           setUserProfileData(null);
         });
@@ -341,11 +365,11 @@ function AddCategoriesApp() {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
         setLoading(false);
-        auth.signOut();
+        window.auth.signOut();
         setUser(null);
         setUserProfileData(null);
       }
-    } else if (user === null) {
+    } else if (isAuthReady && user === null) {
         // Ak je user null (a už nie undefined), znamená to, že bol odhlásený.
         // Presmerovanie už by mal spraviť GlobalNotificationHandler.
         // Tu len zabezpečíme, že loading je false a dáta sú vyčistené.
@@ -359,7 +383,7 @@ function AddCategoriesApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [user, db, auth]); // Závisí od user a db (a auth pre signOut)
+  }, [user, db, isAuthReady]); // Závisí od user a db (a auth pre signOut)
 
 
   // Callback funkcia pre získanie referencie na dokument kategórií
@@ -457,19 +481,25 @@ function AddCategoriesApp() {
   const handleAddCategorySubmit = async (categoryName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na pridanie kategórie.");
-      setUserNotificationMessage("Nemáte oprávnenie na pridanie kategórie."); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
+      }
       return;
     }
     const trimmedCategoryName = categoryName.trim();
     if (trimmedCategoryName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
-      setUserNotificationMessage("Názov kategórie nemôže byť prázdny."); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.", 'error');
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // setUserNotificationMessage(''); // Vyčistíme predchádzajúcu lokálnu správu
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -482,7 +512,10 @@ function AddCategoriesApp() {
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
         setError(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`);
-        setUserNotificationMessage(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`); // Použijeme lokálnu notifikáciu
+        // Použijeme globálnu notifikáciu namiesto lokálnej
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
+        }
         setLoading(false);
         return;
       }
@@ -496,7 +529,10 @@ function AddCategoriesApp() {
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
-      setUserNotificationMessage("Kategória úspešne pridaná!"); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Kategória úspešne pridaná!", 'success');
+      }
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -506,7 +542,10 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
       setError(`Chyba pri pridávaní kategórie: ${e.message}`);
-      setUserNotificationMessage(`Chyba pri pridávaní kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri pridávaní kategórie: ${e.message}`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -516,19 +555,25 @@ function AddCategoriesApp() {
   const handleEditCategorySubmit = async (categoryId, newName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       setError("Nemáte oprávnenie na úpravu kategórie.");
-      setUserNotificationMessage("Nemáte oprávnenie na úpravu kategórie."); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Nemáte oprávnenie na úpravu kategórie.", 'error');
+      }
       return;
     }
     const trimmedNewName = newName.trim();
     if (trimmedNewName === '') {
       setError("Názov kategórie nemôže byť prázdny.");
-      setUserNotificationMessage("Názov kategórie nemôže byť prázdny."); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.", 'error');
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // setUserNotificationMessage(''); // Vyčistíme predchádzajúcu lokálnu správu
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
@@ -542,7 +587,10 @@ function AddCategoriesApp() {
       // categoryId je tu náhodné ID, newName je nová hodnota
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
         setError(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`);
-        setUserNotificationMessage(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`); // Použijeme lokálnu notifikáciu
+        // Použijeme globálnu notifikáciu namiesto lokálnej
+        if (typeof window.showGlobalNotification === 'function') {
+          window.showGlobalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
+        }
         setLoading(false);
         return;
       }
@@ -555,7 +603,10 @@ function AddCategoriesApp() {
         [categoryId]: trimmedNewName
       });
 
-      setUserNotificationMessage("Kategória úspešne aktualizovaná!"); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Kategória úspešne aktualizovaná!", 'success');
+      }
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
 
@@ -566,7 +617,10 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
       setError(`Chyba pri aktualizácii kategórie: ${e.message}`);
-      setUserNotificationMessage(`Chyba pri aktualizácii kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri aktualizácii kategórie: ${e.message}`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -582,13 +636,16 @@ function AddCategoriesApp() {
   const handleDeleteCategory = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
       setError("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.");
-      setUserNotificationMessage("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná."); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.", 'error');
+      }
       return;
     }
 
     setLoading(true);
     setError('');
-    setUserNotificationMessage(''); // Vyčistíme predchádzajúcu správu
+    // setUserNotificationMessage(''); // Vyčistíme predchádzajúcu lokálnu správu
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
@@ -600,7 +657,10 @@ function AddCategoriesApp() {
         [categoryToDelete.id]: firebase.firestore.FieldValue.delete()
       });
 
-      setUserNotificationMessage(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`, 'success');
+      }
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
       // NOVINKA: Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
@@ -610,7 +670,10 @@ function AddCategoriesApp() {
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
       setError(`Chyba pri mazaní kategórie: ${e.message}`);
-      setUserNotificationMessage(`Chyba pri mazaní kategórie: ${e.message}`); // Použijeme lokálnu notifikáciu
+      // Použijeme globálnu notifikáciu namiesto lokálnej
+      if (typeof window.showGlobalNotification === 'function') {
+        window.showGlobalNotification(`Chyba pri mazaní kategórie: ${e.message}`, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -618,7 +681,7 @@ function AddCategoriesApp() {
 
   // Display loading state
   // Zobraz loading, ak user nie je prihlásený, alebo ak sú dáta profilu ešte načítavané
-  if (!user || loading) {
+  if (!isAuthReady || !user || loading) {
     // Ak user nie je prihlásený, presmerovanie už by mal spraviť GlobalNotificationHandler.
     // Tu len zabezpečíme zobrazenie loading správy.
     let loadingMessage = 'Načítavam...';
