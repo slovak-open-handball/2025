@@ -19,22 +19,31 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-try {
-    const app = initializeApp(firebaseConfig);
-    window.auth = getAuth(app);
-    window.db = getFirestore(app);
-} catch (e) {
-    console.error("AuthManager: Chyba pri inicializácii Firebase. Skontrolujte konfiguráciu.", e);
-}
+// Defenzívna kontrola, či je konfigurácia Firebase platná
+if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+    console.error("AuthManager: Globálna premenná __firebase_config je prázdna alebo neplatná. Firebase nemôže byť inicializovaný.");
+} else {
+    try {
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
 
+    } catch (e) {
+        console.error("AuthManager: Chyba pri inicializácii Firebase. Skontrolujte konfiguráciu.", e);
+    }
+}
 
 // Funkcia na overenie a prihlásenie pomocou custom tokenu alebo anonymne
 const authenticateUser = async () => {
+    if (!window.auth) {
+        console.error("AuthManager: Firebase Auth nie je inicializovaný. Preskakujem autentifikáciu.");
+        return;
+    }
     try {
-        if (initialAuthToken && window.auth) {
+        if (initialAuthToken) {
             await signInWithCustomToken(window.auth, initialAuthToken);
             console.log("AuthManager: Prihlásenie pomocou custom tokenu úspešné.");
-        } else if (window.auth) {
+        } else {
             await signInAnonymously(window.auth);
             console.log("AuthManager: Prihlásenie anonymne úspešné.");
         }
@@ -154,41 +163,46 @@ try {
 }
 
 // Pridáme logiku pre kontrolu autorizácie pri zmene stavu autentifikácie
-onAuthStateChanged(window.auth, async (user) => {
-    console.log("AuthManager: Stav autentifikácie sa zmenil.", user);
+// Uistíme sa, že onAuthStateChanged sa zavolá iba ak je auth inicializované
+if (window.auth) {
+    onAuthStateChanged(window.auth, async (user) => {
+        console.log("AuthManager: Stav autentifikácie sa zmenil.", user);
 
-    let profileData = null;
-    if (user) {
-        const userDocRef = doc(window.db, 'users', user.uid);
-        try {
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                profileData = userDoc.data();
-            } else {
-                console.log("AuthManager: Dokument používateľa neexistuje, nastavujem defaultný profil.");
-                profileData = { role: 'user', approved: false, email: user.email };
+        let profileData = null;
+        if (user) {
+            const userDocRef = doc(window.db, 'users', user.uid);
+            try {
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    profileData = userDoc.data();
+                } else {
+                    console.log("AuthManager: Dokument používateľa neexistuje, nastavujem defaultný profil.");
+                    profileData = { role: 'user', approved: false, email: user.email };
+                }
+            } catch (e) {
+                console.error("AuthManager: Chyba pri načítavaní profilu používateľa:", e);
             }
-        } catch (e) {
-            console.error("AuthManager: Chyba pri načítavaní profilu používateľa:", e);
         }
-    }
-    
-    window.globalUserProfileData = profileData;
-    window.isGlobalAuthReady = true;
+        
+        window.globalUserProfileData = profileData;
+        window.isGlobalAuthReady = true;
 
-    // Odpálime udalosť, aby ostatné skripty vedeli, že sa môžu spustiť
-    window.dispatchEvent(new Event('auth-state-changed'));
+        // Odpálime udalosť, aby ostatné skripty vedeli, že sa môžu spustiť
+        window.dispatchEvent(new Event('auth-state-changed'));
 
-    const currentPath = window.location.pathname;
-    const isAuthorized = checkPageAuthorization(window.globalUserProfileData, currentPath);
+        const currentPath = window.location.pathname;
+        const isAuthorized = checkPageAuthorization(window.globalUserProfileData, currentPath);
 
-    if (!isAuthorized) {
-        if (!user) {
-            window.location.href = 'login.html';
-        } else {
-            redirectToHome();
+        if (!isAuthorized) {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                redirectToHome();
+            }
         }
-    }
-});
+    });
 
-authenticateUser();
+    authenticateUser();
+} else {
+    console.warn("AuthManager: Firebase auth nebol inicializovaný, onAuthStateChanged sa nespustí.");
+}
