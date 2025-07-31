@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOH 2025 - Moja zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* Základné štýly pre telo dokumentu a hlavný layout */
@@ -70,6 +72,7 @@
             }
         }
     </style>
+    <!-- React, ReactDOM a Babel pre spracovanie JSX -->
     <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -79,20 +82,22 @@
     <div id="left-menu-placeholder"></div>
     <main class="main-content">
         <div id="root">
+            <!-- Pred načítaním React komponentu zobrazíme jednoduchý loading spinner -->
             <div class="flex justify-center items-center h-full">
                 <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
             </div>
         </div>
     </main>
 
+    <!-- Naše hlavné skripty. authentication.js sa postará o inicializáciu Firebase. -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
 
+    <!-- Načítanie a spracovanie React komponentu -->
     <script type="text/babel" src="logged-in-my-data.js"></script>
 
     <script type="module">
         // Globálna funkcia pre zobrazenie notifikácií.
-        // Je dôležité, aby bola definovaná pred načítaním iných skriptov, ktoré ju môžu použiť.
         window.showGlobalNotification = (message, type = 'success') => {
             let notificationElement = document.getElementById('global-notification');
             if (!notificationElement) {
@@ -131,20 +136,31 @@
             }, 3000);
         };
         
-        // Vykreslíme React aplikáciu až po načítaní všetkých skriptov a DOM-u.
+        // Vykreslíme React aplikáciu až po načítaní DOM-u a uistení sa, že authentication.js už beží.
         window.onload = () => {
-            if (typeof window.MyDataApp === 'undefined') {
-                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
-                const rootElement = document.getElementById('root');
-                if (rootElement) {
-                    rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba pri načítaní aplikácie.</div>';
-                }
-                return;
+            // Použijeme onAuthStateChanged, aby sme sa uistili, že React kód sa spustí až po úspešnej autentifikácii
+            // To je bezpečnejší prístup ako sa spoliehať na window.onload
+            const auth = window.auth;
+            if (auth) {
+                auth.onAuthStateChanged(user => {
+                    // Ak je používateľ prihlásený, alebo bol aspoň overený prvý stav, môžeme vykresliť aplikáciu.
+                    if (user || window.isGlobalAuthReady) {
+                        if (typeof window.MyDataApp === 'undefined') {
+                            console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
+                            const rootElement = document.getElementById('root');
+                            if (rootElement) {
+                                rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba pri načítaní aplikácie.</div>';
+                            }
+                            return;
+                        }
+                        const root = ReactDOM.createRoot(document.getElementById('root'));
+                        root.render(React.createElement(window.MyDataApp, null));
+                        console.log("logged-in-my-data.html: React App úspešne vykreslená po overení autentifikácie.");
+                    }
+                });
+            } else {
+                console.error("Chyba: Firebase Auth nie je definovaný.");
             }
-
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(window.MyDataApp, null));
-            console.log("logged-in-my-data.html: React App úspešne vykreslená.");
         };
     </script>
 </body>
