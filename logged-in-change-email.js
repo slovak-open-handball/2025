@@ -160,7 +160,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   );
 }
 
-// Funkcia na validáciu emailu (presunutá sem, aby bola globálna)
+// Funkcia na validáciu emailu
 const validateEmail = (email) => {
   const atIndex = email.indexOf('@');
   if (atIndex === -1) return false;
@@ -179,14 +179,19 @@ const validateEmail = (email) => {
 
 // Main React component for the logged-in-change-email.html page
 function ChangeEmailApp() {
-  const [app, setApp] = React.useState(null);
-  const [auth, setAuth] = React.useState(null);
-  const [db, setDb] = React.useState(null);
-  const [user, setUser] = React.useState(undefined); // Firebase User object from onAuthStateChanged
+  // NOVÉ: Získame referencie na Firebase služby priamo
+  const app = firebase.app();
+  const auth = firebase.auth(app);
+  const db = firebase.firestore(app);
+
+  // NOVÉ: Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
+  // Tieto stavy budú aktualizované lokálnym onAuthStateChanged a onSnapshot
+  const [user, setUser] = React.useState(auth.currentUser); // Inicializovať s aktuálnym používateľom
   const [userProfileData, setUserProfileData] = React.useState(null); 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Nový stav pre pripravenosť autentifikácie
-  const [loading, setLoading] = React.useState(true);
+
+  const [loading, setLoading] = React.useState(true); // Loading pre dáta v ChangeEmailApp
   const [error, setError] = React.useState('');
+  // PONECHANÉ: userNotificationMessage pre lokálne notifikácie
   const [userNotificationMessage, setUserNotificationMessage] = React.useState('');
 
   // User Data States
@@ -203,195 +208,156 @@ function ChangeEmailApp() {
   // Zabezpečíme, že appId je definované (používame globálnu premennú)
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-  // Effect for Firebase initialization and Auth Listener setup (runs only once)
+  // NOVÉ: Lokálny Auth Listener pre ChangeEmailApp
+  // Tento listener zabezpečí, že ChangeEmailApp reaguje na zmeny autentifikácie,
+  // ale primárne odhlásenie/presmerovanie spravuje GlobalNotificationHandler.
   React.useEffect(() => {
-    let unsubscribeAuth;
-    let firestoreInstance;
-
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error("ChangeEmailApp: Firebase SDK nie je načítané.");
-        setError("Firebase SDK nie je načítané. Skontrolujte logged-in-change-email.html.");
-        setLoading(false);
-        return;
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      console.log("ChangeEmailApp: Lokálny onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
+      setUser(currentUser);
+      // Ak používateľ nie je prihlásený, presmerujeme ho (aj keď by to mal spraviť GNH)
+      if (!currentUser) {
+        console.log("ChangeEmailApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        window.location.href = 'login.html';
       }
+    });
+    return () => unsubscribeAuth();
+  }, [auth]); // Závisí od auth inštancie
 
-      let firebaseApp;
-      // Skontrolujte, či už existuje predvolená aplikácia Firebase
-      if (firebase.apps.length === 0) {
-        // Používame globálne firebaseConfig
-        firebaseApp = firebase.initializeApp(firebaseConfig);
-      } else {
-        firebaseApp = firebase.app(); // Použite existujúcu predvolenú aplikáciu
-      }
-      setApp(firebaseApp);
-
-      const authInstance = firebase.auth(firebaseApp);
-      setAuth(authInstance);
-      firestoreInstance = firebase.firestore(firebaseApp);
-      setDb(firestoreInstance);
-
-      const signIn = async () => {
-        try {
-          if (typeof initialAuthToken !== 'undefined' && initialAuthToken) {
-            await authInstance.signInWithCustomToken(initialAuthToken);
-          }
-        } catch (e) {
-          console.error("ChangeEmailApp: Chyba pri počiatočnom prihlásení Firebase (s custom tokenom):", e);
-          setError(`Chyba pri prihlásení: ${e.message}`);
-        }
-      };
-
-      unsubscribeAuth = authInstance.onAuthStateChanged(async (currentUser) => {
-        console.log("ChangeEmailApp: onAuthStateChanged - Používateľ:", currentUser ? currentUser.uid : "null");
-        setUser(currentUser); // Nastaví Firebase User objekt
-        setIsAuthReady(true); // Mark auth as ready after the first check
-      });
-
-      signIn();
-
-      return () => {
-        if (unsubscribeAuth) {
-          unsubscribeAuth();
-        }
-      };
-    } catch (e) {
-      console.error("ChangeEmailApp: Nepodarilo sa inicializovať Firebase:", e);
-      setError(`Chyba pri inicializácii Firebase: ${e.message}`);
-      setLoading(false);
-    }
-  }, []);
-
-  // Effect for loading user data from Firestore after Auth and DB are ready
+  // NOVÉ: Lokálny Effect pre načítanie používateľských dát z Firestore
+  // Tento efekt sa spustí, keď je používateľ prihlásený a db je k dispozícii.
+  // Predpokladá sa, že passwordLastChanged a approved status sú už overené v header.js.
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
-    if (isAuthReady && db && user !== undefined) {
-      if (user === null) { 
-        console.log("ChangeEmailApp: Auth je ready a používateľ je null, presmerovávam na login.html");
-        window.location.href = 'login.html';
-        return;
-      }
+    if (user && db) { // Spustí sa len ak je používateľ prihlásený a db je k dispozícii
+      console.log(`ChangeEmailApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
+      setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
-      if (user) {
-        console.log(`ChangeEmailApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-        setLoading(true);
+      try {
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
+          console.log("ChangeEmailApp: onSnapshot pre používateľský dokument spustený.");
+          if (docSnapshot.exists) {
+            const userData = docSnapshot.data();
+            console.log("ChangeEmailApp: Používateľský dokument existuje, dáta:", userData);
 
-        try {
-          const userDocRef = db.collection('users').doc(user.uid);
-          unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => {
-            console.log("ChangeEmailApp: onSnapshot pre používateľský dokument spustený.");
-            if (docSnapshot.exists) {
-              const userData = docSnapshot.data();
-              console.log("ChangeEmailApp: Používateľský dokument existuje, dáta:", userData);
-
-              // --- LOGIKA ODHLÁSENIA NA ZÁKLADE passwordLastChanged ---
-              if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
-                  console.error("ChangeEmailApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
-                  console.log("ChangeEmailApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(`passwordLastChanged_${user.uid}`);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              }
-
-              const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
-              const localStorageKey = `passwordLastChanged_${user.uid}`;
-              let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
-
-              console.log(`ChangeEmailApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Stored: ${storedPasswordChangedTime}`);
-
-              if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-                  console.log("ChangeEmailApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
-              } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
-                  console.log("ChangeEmailApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
-                  console.warn("ChangeEmailApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  localStorage.removeItem(localStorageKey);
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return;
-              } else {
-                  localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
-              }
-              // --- KONIEC LOGIKY ODHLÁSENIA ---
-
-              // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
-              if (userData.role === 'admin' && userData.approved === false) {
-                  console.log("ChangeEmailApp: Používateľ je admin a nie je schválený. Odhlasujem.");
-                  auth.signOut();
-                  window.location.href = 'login.html';
-                  setUser(null); // Explicitne nastaviť user na null
-                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                  return; // Zastav ďalšie spracovanie
-              }
-
-              setUserProfileData(userData);
-              setCurrentEmail(user.email || ''); // Nastaví aktuálny e-mail z Firebase Auth
-              // setNewEmail(user.email || ''); // ODSTRÁNENÉ: Už sa nebude predvypĺňať
-              
-              setLoading(false);
-              setError('');
-
-              if (typeof window.updateMenuItemsVisibility === 'function') {
-                  updateMenuItemsVisibility(userData.role);
-              }
-
-              console.log("ChangeEmailApp: Načítanie používateľských dát dokončené, loading: false");
-            } else {
-              console.warn("ChangeEmailApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-              setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
-              setLoading(false);
-              setUser(null); // Explicitne nastaviť user na null
-              setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+            // --- OKAMŽITÉ ODHLÁSENIE, AK passwordLastChanged NIE JE PLATNÝ TIMESTAMP ---
+            // Toto je pridaná logika, ktorá sa spustí hneď po načítaní dát.
+            // Ak je passwordLastChanged neplatný alebo chýba, odhlásiť.
+            if (!userData.passwordLastChanged || typeof userData.passwordLastChanged.toDate !== 'function') {
+                console.error("ChangeEmailApp: passwordLastChanged NIE JE platný Timestamp objekt! Typ:", typeof userData.passwordLastChanged, "Hodnota:", userData.passwordLastChanged);
+                console.log("ChangeEmailApp: Okamžite odhlasujem používateľa kvôli neplatnému timestampu zmeny hesla.");
+                auth.signOut(); // Používame auth z React stavu
+                window.location.href = 'login.html';
+                localStorage.removeItem(`passwordLastChanged_${user.uid}`); // Vyčistíme localStorage
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return; // Zastaviť ďalšie spracovanie
             }
-          }, error => {
-            console.error("ChangeEmailApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-            if (error.code === 'permission-denied') {
-                setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
-            } else if (error.code === 'unavailable') {
-                setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
-            } else if (error.code === 'unauthenticated') {
-                 setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
-                 if (auth) {
-                    auth.signOut();
-                    window.location.href = 'login.html';
-                    setUser(null); // Explicitne nastaviť user na null
-                    setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-                 }
+
+            // Normálne spracovanie, ak je passwordLastChanged platný
+            const firestorePasswordChangedTime = userData.passwordLastChanged.toDate().getTime();
+            const localStorageKey = `passwordLastChanged_${user.uid}`;
+            let storedPasswordChangedTime = parseInt(localStorage.getItem(localStorageKey) || '0', 10);
+
+            console.log(`ChangeEmailApp: Firestore passwordLastChanged (konvertované): ${firestorePasswordChangedTime}, Uložené: ${storedPasswordChangedTime}`);
+
+            if (storedPasswordChangedTime === 0 && firestorePasswordChangedTime !== 0) {
+                // Prvé načítanie pre tohto používateľa/prehliadač, inicializuj localStorage a NEODHLASUJ
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangeEmailApp: Inicializujem passwordLastChanged v localStorage (prvé načítanie).");
+                // Nepokračujeme tu, pokračujeme s normálnym spracovaním dát pre prvé načítanie
+            } else if (firestorePasswordChangedTime > storedPasswordChangedTime) {
+                // Heslo bolo zmenené na inom zariadení/relácii
+                console.log("ChangeEmailApp: Detekovaná zmena hesla na inom zariadení/relácii. Odhlasujem používateľa.");
+                auth.signOut(); // Používame auth z React stavu
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey); // Vyčistiť localStorage po odhlásení
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return;
+            } else if (firestorePasswordChangedTime < storedPasswordChangedTime) {
+                // Toto by sa ideálne nemalo stať, ak je Firestore zdrojom pravdy
+                console.warn("ChangeEmailApp: Detekovaný starší timestamp z Firestore ako uložený. Odhlasujem používateľa (potenciálny nesúlad).");
+                auth.signOut(); // Používame auth z React stavu
+                window.location.href = 'login.html';
+                localStorage.removeItem(localStorageKey);
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return;
             } else {
-                setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+                // Časy sú rovnaké, zabezpečte, aby bol localStorage aktuálny
+                localStorage.setItem(localStorageKey, firestorePasswordChangedTime.toString());
+                console.log("ChangeEmailApp: Timestampy sú rovnaké, aktualizujem localStorage.");
             }
-            setLoading(false);
-            console.log("ChangeEmailApp: Načítanie používateľských dát zlyhalo, loading: false");
+
+            // NOVÁ LOGIKA: Odhlásenie, ak je používateľ admin a nie je schválený
+            if (userData.role === 'admin' && userData.approved === false) {
+                console.log("ChangeEmailApp: Používateľ je admin a nie je schválený. Odhlasujem.");
+                auth.signOut();
+                window.location.href = 'login.html';
+                setUser(null); // Explicitne nastaviť user na null
+                setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+                return; // Zastav ďalšie spracovanie
+            }
+
+            setUserProfileData(userData); // Aktualizujeme stav userProfileData
+            setCurrentEmail(user.email || ''); // Nastaví aktuálny e-mail z Firebase Auth
+            
+            setLoading(false); // Zastavíme načítavanie po načítaní používateľských dát
+            setError(''); // Vymazať chyby po úspešnom načítaní
+
+            // Aktualizácia viditeľnosti menu po načítaní roly (volanie globálnej funkcie z left-menu.js)
+            if (typeof window.updateMenuItemsVisibility === 'function') {
+                window.updateMenuItemsVisibility(userData.role);
+            } else {
+                console.warn("ChangeEmailApp: Funkcia updateMenuItemsVisibility nie je definovaná.");
+            }
+
+            console.log("ChangeEmailApp: Načítanie používateľských dát dokončené, loading: false");
+          } else {
+            console.warn("ChangeEmailApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
+            setError("Chyba: Používateľský profil sa nenašiel alebo nemáte dostatočné oprávnenia. Skúste sa prosím znova prihlásiť.");
+            setLoading(false); // Zastaví načítavanie, aby sa zobrazila chyba
             setUser(null); // Explicitne nastaviť user na null
             setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-          });
-        } catch (e) {
-          console.error("ChangeEmailApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
-          setLoading(false);
+          }
+        }, error => {
+          console.error("ChangeEmailApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
+          if (error.code === 'permission-denied') {
+              setError(`Chyba oprávnení: Nemáte prístup k svojmu profilu. Skúste sa prosím znova prihlásiť alebo kontaktujte podporu.`);
+          } else if (error.code === 'unavailable') {
+              setError(`Chyba pripojenia: Služba Firestore je nedostupná. Skúste to prosím neskôr.`);
+          } else if (error.code === 'unauthenticated') {
+               setError(`Chyba autentifikácie: Nie ste prihlásený. Skúste sa prosím znova prihlásiť.`);
+               if (auth) {
+                  auth.signOut();
+                  window.location.href = 'login.html';
+                  setUser(null); // Explicitne nastaviť user na null
+                  setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+               }
+          } else {
+              setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+          }
+          setLoading(false); // Zastaví načítavanie aj pri chybe
+          console.log("ChangeEmailApp: Načítanie používateľských dát zlyhalo, loading: false");
           setUser(null); // Explicitne nastaviť user na null
           setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-        }
-      } else { // Ak user nie je null ani undefined, ale je false (napr. po odhlásení)
-          setLoading(false);
-          setUserProfileData(null); // Zabezpečiť, že userProfileData je null, ak user nie je prihlásený
-      }
-    } else if (isAuthReady && user === undefined) {
-        console.log("ChangeEmailApp: Auth ready, user undefined. Nastavujem loading na false.");
+        });
+      } catch (e) {
+        console.error("ChangeEmailApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
+        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
         setLoading(false);
+        setUser(null); // Explicitne nastaviť user na null
+        setUserProfileData(null); // Explicitne nastaviť userProfileData na null
+      }
+    } else if (user === null) {
+        // Ak je user null (a už nie undefined), znamená to, že bol odhlásený.
+        // Presmerovanie už by mal spraviť GlobalNotificationHandler.
+        // Tu len zabezpečíme, že loading je false a dáta sú vyčistené.
+        setLoading(false);
+        setUserProfileData(null);
     }
 
     return () => {
@@ -400,68 +366,8 @@ function ChangeEmailApp() {
         unsubscribeUserDoc();
       }
     };
-  }, [isAuthReady, db, user, auth]);
+  }, [user, db, auth]); // Závisí od user a db (a auth pre signOut)
 
-  // Effect for updating header link visibility
-  React.useEffect(() => {
-    console.log(`ChangeEmailApp: useEffect pre aktualizáciu odkazov hlavičky. User: ${user ? user.uid : 'null'}`);
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
-
-    if (authLink) {
-      if (user) {
-        authLink.classList.add('hidden');
-        profileLink && profileLink.classList.remove('hidden');
-        logoutButton && logoutButton.classList.remove('hidden');
-        registerLink && registerLink.classList.add('hidden');
-        console.log("ChangeEmailApp: Používateľ prihlásený. Skryté: Prihlásenie, Registrácia. Zobrazené: Moja zóna, Odhlásenie.");
-      } else {
-        authLink.classList.remove('hidden');
-        profileLink && profileLink.classList.add('hidden');
-        logoutButton && logoutButton.classList.add('hidden');
-        registerLink && registerLink.classList.remove('hidden'); 
-        console.log("ChangeEmailApp: Používateľ odhlásený. Zobrazené: Prihlásenie, Registrácia. Skryté: Moja zóna, Odhlásenie.");
-      }
-    }
-  }, [user]);
-
-  // Handle logout (needed for the header logout button)
-  const handleLogout = React.useCallback(async () => {
-    if (!auth) return;
-    try {
-      setLoading(true);
-      await auth.signOut();
-      // Používame globálnu funkciu pre centrálnu notifikáciu
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Úspešne odhlásený.");
-      } else {
-        console.warn("ChangeEmailApp: window.showGlobalNotification nie je definovaná.");
-      }
-      window.location.href = 'login.html';
-      setUser(null); // Explicitne nastaviť user na null
-      setUserProfileData(null); // Explicitne nastaviť userProfileData na null
-    } catch (e) {
-      console.error("ChangeEmailApp: Chyba pri odhlásení:", e);
-      setError(`Chyba pri odhlásení: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [auth]);
-
-  // Attach logout handler to the button in the header
-  React.useEffect(() => {
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-      logoutButton.addEventListener('click', handleLogout);
-    }
-    return () => {
-      if (logoutButton) {
-        logoutButton.removeEventListener('click', handleLogout);
-      }
-    };
-  }, [handleLogout]);
 
   // Handle for email input change
   const handleNewEmailChange = (e) => {
@@ -560,15 +466,15 @@ function ChangeEmailApp() {
   `;
 
   // Display loading state
-  if (!isAuthReady || user === undefined || (user && !userProfileData) || loading) {
-    if (isAuthReady && user === null) { 
-        console.log("ChangeEmailApp: Auth je ready a používateľ je null, presmerovávam na login.html");
+  if (!user || (user && !userProfileData) || loading) {
+    if (user === null) { 
+        console.log("ChangeEmailApp: Používateľ je null, presmerovávam na login.html");
         window.location.href = 'login.html';
         return null;
     }
 
     let loadingMessage = 'Načítavam...';
-    if (isAuthReady && user && !userProfileData) {
+    if (user && !userProfileData) {
         loadingMessage = 'Načítavam...';
     } else if (loading) {
         loadingMessage = 'Načítavam...';
