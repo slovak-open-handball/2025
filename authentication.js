@@ -144,26 +144,25 @@ try {
 // --- Inicializácia Firebase ---
 console.log("AuthManager: Spúšťam inicializáciu Firebase.");
 
-// Nová, vylepšená inicializácia Firebase, ktorá by mala zabrániť chybe.
-// Používame namespaced prístup, ktorý už je na stránke.
+// Nová, vylepšená inicializácia Firebase pomocou v7 namespaced prístupu
 const app = typeof firebaseConfig !== 'undefined'
-  ? (!firebase.app ? firebase.initializeApp(firebaseConfig) : firebase.app())
+  ? (!firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app())
   : null;
 
 if (app) {
     // Sprístupnenie globálnych premenných
-    window.auth = firebase.getAuth(app);
-    window.db = firebase.getFirestore(app);
+    window.auth = app.auth();
+    window.db = app.firestore();
 
     // Počkáme, kým sa overí stav prihlásenia
-    firebase.onAuthStateChanged(window.auth, async (user) => {
+    app.auth().onAuthStateChanged(async (user) => {
         console.log("AuthManager: onAuthStateChanged - používateľ je teraz:", user ? user.email : 'neprihlásený');
         if (user) {
             console.log(`AuthManager: Prihlásený používateľ s UID: ${user.uid}. Načítavam profil...`);
-            const userDocRef = firebase.doc(window.db, "users", user.uid);
+            const userDocRef = app.firestore().collection("users").doc(user.uid);
             try {
-                const docSnap = await firebase.getDoc(userDocRef);
-                if (docSnap.exists()) {
+                const docSnap = await userDocRef.get();
+                if (docSnap.exists) {
                     window.globalUserProfileData = docSnap.data();
                     console.log("AuthManager: Profil používateľa úspešne načítaný:", window.globalUserProfileData);
                 } else {
