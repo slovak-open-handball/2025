@@ -80,17 +80,26 @@ async function handleLogout() {
 
 // Funkcia, ktorá dynamicky mení odkazy v hlavičke na základe stavu autentifikácie
 function updateHeaderLinks() {
+    const homeLink = document.getElementById('home-link');
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
 
+    // Najprv skryjeme všetky odkazy
+    const allLinks = [homeLink, authLink, profileLink, logoutButton, registerLink];
+    allLinks.forEach(link => {
+        if (link) {
+            link.classList.add('hidden');
+        }
+    });
+
     const user = window.auth ? window.auth.currentUser : null;
     const userProfileData = window.globalUserProfileData;
-
+    
+    // Farba hlavičky sa zmení na základe typu používateľa
     if (header) {
-        // Zmena farby hlavičky na základe typu používateľa
         if (user && userProfileData && userProfileData.type === 'user') {
             header.classList.remove('bg-blue-700');
             header.classList.add('bg-[#9333EA]');
@@ -100,9 +109,13 @@ function updateHeaderLinks() {
         }
     }
 
+    // Domov je vždy viditeľný
+    if (homeLink) {
+        homeLink.classList.remove('hidden');
+    }
+
     if (user) {
         // Používateľ je prihlásený
-        if (authLink) authLink.classList.add('hidden');
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
 
@@ -113,17 +126,10 @@ function updateHeaderLinks() {
                 registerLink.textContent = 'Registrácia na turnaj';
                 registerLink.href = 'logged-in-registration.html';
             }
-        } else {
-            // Skryť odkaz, ak používateľ nie je typu 'user'
-            if (registerLink) {
-                 registerLink.classList.add('hidden');
-            }
         }
     } else {
         // Používateľ je odhlásený
         if (authLink) authLink.classList.remove('hidden');
-        if (profileLink) profileLink.classList.add('hidden');
-        if (logoutButton) logoutButton.classList.add('hidden');
         
         // Zobraziť odkaz na registráciu pre všetkých, ale s iným textom a odkazom
         if (registerLink) {
