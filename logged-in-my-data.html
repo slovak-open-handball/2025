@@ -5,19 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOH 2025 - Moja zóna</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Základné štýly pre telo dokumentu a hlavný layout */
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding-top: 64px;
+            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
+        /* Štýly pre modálne okná */
         .modal {
             position: fixed;
             z-index: 100;
@@ -41,6 +44,7 @@
             width: 90%;
             position: relative;
         }
+        /* Štýly pre fixnú hlavičku a menu */
         #header-placeholder {
             position: fixed;
             top: 0;
@@ -56,7 +60,7 @@
             z-index: 25;
         }
         .main-content {
-            margin-left: 256px;
+            margin-left: 256px; /* Odsadenie pre ľavé menu */
             flex-grow: 1;
             padding: 2rem;
             width: 100%;
@@ -72,20 +76,20 @@
     <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
 </head>
 <body class="bg-gray-100">
     <div id="header-placeholder"></div>
     <div id="left-menu-placeholder"></div>
     <main class="main-content">
         <div id="root">
+            <!-- Pred načítaním React komponentu zobrazíme jednoduchý loading spinner -->
             <div class="flex justify-center items-center h-full">
-                <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+                <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
             </div>
         </div>
     </main>
 
-    <!-- Naše hlavné skripty -->
+    <!-- Naše hlavné skripty. authentication.js musí byť načítaný ako prvý. -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
 
@@ -97,6 +101,7 @@
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Globálna funkcia pre zobrazenie notifikácií
         window.showGlobalNotification = (message, type = 'success') => {
             let notificationElement = document.getElementById('global-notification');
             if (!notificationElement) {
@@ -136,9 +141,9 @@
         };
         
         window.onload = async () => {
-            // Check if firebase config is available
+            // Skontrolujeme, či je konfigurácia Firebase k dispozícii
             if (typeof window.__firebase_config === 'undefined') {
-                console.error("Firebase config is not available. Cannot initialize Firebase.");
+                console.error("Firebase config nie je k dispozícii. Inicializácia Firebase zlyhala.");
                 const rootElement = document.getElementById('root');
                 if (rootElement) {
                     rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba: Firebase konfigurácia chýba.</div>';
@@ -146,32 +151,32 @@
                 return;
             }
 
-            // Initialize Firebase from global variables
+            // Inicializácia Firebase z globálnych premenných
             try {
                 const firebaseConfig = JSON.parse(window.__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 window.auth = getAuth(app);
                 window.db = getFirestore(app);
 
-                // Sign in the user
+                // Prihlásenie používateľa pomocou custom tokenu alebo anonymne
                 if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
                     await signInWithCustomToken(window.auth, window.__initial_auth_token);
-                    console.log("logged-in-my-data.html: Signed in with custom token.");
+                    console.log("logged-in-my-data.html: Úspešne prihlásený pomocou custom tokenu.");
                 } else {
                     await signInAnonymously(window.auth);
-                    console.log("logged-in-my-data.html: Signed in anonymously.");
+                    console.log("logged-in-my-data.html: Úspešne prihlásený anonymne.");
                 }
+                // Nastavíme globálny stav, aby ostatné skripty vedeli, že overenie je dokončené
                 window.isGlobalAuthReady = true;
-                console.log("logged-in-my-data.html: Authentication successful.");
+                console.log("logged-in-my-data.html: Autentifikácia bola úspešne dokončená.");
             } catch (error) {
-                console.error("logged-in-my-data.html: Error during authentication:", error);
-                window.isGlobalAuthReady = true; // Mark as ready even with an error
-                // The React component will handle the case where the user is not logged in
+                console.error("logged-in-my-data.html: Chyba počas autentifikácie:", error);
+                window.isGlobalAuthReady = true; // Označíme ako hotové aj v prípade chyby, aby sa mohla zobraziť stránka
             }
 
-            // After authentication, render the React app
+            // Po dokončení autentifikácie vykreslíme React aplikáciu
             if (typeof window.MyDataApp === 'undefined') {
-                console.error("Error: MyDataApp component is not defined. Check logged-in-my-data.js.");
+                console.error("Chyba: Komponent MyDataApp nie je definovaný. Skontrolujte logged-in-my-data.js.");
                 const rootElement = document.getElementById('root');
                 if (rootElement) {
                     rootElement.innerHTML = '<div class="text-red-500 text-center p-4">Chyba pri načítaní aplikácie.</div>';
@@ -180,8 +185,8 @@
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MyDataApp, null));
-            console.log("logged-in-my-data.html: React App rendered.");
+            root.render(React.createElement(window.MyDataApp, null));
+            console.log("logged-in-my-data.html: React App úspešne vykreslená.");
         };
     </script>
 </body>
