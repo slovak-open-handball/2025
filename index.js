@@ -1,12 +1,17 @@
 // index.js
-// Tento súbor predpokladá, že Firebase SDK je inicializovaný v <head> index.html
-// a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
+// This file is now self-contained and does not rely on global window variables from authentication.js.
+// It initializes Firebase and handles authentication on its own.
 
-// Importujeme potrebné Firebase funkcie. Tieto je potrebné explicitne naimportovať,
-// aj keď je hlavná inštancia Firebase dostupná cez globálne premenné.
-import { doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Import React and ReactDOM from CDN for a standalone script
+import React from 'https://cdn.skypack.dev/react@17.0.2';
+import ReactDOM from 'https://cdn.skypack.dev/react-dom@17.0.2';
 
-// Helper funkcia na formátovanie objektu Date do 'YYYY-MM-DDTHH:mm'
+// Import necessary Firebase functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
 const formatToDatetimeLocal = (date) => {
     if (!date) return '';
     const year = date.getFullYear();
@@ -17,11 +22,13 @@ const formatToDatetimeLocal = (date) => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Hlavný React komponent pre stránku index.html
+// Main React component for the index.html page
 function App() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
     const [user, setUser] = React.useState(null);
+    const [db, setDb] = React.useState(null);
+    const [auth, setAuth] = React.useState(null);
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [registrationEndDate, setRegistrationEndDate] = React.useState(null);
     const [categoriesExist, setCategoriesExist] = React.useState(false);
@@ -29,39 +36,55 @@ function App() {
     // Globálny App ID
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-    // Počúvanie na zmeny stavu autentifikácie a aktualizácia stavu používateľa
+    // Firebase initialization and authentication
     React.useEffect(() => {
-        const handleAuthStateChange = () => {
-            console.log("App: auth-state-changed event received.");
-            if (window.isGlobalAuthReady) {
-                setUser(window.globalUserProfileData);
-                // Tu môžete spustiť ďalšiu logiku, ktorá závisí od prihlásenia
-            } else {
-                setUser(null);
+        const initFirebase = async () => {
+            try {
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const app = initializeApp(firebaseConfig);
+                const firestoreDb = getFirestore(app);
+                const firebaseAuth = getAuth(app);
+                
+                setDb(firestoreDb);
+                setAuth(firebaseAuth);
+
+                // Sign in with custom token if available, otherwise sign in anonymously
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
+                if (token) {
+                    await signInWithCustomToken(firebaseAuth, token);
+                } else {
+                    await signInAnonymously(firebaseAuth);
+                }
+
+                onAuthStateChanged(firebaseAuth, (currentUser) => {
+                    if (currentUser) {
+                        setUser(currentUser);
+                        console.log("User is signed in:", currentUser.uid);
+                    } else {
+                        setUser(null);
+                        console.log("User is signed out.");
+                    }
+                });
+
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                setError("Chyba pri inicializácii Firebase. Skúste obnoviť stránku.");
             }
         };
 
-        // Spustíme logiku, ak je už stav pripravený pri prvom vykreslení
-        if (window.isGlobalAuthReady) {
-            handleAuthStateChange();
-        }
-
-        window.addEventListener('auth-state-changed', handleAuthStateChange);
-        return () => {
-            window.removeEventListener('auth-state-changed', handleAuthStateChange);
-        };
+        initFirebase();
     }, []);
 
     // Načítanie nastavení registrácie z Firestore, spúšťa sa, keď je Firebase pripravený
     React.useEffect(() => {
-        if (!window.isGlobalAuthReady || !window.db) {
-            console.log("App: Waiting for Firebase to be ready...");
+        if (!db) {
+            console.log("App: Waiting for Firebase db to be ready...");
             return;
         }
 
-        console.log("App: Firebase je pripravené, načítavam nastavenia registrácie.");
+        console.log("App: Firebase db is ready, fetching registration settings.");
         try {
-            const settingsRef = doc(window.db, 'artifacts', appId, 'public', 'settings');
+            const settingsRef = doc(db, 'artifacts', appId, 'public', 'settings');
             const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -85,18 +108,18 @@ function App() {
             setError("Chyba pri inicializácii načítania nastavení. Skúste obnoviť stránku.");
             setLoading(false);
         }
-    }, [window.isGlobalAuthReady, window.db, appId]); // Závislosti zabezpečia, že sa spustí, až keď sú služby pripravené
+    }, [db, appId]);
 
     // Kontrola existencie kategórií, spúšťa sa, keď sú načítané dátumy registrácie
     React.useEffect(() => {
         const checkCategories = async () => {
-            if (!window.db || !window.isGlobalAuthReady) {
+            if (!db) {
                 console.log("App: Waiting for Firebase to be ready before checking categories.");
                 return;
             }
             console.log("App: Checking for categories...");
             try {
-                const categoriesCollectionRef = collection(window.db, 'artifacts', appId, 'public', 'categories');
+                const categoriesCollectionRef = collection(db, 'artifacts', appId, 'public', 'categories');
                 const categoriesSnap = await getDocs(categoriesCollectionRef);
                 setCategoriesExist(!categoriesSnap.empty);
             } catch (e) {
@@ -107,7 +130,7 @@ function App() {
         if (registrationStartDate && registrationEndDate) {
             checkCategories();
         }
-    }, [registrationStartDate, registrationEndDate, window.isGlobalAuthReady, window.db, appId]);
+    }, [registrationStartDate, registrationEndDate, db, appId]);
 
 
     // Funkcia na výpočet odpočtu
