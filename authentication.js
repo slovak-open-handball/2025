@@ -56,7 +56,16 @@ function checkPageAuthorization(userProfile, path) {
 // Inicializácia Firebase
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // Použitie poskytnutej config premennej ak globálna neexistuje
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : JSON.stringify({
+            apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+            authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+            projectId: "soh2025-2s0o2h5",
+            storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+            messagingSenderId: "572988314768",
+            appId: "1:572988314768:web:781e27eb035179fe34b415"
+        }));
+
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         if (Object.keys(firebaseConfig).length > 0) {
@@ -74,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log("AuthManager: Prihlásenie anonymne prebehlo úspešne.");
             }
         } else {
-            console.error("AuthManager: Firebase config nebol nájdený. Inicializácia preskočená.");
+            console.error("AuthManager: Firebase config nebol nájdený a fallback config je prázdny. Inicializácia preskočená.");
         }
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii alebo prihlásení:", error);
@@ -95,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
 
-            // KĽÚČOVÁ ZMENA: Správna cesta k profilu používateľa je 'users/{userId}'
+            // Správna cesta k profilu používateľa je 'users/{userId}'
             const userProfileRef = doc(window.db, `users/${user.uid}`);
 
             const unsubscribe = onSnapshot(userProfileRef, (snapshot) => {
@@ -103,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.globalUserProfileData = { id: snapshot.id, ...snapshot.data() };
                     console.log("AuthManager: Načítaný profil používateľa:", window.globalUserProfileData);
                 } else {
-                    console.warn("AuthManager: Žiadny profil používateľa nenájdený na správnej ceste 'users/{userId}'.");
+                    console.warn("AuthManager: Žiadny profil používateľa nenájdený na ceste 'users/{userId}'.");
                     window.globalUserProfileData = null;
                 }
                 
