@@ -47,40 +47,55 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // Funkcia pre inicializáciu Firebase
 const initFirebase = async () => {
-    try {
-        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        let firebaseConfig = JSON.parse(firebaseConfigString);
+    const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+    let firebaseConfig = JSON.parse(firebaseConfigString);
 
-        // Kľúčová kontrola pred inicializáciou! Ak chýba 'projectId', použijeme pevnú konfiguráciu.
-        if (!firebaseConfig.projectId) {
-            console.warn("AuthManager: 'projectId' nie je poskytnuté v __firebase_config. Používa sa pevne zadaná konfigurácia.");
-            firebaseConfig = {
-                apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-                authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-                projectId: "soh2025-2s0o2h5",
-                storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-                messagingSenderId: "572988314768",
-                appId: "1:572988314768:web:781e27eb035179fe34b415"
-            };
-        }
-
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        window.auth = getAuth(app);
-
-        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
-        if (token) {
-            await signInWithCustomToken(window.auth, token);
-        } else {
-            await signInAnonymously(window.auth);
-        }
-
-        console.log("AuthManager: Firebase inicializované.");
-        return app;
-    } catch (e) {
-        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
-        return null;
+    // Kľúčová kontrola pred inicializáciou! Ak chýba 'projectId', použijeme pevnú konfiguráciu.
+    if (!firebaseConfig.projectId) {
+        console.warn("AuthManager: 'projectId' nie je poskytnuté v __firebase_config. Používa sa pevne zadaná konfigurácia.");
+        firebaseConfig = {
+            apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+            authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+            projectId: "soh2025-2s0o2h5",
+            storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+            messagingSenderId: "572988314768",
+            appId: "1:572988314768:web:781e27eb035179fe34b415"
+        };
     }
+
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.auth = getAuth(app);
+
+    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
+    
+    // Nový mechanizmus opätovného pokusu
+    const maxRetries = 5;
+    let retries = 0;
+    let delay = 1000; // Počká 1 sekundu pred prvým opätovným pokusom
+    
+    while (retries < maxRetries) {
+        try {
+            if (token) {
+                await signInWithCustomToken(window.auth, token);
+            } else {
+                await signInAnonymously(window.auth);
+            }
+            console.log("AuthManager: Firebase inicializované a prihlásenie úspešné.");
+            return app; // Úspešne prihlásené, ukončíme cyklus
+        } catch (e) {
+            console.error(`AuthManager: Chyba pri prihlasovaní (pokus ${retries + 1}/${maxRetries}):`, e);
+            retries++;
+            if (retries < maxRetries) {
+                console.log(`AuthManager: Čakám ${delay / 1000} sekúnd pred ďalším pokusom...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2; // Exponenciálne zvyšovanie oneskorenia
+            }
+        }
+    }
+
+    console.error("AuthManager: Opakované pokusy o prihlásenie zlyhali. Inicializácia Firebase zlyhala.");
+    return null;
 };
 
 // Pomocná funkcia pre autorizáciu prístupu k stránkam
