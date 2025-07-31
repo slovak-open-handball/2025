@@ -17,43 +17,50 @@ function MyDataApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
   // Effect pre načítanie používateľských dát z Firestore
+  // Tento effect sa spúšťa len raz, po prihlásení používateľa
   React.useEffect(() => {
     let unsubscribeUserDoc;
+    
+    // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
+    // Používame setTimeout, aby sme sa uistili, že `window.auth` a `window.db` sú už inicializované z `authentication.js`
+    const checkAuthAndFetchData = () => {
+        if (window.isGlobalAuthReady && window.auth && window.auth.currentUser) {
+            console.log(`MyDataApp: Globálna autentifikácia pripravená. Spúšťam vlastný Firestore listener.`);
+            const userId = window.auth.currentUser.uid;
+            const userDocRef = doc(window.db, 'users', userId);
 
-    // Funkcia na nastavenie listeneru
-    const setupListener = () => {
-      // Čakáme, kým bude globálna autentifikácia pripravená a používateľ prihlásený
-      if (window.isGlobalAuthReady && db && auth && auth.currentUser) {
-        console.log(`MyDataApp: Globálna autentifikácia pripravená. Pokúšame sa načítať dáta.`);
-        const userId = auth.currentUser.uid;
-        const userDocRef = doc(db, 'users', userId);
-
-        unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            console.log("MyDataApp: Dáta používateľa z Firestore načítané.");
-            setUserProfileData(docSnap.data());
-            setLoading(false);
-            setError('');
-          } else {
-            console.warn("MyDataApp: Profil používateľa nebol nájdený.");
-            setUserProfileData(null);
-            setLoading(false);
-            setError('Profil používateľa nebol nájdený.');
-          }
-        }, (err) => {
-          console.error("MyDataApp: Chyba pri načítaní dát:", err);
-          setError('Chyba pri načítaní profilu.');
-          setLoading(false);
-        });
-      } else {
-        // Ak ešte nie je prihlásený, nastavíme načítanie na true a dáta na null
-        setUserProfileData(null);
-        setLoading(true);
-      }
+            // Nastavíme real-time listener na dáta používateľa
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    console.log("MyDataApp: Dáta používateľa z Firestore načítané.");
+                    setUserProfileData(docSnap.data());
+                    setLoading(false);
+                    setError('');
+                } else {
+                    console.warn("MyDataApp: Profil používateľa nebol nájdený.");
+                    setUserProfileData(null);
+                    setLoading(false);
+                    setError('Profil používateľa nebol nájdený.');
+                }
+            }, (err) => {
+                console.error("MyDataApp: Chyba pri načítaní dát:", err);
+                setError('Chyba pri načítaní profilu.');
+                setLoading(false);
+            });
+        } else {
+            // Ak ešte nie je prihlásený, opakujeme kontrolu o 100ms neskôr
+            if (!window.isGlobalAuthReady) {
+                setTimeout(checkAuthAndFetchData, 100);
+            } else {
+                console.log("MyDataApp: Používateľ nie je prihlásený, nebudeme načítavať dáta.");
+                setUserProfileData(null);
+                setLoading(false);
+            }
+        }
     };
-
-    // Priamo zavoláme funkciu na nastavenie listeneru
-    setupListener();
+    
+    // Spustíme prvú kontrolu
+    checkAuthAndFetchData();
 
     // Vrátime funkciu na odhlásenie listeneru
     return () => {
@@ -63,27 +70,7 @@ function MyDataApp() {
       }
     };
 
-  }, [db, auth]); // Spustí sa, keď sa zmenia db alebo auth inštancie
-
-  // Nový effect, ktorý sa spustí, keď sa zmení globálna premenná globalUserProfileData
-  React.useEffect(() => {
-    // Sledujeme zmeny v globálnej premennej a aktualizujeme stav komponentu
-    if (window.globalUserProfileData) {
-        console.log("MyDataApp: Globálne dáta používateľa boli aktualizované.");
-        setUserProfileData(window.globalUserProfileData);
-        setLoading(false);
-    } else {
-        // Ak sú dáta null, znamená to, že buď ešte nie sú načítané, alebo používateľ nie je prihlásený.
-        // Ponecháme loading, ak je isGlobalAuthReady false, inak ho vypneme.
-        if (window.isGlobalAuthReady) {
-            setLoading(false);
-            setUserProfileData(null);
-        } else {
-            setLoading(true);
-        }
-    }
-  }, [window.globalUserProfileData, window.isGlobalAuthReady]);
-
+  }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí len raz
 
   // Funkcia, ktorá renderuje buď loading obrazovku, error, alebo dáta
   function renderContent() {
