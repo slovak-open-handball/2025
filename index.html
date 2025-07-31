@@ -6,9 +6,9 @@
     <title>SOH 2025 - Slovak Open Handball</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Aktualizované na React 18, aby sa opravila chyba ReactDOM.createRoot -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Používame React 17, ako ste požadovali -->
+    <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -57,51 +57,7 @@
     <div id="authentication-root"></div>
     <div id="root"></div>
 
-    <script type="module">
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Firebase Initialization and Auth Logic (Moved from authentication.js)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Sign in anonymously or with custom token
-        async function authenticateAndSetup() {
-            try {
-                if (token) {
-                    await signInWithCustomToken(auth, token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                console.log("Firebase authenticated successfully.");
-                window.isGlobalAuthReady = true;
-                window.auth = auth;
-                window.db = db;
-                // Dispatch event to inform other scripts that auth is ready
-                window.dispatchEvent(new Event('auth-state-changed'));
-            } catch (error) {
-                console.error("Firebase authentication failed:", error);
-                window.isGlobalAuthReady = true;
-                window.dispatchEvent(new Event('auth-state-changed'));
-            }
-        }
-        
-        // This is where you would handle the header loading, etc.
-        // For this example, we will just assume the other scripts are ready.
-        window.onload = function() {
-            authenticateAndSetup();
-        };
-    </script>
-    <!-- Opravené, aby sa načítali ako moduly -->
-    <script src="header.js" defer type="module"></script>
-    <script src="authentication.js" defer type="module"></script>
+    <!-- Načítavame len jeden hlavný modul, ktorý sa postará o všetko -->
     <script src="index.js" defer type="module"></script>
 </body>
 </html>
