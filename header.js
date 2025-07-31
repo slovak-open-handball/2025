@@ -741,11 +741,11 @@ try {
 // Tento komponent sa už nebude spúšťať v header.js, ale mal by byť v logged-in-users.js
 // Ponechaný tu len pre referenciu, ale nebude sa renderovať.
 function UsersManagementApp() {
-  // NOVINKA: Podmienka na zabránenie spustenia na logged-in-users.html
-  // TENTO KOMPONENT SA UŽ NEBUDE RENDEROVAŤ CEZ HEADER.JS, TÁTO KONTROLA JE PRE ISTOTU
-  if (!window.location.pathname.includes('logged-in-users.html')) {
-    console.log("UsersManagementApp (header.js): Nie je na stránke logged-in-users.html. Nebudem spúšťať komponent z header.js.");
-    return null; // Nespúšťať komponent, ak nie je na správcovskej stránke
+  // ZMENA: Podmienka na zabránenie spustenia na logged-in-users.html
+  // TENTO KOMPONENT SA BUDE RENDEROVAŤ CEZ HEADER.JS NA VŠETKÝCH STRÁNKACH OKREM logged-in-users.html
+  if (window.location.pathname.includes('logged-in-users.html')) {
+    console.log("UsersManagementApp (header.js): Je na stránke logged-in-users.html. Nebudem spúšťať komponent z header.js.");
+    return null; // Nespúšťať komponent, ak je na stránke logged-in-users.html
   }
 
   const [app, setApp] = React.useState(null);
