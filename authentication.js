@@ -62,15 +62,22 @@ function checkPageAuthorization(userProfileData, path) {
 // Inicializácia Firebase a nastavenie listenerov
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        let firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'soh2025-2s0o2h5';
-
-        // Oprava: Ak chýba projectId, použije sa appId ako záloha
-        if (!firebaseConfig.projectId) {
-            firebaseConfig = {
-                ...firebaseConfig,
-                projectId: appId
-            };
+        let firebaseConfig;
+        const defaultFirebaseConfig = {
+            apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+            authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+            projectId: "soh2025-2s0o2h5",
+            storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+            messagingSenderId: "572988314768",
+            appId: "1:572988314768:web:781e27eb035179fe34b415"
+        };
+        
+        // Načítanie konfigurácie, s fallbackom na konštantné hodnoty
+        try {
+            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : null) || defaultFirebaseConfig;
+        } catch (e) {
+            console.warn("AuthManager: Globálna konfigurácia Firebase je neplatná alebo chýba, použije sa predvolená konfigurácia.");
+            firebaseConfig = defaultFirebaseConfig;
         }
 
         const app = initializeApp(firebaseConfig);
@@ -98,8 +105,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, načítavam profil.");
 
-            // Použitie dynamického appId pre cestu k profilu
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'soh2025-2s0o2h5';
+            // Použitie dynamického appId pre cestu k profilu, s fallbackom na projectId z konfigurácie
+            const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId;
             const userDocRef = doc(window.db, 'artifacts', appId, 'users', user.uid);
 
             // Listener pre dáta profilu v reálnom čase
