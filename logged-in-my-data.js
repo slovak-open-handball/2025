@@ -139,7 +139,7 @@ function MyDataApp() {
         // Rozloženie v jednom stĺpci s medzerou medzi sekciami
         { className: 'space-y-6 md:space-y-8' },
         // Kontaktné údaje
-        (userProfileData.firstName || userProfileData.lastName || userProfileData.email || userProfileData.contactPhoneNumber) && React.createElement(
+        (userProfileData.firstName || userProfileData.lastName || userProfileData.email || userProfileData.contactPhoneNumber || userProfileData.registrationDate) && React.createElement(
             'div',
             { className: 'space-y-4' },
             React.createElement(
@@ -165,7 +165,7 @@ function MyDataApp() {
                 React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                 ` ${userProfileData.contactPhoneNumber}`
             ),
-            // Presunutá sekcia s dátumom a časom registrácie
+            // Dátum a čas registrácie
             userProfileData.registrationDate && React.createElement(
               'p',
               { className: 'text-gray-800 text-lg' },
