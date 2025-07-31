@@ -170,6 +170,7 @@ if (!authRoot) {
 }
 
 try {
+    // OPRAVA: Použitie createRoot namiesto render pre React 18
     const root = ReactDOM.createRoot(authRoot);
     root.render(React.createElement(GlobalNotificationHandler));
 } catch (e) {
