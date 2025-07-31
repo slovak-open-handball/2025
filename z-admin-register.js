@@ -297,7 +297,8 @@ function App() {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       // Pridáme passwordLastChanged k updateProfile, aby sa zaznamenal čas zmeny hesla
       await userCredential.user.updateProfile({ 
-          displayName: `${firstName} ${lastName}`,
+          firstName: firstName,
+          lastName: lastName,
       });
 
       // ZMENA: Nastavenie role na 'admin' a approved na 'false' priamo pri prvom zápise
@@ -306,7 +307,7 @@ function App() {
         email: email,
         firstName: firstName,
         lastName: lastName,
-        displayName: `${firstName} ${lastName}`,
+//        displayName: `${firstName} ${lastName}`,
         role: 'admin', // Priamo nastavené ako admin
         approved: false, // Priamo nastavené ako neschválený admin
         registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
