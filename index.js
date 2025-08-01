@@ -4,6 +4,7 @@
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 // Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
+// Predvolene je tlačidlo 'Registrácia na turnaj' skryté.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -95,7 +96,7 @@ const startCountdown = (targetDate) => {
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const minutes = Math.floor((distance % (1000 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
@@ -297,13 +298,17 @@ const updateLoginButton = (isLoggedIn) => {
     }
 };
 
+// Predvolene skryjeme tlačidlo na registráciu na turnaj na začiatku.
+toggleRegistrationButton(false);
+
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
-    updateRegistrationUI();
+    // Vďaka tejto úprave sa UI aktualizuje po načítaní globálnych dát
+    updateRegistrationUI(null);
     setupRegistrationDataListener();
 });
 
