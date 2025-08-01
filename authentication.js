@@ -49,14 +49,14 @@ const setupFirebase = () => {
 
 // Funkcia na kontrolu autorizácie stránky
 const checkPageAuthorization = (userProfile, currentPath) => {
-    // Odstránime lomítko na konci, aby sme správne porovnali cesty
-    const normalizedPath = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
-    const isPublicPage = PUBLIC_PAGES.some(page => normalizedPath.endsWith(page));
+    // Kontrolujeme, či sa aktuálna cesta nachádza v zozname verejných stránok.
+    // Táto metóda je robustnejšia a spoľahlivo overí aj koreňovú cestu '/'.
+    const isPublicPage = PUBLIC_PAGES.includes(currentPath);
     const isLoggedIn = !!userProfile;
-    const isLoginPage = normalizedPath.endsWith('/login.html');
+    const isLoginPage = currentPath === '/login.html';
 
     // Ak je používateľ odhlásený a nie je na verejnej stránke, presmerujeme ho na prihlásenie
-    if (!isLoggedIn && !isPublicPage && !isLoginPage) {
+    if (!isLoggedIn && !isPublicPage) {
         console.log("AuthManager: Používateľ nie je prihlásený, presmerovanie na login.html.");
         window.location.href = 'login.html';
     } else if (isLoggedIn && isLoginPage) {
