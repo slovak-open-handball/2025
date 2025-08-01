@@ -116,7 +116,7 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
             React.createElement(
                 'h2',
                 { className: 'text-2xl' },
-                'Moje fakturačné údaje a adresa'
+                'Fakturačné údaje' // Zmenený nadpis
             )
         ),
         React.createElement(
@@ -124,11 +124,6 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
             { className: 'p-6' },
             // Zobrazí fakturačné údaje
             hasBillingData && React.createElement(React.Fragment, null,
-                React.createElement(
-                    'h3',
-                    { className: 'text-xl font-bold mb-2 text-gray-800' },
-                    'Fakturačné údaje'
-                ),
                 React.createElement(
                     'p',
                     { className: 'text-gray-800' },
