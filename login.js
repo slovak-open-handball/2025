@@ -80,7 +80,7 @@ function NotificationModal({ show, message, type, onClose }) {
     { className: 'modal' },
     React.createElement(
       'div',
-      { className: `bg-white p-6 rounded-xl shadow-xl max-w-sm w-full text-center ${bgColor}` },
+      { className: `bg-white p-6 rounded-xl shadow-xl max-w-md w-full text-center ${bgColor}` },
       React.createElement(
         'p',
         { className: 'text-white text-lg font-semibold flex items-center justify-center space-x-2' },
@@ -113,7 +113,8 @@ function ResetPasswordModal({ show, onClose, onReset }) {
     setMessage('');
     try {
       const auth = window.auth;
-      await firebase.auth().sendPasswordResetEmail(email); // Používame starú syntax pre jednoduchosť
+      // Používame Firebase funkciu na reset hesla
+      await firebase.auth().sendPasswordResetEmail(email); 
       setMessage('E-mail na reset hesla bol odoslaný. Skontrolujte si schránku.');
       setMessageType('success');
       setTimeout(() => {
@@ -136,7 +137,7 @@ function ResetPasswordModal({ show, onClose, onReset }) {
     { className: 'modal' },
     React.createElement(
       'div',
-      { className: 'modal-content modal-content-sm' },
+      { className: 'bg-white p-6 rounded-xl shadow-xl max-w-md w-full text-center' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4 text-center' }, 'Resetovať heslo'),
       React.createElement(
         'form',
