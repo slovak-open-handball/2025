@@ -1,8 +1,8 @@
 // index.js
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
-// a podmienene zobrazil tlačidlo na registráciu na základe existencie kategórií.
+// a podmienene zobrazil tlačidlo a text na základe existencie kategórií.
 
-import { getDoc, getDocs, doc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Načíta dátumové a časové údaje o registrácii z Firestore a vypíše ich do konzoly.
@@ -32,11 +32,10 @@ const loadRegistrationData = async () => {
 };
 
 /**
- * Načíta všetky kategórie z Firestore a vypíše ich do konzoly.
- * Ak neexistujú žiadne kategórie, skryje tlačidlo na registráciu.
+ * Načíta všetky kategórie z Firestore.
+ * Ak neexistujú žiadne kategórie, skryje tlačidlo na registráciu a zmení text.
  */
 const loadCategoriesData = async () => {
-    // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
         // Vytvorenie referencie na dokument 'categories' pod kolekciou 'settings'.
         const categoriesDocRef = doc(window.db, "settings", "categories");
@@ -45,21 +44,23 @@ const loadCategoriesData = async () => {
             const docSnap = await getDoc(categoriesDocRef);
 
             // Kontrola, či dokument s kategóriami existuje.
-            if (docSnap.exists()) {
+            if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
                 console.log("Dáta kategórií:", docSnap.data());
                 
-                // Ak dokument existuje, uistíme sa, že tlačidlo je viditeľné.
+                // Ak dokument existuje, uistíme sa, že tlačidlo je viditeľné a nastavíme pôvodný text.
                 toggleRegistrationButton(true);
-
+                updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
             } else {
-                // Ak dokument nebol nájdený, vypíšeme správu a skryjeme tlačidlo.
-                console.log("Dokument s kategóriami nebol nájdený!");
+                // Ak dokument nebol nájdený alebo je prázdny, vypíšeme správu, skryjeme tlačidlo a zmeníme text.
+                console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
                 toggleRegistrationButton(false);
+                updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
             }
         } catch (e) {
-            // V prípade chyby pri načítaní vypíšeme detail chyby a skryjeme tlačidlo pre istotu.
+            // V prípade chyby pri načítaní vypíšeme detail chyby, skryjeme tlačidlo a zmeníme text pre istotu.
             console.error("Chyba pri načítaní údajov o kategóriách:", e);
             toggleRegistrationButton(false);
+            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
         }
     }
 };
@@ -69,12 +70,26 @@ const loadCategoriesData = async () => {
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
 const toggleRegistrationButton = (isVisible) => {
-    const registrationButton = document.getElementById('tournament-registration-button');
-    if (registrationButton) {
-        registrationButton.style.display = isVisible ? 'block' : 'none';
+    const registrationButtonWrapper = document.getElementById('tournament-registration-button-wrapper');
+    if (registrationButtonWrapper) {
+        registrationButtonWrapper.style.display = isVisible ? 'block' : 'none';
         console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
     } else {
-        console.log("Tlačidlo 'Registrácia na turnaj' nebolo nájdené v DOM.");
+        console.log("Wrapper pre tlačidlo 'Registrácia na turnaj' nebol nájdený v DOM.");
+    }
+};
+
+/**
+ * Aktualizuje text na domovskej stránke.
+ * @param {string} text - Nový text pre element.
+ */
+const updateMainText = (text) => {
+    const mainTextElement = document.getElementById('main-page-text');
+    if (mainTextElement) {
+        mainTextElement.textContent = text;
+        console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
+    } else {
+        console.log("Element s textom na domovskej stránke nebol nájdený v DOM.");
     }
 };
 
