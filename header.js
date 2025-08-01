@@ -94,8 +94,9 @@ const updateHeaderLinks = (userProfileData) => {
             case 'user':
                 headerColor = '#9333EA'; // user
                 break;
-            default:
-                headerColor = '#1d4ed8'; // default
+            case 'null':
+                headerColor = '#1d4ed8'; // null
+                break;
         }
         
         // Zobrazí odkaz na registráciu len ak je používateľ prihlásený a má povolenú rolu
