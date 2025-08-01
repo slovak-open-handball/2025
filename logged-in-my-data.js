@@ -86,7 +86,7 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     return React.createElement(
         'div',
         // Použitie inline štýlu pre farbu borderu
-        { className: 'bg-white rounded-lg shadow-lg p-6 mt-6 max-w-2xl mx-auto border-t-4', style: { borderColor: headerColor } },
+        { className: 'bg-white rounded-lg shadow-lg p-6 mt-6 border-t-4', style: { borderColor: headerColor } },
         React.createElement(
             'h2',
             { className: 'text-2xl font-semibold mb-4 text-gray-800' },
@@ -135,7 +135,7 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
     // Lokálny stav pre používateľské dáta, ktoré sa načítajú po globálnej autentifikácii
-    const [userProfileData, setUserProfileData] = React.useState(null); 
+    const [userProfileData, setUserProfileData] = React.useState(null);
     const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
     const [error, setError] = React.useState('');
     
@@ -247,9 +247,10 @@ function MyDataApp() {
 
     const headerColor = getHeaderColor(userProfileData.role);
 
+    // Nový hlavný kontajner s jednotnou šírkou pre celú sekciu
     return React.createElement(
         'div',
-        { className: 'container mx-auto p-8 mt-12 bg-gray-50 rounded-lg shadow-lg max-w-4xl' },
+        { className: 'container mx-auto p-8 mt-12 max-w-2xl' },
         React.createElement(
             'div',
             {
@@ -264,7 +265,7 @@ function MyDataApp() {
         ),
         React.createElement(
             'div',
-            { className: 'bg-white rounded-b-lg shadow-lg p-6 max-w-2xl mx-auto' },
+            { className: 'bg-white rounded-b-lg shadow-lg p-6' },
             React.createElement(
                 'h2',
                 { className: 'text-2xl font-semibold mb-4 text-gray-800' },
@@ -277,8 +278,8 @@ function MyDataApp() {
             )
         ),
         
-        // Funkciu renderBillingAndAddressInfo voláme s premennou headerColor
-        renderBillingAndAddressInfo(userProfileData, headerColor),
+        // Funkciu renderBillingAndAddressInfo voláme iba vtedy, ak existujú údaje
+        (userProfileData.billing || userProfileData.address) && renderBillingAndAddressInfo(userProfileData, headerColor)
     );
 }
 
