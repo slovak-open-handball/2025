@@ -197,8 +197,24 @@ function MyDataApp() {
         React.createElement(
           'div',
           { className: 'space-y-2' },
-          // Podmienene zobrazenie popisov pre admina a ostatných
-          userProfileData.role === 'admin' ? (
+          // Podmienene zobrazenie popisov pre admina, hall a ostatných
+          userProfileData.role === 'hall' ? (
+              // Pre Halu
+              React.createElement(React.Fragment, null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                    ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                  ),
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                    ` ${userProfileData.email}`
+                  )
+              )
+          ) : userProfileData.role === 'admin' ? (
               // Pre administrátora
               React.createElement(React.Fragment, null,
                   React.createElement(
