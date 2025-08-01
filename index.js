@@ -3,7 +3,7 @@
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie.
 
-import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna premenná na uloženie dát o registrácii
 window.registrationDates = null;
@@ -48,33 +48,18 @@ const setupCategoriesListener = () => {
 };
 
 /**
- * Spustí kontrolu času každú minútu, aby sa automaticky aktualizovalo UI
- * po začiatku registrácie bez nutnosti obnovenia stránky.
- */
-const startAutomaticTimeCheck = () => {
-    // Najprv zrušíme predchádzajúci časovač, ak existuje
-    if (timerId) {
-        clearInterval(timerId);
-    }
-    // Nastavíme nový časovač, ktorý sa spustí každú minútu
-    timerId = setInterval(() => {
-        console.log("Automatická kontrola času registrácie...");
-        // Získame referenciu na dokument kategórií, aby sme mohli zavolať updateRegistrationUI
-        const categoriesDocRef = doc(window.db, "settings", "categories");
-        getDoc(categoriesDocRef).then((docSnap) => {
-            updateRegistrationUI(docSnap);
-        }).catch((error) => {
-            console.error("Chyba pri automatickom načítaní údajov o kategóriách:", error);
-        });
-    }, 60000); // 60000 ms = 1 minúta
-};
-
-/**
  * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie.
+ * Obsahuje aj logiku pre automatickú kontrolu času a nastavenie časovača.
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
     toggleMainText(true);
+
+    // Zrušíme existujúci časovač, aby sme predišli duplicitným spusteniam
+    if (timerId) {
+        clearTimeout(timerId);
+        timerId = null;
+    }
 
     const now = new Date();
     const registrationStartDate = window.registrationDates?.registrationStartDate?.toDate();
@@ -82,9 +67,9 @@ const updateRegistrationUI = (docSnap) => {
     
     const isRegistrationOpen = window.registrationDates &&
                                now >= registrationStartDate &&
-                               now <= registrationEndDate;
+                               now < registrationEndDate;
     const isRegistrationBeforeStart = window.registrationDates && now < registrationStartDate;
-    const isRegistrationEnded = window.registrationDates && now > registrationEndDate;
+    const isRegistrationEnded = window.registrationDates && now >= registrationEndDate;
 
     if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
         console.log("Dáta kategórií:", docSnap.data());
@@ -92,24 +77,32 @@ const updateRegistrationUI = (docSnap) => {
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
             updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
-            // Keď sa registrácia spustí, môžeme zrušiť časovač
-            if (timerId) {
-                clearInterval(timerId);
-                timerId = null;
+            
+            // Registrácia je otvorená, nastavíme časovač na jej koniec
+            const timeUntilEnd = registrationEndDate.getTime() - now.getTime();
+            if (timeUntilEnd > 0) {
+                console.log(`Nastavujem časovač na koniec registrácie za ${Math.ceil(timeUntilEnd / 1000)} sekúnd.`);
+                timerId = setTimeout(() => {
+                    // Po skončení časovača opätovne spustíme aktualizáciu UI
+                    getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
+                }, timeUntilEnd);
             }
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
             updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
-            // Spustíme automatickú kontrolu, aby sa tlačidlo zobrazilo, keď nastane čas
-            startAutomaticTimeCheck();
+            
+            // Registrácia sa ešte nezačala, nastavíme časovač na jej spustenie
+            const timeUntilStart = registrationStartDate.getTime() - now.getTime();
+            if (timeUntilStart > 0) {
+                console.log(`Nastavujem časovač na spustenie registrácie za ${Math.ceil(timeUntilStart / 1000)} sekúnd.`);
+                timerId = setTimeout(() => {
+                    // Po skončení časovača opätovne spustíme aktualizáciu UI
+                    getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
+                }, timeUntilStart);
+            }
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
             updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
-            // Po skončení registrácie už časovač nepotrebujeme
-            if (timerId) {
-                clearInterval(timerId);
-                timerId = null;
-            }
         } else {
             toggleRegistrationButton(false);
             updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
