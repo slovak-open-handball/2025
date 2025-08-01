@@ -63,50 +63,54 @@ function MyDataApp() {
   }, []); // Prázdne pole znamená, že efekt sa spustí len raz, pri mountovaní
 
 
-  // Funkcia pre renderovanie fakturačných údajov
-  const renderBillingInfo = () => {
-    // Získame údaje o fakturácii z userProfileData
-    const { billing } = userProfileData;
-
-    // Vráti null, ak nie sú k dispozícii žiadne fakturačné údaje
-    if (!billing || (!billing.clubName && !billing.dic && !billing.ico && !billing.icDph)) {
-      return null;
+  // Funkcia pre renderovanie fakturačných údajov a adresy
+  const renderBillingAndAddressInfo = () => {
+    // Ak neexistujú žiadne fakturačné údaje ani adresa, nič nezobrazíme
+    if (!userProfileData.billing && !userProfileData.street) {
+        return null;
     }
-
+    
     return React.createElement(
       'div',
       { className: 'p-6 bg-white rounded-lg shadow-md mb-6' },
       React.createElement(
         'h2',
         { className: 'text-2xl font-semibold text-blue-800 mb-4' },
-        'Fakturačné údaje'
+        'Fakturačné údaje a adresa'
       ),
       React.createElement(
         'div',
         { className: 'space-y-2' },
-        billing.clubName && React.createElement(
+        userProfileData.billing && userProfileData.billing.clubName && React.createElement(
           'p',
           { className: 'text-gray-800 text-lg' },
           React.createElement('span', { className: 'font-bold' }, 'Názov klubu/organizácie:'),
-          ` ${billing.clubName}`
+          ` ${userProfileData.billing.clubName}`
         ),
-        billing.ico && React.createElement(
+        // Zobrazenie adresy vrátane krajiny
+        userProfileData.street && React.createElement(
+            'p',
+            { className: 'text-gray-800 text-lg' },
+            React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+            ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}, ${userProfileData.country}`
+        ),
+        userProfileData.billing && userProfileData.billing.ico && React.createElement(
           'p',
           { className: 'text-gray-800 text-lg' },
           React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-          ` ${billing.ico}`
+          ` ${userProfileData.billing.ico}`
         ),
-        billing.dic && React.createElement(
+        userProfileData.billing && userProfileData.billing.dic && React.createElement(
           'p',
           { className: 'text-gray-800 text-lg' },
           React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-          ` ${billing.dic}`
+          ` ${userProfileData.billing.dic}`
         ),
-        billing.icDph && React.createElement(
+        userProfileData.billing && userProfileData.billing.icDph && React.createElement(
           'p',
           { className: 'text-gray-800 text-lg' },
           React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-          ` ${billing.icDph}`
+          ` ${userProfileData.billing.icDph}`
         )
       )
     );
@@ -187,18 +191,11 @@ function MyDataApp() {
               React.createElement('span', { className: 'font-bold' }, 'Telefón:'),
               ` ${userProfileData.contactPhoneNumber}`
             ),
-            // Zobrazenie adresy vrátane krajiny
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-              ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}, ${userProfileData.country}`
-            ),
           )
         ),
         
-        // Zobrazí fakturačné údaje, ak existujú
-        renderBillingInfo(),
+        // Zobrazí fakturačné údaje a adresu, ak existujú
+        renderBillingAndAddressInfo(userProfileData),
         
         // Zobrazenie unikátneho ID
         React.createElement(
