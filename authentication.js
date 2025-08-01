@@ -73,6 +73,8 @@ const handleAuthState = () => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
                     console.log("AuthManager: Údaje používateľa načítané a aktualizované.");
+                    // Vypísanie celého objektu s dátami používateľa do konzoly
+                    console.log("AuthManager: Načítané dáta používateľa:", window.globalUserProfileData);
                 } else {
                     console.warn("AuthManager: Údaje používateľa v databáze neexistujú.");
                     window.globalUserProfileData = null;
