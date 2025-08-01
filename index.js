@@ -29,7 +29,7 @@ const firebaseConfig = {
 function setupFirebase() {
     try {
         // Používame globálne premenné poskytnuté prostredím Canvas
-        const config = JSON.parse(__firebase_config);
+        const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
         const app = initializeApp(config);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
