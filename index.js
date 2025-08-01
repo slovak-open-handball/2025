@@ -1,9 +1,7 @@
 // index.js
-// Tento súbor bol prepracovaný, aby bol plne samostatný a robustný voči chybám
-// v načítavaní a stave autentifikácie. Všetka logika je centralizovaná
-// v jednom useEffect, ktorý sa spustí iba raz.
-
-// Importy pre React a Firebase sú spracované priamo v HTML súbore pre zjednodušenie.
+// Tento súbor bol prepracovaný tak, aby sa spúšťal až po obdržaní udalosti
+// 'globalDataUpdated' z authentication.js, čím sa eliminuje zacyklenie
+// a zabezpečí správny poriadok načítavania.
 
 // Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
@@ -12,7 +10,7 @@ const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = L
 const LoaderComponent = () => {
     return React.createElement(
         'div',
-        { className: 'flex justify-center items-center h-screen' },
+        { className: 'flex justify-center items-center min-h-screen' },
         React.createElement(
             'div',
             { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
@@ -23,7 +21,7 @@ const LoaderComponent = () => {
 const ErrorMessage = ({ message }) => {
     return React.createElement(
         'div',
-        { className: 'flex justify-center items-center h-screen' },
+        { className: 'flex justify-center items-center min-h-screen' },
         React.createElement(
             'div',
             { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
@@ -41,81 +39,67 @@ const App = () => {
     const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
     const [countdown, setCountdown] = React.useState('');
 
-    // Jediný useEffect na správu všetkých listenerov a dát
     React.useEffect(() => {
         let unsubscribeRegistrationData = () => {};
-        let authReadyInterval = null;
 
-        const setupListeners = () => {
-            // Listener pre zmeny v autentifikácii
-            const handleGlobalDataUpdate = (event) => {
-                console.log("App: Prijatá udalosť 'globalDataUpdated', aktualizujem profil.");
-                setGlobalUserProfileData(event.detail);
-            };
-            window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        // Funkcia, ktorá načíta registračné dáta a nastaví listener
+        const fetchRegistrationData = () => {
+            if (!window.db) {
+                console.error("App: Firestore nie je inicializovaný.");
+                setError("Firestore nie je inicializovaný. Skúste obnoviť stránku.");
+                setLoading(false);
+                return;
+            }
 
-            // Listener pre načítanie registračných dát z Firestore
             try {
-                if (window.db) {
-                    const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
-                    unsubscribeRegistrationData = onSnapshot(docRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            console.log("App: Registračné dáta načítané.", data);
-                            setRegistrationData(data);
-                        } else {
-                            console.warn("App: Registračné dáta neboli nájdené.");
-                            setError("Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.");
-                        }
-                        setLoading(false);
-                    }, (err) => {
-                        console.error("App: Chyba pri načítaní registračných dát:", err);
-                        setError("Chyba pri načítaní registračných dát. Skúste to prosím neskôr.");
-                        setLoading(false);
-                    });
-                } else {
-                    console.error("App: Firestore nie je inicializovaný. Nastavenie listenera zlyhalo.");
-                    setError("Firestore nie je inicializovaný. Skúste obnoviť stránku.");
+                const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
+                unsubscribeRegistrationData = onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setRegistrationData(docSnap.data());
+                    } else {
+                        console.warn("App: Registračné dáta neboli nájdené.");
+                        setError("Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.");
+                    }
                     setLoading(false);
-                }
+                }, (err) => {
+                    console.error("App: Chyba pri načítaní registračných dát:", err);
+                    setError("Chyba pri načítaní registračných dát. Skúste to prosím neskôr.");
+                    setLoading(false);
+                });
             } catch (err) {
                 console.error("App: Chyba pri inicializácii listenera na dáta:", err);
                 setError("Chyba pri inicializácii aplikácie. Skúste to prosím neskôr.");
                 setLoading(false);
             }
-
-            // Cleanup funkcia pre odhlásenie listenerov
-            return () => {
-                console.log("App: Odstraňujem listenery.");
-                unsubscribeRegistrationData();
-                window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-            };
         };
 
-        // Skontrolujeme, či je autentifikácia už pripravená
+        // Poslucháč pre udalosť z 'authentication.js'
+        const handleGlobalDataUpdate = (event) => {
+            console.log("App: Prijatá udalosť 'globalDataUpdated', aktualizujem profil a spúšťam načítavanie dát.");
+            setGlobalUserProfileData(event.detail);
+            fetchRegistrationData();
+        };
+
+        // Pripojíme poslucháča udalostí
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+        // Okamžite skontrolujeme, či sú dáta už dostupné, pre prípad, že udalosť
+        // už prebehla pred pripojením nášho poslucháča.
         if (window.isGlobalAuthReady) {
-            console.log("App: Firebase Auth je pripravený, spúšťam listenery.");
-            return setupListeners();
-        } else {
-            // Ak nie je, počkáme na ňu, aby sme predišli pretekárskym podmienkam
-            console.log("App: Čakám na inicializáciu Firebase Auth...");
-            authReadyInterval = setInterval(() => {
-                if (window.isGlobalAuthReady) {
-                    console.log("App: Firebase Auth je pripravený, spúšťam listenery.");
-                    clearInterval(authReadyInterval);
-                    setupListeners();
-                }
-            }, 100);
+            console.log("App: Firebase Auth je už pripravený, spúšťam načítavanie dát.");
+            fetchRegistrationData();
         }
 
-        // Cleanup intervalu, ak by sa komponent zrušil pred inicializáciou
+        // Cleanup funkcia pre odhlásenie všetkých listenerov, keď komponent zanikne
         return () => {
-            if (authReadyInterval) clearInterval(authReadyInterval);
+            console.log("App: Odstraňujem listenery.");
+            unsubscribeRegistrationData();
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
         };
     }, []); // Prázdne pole závislostí zabezpečí, že sa tento efekt spustí iba raz
 
 
-    // Samostatný useEffect pre odpočítavanie, závisí iba od registračných dát
+    // Samostatný useEffect pre odpočítavanie
     React.useEffect(() => {
         if (!registrationData || !registrationData.registrationStartDate) {
             setCountdown('');
