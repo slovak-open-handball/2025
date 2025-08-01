@@ -31,6 +31,14 @@ const protectedPages = [
     '/logged-in-registration.html',
 ];
 
+// Zoznam verejných stránok, ktoré sú prístupné bez prihlásenia
+const publicPages = [
+    '/',
+    '/index.html',
+    '/login.html',
+    '/registration.html',
+];
+
 /**
  * Kontroluje, či má používateľ prístup na danú stránku.
  * Ak nemá, presmeruje ho na príslušnú stránku (napr. prihlásenie).
@@ -38,8 +46,8 @@ const protectedPages = [
  * @param {string} pathname - Cesta aktuálnej stránky (window.location.pathname).
  */
 const checkPageAuthorization = (userProfile, pathname) => {
-    // Stránka index.html je vždy verejná, autorizácia sa na ňu nevzťahuje
-    if (pathname === '/' || pathname === '/index.html') {
+    // Ak je stránka verejná, žiadna kontrola sa nevykoná
+    if (publicPages.includes(pathname)) {
         return true;
     }
 
@@ -52,9 +60,11 @@ const checkPageAuthorization = (userProfile, pathname) => {
         return false;
     }
     
-    if (!isProtected && isAuthenticated && pathname.includes('login.html')) {
+    // Ak je používateľ prihlásený a pokúša sa dostať na stránku s prihlásením alebo registráciou,
+    // presmerujeme ho na hlavnú stránku.
+    if (isAuthenticated && (pathname === '/login.html' || pathname === '/registration.html')) {
         console.log("AuthManager: Používateľ je už prihlásený, presmerujem na hlavnú stránku.");
-        window.location.href = 'index.html'; // Presmerujeme na index.html, ak je prihlásený
+        window.location.href = 'index.html';
         return false;
     }
 
@@ -77,7 +87,16 @@ let unsubscribeUserDoc = null;
 // Hlavná funkcia pre obsluhu stavu autentifikácie
 const handleAuthState = () => {
     onAuthStateChanged(window.auth, (user) => {
+        // Ak je aktuálna stránka vo verejnom zozname, žiadne autorizačné kontroly sa nevykonajú.
+        if (publicPages.includes(window.location.pathname)) {
+            window.isGlobalAuthReady = true;
+            window.dispatchEvent(new CustomEvent('globalAuthReady'));
+            console.log("AuthManager: Stránka je verejná, autorizácia sa preskočila.");
+            return;
+        }
+
         window.isGlobalAuthReady = true;
+        window.dispatchEvent(new CustomEvent('globalAuthReady'));
 
         if (unsubscribeUserDoc) {
             unsubscribeUserDoc();
