@@ -2,15 +2,55 @@
 // Tento súbor bol upravený tak, aby bol plne samostatný a riešil potenciálne problémy
 // s chybou "Minified React error #130" tým, že všetky komponenty definuje priamo v sebe.
 
-// Importy pre React a Firebase sú spracované priamo v HTML súbore pre zjednodenšenie.
+// Importy pre React a Firebase sú spracované priamo v HTML súbore pre zjednodušenie.
 
 // Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
+// Pomocné komponenty pre zobrazenie stavov načítania a chýb
+const LoaderComponent = () => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
+        )
+    );
+};
+
+const ErrorMessage = ({ message }) => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
+            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
+            React.createElement('p', null, message)
+        )
+    );
+};
+
 // Jednoduchý Header komponent definovaný priamo tu
-const Header = () => {
-    // Vytvoríme jednoduché odkazy, aby sme sa vyhli závislosti na externých súboroch
-    // Odkazy a ich viditeľnosť budú neskôr spravované na základe stavu používateľa
+const Header = ({ globalUserProfileData, registrationActive, handleLogout }) => {
+    const navLinks = [];
+    if (globalUserProfileData) {
+        navLinks.push(
+            React.createElement('a', { key: 'my-zone', href: 'logged-in-my-data.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Moja zóna'),
+            React.createElement('button', { key: 'logout', onClick: handleLogout, className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Odhlásenie')
+        );
+    } else {
+        navLinks.push(
+            React.createElement('a', { key: 'login', href: 'login.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Prihlásenie')
+        );
+        if (registrationActive) {
+            navLinks.push(
+                React.createElement('a', { key: 'register', href: 'registration.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Registrácia na turnaj')
+            );
+        }
+    }
+
     return React.createElement(
         'header',
         { className: 'bg-white shadow-md rounded-b-lg sticky top-0 z-50' },
@@ -27,8 +67,7 @@ const Header = () => {
                 'div',
                 { className: 'hidden md:flex space-x-6 items-center' },
                 React.createElement('a', { href: 'index.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Domov'),
-                React.createElement('a', { href: 'login.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Prihlásenie'),
-                React.createElement('a', { href: 'registration.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Registrácia')
+                ...navLinks
             ),
             React.createElement(
                 'div',
@@ -63,7 +102,7 @@ const App = () => {
         return `${days}d ${hours}h ${minutes}m ${seconds}s`;
     };
 
-    // Načítanie registračných dát
+    // Načítanie registračných dát a užívateľského profilu
     React.useEffect(() => {
         const handleGlobalDataUpdate = (event) => {
             setGlobalUserProfileData(event.detail);
@@ -76,11 +115,9 @@ const App = () => {
                     throw new Error("Firestore nie je inicializovaný.");
                 }
 
-                // Vytvoríme referenciu na dokument s registračnými dátami
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
                 const docRef = doc(window.db, "artifacts", appId);
 
-                // Použijeme onSnapshot pre reálne-časové aktualizácie
                 const unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -132,13 +169,12 @@ const App = () => {
     const categoriesExist = registrationData?.categories?.length > 0;
     const now = new Date().getTime();
 
-    // Kontrola platnosti dát a spracovanie chýb
     const regStart = registrationStartDate ? new Date(registrationStartDate).getTime() : null;
     const regEnd = registrationEndDate ? new Date(registrationEndDate).getTime() : null;
     const registrationActive = categoriesExist && regStart && regEnd && now >= regStart && now <= regEnd;
 
     if (loading) {
-        return React.createElement(Loader, null);
+        return React.createElement(LoaderComponent, null);
     }
 
     if (error) {
@@ -156,34 +192,23 @@ const App = () => {
             React.createElement(
                 'div',
                 { className: 'mt-8' },
-                registrationActive ? (
+                React.createElement(
+                    'a',
+                    { href: 'logged-in-my-data.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                    'Moja zóna'
+                ),
+                !categoriesExist && React.createElement('p', { className: 'text-lg text-red-500 font-semibold mt-4' }, 'Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.'),
+                categoriesExist && regStart && !isNaN(regStart) && now < regStart && (
                     React.createElement(
                         'div',
-                        { className: 'flex justify-center' },
-                        React.createElement(
-                            'a',
-                            { href: 'logged-in-registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                            'Registrovať sa na turnaj'
-                        )
+                        {className: 'mt-4'},
+                        React.createElement('p', { className: 'text-xl text-red-600 font-semibold' }, 'Registrácia sa ešte nezačala.'),
+                        React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia začne o: ${countdown}`)
                     )
-                ) : (
-                    React.createElement(
-                        'div',
-                        { className: 'text-center' },
-                        !categoriesExist && React.createElement('p', { className: 'text-lg text-red-500 font-semibold' }, 'Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.'),
-                        categoriesExist && regStart && !isNaN(regStart) && now < regStart && (
-                            React.createElement(
-                                'div',
-                                null,
-                                React.createElement('p', { className: 'text-xl text-red-600 font-semibold' }, 'Registrácia sa ešte nezačala.'),
-                                React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia začne o: ${countdown}`)
-                            )
-                        ),
-                        categoriesExist && regEnd && !isNaN(regEnd) && now > regEnd && (
-                            React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia skončila: ${new Date(registrationEndDate).toLocaleDateString('sk-SK')} o ${new Date(registrationEndDate).toLocaleTimeString('sk-SK')}`)
-                        ),
-                    )
-                )
+                ),
+                categoriesExist && regEnd && !isNaN(regEnd) && now > regEnd && (
+                    React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia skončila: ${new Date(registrationEndDate).toLocaleDateString('sk-SK')} o ${new Date(registrationEndDate).toLocaleTimeString('sk-SK')}`)
+                ),
             )
         );
     } else {
@@ -204,7 +229,7 @@ const App = () => {
                 registrationActive && React.createElement(
                     'a',
                     { href: 'registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                    'Registrácia'
+                    'Registrácia na turnaj'
                 )
             )
         );
