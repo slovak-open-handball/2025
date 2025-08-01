@@ -8,10 +8,9 @@
     <!-- Použitie Tailwind CSS pre jednoduché a pekné štýly -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Používame font Inter pre celý dokument */
         body {
             font-family: 'Inter', sans-serif;
-            padding-top: 6rem; /* Odskok pre fixnú hlavičku */
+            padding-top: 6rem;
         }
     </style>
 </head>
@@ -23,13 +22,11 @@
     <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia -->
     <div id="root"></div>
 
-    <!-- Načítanie hlavných JavaScript súborov.
-         Súbory musia byť načítané ako moduly pre správnu funkcionalitu. -->
+    <!-- Načítanie hlavných JavaScript súborov. -->
     <script type="module" src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script type="module" src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script type="module" src="https://unpkg.com/lucide-react@latest"></script>
     
-    <!-- Kód pre obsluhu autorizácie a hlavičky, ktoré sú globálne dostupné -->
     <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
