@@ -49,7 +49,7 @@ const checkPageAuthorization = (userProfile, path) => {
     // To rieši problém s cestami, ktoré obsahujú ID projektu (napr. /2025/index.html).
     const pathEndsWithPublicPage = publicPages.some(page => {
         // Špeciálne ošetrenie pre root cestu '/'
-        if (page === '/' && path === '/') {
+        if (page === '/' && path.endsWith('/')) {
             return true;
         }
         return path.endsWith('/' + page);
