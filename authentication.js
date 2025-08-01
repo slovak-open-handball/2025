@@ -18,107 +18,118 @@ import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasej
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-    projectId: "soh2025-2s0o2h5",
-    storageBucket: "soh2025-2s0o2h5.appspot.com",
-    messagingSenderId: "360333550810",
-    appId: "1:360333550810:web:12a64c4c519c72c1c3f550"
+    projectId: "soh2025-2s0o2h5"
 };
 
-// Funkcia pre inicializáciu Firebase
-const setupFirebase = () => {
-    try {
-        console.log("AuthManager: Inicializujem Firebase.");
-        const app = initializeApp(firebaseConfig);
-        window.auth = getAuth(app);
-        window.db = getFirestore(app);
-    } catch (error) {
-        console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
-    }
+// Polia s URL, ktoré vyžadujú rôzne roly.
+// Uľahčuje to spravovanie autorizácie.
+const ROLE_REQUIRED_PAGES = {
+    'admin': ['/admin.html', '/admin-edit-player.html'],
+    'hall': ['/hall.html'],
+    'user': ['/logged-in-registration.html', '/logged-in-my-data.html']
 };
 
-// Pomocná funkcia pre overenie prístupu na stránku a presmerovanie
+/**
+ * Kontroluje, či má používateľ prístup na aktuálnu stránku na základe jeho roly.
+ * Ak nemá, presmeruje ho na login.html alebo index.html
+ * @param {object|null} userProfileData - Dáta profilu aktuálneho používateľa.
+ * @param {string} pathname - Cesta aktuálnej stránky (window.location.pathname).
+ * @returns {boolean} True, ak má používateľ prístup, inak false.
+ */
 const checkPageAuthorization = (userProfileData, pathname) => {
-    // Definícia prístupových pravidiel pre rôzne stránky
-    const publicPages = ['/', '/index.html', '/login.html', '/register.html'];
-    const loggedInPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
-    const adminPages = ['/admin.html']; // Príklad pre admin stránky
+    // Ak je používateľ prihlásený, ale nemá dáta profilu, môžeme ho poslať na prihlásenie.
+    // To môže nastať, ak používateľ bol zmazaný z databázy alebo ešte nemá profil
+    if (window.auth.currentUser && !userProfileData) {
+        console.warn("AuthManager: Používateľ je prihlásený, ale nenašli sa dáta profilu.");
+        window.location.href = '/login.html';
+        return false;
+    }
 
-    const isPublicPage = publicPages.some(page => pathname.endsWith(page));
-    const isLoggedInPage = loggedInPages.some(page => pathname.endsWith(page));
-    const isAdminPage = adminPages.some(page => pathname.endsWith(page));
-
-    const isAuthenticated = userProfileData !== null;
-    const userRole = userProfileData?.role || 'guest';
-
-    if (isAuthenticated) {
-        // Prihlásený používateľ
-        if (!isLoggedInPage && !isPublicPage && !isAdminPage) {
-            // Presmerovanie na domovskú stránku, ak sa prihlásený používateľ snaží dostať na neexistujúcu stránku
-            window.location.href = '/index.html';
+    // Ak nie je prihlásený vôbec, presmerujeme ho na login.html, ak nie je už na logine alebo na indexe
+    // a stránka vyžaduje autentifikáciu.
+    if (!window.auth.currentUser) {
+        // Zoznam stránok, ktoré si vyžadujú prihlásenie
+        const loggedInPages = Object.values(ROLE_REQUIRED_PAGES).flat();
+        
+        if (loggedInPages.includes(pathname)) {
+            console.warn("AuthManager: Používateľ nie je prihlásený, presmerovanie na login.");
+            window.location.href = '/login.html';
             return false;
         }
-        if (isAdminPage && userRole !== 'admin') {
-            // Ak nie je admin, presmeruj ho z admin stránky
-            window.location.href = '/logged-in-my-data.html';
-            return false;
-        }
-        // Ak sa prihlásený používateľ pokúsi ísť na 'login.html' alebo 'register.html', presmeruj ho na jeho profil.
-        if (pathname.endsWith('login.html') || pathname.endsWith('register.html')) {
-            window.location.href = '/logged-in-my-data.html';
-            return false;
+
+        return true; // Na verejných stránkach netreba presmerovávať
+    }
+
+    // Ak je prihlásený, skontrolujeme rolu pre prístup na špecifické stránky
+    if (userProfileData && userProfileData.role) {
+        for (const role in ROLE_REQUIRED_PAGES) {
+            if (ROLE_REQUIRED_PAGES[role].includes(pathname)) {
+                if (role !== userProfileData.role) {
+                    console.warn(`AuthManager: Rola '${userProfileData.role}' nemá prístup na '${pathname}'. Presmerovanie.`);
+                    window.location.href = '/login.html'; // Presmerovanie na login, ak rola nesedí
+                    return false;
+                }
+            }
         }
     } else {
-        // Neprihlásený používateľ
-        if (isLoggedInPage || isAdminPage) {
-            // Ak nie je prihlásený, presmeruj ho na prihlasovaciu stránku
+        // Ak používateľ nemá priradenú rolu, presmerujeme ho na index.html.
+        console.warn("AuthManager: Používateľ nemá priradenú rolu.");
+        // Ak sa používateľ pokúša dostať na prihlásenú stránku bez roly, pošleme ho na login.
+        const loggedInPages = Object.values(ROLE_REQUIRED_PAGES).flat();
+        if (loggedInPages.includes(pathname)) {
             window.location.href = '/login.html';
             return false;
         }
     }
-    return true; // Prístup povolený
+
+    console.log(`AuthManager: Prístup na stránku '${pathname}' povolený pre rolu '${userProfileData ? userProfileData.role : 'neznáma'}'.`);
+    return true;
 };
 
-// Funkcia na odhlásenie používateľa
-window.handleLogout = async () => {
-    if (window.auth) {
-        try {
-            await signOut(window.auth);
-            console.log("AuthManager: Používateľ bol úspešne odhlásený.");
-            window.showGlobalNotification('Úspešne ste sa odhlásili.');
-            window.location.href = '/login.html'; // Presmerovanie na prihlasovaciu stránku
-        } catch (error) {
-            console.error("AuthManager: Chyba pri odhlasovaní:", error);
-            window.showGlobalNotification('Chyba pri odhlasovaní: ' + error.message, 'error');
+// Funkcia pre odhlásenie používateľa
+const handleLogout = async () => {
+    try {
+        await signOut(window.auth);
+        console.log("AuthManager: Používateľ bol odhlásený.");
+        window.location.href = '/index.html'; // Presmerovanie na domovskú stránku
+    } catch (error) {
+        console.error("AuthManager: Chyba pri odhlásení:", error);
+        if (window.showGlobalNotification) {
+            window.showGlobalNotification('Chyba pri odhlásení. Skúste to prosím znova.', 'error');
         }
     }
 };
 
-// Hlavná funkcia, ktorá sa stará o autentifikačný stav
-const handleAuthState = () => {
-    if (!window.auth || !window.db) {
-        console.error("AuthManager: Firebase nebol inicializovaný. Nemôžem sledovať stav autentifikácie.");
-        return;
+const setupFirebase = () => {
+    if (typeof window.firebaseApp === 'undefined') {
+        window.firebaseApp = initializeApp(firebaseConfig);
+        window.auth = getAuth(window.firebaseApp);
+        window.db = getFirestore(window.firebaseApp);
     }
-    
-    // onAuthStateChanged je listener, ktorý sa spustí vždy, keď sa zmení stav prihlásenia
+};
+
+let unsubscribeUserDoc = null;
+const handleAuthState = () => {
     onAuthStateChanged(window.auth, async (user) => {
         window.isGlobalAuthReady = true;
-        
+
+        if (unsubscribeUserDoc) {
+            unsubscribeUserDoc(); // Odhlásime sa z predchádzajúceho listenera
+        }
+
         if (user) {
-            console.log("AuthManager: Používateľ je prihlásený:", user.uid);
-            
-            // Nastavenie onSnapshot listenera na dokument používateľa
+            console.log("AuthManager: Používateľ prihlásený:", user.uid);
+
             const userDocRef = doc(window.db, "users", user.uid);
-            const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
-                    console.log("AuthManager: Dáta profilu aktualizované.", window.globalUserProfileData);
                 } else {
-                    console.warn("AuthManager: Používateľský profil nebol nájdený pre UID:", user.uid);
-                    window.globalUserProfileData = { id: user.uid, email: user.email, role: 'user' };
+                    console.warn("AuthManager: Dokument profilu pre prihláseného používateľa neexistuje.");
+                    window.globalUserProfileData = null;
                 }
-
-                // Odoslanie udalosti s detailom dát
+                
+                // Vytvorenie a odoslanie vlastnej udalosti po aktualizácii dát
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
 
                 // Kontrola autorizácie po načítaní dát
@@ -157,3 +168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupFirebase();
     handleAuthState();
 });
+
+// Zverejníme funkcie, aby boli dostupné globálne
+window.handleLogout = handleLogout;
+window.checkPageAuthorization = checkPageAuthorization;
