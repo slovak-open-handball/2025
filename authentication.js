@@ -40,20 +40,22 @@ const setupFirebase = () => {
 const checkPageAuthorization = (userProfile, path) => {
     // Definujeme povolené roly pre jednotlivé stránky
     const publicPages = ['/', '/index.html', '/login.html', '/register.html'];
-    const loggedInPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
+    const loggedInPages = ['/logged-in-my-data.html'];
     const adminPages = ['/admin-register.html', '/admin-dashboard.html'];
     const hallPages = ['/hall-dashboard.html'];
 
     const currentPage = path.endsWith('/') ? '/' : path.split('/').pop();
-    const isPublicPage = publicPages.includes(currentPage);
-    const isLoggedInPage = loggedInPages.includes(currentPage);
-    const isAdminPage = adminPages.includes(currentPage);
-    const isHallPage = hallPages.includes(currentPage);
+    // PÔVODNÁ KONTROLA: const isPublicPage = publicPages.includes(currentPage);
+    // VYLEPŠENÁ KONTROLA: Porovnáva celú cestu priamo s poľom verejných stránok
+    const isPublicPage = publicPages.includes(path);
+    const isLoggedInPage = loggedInPages.includes(path);
+    const isAdminPage = adminPages.includes(path);
+    const isHallPage = hallPages.includes(path);
 
     // DÔLEŽITÁ ZMENA: Ak je stránka verejná, umožníme prístup všetkým
     // Toto pravidlo je nadradené a platí pre prihlásených aj neprihlásených používateľov
     if (isPublicPage) {
-        console.log(`AuthManager: Stránka '${currentPage}' je verejná, prístup povolený.`);
+        console.log(`AuthManager: Stránka '${path}' je verejná, prístup povolený.`);
         return true;
     }
 
@@ -85,7 +87,7 @@ const checkPageAuthorization = (userProfile, path) => {
     }
 
     // Ak sa prihlásený používateľ dostane až sem, má prístup
-    console.log(`AuthManager: Prihlásený používateľ s rolou '${userRole}' má prístup na stránku '${currentPage}'.`);
+    console.log(`AuthManager: Prihlásený používateľ s rolou '${userRole}' má prístup na stránku '${path}'.`);
     return true;
 };
 
