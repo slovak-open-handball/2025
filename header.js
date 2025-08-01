@@ -81,52 +81,46 @@ const updateHeaderLinks = () => {
     
     // Odstránenie všetkých tried farieb pred nastavením novej
     if (header) {
-        header.classList.remove('bg-[#9333EA]', 'bg-[#1D4ED8]', 'bg-[#3B82F6]', 'bg-[#b06835]');
-
-        // Farba hlavičky sa zmení na základe typu používateľa
-        if (user && userProfileData) {
-            if (userProfileData.type === 'user') {
-                header.classList.add('bg-[#9333EA]'); // Tmavá fialová pre používateľa
-            } else if (userProfileData.type === 'admin') {
-                header.classList.add('bg-[#1D4ED8]'); // Tmavá modrá pre admina
-            } else if (userProfileData.type === 'hall') {
-                 header.classList.add('bg-[#b06835]'); // Oranžová farba pre halu
-            }
-        } else {
-            // Ak nie je prihlásený, nastavíme farbu hlavičky na #3B82F6
-            header.classList.add('bg-[#3B82F6]');
-        }
+        header.classList.remove('bg-blue-700', 'bg-[#9333EA]', 'bg-[#b06835]', 'bg-[#1D4ED8]');
     }
 
-    if (user) {
+
+    if (user && userProfileData) {
         // Používateľ je prihlásený
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
-        
-        // Zobrazí odkaz na registráciu iba, ak je používateľ typu 'user' alebo 'admin'
-        if (userProfileData && userProfileData.type === 'user') {
-             if (registerLink) {
+
+        // Nastavíme farbu hlavičky na základe typu používateľa
+        if (userProfileData.type === 'user') {
+            header.classList.add('bg-[#9333EA]'); // Tmavá fialová pre používateľa
+            if (registerLink) {
                  registerLink.classList.remove('hidden');
                  registerLink.textContent = 'Registrácia na turnaj';
                  registerLink.href = 'logged-in-registration.html';
              }
-        } else if (userProfileData && userProfileData.type === 'admin') {
-             if (registerLink) {
+        } else if (userProfileData.type === 'admin') {
+            header.classList.add('bg-[#1D4ED8]'); // Tmavá modrá pre admina
+            if (registerLink) {
                  registerLink.classList.remove('hidden');
                  registerLink.textContent = 'Správa registrácií';
                  registerLink.href = 'admin.html';
              }
-        } else {
-            // Pre iné typy používateľov, alebo ak dáta ešte nie sú načítané
-            // neukážeme odkaz na registráciu
+        } else if (userProfileData.type === 'hall') {
+            header.classList.add('bg-[#b06835]'); // Oranžová farba pre halu
             if (registerLink) {
-                registerLink.classList.add('hidden');
+                registerLink.classList.add('hidden'); // Skryť pre halu
             }
+        } else {
+            // Predvolená farba pre iné typy alebo neznámy stav prihlásenia
+            header.classList.add('bg-blue-700');
         }
 
     } else {
         // Používateľ nie je prihlásený
         if (authLink) authLink.classList.remove('hidden');
+        if (header) {
+             header.classList.add('bg-blue-700');
+        }
     }
 };
 
