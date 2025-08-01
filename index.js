@@ -119,20 +119,31 @@ const App = () => {
         mainContent = React.createElement(LoaderComponent, null);
     } else if (error) {
         mainContent = React.createElement(ErrorMessage, { message: error });
-    } else { // Removed registrationData check, because main content is now always present
+    } else {
         const now = new Date();
         const regStart = registrationData ? new Date(registrationData.registrationStart) : null;
         const regEnd = registrationData ? new Date(registrationData.registrationEnd) : null;
         const registrationOpen = registrationData && now >= regStart && now <= regEnd;
 
+        let welcomeText = "Vitajte na stránke turnaja Slovak Open Handball.";
+        let secondaryText = "Pre pokračovanie sa prosím prihláste.";
+        if (registrationOpen) {
+            secondaryText = "Pre pokračovanie sa prosím prihláste, alebo sa zaregistrujte.";
+        } else if (regEnd && now > regEnd) {
+            secondaryText = `Pre pokračovanie sa prosím prihláste. Registrácia na turnaj bola ukončená dňa: ${regEnd.toLocaleDateString('sk-SK')}.`;
+        } else if (regStart && now < regStart) {
+            secondaryText = `Pre pokračovanie sa prosím prihláste. Registrácia začne o: ${countdown}.`;
+        } else if (registrationData && registrationData.isRegistrationOpen) {
+            // Prípad, kedy isRegistrationOpen existuje, ale dátumy sú neplatné
+            secondaryText = "Pre pokračovanie sa prosím prihláste, alebo sa zaregistrujte.";
+        }
+
+
         mainContent = React.createElement(
             'div',
             { className: 'text-center p-8' },
             React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
-            React.createElement('p', { className: 'text-xl text-gray-700 mb-8' }, 
-                `Vitajte na stránke turnaja Slovak Open Handball. Pre pokračovanie sa prosím prihláste${registrationOpen ? ', alebo sa zaregistrujte.' : ''}` +
-                `${!registrationOpen && registrationData && now > regEnd ? ` Registrácia na turnaj bola ukončená dňa: ${regEnd.toLocaleDateString('sk-SK')}.` : '.'}`
-            ),
+            React.createElement('p', { className: 'text-xl text-gray-700 mb-8' }, `${welcomeText} ${secondaryText}`),
             React.createElement('div', { className: 'flex justify-center space-x-4' },
                 React.createElement(
                     'a',
@@ -172,8 +183,18 @@ window.App = App;
 
 // Vykreslí aplikáciu až po načítaní DOM a skryje loader
 window.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('root')) {
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App, null));
+    // Čakáme, kým bude Firebase inicializovaný cez authentication.js
+    if (window.isGlobalAuthReady) {
+        if (document.getElementById('root')) {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App, null));
+        }
+    } else {
+        window.addEventListener('globalDataUpdated', () => {
+            if (document.getElementById('root')) {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            }
+        }, { once: true }); // Listener sa spustí len raz, potom sa odstráni
     }
 });
