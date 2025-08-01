@@ -1,19 +1,14 @@
 // index.js
-// Tento súbor bol upravený tak, aby obsahoval logiku špecifickú pre domovskú stránku
+// Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // po inicializácii Firebase a autentifikácii.
-// Zmenili sme listener na správnu udalosť 'globalDataUpdated' ktorá je
-// definovaná v authentication.js.
 
-import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getDoc, getDocs, doc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Načíta dátumové a časové údaje o registrácii z Firestore a vypíše ich do konzoly.
- * Čaká, kým je Firebase pripravené.
  */
 const loadRegistrationData = async () => {
-    // Skontrolujeme, či sú globálne premenné pre autentifikáciu a databázu pripravené.
-    // Predchádzame tak chybám, ak by sa funkcia zavolala príliš skoro.
-    // window.db je dostupné po inicializácii v authentication.js
+    // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
         // Vytvorenie referencie na dokument v databáze.
         const docRef = doc(window.db, "settings", "registration");
@@ -32,8 +27,35 @@ const loadRegistrationData = async () => {
             console.error("Chyba pri načítaní údajov o registrácii:", e);
         }
     } else {
-        // Ak Firebase nie je pripravené, vypíšeme správu.
         console.log("Firebase databáza nie je pripravená.");
+    }
+};
+
+/**
+ * Načíta všetky kategórie z Firestore a vypíše ich do konzoly.
+ */
+const loadCategoriesData = async () => {
+    // Skontrolujeme, či je inštancia Firestore databázy pripravená.
+    if (window.db) {
+        // Vytvorenie referencie na kolekciu.
+        const collectionRef = collection(window.db, "settings", "categories");
+        try {
+            // Pokus o načítanie všetkých dokumentov z kolekcie.
+            const querySnapshot = await getDocs(collectionRef);
+            if (!querySnapshot.empty) {
+                console.log("Dáta kategórií:");
+                querySnapshot.forEach((doc) => {
+                    // Pre každý dokument v kolekcii vypíšeme jeho ID a dáta.
+                    console.log(`ID: ${doc.id}, Dáta:`, doc.data());
+                });
+            } else {
+                // Ak kolekcia neobsahuje žiadne dokumenty, vypíšeme správu.
+                console.log("Žiadne kategórie neboli nájdené!");
+            }
+        } catch (e) {
+            // V prípade chyby pri načítaní vypíšeme detail chyby.
+            console.error("Chyba pri načítaní údajov o kategóriách:", e);
+        }
     }
 };
 
@@ -41,12 +63,14 @@ const loadRegistrationData = async () => {
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    // Po prijatí udalosti načítame dáta.
+    // Po prijatí udalosti načítame dáta o registrácii aj kategórie.
     loadRegistrationData();
+    loadCategoriesData();
 });
 
-// Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
+// Volanie funkcií aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
     loadRegistrationData();
+    loadCategoriesData();
 }
