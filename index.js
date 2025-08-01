@@ -2,11 +2,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Potrebné ikony z lucide-react
-const { Menu, User, LogIn } = LucideReact;
+// V tomto prostredí sa nebudú používať ikony z 'lucide-react'.
+// Namiesto toho použijeme inline SVG pre spoľahlivé zobrazenie.
 
 // Komponent Header
 const Header = () => {
+    // Definícia ikon vo forme SVG reťazca
+    const menuIcon = (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+            <line x1="4" x2="20" y1="12" y2="12" />
+            <line x1="4" x2="20" y1="6" y2="6" />
+            <line x1="4" x2="20" y1="18" y2="18" />
+        </svg>
+    );
+
     return (
         <header className="bg-white shadow-md rounded-b-lg sticky top-0 z-50">
             <nav className="container mx-auto p-4 flex justify-between items-center">
@@ -20,7 +29,7 @@ const Header = () => {
                 </div>
                 <div className="md:hidden">
                     <button className="text-gray-600 hover:text-gray-900">
-                        <Menu className="h-6 w-6" />
+                        {menuIcon}
                     </button>
                 </div>
             </nav>
