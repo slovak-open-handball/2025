@@ -35,8 +35,9 @@ const formatDate = (timestamp) => {
  */
 const setupCategoriesListener = () => {
     if (window.db) {
-        const categoriesDocRef = doc(window.db, "settings", "categories");
-        
+        // Používame globálne window.appId pre správnu cestu
+        const categoriesDocRef = doc(window.db, `artifacts/${window.appId}/settings/categories`);
+
         onSnapshot(categoriesDocRef, (docSnap) => {
             console.log("Dáta kategórií boli aktualizované!");
             // Spustíme logiku na zobrazenie/skrytie tlačidiel po načítaní dát kategórií
@@ -70,7 +71,8 @@ const startCountdown = (targetDate) => {
                 countdownElement.textContent = '';
             }
             // Získame najnovšie dáta o kategóriách a aktualizujeme UI
-            getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
+            // Používame getDoc pre jednorazové načítanie
+            getDoc(doc(window.db, `artifacts/${window.appId}/settings/categories`)).then(updateRegistrationUI);
             return;
         }
 
@@ -80,7 +82,7 @@ const startCountdown = (targetDate) => {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `Zostáva: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
+
         if (countdownElement) {
             countdownElement.textContent = countdownText;
         }
@@ -121,7 +123,7 @@ const updateRegistrationUI = (docSnap) => {
     // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
     const registrationStartDate = window.registrationDates?.registrationStartDate;
     const registrationEndDate = window.registrationDates?.registrationEndDate;
-    
+
     const isRegistrationOpen = registrationStartDate && registrationEndDate &&
                                now >= registrationStartDate.toDate() &&
                                now < registrationEndDate.toDate();
@@ -130,7 +132,7 @@ const updateRegistrationUI = (docSnap) => {
 
     if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
         console.log("Dáta kategórií:", docSnap.data());
-        
+
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
             updateRegistrationStatusText(`
@@ -138,7 +140,7 @@ const updateRegistrationUI = (docSnap) => {
                 <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
                 <p class="text-sm text-gray-500" id="countdown-timer"></p>
             `);
-            
+
             // Spustíme odpočet do konca registrácie
             startCountdown(registrationEndDate.toDate());
         } else if (isRegistrationBeforeStart) {
@@ -148,7 +150,7 @@ const updateRegistrationUI = (docSnap) => {
                 <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
                 <p class="text-sm text-gray-500" id="countdown-timer"></p>
             `);
-            
+
             // Spustíme odpočet do začiatku registrácie
             startCountdown(registrationStartDate.toDate());
         } else if (isRegistrationEnded) {
@@ -173,8 +175,9 @@ const updateRegistrationUI = (docSnap) => {
  * Dátumy uloží do globálnej premennej a následne spustí listener pre kategórie.
  */
 const setupRegistrationDataListener = () => {
-    if (window.db) {
-        const docRef = doc(window.db, "settings", "registration");
+    if (window.db && window.appId) {
+        // Používame globálne window.appId pre správnu cestu
+        const docRef = doc(window.db, `artifacts/${window.appId}/settings/registration`);
         onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
@@ -192,7 +195,7 @@ const setupRegistrationDataListener = () => {
             setupCategoriesListener(); // Pokračujeme aj v prípade chyby, aby sme skryli tlačidlo.
         });
     } else {
-        console.log("Firebase databáza nie je pripravená.");
+        console.log("Firebase databáza alebo ID aplikácie nie sú pripravené.");
     }
 };
 
@@ -269,7 +272,7 @@ window.addEventListener('globalDataUpdated', () => {
 });
 
 // Volanie funkcie pre nastavenie listenerov pri prvom spustení
-if (window.db) {
+if (window.db && window.appId) {
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
     setupRegistrationDataListener();
