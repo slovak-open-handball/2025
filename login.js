@@ -199,8 +199,6 @@ function App() {
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [notificationType, setNotificationType] = React.useState('error');
   const [showResetPasswordModal, setShowResetPasswordModal] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(false);
-  const [isRegistrationOpen, setIsRegistrationOpen] = React.useState(false);
   
   // Pridal som túto funkciu na zmenu farby hlavičky, je prevzatá z index.js
   const getRoleColor = (role) => {
@@ -246,30 +244,9 @@ function App() {
     // Zaregistrujeme listener pre globálnu udalosť
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
-    // Načítanie nastavení o registrácii
-    const registrationSettingsRef = doc(window.db, "settings", "registration");
-    const categoriesRef = doc(window.db, "settings", "categories");
-
-    const unsubscribeRegistration = onSnapshot(registrationSettingsRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const now = new Date();
-            const endDate = data.registration_end_date.toDate();
-            setIsRegistrationOpen(now < endDate);
-        } else {
-            setIsRegistrationOpen(false);
-        }
-    });
-
-    const unsubscribeCategories = onSnapshot(categoriesRef, (docSnap) => {
-        setCategoriesExist(docSnap.exists());
-    });
-
     // Clean-up funkcia pre listener
     return () => {
       unsubscribe();
-      unsubscribeRegistration();
-      unsubscribeCategories();
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, []);
@@ -404,15 +381,6 @@ function App() {
                 className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200',
               },
               'Zabudli ste heslo?'
-            ),
-            (categoriesExist && isRegistrationOpen) && React.createElement(
-              'a',
-              {
-                href: 'register.html',
-                className: 'inline-block align-baseline font-bold text-sm text-green-600 hover:text-green-800 transition-colors duration-200',
-                tabIndex: 4
-              },
-              'Registrovať sa'
             )
           )
         )
