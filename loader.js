@@ -1,24 +1,30 @@
 // loader.js
-// Tento súbor definuje univerzálny React komponent pre načítavacie koliesko.
-// Je navrhnutý tak, aby sa dal použiť na akejkoľvek stránke, ktorá potrebuje zobraziť
-// stav načítavania.
+// Tento súbor definuje globálne funkcie pre zobrazenie a skrytie načítavacieho prvku.
 
-// Komponent pre načítavacie koliesko
-function Loader() {
-  return React.createElement(
-    'div',
-    { className: 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)]' },
-    React.createElement(
-      'div',
-      {
-        // Vylepšené triedy pre lepšiu viditeľnosť a efekt otáčania
-        className: 'ease-linear rounded-full border-4 border-gray-200 border-t-4 border-t-blue-500 h-12 w-12 mb-4 animate-spin'
-      }
-    ),
-    React.createElement('p', { className: 'text-gray-600' }, 'Načítavam dáta...')
-  );
-}
+let loaderElement = null;
 
-// Komponent je exportovaný do globálneho objektu 'window',
-// aby ho bolo možné použiť v iných skriptoch.
-window.Loader = Loader;
+// Funkcia na vytvorenie a zobrazenie načítavacieho prvku
+window.showGlobalLoader = () => {
+  if (!loaderElement) {
+    loaderElement = document.createElement('div');
+    loaderElement.id = 'global-loader';
+    loaderElement.className = 'fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-[100] transition-opacity duration-300 ease-in-out';
+    loaderElement.innerHTML = `
+      <div class="ease-linear rounded-full border-4 border-t-4 border-gray-200 border-t-blue-500 h-12 w-12 animate-spin"></div>
+    `;
+    document.body.appendChild(loaderElement);
+  }
+  loaderElement.style.display = 'flex';
+};
+
+// Funkcia na skrytie načítavacieho prvku
+window.hideGlobalLoader = () => {
+  if (loaderElement) {
+    loaderElement.style.display = 'none';
+  }
+};
+
+// Volanie funkcie na skrytie po načítaní DOM
+document.addEventListener('DOMContentLoaded', () => {
+  window.hideGlobalLoader();
+});
