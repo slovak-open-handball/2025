@@ -62,16 +62,12 @@ const handleLogout = async () => {
 };
 
 // Funkcia, ktorá dynamicky mení navigačné odkazy na základe stavu prihlásenia
-const updateHeaderLinks = () => {
+const updateHeaderLinks = (userProfileData) => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
-
-    // Inicializácia globálnych premenných, ktoré sú nastavené v authentication.js
-    const user = window.auth ? window.auth.currentUser : null;
-    const userProfileData = window.globalUserProfileData;
 
     // Skryť všetky odkazy ako prvé
     if (authLink) authLink.classList.add('hidden');
@@ -84,8 +80,7 @@ const updateHeaderLinks = () => {
         header.classList.remove('bg-blue-700', 'bg-[#9333EA]', 'bg-[#b06835]', 'bg-[#1D4ED8]');
     }
 
-
-    if (user && userProfileData) {
+    if (userProfileData) {
         // Používateľ je prihlásený
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
@@ -143,14 +138,16 @@ const loadHeader = async () => {
         // Kľúčová časť: Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         // Týmto sa zabezpečí, že hlavička sa aktualizuje, až keď sú dáta z databázy
         // načítané a globálna premenná 'globalUserProfileData' je dostupná.
-        window.addEventListener('globalDataUpdated', () => {
+        window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
-            updateHeaderLinks();
+            // Dáta prevezmeme z event.detail
+            updateHeaderLinks(event.detail);
         });
 
         // Zavoláme funkciu hneď po načítaní, pre prípad, že dáta boli načítané
         // pred pripojením listenera. Ak nie, listener to zachytí neskôr.
-        updateHeaderLinks();
+        // Spoliehame sa na globálnu premennú len pre počiatočné volanie
+        updateHeaderLinks(window.globalUserProfileData);
         
     } catch (error) {
         console.error('header.js: Chyba pri načítaní hlavičky:', error);
