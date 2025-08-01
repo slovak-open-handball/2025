@@ -3,16 +3,16 @@
 // React, ReactDOM a LucideReact, ktoré sú načítané v index.html.
 // To eliminuje potenciálne konflikty pri načítavaní modulov.
 
-// Prístup ku globálnym premenným
-const { useState, useEffect } = React;
-const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
+// Prístup ku globálnym premenným z window objektu
+const { useState, useEffect } = window.React;
+const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = window.LucideReact;
 
 // Pomocné komponenty pre zobrazenie stavov načítania a chýb
 const LoaderComponent = () => {
-    return React.createElement(
+    return window.React.createElement(
         'div',
         { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
+        window.React.createElement(
             'div',
             { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
         )
@@ -20,14 +20,14 @@ const LoaderComponent = () => {
 };
 
 const ErrorMessage = ({ message }) => {
-    return React.createElement(
+    return window.React.createElement(
         'div',
         { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
+        window.React.createElement(
             'div',
             { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
-            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
-            React.createElement('p', null, message)
+            window.React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
+            window.React.createElement('p', null, message)
         )
     );
 };
@@ -106,7 +106,7 @@ const App = () => {
         if (!checkFirebaseReady()) {
             window.addEventListener('globalDataUpdated', () => {
                 checkFirebaseReady();
-            });
+            }, { once: true });
         }
 
         return () => clearInterval(timer);
@@ -115,9 +115,9 @@ const App = () => {
     let mainContent;
 
     if (loading) {
-        mainContent = React.createElement(LoaderComponent, null);
+        mainContent = window.React.createElement(LoaderComponent, null);
     } else if (error) {
-        mainContent = React.createElement(ErrorMessage, { message: error });
+        mainContent = window.React.createElement(ErrorMessage, { message: error });
     } else {
         const now = new Date();
         const regStart = registrationData ? new Date(registrationData.registrationStart) : null;
@@ -136,13 +136,13 @@ const App = () => {
             secondaryText = "Pre pokračovanie sa prosím prihláste, alebo sa zaregistrujte.";
         }
 
-        mainContent = React.createElement(
+        mainContent = window.React.createElement(
             'div',
             { className: 'text-center p-8' },
-            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
-            React.createElement('p', { className: 'text-xl text-gray-700 mb-8' }, `${welcomeText} ${secondaryText}`),
-            React.createElement('div', { className: 'flex justify-center space-x-4' },
-                React.createElement(
+            window.React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+            window.React.createElement('p', { className: 'text-xl text-gray-700 mb-8' }, `${welcomeText} ${secondaryText}`),
+            window.React.createElement('div', { className: 'flex justify-center space-x-4' },
+                window.React.createElement(
                     'a',
                     {
                         href: 'login.html',
@@ -150,7 +150,7 @@ const App = () => {
                     },
                     'Prihlásenie'
                 ),
-                registrationOpen && React.createElement(
+                registrationOpen && window.React.createElement(
                     'a',
                     {
                         href: 'logged-in-registration.html',
@@ -162,11 +162,11 @@ const App = () => {
         );
     }
 
-    return React.createElement(
-        React.Fragment,
+    return window.React.createElement(
+        window.React.Fragment,
         null,
-        React.createElement(Header, null),
-        React.createElement(
+        window.React.createElement(Header, null),
+        window.React.createElement(
             'main',
             { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl flex-grow flex items-center justify-center' },
             mainContent
@@ -183,14 +183,14 @@ window.addEventListener('DOMContentLoaded', () => {
     // Čakáme, kým bude Firebase inicializovaný cez authentication.js
     if (window.isGlobalAuthReady) {
         if (document.getElementById('root')) {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
+            const root = window.ReactDOM.createRoot(document.getElementById('root'));
+            root.render(window.React.createElement(App, null));
         }
     } else {
         window.addEventListener('globalDataUpdated', () => {
-            if (document.getElementById('root')) {
-                const root = ReactDOM.createRoot(document.getElementById('root'));
-                root.render(React.createElement(App, null));
+            if (window.isGlobalAuthReady && document.getElementById('root')) {
+                const root = window.ReactDOM.createRoot(document.getElementById('root'));
+                root.render(window.React.createElement(App, null));
             }
         }, { once: true }); // Listener sa spustí len raz, potom sa odstráni
     }
