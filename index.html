@@ -37,13 +37,15 @@
             <!-- Nadpis H1 s textom "Slovak Open Handball 2025" -->
             <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
 
-            <!-- Element pre dynamické zobrazenie správ o registrácii a odpočet -->
-            <div id="registration-status-message" class="text-lg text-gray-600 mb-6" style="display: none;">
+            <!-- Element pre dynamické zobrazenie správ o registrácii a odpočet. -->
+            <!-- Jeho obsah a viditeľnosť sú plne riadené súborom index.js. -->
+            <div id="registration-status-message" class="text-lg text-gray-600 mb-6">
                 <!-- Obsah sa bude generovať dynamicky pomocou JavaScriptu -->
             </div>
 
-            <!-- Element pre správu o prihlásenom používateľovi -->
-            <div id="logged-in-message" class="text-lg text-green-600 font-semibold mb-6" style="display: none;">
+            <!-- Element pre správu o prihlásenom používateľovi. -->
+            <!-- Jeho viditeľnosť je tiež plne riadená súborom index.js. -->
+            <div id="logged-in-message" class="text-lg text-green-600 font-semibold mb-6">
                 Vitajte, ste prihlásený!
             </div>
 
@@ -55,7 +57,7 @@
                     </button>
                 </a>
                 <!-- Wrapper pre tlačidlo registrácie na turnaj -->
-                <a id="tournament-registration-button-wrapper" href="register.html" class="inline-block" style="display: none;">
+                <a id="tournament-registration-button-wrapper" href="register.html" class="inline-block">
                     <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Registrácia na turnaj
                     </button>
