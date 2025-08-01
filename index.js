@@ -25,7 +25,7 @@ const formatDate = (timestamp) => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod`;
+    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
 };
 
 /**
@@ -79,7 +79,7 @@ const startCountdown = (targetDate) => {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const countdownText = `Odpočet: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const countdownText = `Zostáva: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
         if (countdownElement) {
             countdownElement.textContent = countdownText;
@@ -128,7 +128,7 @@ const updateRegistrationUI = (docSnap) => {
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
             mainTextElement.innerHTML = `
-                <p>Registrácia na turnaj prebieha.</p>
+                <p>Registrácia na turnaj je spustená.</p>
                 <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
                 <p class="text-sm text-gray-500" id="countdown-timer"></p>
             `;
