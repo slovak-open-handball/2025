@@ -9,15 +9,6 @@ window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 
-// Pole verejných stránok, ktoré nevyžadujú prihlásenie
-// Toto pole je možné v budúcnosti jednoducho rozšíriť
-const PUBLIC_PAGES = [
-    '/',
-    '/index.html',
-    '/login.html',
-    // Ďalšie verejné stránky môžu byť pridané sem
-];
-
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -32,18 +23,6 @@ const firebaseConfig = {
     messagingSenderId: "572988314768",
     appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
-
-// Pomocná funkcia na overenie autorizácie stránky
-function checkPageAuthorization(userProfile, path) {
-    const isPublicPage = PUBLIC_PAGES.includes(path);
-    const isAuthenticated = !!userProfile;
-
-    if (!isPublicPage && !isAuthenticated) {
-        // Ak používateľ nie je prihlásený a stránka nie je verejná, presmerujeme ho na prihlasovaciu stránku
-        console.log(`AuthManager: Neautorizovaný prístup k ${path}. Presmerovanie na /login.html.`);
-        window.location.href = '/login.html';
-    }
-}
 
 // Inicializácia Firebase a nastavenie globálnych premenných
 function setupFirebase() {
@@ -91,13 +70,10 @@ const handleAuthState = () => {
                 window.isGlobalAuthReady = true;
                 // Odošleme udalosť, že dáta boli aktualizované
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                // Skontrolujeme autorizáciu po načítaní dát
-                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
             });
 
             // Pridáme listener na odhlásenie, ak je užívateľ na stránke
@@ -113,9 +89,6 @@ const handleAuthState = () => {
 
             // Odošleme udalosť aj pri odhlásení
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-            
-            // Kontrola autorizácie stránky po odhlásení
-            checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
         }
     });
 
