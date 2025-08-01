@@ -126,7 +126,7 @@ const updateRegistrationUI = (docSnap) => {
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
             updateMainText(
-                "Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.",
+                "Registrácia na turnaj prebieha.",
                 `<br><span class="text-gray-500 text-sm">Registrácia sa končí ${formatDate(registrationEndDate)}</span>`
             );
             
@@ -135,8 +135,8 @@ const updateRegistrationUI = (docSnap) => {
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
             updateMainText(
-                "Registrácia na turnaj bude spustená",
-                `<br><span class="text-gray-500 text-sm">${formatDate(registrationStartDate)}</span>`
+                "Registrácia na turnaj ešte nebola spustená.",
+                `<br><span class="text-gray-500 text-sm">Registrácia sa spustí ${formatDate(registrationStartDate)}</span>`
             );
             
             // Spustíme odpočet do začiatku registrácie
@@ -144,8 +144,8 @@ const updateRegistrationUI = (docSnap) => {
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
             updateMainText(
-                "Registrácia na turnaj bola ukončená",
-                `<br><span class="text-gray-500 text-sm">${formatDate(registrationEndDate)}</span>`
+                "Registrácia na turnaj je už ukončená.",
+                `<br><span class="text-gray-500 text-sm">Registrácia bola ukončená ${formatDate(registrationEndDate)}</span>`
             );
         } else {
             toggleRegistrationButton(false);
