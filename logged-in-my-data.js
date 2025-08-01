@@ -226,28 +226,29 @@ function MyDataApp() {
         if (!data) return null;
 
         return React.createElement(
-            React.Fragment,
-            null,
+            'div',
+            { className: 'space-y-4 text-gray-700' }, // Pridáme vertikálny priestor medzi jednotlivé polia
             React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-                ` ${data.firstName || '-'} ${data.lastName || ''}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a priezvisko kontaktnej osoby:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, `${data.firstName || '-'} ${data.lastName || ''}`)
             ),
             React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
-                ` ${data.email || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'E-mailová adresa kontaktnej osoby:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, data.email || '-')
             ),
             React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
-                ` ${formatPhoneNumber(data.contactPhoneNumber) || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo kontaktnej osoby:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, formatPhoneNumber(data.contactPhoneNumber) || '-')
             )
         );
     };
+
 
     const headerColor = getHeaderColor(userProfileData.role);
 
@@ -275,11 +276,7 @@ function MyDataApp() {
                 { className: 'text-2xl font-semibold mb-4 text-gray-800' },
                 'Osobné údaje'
             ),
-            React.createElement(
-                'div',
-                { className: 'space-y-2' },
-                renderPersonalData(userProfileData)
-            )
+            renderPersonalData(userProfileData)
         ),
         
         // Funkciu renderBillingAndAddressInfo voláme iba vtedy, ak existujú nejaké zmysluplné údaje
