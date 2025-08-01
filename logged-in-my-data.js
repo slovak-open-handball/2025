@@ -55,39 +55,39 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         ),
         billing && React.createElement(
             'div',
-            { className: 'space-y-2 text-gray-700' },
+            { className: 'space-y-4 text-gray-700' }, // Upravené na space-y-4 pre konzistentnosť
             React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
-                ` ${billing.clubName || billing.companyName || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Oficiálny názov klubu:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, `${billing.clubName || billing.companyName || '-'}`)
             ),
             // Zobrazenie spojenej adresy pod názvom klubu
             formattedAddress && React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                ` ${formattedAddress}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Adresa:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, formattedAddress)
             ),
             React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                ` ${billing.ico || billing.companyId || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'IČO:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, `${billing.ico || billing.companyId || '-'}`)
             ),
             // Opravené pole 'dic' namiesto 'taxId'
             React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                ` ${billing.dic || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'DIČ:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, `${billing.dic || '-'}`)
             ),
             // Opravené pole 'icdph' namiesto 'vatId'
             React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                ` ${billing.icdph || '-'}`
+                'div',
+                null,
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'IČ DPH:'),
+                React.createElement('p', { className: 'text-lg mt-1' }, `${billing.icdph || '-'}`)
             ),
         )
     );
