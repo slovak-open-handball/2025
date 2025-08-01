@@ -65,7 +65,8 @@ const checkPageAuthorization = (userProfile, path) => {
     // Ak je používateľ odhlásený a stránka nie je verejná, presmerujeme ho
     if (!userProfile) {
         console.warn("AuthManager: Používateľ je odhlásený a stránka nie je verejná, presmerovávam na prihlásenie.");
-        window.location.href = 'login.html';
+        // ZMENA: Presmerovanie na relatívnu cestu, aby fungovalo na GitHub Pages
+        window.location.href = './login.html';
         return false;
     }
     
@@ -75,17 +76,17 @@ const checkPageAuthorization = (userProfile, path) => {
     // Kontrola prístupu na základe roly
     if (adminPages.includes(path.split('/').pop()) && userRole !== 'admin') {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na admin stránku.`);
-        window.location.href = 'logged-in-my-data.html';
+        window.location.href = './logged-in-my-data.html';
         return false;
     }
     if (hallPages.includes(path.split('/').pop()) && userRole !== 'hall') {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na stránku haly.`);
-        window.location.href = 'logged-in-my-data.html';
+        window.location.href = './logged-in-my-data.html';
         return false;
     }
     if (loggedInPages.includes(path.split('/').pop()) && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na prihlásenú stránku.`);
-        window.location.href = 'logged-in-my-data.html';
+        window.location.href = './logged-in-my-data.html';
         return false;
     }
 
