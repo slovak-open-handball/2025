@@ -1,169 +1,130 @@
-// index.js
-// Tento súbor bol upravený tak, aby správne spravoval stav a predchádzal nekonečnému
-// opakovaniu cyklov, ktoré môžu nastať pri nesprávnej interakcii Reactu a globálnych dát.
-// Teraz načítava údaje o registrácii z Firestore databázy.
-// Chybné volanie LucideReact bolo odstránené.
+// authentication.js
+// Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
+// overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
 
-// Pomocné komponenty pre zobrazenie stavov načítania a chýb
-const LoaderComponent = () => {
-    return React.createElement(
-        'div',
-        { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
-            'div',
-            { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
-        )
-    );
+// Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
+window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
+window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
+window.auth = null; // Inštancia Firebase Auth
+window.db = null; // Inštancia Firebase Firestore
+window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
+
+// Pole verejných stránok, ktoré nevyžadujú prihlásenie
+// Toto pole je možné v budúcnosti jednoducho rozšíriť
+const PUBLIC_PAGES = [
+    '/',
+    '/index.html',
+    '/login.html',
+    // Ďalšie verejné stránky môžu byť pridané sem
+];
+
+// Import necessary Firebase functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Pevne definovaná konfigurácia Firebase, podľa požiadavky
+const firebaseConfig = {
+    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+    projectId: "soh2025-2s0o2h5",
+    storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+    messagingSenderId: "572988314768",
+    appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
 
-const ErrorMessage = ({ message }) => {
-    return React.createElement(
-        'div',
-        { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
-            'div',
-            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
-            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
-            React.createElement('p', null, message)
-        )
-    );
-};
+// Pomocná funkcia na overenie autorizácie stránky
+function checkPageAuthorization(userProfile, path) {
+    const isPublicPage = PUBLIC_PAGES.includes(path);
+    const isAuthenticated = !!userProfile;
 
-// Zástupný Header komponent. Skutočný header je načítavaný cez header.js.
-const Header = () => null;
-
-
-const App = () => {
-    // Globálne dáta o stave autentifikácie
-    const isAuthReady = window.isGlobalAuthReady;
-    const globalUserProfileData = window.globalUserProfileData;
-
-    // Lokálny stav komponentu pre dáta o registrácii a čas odpočítavania
-    const [registrationData, setRegistrationData] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState(null);
-    const [countdown, setCountdown] = React.useState('');
-
-    // Efekt na načítanie dát o registrácii z Firestore
-    React.useEffect(() => {
-        // Získanie inštancie databázy
-        const db = window.db;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const docRef = window.doc(db, `artifacts/${appId}/public/data/registration`);
-
-        // onSnapshot listener pre sledovanie zmien v reálnom čase
-        const unsubscribe = window.onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                console.log("index.js: Dáta o registrácii boli úspešne načítané.");
-                setRegistrationData(docSnap.data());
-            } else {
-                console.warn("index.js: Dokument s dátami o registrácii neexistuje.");
-                setError("Dáta o registrácii neboli nájdené.");
-            }
-            setLoading(false);
-        }, (err) => {
-            console.error("index.js: Chyba pri načítaní dát o registrácii: ", err);
-            setError("Chyba pri načítaní dát o registrácii.");
-            setLoading(false);
-        });
-
-        // Cleanup funkcia pre odhlásenie odberu onSnapshot pri odmountovaní komponentu
-        return () => unsubscribe();
-    }, []);
-
-    // Efekt pre odpočítavanie do začiatku registrácie
-    React.useEffect(() => {
-        if (!registrationData) return;
-
-        const interval = setInterval(() => {
-            const now = new Date();
-            const regStart = new Date(registrationData.registrationStart.seconds * 1000);
-
-            if (now < regStart) {
-                const diff = regStart - now;
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                setCountdown(`${days} dní, ${hours} hodín, ${minutes} minút a ${seconds} sekúnd`);
-            } else {
-                setCountdown('');
-                clearInterval(interval);
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [registrationData]);
-
-    // Zobrazenie načítavacieho stavu
-    if (loading) {
-        return React.createElement(LoaderComponent, null);
+    if (!isPublicPage && !isAuthenticated) {
+        // Ak používateľ nie je prihlásený a stránka nie je verejná, presmerujeme ho na prihlasovaciu stránku
+        console.log(`AuthManager: Neautorizovaný prístup k ${path}. Presmerovanie na /login.html.`);
+        window.location.href = '/login.html';
     }
+}
 
-    // Zobrazenie chybového stavu
-    if (error) {
-        return React.createElement(ErrorMessage, { message: error });
-    }
-
-    let mainContent = null;
-    const now = new Date();
-
-    if (registrationData) {
-        const regStart = new Date(registrationData.registrationStart.seconds * 1000);
-        const regEnd = new Date(registrationData.registrationEnd.seconds * 1000);
-        const categoriesExist = registrationData.categories && registrationData.categories.length > 0;
-        const isRegistrationOpen = now >= regStart && now <= regEnd;
-
-        if (isRegistrationOpen && categoriesExist) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-green-600' }, 'Registrácia je otvorená!'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Môžete sa zaregistrovať na turnaj.')
-            );
-        } else if (now < regStart) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia sa ešte nezačala.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, `Registrácia začne o: ${countdown}`)
-            );
-        } else { // now > regEnd
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-red-600' }, 'Registrácia skončila.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registračný proces pre tento rok bol už ukončený.')
-            );
+// Inicializácia Firebase a nastavenie globálnych premenných
+function setupFirebase() {
+    try {
+        // Predpokladáme, že appId a initialAuthToken sú definované globálne v HTML
+        if (!window.initialAuthToken || !window.appId) {
+            console.error("AuthManager: Globálne premenné 'initialAuthToken' alebo 'appId' nie sú definované.");
+            return;
         }
-    } else {
-         mainContent = React.createElement(
-            ErrorMessage,
-            { message: "Chyba: Dáta o registrácii neboli nájdené." }
-        );
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        
+        // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
+        window.doc = doc; 
+
+        console.log("AuthManager: Firebase inicializované.");
+
+    } catch (error) {
+        console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
     }
+}
 
 
-    return React.createElement(
-        'div',
-        { className: 'bg-gray-100 min-h-screen flex flex-col' },
-        React.createElement(Header, null),
-        React.createElement(
-            'main',
-            { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl flex-grow flex items-center justify-center' },
-            mainContent
-        )
-    );
+// Spracovanie stavu autentifikácie
+const handleAuthState = () => {
+    onAuthStateChanged(window.auth, async (user) => {
+        if (user) {
+            console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
+            
+            // Načítanie profilu používateľa z Firestore
+            // Používame onSnapshot pre sledovanie zmien v reálnom čase
+            const userDocRef = doc(window.db, `artifacts/${window.appId}/users/${user.uid}/profile/data`);
+            
+            const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.globalUserProfileData = docSnap.data();
+                    console.log("AuthManager: Profil používateľa načítaný a aktuálny.", window.globalUserProfileData);
+                } else {
+                    console.log("AuthManager: Profil používateľa nebol nájdený.");
+                    window.globalUserProfileData = null;
+                }
+
+                window.isGlobalAuthReady = true;
+                // Odošleme udalosť, že dáta boli aktualizované
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                // Skontrolujeme autorizáciu po načítaní dát
+                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+            }, (error) => {
+                console.error("AuthManager: Chyba pri načítaní profilu:", error);
+                window.globalUserProfileData = null;
+                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+            });
+
+            // Pridáme listener na odhlásenie, ak je užívateľ na stránke
+            window.addEventListener('beforeunload', () => {
+                if (unsubscribeUserDoc) {
+                    unsubscribeUserDoc();
+                }
+            });
+        } else {
+            console.log("AuthManager: Používateľ odhlásený.");
+            window.globalUserProfileData = null;
+            window.isGlobalAuthReady = true;
+
+            // Odošleme udalosť aj pri odhlásení
+            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+            
+            // Kontrola autorizácie stránky po odhlásení
+            checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+        }
+    });
+
+    console.log("AuthManager: Listener pre zmeny stavu autentifikácie nastavený.");
 };
 
 
-// Export pre možnosť načítania v HTML
-window.App = App;
-
-// Vykreslí aplikáciu až po načítaní DOM a skryje loader
-window.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('root')) {
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(App, null));
-    }
+// Spustenie inicializácie po načítaní DOM
+window.addEventListener('DOMContentLoaded', async () => {
+    setupFirebase();
+    handleAuthState();
 });
