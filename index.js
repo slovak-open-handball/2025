@@ -1,8 +1,8 @@
 // index.js
-// Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
-// a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
-// Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
-// Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
+// Tento súbor bol upravený tak, aby správne zobrazoval správu pre prihláseného používateľa
+// pod hlavným nadpisom, ktorý zostáva nezmenený.
+// Logika sa teraz stará o prepínanie medzi správou pre prihláseného používateľa a
+// informáciami o stave registrácie pre odhlásených používateľov.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -95,17 +95,16 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
-    // Ak je používateľ prihlásený, skryjeme všetky registratúra texty a tlačidlá,
-    // a zobrazíme len správu pre prihláseného používateľa.
+    // Ak je používateľ prihlásený, skryjeme text o registrácii a zobrazíme správu pre prihláseného používateľa.
     if (window.globalUserProfileData) {
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(''); // Vždy vymaže text o registrácii
+        updateRegistrationStatusText(''); // Vymaže a skryje text o registrácii
         toggleLoggedInMessage(true);
         console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
         return;
     }
 
-    // Ak používateľ nie je prihlásený, skryjeme správu o prihlásení a pokračujeme s logikou registrácie
+    // Ak používateľ nie je prihlásený, skryjeme správu o prihlásení a zobrazíme informácie o registrácii.
     toggleLoggedInMessage(false);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
@@ -216,15 +215,10 @@ const toggleRegistrationButton = (isVisible) => {
 const updateRegistrationStatusText = (htmlContent = '') => {
     const statusMessageElement = document.getElementById('registration-status-message');
     if (statusMessageElement) {
-        if (htmlContent) {
-            statusMessageElement.innerHTML = htmlContent;
-            statusMessageElement.style.display = 'block';
-            console.log(`Registračný text bol aktualizovaný a zobrazený.`);
-        } else {
-            statusMessageElement.innerHTML = '';
-            statusMessageElement.style.display = 'none';
-            console.log(`Registračný text bol skrytý.`);
-        }
+        statusMessageElement.innerHTML = htmlContent;
+        // Ak má obsah, zobrazíme ho, inak ho skryjeme.
+        statusMessageElement.style.display = htmlContent ? 'block' : 'none';
+        console.log(`Registračný text bol aktualizovaný a ${htmlContent ? 'zobrazený' : 'skrytý'}.`);
     }
 };
 
