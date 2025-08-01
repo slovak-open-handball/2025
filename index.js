@@ -1,13 +1,14 @@
 // index.js
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
-// Bola pridaná funkcia pre automatickú kontrolu času registrácie.
+// Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna premenná na uloženie dát o registrácii
 window.registrationDates = null;
 let timerId = null; // ID pre časovač, aby sme ho mohli zrušiť
+let countdownIntervalId = null; // ID pre interval odpočtu
 
 /**
  * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod".
@@ -48,6 +49,57 @@ const setupCategoriesListener = () => {
 };
 
 /**
+ * Spustí odpočet do cieľového dátumu a aktualizuje text na stránke.
+ * @param {Date} targetDate - Dátum, do ktorého sa má odpočítavať.
+ * @param {string} messagePrefix - Text, ktorý sa zobrazí pred odpočtom.
+ */
+const startCountdown = (targetDate, messagePrefix) => {
+    // Zrušíme predchádzajúci odpočet
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+    }
+
+    const updateCountdown = () => {
+        const now = new Date().getTime();
+        const distance = targetDate.getTime() - now;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (distance < 0) {
+            clearInterval(countdownIntervalId);
+            const mainTextElement = document.getElementById('main-page-text');
+            if (mainTextElement) {
+                // Po skončení odpočtu odstránime odpočet zo zobrazenia
+                const originalText = mainTextElement.innerHTML.split('<br>')[0];
+                mainTextElement.innerHTML = originalText;
+            }
+            // Získame najnovšie dáta o kategóriách a aktualizujeme UI
+            getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
+            return;
+        }
+
+        const countdownText = `
+            ${messagePrefix}
+            <br>
+            <span class="font-semibold text-lg">
+                ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+            </span>
+        `;
+        const mainTextElement = document.getElementById('main-page-text');
+        if (mainTextElement) {
+            const originalText = mainTextElement.innerHTML.split('<br>')[0];
+            mainTextElement.innerHTML = originalText + countdownText;
+        }
+    };
+
+    updateCountdown();
+    countdownIntervalId = setInterval(updateCountdown, 1000);
+};
+
+/**
  * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie.
  * Obsahuje aj logiku pre automatickú kontrolu času a nastavenie časovača.
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
@@ -55,10 +107,14 @@ const setupCategoriesListener = () => {
 const updateRegistrationUI = (docSnap) => {
     toggleMainText(true);
 
-    // Zrušíme existujúci časovač, aby sme predišli duplicitným spusteniam
+    // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
     if (timerId) {
         clearTimeout(timerId);
         timerId = null;
+    }
+    if (countdownIntervalId) {
+        clearInterval(countdownIntervalId);
+        countdownIntervalId = null;
     }
 
     const now = new Date();
@@ -78,28 +134,14 @@ const updateRegistrationUI = (docSnap) => {
             toggleRegistrationButton(true);
             updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
             
-            // Registrácia je otvorená, nastavíme časovač na jej koniec
-            const timeUntilEnd = registrationEndDate.getTime() - now.getTime();
-            if (timeUntilEnd > 0) {
-                console.log(`Nastavujem časovač na koniec registrácie za ${Math.ceil(timeUntilEnd / 1000)} sekúnd.`);
-                timerId = setTimeout(() => {
-                    // Po skončení časovača opätovne spustíme aktualizáciu UI
-                    getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
-                }, timeUntilEnd);
-            }
+            // Spustíme odpočet do konca registrácie
+            startCountdown(registrationEndDate, `Registrácia sa končí ${formatDate(registrationEndDate)}`);
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
             updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
             
-            // Registrácia sa ešte nezačala, nastavíme časovač na jej spustenie
-            const timeUntilStart = registrationStartDate.getTime() - now.getTime();
-            if (timeUntilStart > 0) {
-                console.log(`Nastavujem časovač na spustenie registrácie za ${Math.ceil(timeUntilStart / 1000)} sekúnd.`);
-                timerId = setTimeout(() => {
-                    // Po skončení časovača opätovne spustíme aktualizáciu UI
-                    getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
-                }, timeUntilStart);
-            }
+            // Spustíme odpočet do začiatku registrácie
+            startCountdown(registrationStartDate, `Registrácia sa začína o`);
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
             updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
