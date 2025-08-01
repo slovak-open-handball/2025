@@ -122,23 +122,30 @@ function MyDataApp() {
     }
   };
 
-  // Upravená funkcia na formátovanie telefónneho čísla
+  /**
+   * Funkcia na formátovanie telefónneho čísla s medzerou po predvoľbe.
+   * Dynamicky určí dĺžku predvoľby.
+   * @param {string} phoneNumber - Neformátované telefónne číslo.
+   * @returns {string} - Formátované telefónne číslo.
+   */
   const formatPhoneNumber = (phoneNumber) => {
-      if (!phoneNumber) return '';
-      // Odstránime všetky medzery
-      const cleaned = ('' + phoneNumber).replace(/\s/g, '');
-      
-      // Skúsime nájsť predvoľbu a formátovať číslo
-      for (const { dialCode } of countryDialCodes) {
-          if (cleaned.startsWith(dialCode)) {
-              // Vytvoríme formát: "+421 9xx xxx xxx"
-              const localNumber = cleaned.substring(dialCode.length);
-              const formattedLocal = localNumber.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-              // Vložíme medzeru po predvoľbe
-              return `${dialCode} ${formattedLocal}`.trim();
-          }
-      }
-      return cleaned;
+    if (!phoneNumber) return '';
+    // Odstránime všetky nečíselné znaky okrem znaku '+' na začiatku
+    const cleaned = ('' + phoneNumber).replace(/[^\d+]/g, '');
+  
+    // Najprv sa pokúsime nájsť zhodu s najdlhšou predvoľbou
+    for (const { dialCode } of countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length)) {
+        if (cleaned.startsWith(dialCode)) {
+            const localNumber = cleaned.substring(dialCode.length);
+            // Pridanie medzier pre lepšiu čitateľnosť, napr. "9xx xxx xxx"
+            const formattedLocal = localNumber.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+            // Spojíme predvoľbu a lokálne číslo s jednou medzerou
+            return `${dialCode} ${formattedLocal}`;
+        }
+    }
+  
+    // Ak sa predvoľba nenájde, vrátime číslo bez formátovania, len s medzerami
+    return cleaned.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
   };
   
   // Funkcia, ktorá zobrazuje fakturačné údaje a adresu
