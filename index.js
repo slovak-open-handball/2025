@@ -7,6 +7,31 @@
 // Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
+// Pomocné komponenty pre zobrazenie stavov načítania a chýb
+const LoaderComponent = () => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
+        )
+    );
+};
+
+const ErrorMessage = ({ message }) => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
+            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
+            React.createElement('p', null, message)
+        )
+    );
+};
+
 // Hlavný komponent aplikácie
 const App = () => {
     const [registrationData, setRegistrationData] = React.useState(null);
@@ -27,116 +52,145 @@ const App = () => {
                     throw new Error("Firestore nie je inicializovaný.");
                 }
 
-                const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
+                // Načítanie údajov z verejnej časti databázy
+                const docRef = doc(window.db, "artifacts/soh2025-2s0o2h5/public/data/registracne_udaje");
                 const unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         setRegistrationData(data);
+                        console.log("Registračné dáta načítané.", data);
                         setError('');
                     } else {
-                        setError("Registračné dáta sa nenašli.");
+                        console.warn("Registračné dáta neboli nájdené.");
+                        setRegistrationData(null);
                     }
                     setLoading(false);
                 }, (err) => {
-                    console.error("Chyba pri načítavaní registračných dát:", err);
-                    setError("Chyba pri načítavaní registračných dát.");
+                    console.error("Chyba pri načítaní registračných dát:", err);
+                    setError('Chyba pri načítaní registračných dát.');
                     setLoading(false);
                 });
-
+                
                 return () => unsubscribe();
+
             } catch (err) {
-                console.error("Chyba pri nastavovaní listenera:", err);
-                setError("Chyba pri inicializácii.");
+                console.error("Všeobecná chyba:", err);
+                setError(err.message);
                 setLoading(false);
             }
         };
 
+        // Čakáme, kým bude Firebase inicializovaný
         if (window.isGlobalAuthReady) {
             fetchRegistrationData();
         } else {
-            const authReadyListener = () => {
-                fetchRegistrationData();
-                window.removeEventListener('globalAuthReady', authReadyListener);
-            };
-            window.addEventListener('globalAuthReady', authReadyListener);
+            window.addEventListener('globalAuthReady', fetchRegistrationData);
         }
 
         return () => {
             window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+            window.removeEventListener('globalAuthReady', fetchRegistrationData);
         };
     }, []);
 
-    // Skryjeme globálny loader, keď je aplikácia pripravená
+    // Stavy a odpočítavanie
+    const [countdown, setCountdown] = React.useState('');
+    const [registrationActive, setRegistrationActive] = React.useState(false);
+    
     React.useEffect(() => {
-        if (!loading) {
-            window.hideGlobalLoader();
+        if (!registrationData || !registrationData.registrationStartDate || !registrationData.registrationEndDate) {
+            return;
         }
-    }, [loading]);
 
-    if (error) {
+        const registrationStartDate = new Date(registrationData.registrationStartDate.toDate());
+        const registrationEndDate = new Date(registrationData.registrationEndDate.toDate());
+        
+        const interval = setInterval(() => {
+            const now = new Date();
+            const regStart = registrationStartDate.getTime();
+            const regEnd = registrationEndDate.getTime();
+
+            // Kontrola, či je registrácia aktívna
+            const isRegActive = now >= regStart && now <= regEnd;
+            setRegistrationActive(isRegActive);
+
+            if (now < regStart) {
+                const distance = regStart - now;
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+            } else {
+                setCountdown('Registrácia prebieha!');
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [registrationData]);
+
+
+    const mainContent = (() => {
+        if (loading) {
+            return React.createElement(LoaderComponent);
+        }
+
+        if (error) {
+            return React.createElement(ErrorMessage, { message: error });
+        }
+        
+        const regStart = registrationData ? new Date(registrationData.registrationStartDate.toDate()).getTime() : null;
+        const regEnd = registrationData ? new Date(registrationData.registrationEndDate.toDate()).getTime() : null;
+        const now = new Date().getTime();
+        const categoriesExist = registrationData && registrationData.categories && registrationData.categories.length > 0;
+
         return React.createElement(
             'div',
-            { className: 'flex justify-center items-center h-screen' },
-            React.createElement(
-                'div',
-                { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
-                React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
-                React.createElement('p', null, error)
-            )
-        );
-    }
-    
-    // Zobrazenie hlavného obsahu
-    const { registrationStart, registrationEnd, registrationOpen } = registrationData || {};
-    const now = new Date().getTime();
-    const registrationActive = registrationOpen && registrationStart && registrationEnd && now >= registrationStart && now <= registrationEnd;
-    
-    // Obsah pre prihlásených a neprihlásených používateľov
-    const mainContent = globalUserProfileData ? (
-        React.createElement(
-            'div',
-            { className: 'text-center' },
-            React.createElement(
-                'h2',
-                { className: 'text-3xl font-bold mb-4 text-blue-600' },
-                `Vitajte, ${globalUserProfileData.firstName || 'používateľ'}!`
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-xl text-gray-700' },
-                'Použite menu v hlavičke na prechod do vašej zóny alebo na registráciu do turnaja.'
-            )
-        )
-    ) : (
-        React.createElement(
-            'div',
-            { className: 'text-center' },
-            React.createElement(
-                'h2',
-                { className: 'text-3xl font-bold mb-4 text-blue-600' },
-                'Vitajte na Slovak Open Handball 2025'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-xl text-gray-700' },
-                'Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.'
-            ),
+            { className: 'p-8' },
+            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+            React.createElement('p', { className: 'text-xl text-gray-700' }, 'Pre pokračovanie sa, prosím, prihláste, alebo sa zaregistrujte.'),
             React.createElement(
                 'div',
                 { className: 'mt-8 flex justify-center space-x-4' },
-                React.createElement(
+                !globalUserProfileData && React.createElement(
                     'a',
                     { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
                     'Prihlásenie'
                 ),
-                registrationActive && React.createElement(
+                !globalUserProfileData && registrationActive && categoriesExist && React.createElement(
                     'a',
                     { href: 'registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
                     'Registrácia'
                 )
+            ),
+            !globalUserProfileData && React.createElement(
+                'div',
+                { className: 'text-center mt-6' },
+                registrationActive && categoriesExist && React.createElement(
+                    'p',
+                    { className: 'text-lg text-green-600 font-semibold' },
+                    'Registrácia je otvorená!'
+                ),
+                !registrationActive && categoriesExist && regStart && !isNaN(regStart) && now < regStart && React.createElement(
+                    'div',
+                    null,
+                    React.createElement('p', { className: 'text-xl text-red-600 font-semibold' }, 'Registrácia sa ešte nezačala.'),
+                    React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia začne o: ${countdown}`)
+                ),
+                !registrationActive && categoriesExist && regEnd && !isNaN(regEnd) && now > regEnd && React.createElement(
+                    'p',
+                    { className: 'text-md text-gray-500 mt-2' },
+                    `Registrácia skončila: ${new Date(registrationEndDate).toLocaleDateString('sk-SK')} o ${new Date(registrationEndDate).toLocaleTimeString('sk-SK')}`
+                ),
+                (!categoriesExist || (!regStart || !regEnd)) && React.createElement(
+                    'p',
+                    { className: 'text-md text-red-500 mt-2' },
+                    'Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.'
+                )
             )
-        )
-    );
+        );
+    })();
+
 
     return React.createElement(
         'div',
@@ -155,8 +209,6 @@ window.App = App;
 // Vykreslí aplikáciu až po načítaní DOM a skryje loader
 window.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('root')) {
-        ReactDOM.createRoot(document.getElementById('root')).render(
-            React.createElement(App)
-        );
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
     }
 });
