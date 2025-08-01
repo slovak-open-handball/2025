@@ -84,16 +84,22 @@ const updateHeaderLinks = (userProfileData) => {
         logoutButton.classList.remove('hidden');
 
         // Podľa roly používateľa nastavíme farbu
-        if (userProfileData.role === 'organizer') {
-            headerColor = '#22c55e'; // green-500
-        } else if (userProfileData.role === 'teamManager') {
-            headerColor = '#f97316'; // orange-500
-        } else {
-            headerColor = '#1d4ed8'; // blue-700
+        switch (userProfileData.role) {
+            case 'admin':
+                headerColor = '#47b3ff'; // admin
+                break;
+            case 'hall':
+                headerColor = '#b06835'; // hall
+                break;
+            case 'user':
+                headerColor = '#9333EA'; // user
+                break;
+            default:
+                headerColor = '#1d4ed8'; // default
         }
         
         // Zobrazí odkaz na registráciu len ak je používateľ prihlásený a má povolenú rolu
-        if (userProfileData.role === 'teamManager' || userProfileData.role === 'organizer') {
+        if (userProfileData.role === 'admin' || userProfileData.role === 'hall') {
             registerLink.classList.remove('hidden');
         } else {
             registerLink.classList.add('hidden');
