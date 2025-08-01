@@ -3,7 +3,6 @@
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
-// Upravené cesty k Firestore pre kompatibilitu s prostredím Canvas.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -35,10 +34,9 @@ const formatDate = (timestamp) => {
  * a platnosti dátumu registrácie.
  */
 const setupCategoriesListener = () => {
-    if (window.db && window.appId) {
-        // Správna cesta k dokumentu "categories"
-        const categoriesDocRef = doc(window.db, `artifacts/${window.appId}/settings/categories`);
-
+    if (window.db) {
+        const categoriesDocRef = doc(window.db, "settings", "categories");
+        
         onSnapshot(categoriesDocRef, (docSnap) => {
             console.log("Dáta kategórií boli aktualizované!");
             // Spustíme logiku na zobrazenie/skrytie tlačidiel po načítaní dát kategórií
@@ -72,8 +70,7 @@ const startCountdown = (targetDate) => {
                 countdownElement.textContent = '';
             }
             // Získame najnovšie dáta o kategóriách a aktualizujeme UI
-            // Používame getDoc pre jednorazové načítanie
-            getDoc(doc(window.db, `artifacts/${window.appId}/settings/categories`)).then(updateRegistrationUI);
+            getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
             return;
         }
 
@@ -83,7 +80,7 @@ const startCountdown = (targetDate) => {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `Zostáva: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
+        
         if (countdownElement) {
             countdownElement.textContent = countdownText;
         }
@@ -98,17 +95,15 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
-    // Ak je používateľ prihlásený, skryjeme všetky registratúra texty a tlačidlá,
-    // a zobrazíme len správu pre prihláseného používateľa.
+    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu a registračný text.
     if (window.globalUserProfileData) {
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(''); // Vždy vymaže text o registrácii
+        updateRegistrationStatusText(); // Zavoláme bez parametra, aby sa obsah vymazal
         toggleLoggedInMessage(true);
         console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
         return;
     }
 
-    // Ak používateľ nie je prihlásený, skryjeme správu o prihlásení a pokračujeme s logikou registrácie
     toggleLoggedInMessage(false);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
@@ -125,52 +120,50 @@ const updateRegistrationUI = (docSnap) => {
     // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
     const registrationStartDate = window.registrationDates?.registrationStartDate;
     const registrationEndDate = window.registrationDates?.registrationEndDate;
-
-    // Kontrola, či existujú dáta v kategóriách a nie sú prázdne
-    const hasCategories = docSnap.exists() && Object.keys(docSnap.data()).length > 0;
     
-    if (!hasCategories) {
-        console.log("Žiadne kategórie neboli nájdené, registrácia nie je možná.");
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
-        return;
-    }
-
     const isRegistrationOpen = registrationStartDate && registrationEndDate &&
                                now >= registrationStartDate.toDate() &&
                                now < registrationEndDate.toDate();
     const isRegistrationBeforeStart = registrationStartDate && now < registrationStartDate.toDate();
     const isRegistrationEnded = registrationEndDate && now >= registrationEndDate.toDate();
 
-    if (isRegistrationOpen) {
-        toggleRegistrationButton(true);
-        updateRegistrationStatusText(`
-            <p>Registrácia na turnaj je spustená.</p>
-            <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
-            <p class="text-sm text-gray-500" id="countdown-timer"></p>
-        `);
+    if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
+        console.log("Dáta kategórií:", docSnap.data());
         
-        // Spustíme odpočet do konca registrácie
-        startCountdown(registrationEndDate.toDate());
-    } else if (isRegistrationBeforeStart) {
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(`
-            <p>Registrácia na turnaj ešte nebola spustená.</p>
-            <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
-            <p class="text-sm text-gray-500" id="countdown-timer"></p>
-        `);
-        
-        // Spustíme odpočet do začiatku registrácie
-        startCountdown(registrationStartDate.toDate());
-    } else if (isRegistrationEnded) {
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(`
-            <p>Registrácia na turnaj je už ukončená.</p>
-            <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
-        `);
+        if (isRegistrationOpen) {
+            toggleRegistrationButton(true);
+            updateRegistrationStatusText(`
+                <p>Registrácia na turnaj je spustená.</p>
+                <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
+                <p class="text-sm text-gray-500" id="countdown-timer"></p>
+            `);
+            
+            // Spustíme odpočet do konca registrácie
+            startCountdown(registrationEndDate.toDate());
+        } else if (isRegistrationBeforeStart) {
+            toggleRegistrationButton(false);
+            updateRegistrationStatusText(`
+                <p>Registrácia na turnaj ešte nebola spustená.</p>
+                <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
+                <p class="text-sm text-gray-500" id="countdown-timer"></p>
+            `);
+            
+            // Spustíme odpočet do začiatku registrácie
+            startCountdown(registrationStartDate.toDate());
+        } else if (isRegistrationEnded) {
+            toggleRegistrationButton(false);
+            updateRegistrationStatusText(`
+                <p>Registrácia na turnaj je už ukončená.</p>
+                <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
+            `);
+        } else {
+            toggleRegistrationButton(false);
+            updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
+        }
     } else {
+        console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
+        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
     }
 };
 
@@ -179,9 +172,8 @@ const updateRegistrationUI = (docSnap) => {
  * Dátumy uloží do globálnej premennej a následne spustí listener pre kategórie.
  */
 const setupRegistrationDataListener = () => {
-    if (window.db && window.appId) {
-        // Správna cesta k dokumentu "registration"
-        const docRef = doc(window.db, `artifacts/${window.appId}/settings/registration`);
+    if (window.db) {
+        const docRef = doc(window.db, "settings", "registration");
         onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
@@ -199,7 +191,7 @@ const setupRegistrationDataListener = () => {
             setupCategoriesListener(); // Pokračujeme aj v prípade chyby, aby sme skryli tlačidlo.
         });
     } else {
-        console.log("Firebase databáza alebo ID aplikácie nie sú pripravené.");
+        console.log("Firebase databáza nie je pripravená.");
     }
 };
 
@@ -276,12 +268,13 @@ window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
+    updateRegistrationUI();
     setupRegistrationDataListener();
 });
 
 // Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
-if (window.db && window.appId) {
+if (window.db) {
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
     setupRegistrationDataListener();
