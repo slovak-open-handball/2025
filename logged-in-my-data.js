@@ -72,6 +72,9 @@ const renderBillingAndAddressInfo = (userProfileData) => {
 
     const { billing, address } = userProfileData;
 
+    // Vytvoríme formátovanú adresu
+    const formattedAddress = address ? `${address.street || ''} ${address.houseNumber || ''}, ${address.postalCode || ''} ${address.city || ''}, ${address.country || ''}`.trim() : null;
+
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg shadow-lg p-6 mt-6 max-w-2xl mx-auto border-t-4 border-purple-500' },
@@ -88,6 +91,13 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
                 ` ${billing.clubName || billing.companyName || '-'}`
+            ),
+            // Zobrazenie spojenej adresy pod názvom klubu
+            formattedAddress && React.createElement(
+                'p',
+                { className: 'text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                ` ${formattedAddress}`
             ),
             React.createElement(
                 'p',
@@ -109,39 +119,6 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                 React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                 ` ${billing.icdph || '-'}`
             ),
-        ),
-        address && React.createElement(
-            'div',
-            { className: 'space-y-2 text-gray-700 mt-4 border-t pt-4 border-gray-200' },
-            React.createElement(
-                'h3',
-                { className: 'text-xl font-semibold mb-2 text-gray-800' },
-                'Adresa'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo domu:'),
-                ` ${address.street || '-'} ${address.houseNumber || ''}`
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Mesto:'),
-                ` ${address.city || '-'}`
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'PSČ:'),
-                ` ${address.postalCode || '-'}`
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Krajina:'),
-                ` ${address.country || '-'}`
-            )
         )
     );
 };
@@ -241,14 +218,14 @@ function MyDataApp() {
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                ` ${data.email || '-'}`
+                React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
+                ` ${data.firstName || '-'} ${data.lastName || ''}`
             ),
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-                ` ${data.firstName || '-'} ${data.lastName || ''}`
+                React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
+                ` ${data.email || '-'}`
             ),
             React.createElement(
                 'p',
