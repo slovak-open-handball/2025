@@ -2,7 +2,7 @@
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // a podmienene zobrazil tlačidlo a text na základe existencie kategórií.
 
-import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Načíta dátumové a časové údaje o registrácii z Firestore a vypíše ich do konzoly.
@@ -32,22 +32,21 @@ const loadRegistrationData = async () => {
 };
 
 /**
- * Načíta všetky kategórie z Firestore.
+ * Nastaví onSnapshot listener na kategórie v Firestore a reaguje na ich zmeny.
  * Ak neexistujú žiadne kategórie, skryje tlačidlo na registráciu a zmení text.
  */
-const loadCategoriesData = async () => {
+const setupCategoriesListener = () => {
     if (window.db) {
         // Vytvorenie referencie na dokument 'categories' pod kolekciou 'settings'.
         const categoriesDocRef = doc(window.db, "settings", "categories");
-        try {
-            // Pokus o načítanie dokumentu.
-            const docSnap = await getDoc(categoriesDocRef);
-
-            // Kontrola, či dokument s kategóriami existuje.
+        
+        // Nastavenie onSnapshot listenera.
+        onSnapshot(categoriesDocRef, (docSnap) => {
+            console.log("Dáta kategórií boli aktualizované!");
             if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
                 console.log("Dáta kategórií:", docSnap.data());
                 
-                // Ak dokument existuje, uistíme sa, že tlačidlo je viditeľné a nastavíme pôvodný text.
+                // Ak dokument existuje a nie je prázdny, uistíme sa, že tlačidlo je viditeľné a nastavíme pôvodný text.
                 toggleRegistrationButton(true);
                 updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
             } else {
@@ -56,12 +55,12 @@ const loadCategoriesData = async () => {
                 toggleRegistrationButton(false);
                 updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
             }
-        } catch (e) {
+        }, (error) => {
             // V prípade chyby pri načítaní vypíšeme detail chyby, skryjeme tlačidlo a zmeníme text pre istotu.
-            console.error("Chyba pri načítaní údajov o kategóriách:", e);
+            console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
             updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
-        }
+        });
     }
 };
 
@@ -97,14 +96,14 @@ const updateMainText = (text) => {
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    // Po prijatí udalosti načítame dáta o registrácii aj kategórie.
+    // Po prijatí udalosti načítame dáta o registrácii a nastavíme listener pre kategórie.
     loadRegistrationData();
-    loadCategoriesData();
+    setupCategoriesListener();
 });
 
 // Volanie funkcií aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
     loadRegistrationData();
-    loadCategoriesData();
+    setupCategoriesListener();
 }
