@@ -38,23 +38,26 @@ const setupFirebase = () => {
 
 // Funkcia, ktorá skontroluje, či má používateľ prístup na danú stránku
 const checkPageAuthorization = (userProfile, path) => {
-    // Definujeme povolené roly pre jednotlivé stránky
-    const publicPages = ['/', '/index.html', '/login.html', '/register.html'];
-    const loggedInPages = ['/logged-in-my-data.html'];
-    const adminPages = ['/admin-register.html', '/admin-dashboard.html'];
-    const hallPages = ['/hall-dashboard.html'];
+    // Definujeme povolené roly pre jednotlivé stránky.
+    // Zoznam obsahuje len názvy súborov pre robustnejšiu kontrolu cesty.
+    const publicPages = ['/', 'index.html', 'login.html', 'register.html'];
+    const loggedInPages = ['logged-in-my-data.html'];
+    const adminPages = ['admin-register.html', 'admin-dashboard.html'];
+    const hallPages = ['hall-dashboard.html'];
 
-    const currentPage = path.endsWith('/') ? '/' : path.split('/').pop();
-    // PÔVODNÁ KONTROLA: const isPublicPage = publicPages.includes(currentPage);
-    // VYLEPŠENÁ KONTROLA: Porovnáva celú cestu priamo s poľom verejných stránok
-    const isPublicPage = publicPages.includes(path);
-    const isLoggedInPage = loggedInPages.includes(path);
-    const isAdminPage = adminPages.includes(path);
-    const isHallPage = hallPages.includes(path);
+    // Vylepšená kontrola, ktorá zistí, či cesta končí jedným z verejných súborov.
+    // To rieši problém s cestami, ktoré obsahujú ID projektu (napr. /2025/index.html).
+    const pathEndsWithPublicPage = publicPages.some(page => {
+        // Špeciálne ošetrenie pre root cestu '/'
+        if (page === '/' && path === '/') {
+            return true;
+        }
+        return path.endsWith('/' + page);
+    });
 
     // DÔLEŽITÁ ZMENA: Ak je stránka verejná, umožníme prístup všetkým
     // Toto pravidlo je nadradené a platí pre prihlásených aj neprihlásených používateľov
-    if (isPublicPage) {
+    if (pathEndsWithPublicPage) {
         console.log(`AuthManager: Stránka '${path}' je verejná, prístup povolený.`);
         return true;
     }
@@ -70,17 +73,17 @@ const checkPageAuthorization = (userProfile, path) => {
     const userRole = userProfile.role;
 
     // Kontrola prístupu na základe roly
-    if (isAdminPage && userRole !== 'admin') {
+    if (adminPages.includes(path.split('/').pop()) && userRole !== 'admin') {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na admin stránku.`);
         window.location.href = 'logged-in-my-data.html';
         return false;
     }
-    if (isHallPage && userRole !== 'hall') {
+    if (hallPages.includes(path.split('/').pop()) && userRole !== 'hall') {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na stránku haly.`);
         window.location.href = 'logged-in-my-data.html';
         return false;
     }
-    if (isLoggedInPage && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
+    if (loggedInPages.includes(path.split('/').pop()) && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
         console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na prihlásenú stránku.`);
         window.location.href = 'logged-in-my-data.html';
         return false;
