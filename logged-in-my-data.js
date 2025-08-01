@@ -116,7 +116,7 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
             React.createElement(
                 'h2',
                 { className: 'text-2xl' },
-                'Fakturačné údaje' // Zmenený nadpis
+                'Fakturačné údaje'
             )
         ),
         React.createElement(
@@ -154,11 +154,11 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
                     React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                     ` ${userProfileData.billing.dic}`
                 ),
-                userProfileData.billing.icDPH && React.createElement(
+                React.createElement(
                     'p',
                     { className: 'text-gray-800' },
                     React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                    ` ${userProfileData.billing.icDPH}`
+                    ` ${userProfileData.billing.icDPH || '-'}`
                 ),
             )
         )
