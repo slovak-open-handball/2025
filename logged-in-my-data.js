@@ -65,15 +65,13 @@ function MyDataApp() {
 
   // Funkcia pre renderovanie fakturačných údajov
   const renderBillingInfo = () => {
+    // Získame údaje o fakturácii z userProfileData
     const { billing } = userProfileData;
 
     // Vráti null, ak nie sú k dispozícii žiadne fakturačné údaje
-    if (!billing || (!billing.clubName && !billing.billingAddress && !billing.ico && !billing.dic && !billing.icDph)) {
+    if (!billing || (!billing.clubName && !billing.dic && !billing.ico && !billing.icDph)) {
       return null;
     }
-
-    // Fakturačná adresa sa teraz berie z billing.billingAddress
-    const billingAddress = billing.billingAddress;
 
     return React.createElement(
       'div',
@@ -91,12 +89,6 @@ function MyDataApp() {
           { className: 'text-gray-800 text-lg' },
           React.createElement('span', { className: 'font-bold' }, 'Názov klubu/organizácie:'),
           ` ${billing.clubName}`
-        ),
-        billingAddress && React.createElement(
-          'p',
-          { className: 'text-gray-800 text-lg' },
-          React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-          ` ${billingAddress}`
         ),
         billing.ico && React.createElement(
           'p',
@@ -180,13 +172,13 @@ function MyDataApp() {
               'p',
               { className: 'text-gray-800 text-lg' },
               React.createElement('span', { className: 'font-bold' }, 'Meno:'),
-              ` ${userProfileData.name}`
+              ` ${userProfileData.firstName}`
             ),
             React.createElement(
               'p',
               { className: 'text-gray-800 text-lg' },
               React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
-              ` ${userProfileData.surname}`
+              ` ${userProfileData.lastName}`
             ),
             React.createElement(
               'p',
@@ -198,40 +190,20 @@ function MyDataApp() {
               'p',
               { className: 'text-gray-800 text-lg' },
               React.createElement('span', { className: 'font-bold' }, 'Telefón:'),
-              ` ${userProfileData.phone}`
-            )
+              ` ${userProfileData.contactPhoneNumber}`
+            ),
+            // Zobrazenie adresy
+            React.createElement(
+              'p',
+              { className: 'text-gray-800 text-lg' },
+              React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+              ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}`
+            ),
           )
         ),
         
         // Zobrazí fakturačné údaje, ak existujú
         renderBillingInfo(),
-        
-        // Karta s údajmi o registrácii na turnaj
-        userProfileData.registration && React.createElement(
-          'div',
-          { className: 'p-6 bg-white rounded-lg shadow-md' },
-          React.createElement(
-            'h2',
-            { className: 'text-2xl font-semibold text-blue-800 mb-4' },
-            'Údaje o registrácii'
-          ),
-          React.createElement(
-            'div',
-            { className: 'space-y-2' },
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Kategória:'),
-              ` ${userProfileData.registration.category}`
-            ),
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Názov tímu:'),
-              ` ${userProfileData.registration.teamName}`
-            )
-          )
-        ),
         
         // Zobrazenie unikátneho ID
         React.createElement(
@@ -240,7 +212,7 @@ function MyDataApp() {
           React.createElement(
             'p',
             { className: 'text-sm text-gray-500' },
-            `Vaše unikátne ID používateľa: ${userProfileData.uid}`
+            `Vaše unikátne ID používateľa: ${userProfileData.id}`
           )
         )
       )
