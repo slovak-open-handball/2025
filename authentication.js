@@ -20,7 +20,7 @@ const PUBLIC_PAGES = [
 
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    apiKey: "AIzaSyAhFyOppjWDY_zkCcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
     projectId: "soh2025-2s0o2h5",
     storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
@@ -49,14 +49,20 @@ const setupFirebase = () => {
 
 // Funkcia na kontrolu autorizácie stránky
 const checkPageAuthorization = (userProfile, currentPath) => {
-    const isPublicPage = PUBLIC_PAGES.includes(currentPath) || PUBLIC_PAGES.includes(currentPath + '/');
+    // Odstránime lomítko na konci, aby sme správne porovnali cesty
+    const normalizedPath = currentPath.endsWith('/') ? currentPath.slice(0, -1) : currentPath;
+    const isPublicPage = PUBLIC_PAGES.some(page => normalizedPath.endsWith(page));
     const isLoggedIn = !!userProfile;
-    const isLoginPage = currentPath.endsWith('login.html');
+    const isLoginPage = normalizedPath.endsWith('/login.html');
 
     // Ak je používateľ odhlásený a nie je na verejnej stránke, presmerujeme ho na prihlásenie
     if (!isLoggedIn && !isPublicPage && !isLoginPage) {
         console.log("AuthManager: Používateľ nie je prihlásený, presmerovanie na login.html.");
         window.location.href = 'login.html';
+    } else if (isLoggedIn && isLoginPage) {
+        // Ak je používateľ prihlásený a snaží sa dostať na prihlasovaciu stránku, presmerujeme ho na domovskú stránku
+        console.log("AuthManager: Používateľ je prihlásený, presmerovanie z login.html na index.html.");
+        window.location.href = 'index.html';
     }
 };
 
