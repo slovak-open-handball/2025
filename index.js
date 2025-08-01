@@ -3,6 +3,7 @@
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
+// Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -29,6 +30,24 @@ const formatDate = (timestamp) => {
 };
 
 /**
+ * Získa farbu na základe role používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user', 'null').
+ * @returns {string} Hexadecimálny kód farby.
+ */
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff'; // admin
+        case 'hall':
+            return '#b06835'; // hall
+        case 'user':
+            return '#9333EA'; // user
+        default:
+            return '#1d4ed8'; // null alebo iná rola
+    }
+};
+
+/**
  * Nastaví onSnapshot listener na kategórie v Firestore a reaguje na ich zmeny.
  * Zobrazí/skryje tlačidlo na registráciu a zmení text na základe existencie kategórií
  * a platnosti dátumu registrácie.
@@ -44,7 +63,7 @@ const setupCategoriesListener = () => {
         }, (error) => {
             console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
-            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.", "");
+            updateRegistrationStatusText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
         });
     }
 };
@@ -52,9 +71,8 @@ const setupCategoriesListener = () => {
 /**
  * Spustí odpočet do cieľového dátumu a aktualizuje text na stránke.
  * @param {Date} targetDate - Dátum, do ktorého sa má odpočítavať.
- * @param {string} messagePrefix - Text, ktorý sa zobrazí pred odpočtom.
  */
-const startCountdown = (targetDate, messagePrefix) => {
+const startCountdown = (targetDate) => {
     // Zrušíme predchádzajúci odpočet
     if (countdownIntervalId) {
         clearInterval(countdownIntervalId);
@@ -81,7 +99,6 @@ const startCountdown = (targetDate, messagePrefix) => {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
-            ${messagePrefix}
             <br>
             <span class="font-semibold text-lg">
                 ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
@@ -248,8 +265,8 @@ const toggleLoggedInMessage = (isVisible) => {
 };
 
 /**
- * Aktualizuje text a odkaz tlačidla pre prihlásenie na základe stavu autentifikácie.
- * Ak je používateľ prihlásený, zobrazí "Moja zóna" a presmeruje na príslušnú stránku.
+ * Aktualizuje text, odkaz a farbu tlačidla pre prihlásenie na základe stavu autentifikácie.
+ * Ak je používateľ prihlásený, zobrazí "Moja zóna" a farbu zmení podľa jeho role.
  * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
  */
 const updateLoginButton = (isLoggedIn) => {
@@ -260,12 +277,21 @@ const updateLoginButton = (isLoggedIn) => {
         if (isLoggedIn) {
             loginLink.href = 'logged-in-my-data.html';
             loginButton.textContent = 'Moja zóna';
+            const role = window.globalUserProfileData?.role || 'null';
+            const roleColor = getRoleColor(role);
+            loginButton.style.backgroundColor = roleColor;
+            // Odstránime Tailwind triedy pre farbu, aby sme predišli konfliktom
+            loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            console.log(`Používateľ prihlásený s rolou '${role}'. Tlačidlo 'Moja zóna' bolo zmenené a zafarbené na ${roleColor}.`);
         } else {
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
+            // Vrátime pôvodné Tailwind triedy pre farbu
+            loginButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            loginButton.style.backgroundColor = ''; // Odstránime inline štýl
+            console.log("Používateľ odhlásený. Tlačidlo 'Prihlásenie' bolo obnovené.");
         }
         loginLink.style.display = 'inline-block';
-        console.log(`Tlačidlo pre prihlásenie bolo aktualizované a zobrazené.`);
     } else {
         console.warn("Elementy pre tlačidlo prihlásenia neboli nájdené.");
     }
