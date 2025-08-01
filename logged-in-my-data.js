@@ -2,13 +2,9 @@
 // Tento súbor bol upravený, aby počkal na dáta odoslané globálnou udalosťou z authentication.js.
 // Spravuje zobrazenie profilových a fakturačných dát na základe prijatých dát.
 
-// Zoznam predvolieb, zoradený zostupne podľa dĺžky pre správne rozpoznávanie
-const countryDialCodes = [
-    { code: 'SK', dialCode: '+421' },
-    { code: 'CZ', dialCode: '+420' },
-    // A ďalšie predvoľby podľa potreby...
-    // Pre účely príkladu stačia tieto
-];
+// Predvoľby krajín sa načítajú z globálnej premennej countryDialCodes
+// definovanej v countryDialCodes.js. Pre prípad, že súbor nie je načítaný, použijeme prázdne pole.
+const countryDialCodes = window.countryDialCodes || [];
 
 // Definícia pomocných komponentov, ktoré sa používajú v App komponente
 const Loader = () => {
