@@ -138,7 +138,7 @@ const updateRegistrationUI = (docSnap) => {
             updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
             
             // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate, `Registrácia sa začína o`);
+            startCountdown(registrationStartDate, `Registrácia sa začína o:`);
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
             updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
@@ -225,7 +225,7 @@ const toggleMainText = (isVisible) => {
 const updateMainText = (text, countdownText = "") => {
     const mainTextElement = document.getElementById('main-page-text');
     if (mainTextElement) {
-        mainTextElement.innerHTML = `${text}<span id="countdown-timer"></span>`;
+        mainTextElement.innerHTML = `${text}<br><span id="countdown-timer"></span>`;
         if (countdownText) {
             const countdownElement = document.getElementById('countdown-timer');
             if (countdownElement) {
