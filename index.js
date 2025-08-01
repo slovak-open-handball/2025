@@ -11,10 +11,11 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Pevne definovaná konfigurácia Firebase, podľa požiadavky
+// POZNÁMKA: Táto konfigurácia bude prepísaná globálnou premennou '__firebase_config'.
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
@@ -27,15 +28,12 @@ const firebaseConfig = {
 // Inicializácia Firebase a nastavenie globálnych premenných
 function setupFirebase() {
     try {
-        // Predpokladáme, že appId a initialAuthToken sú definované globálne v HTML
-        if (!window.initialAuthToken || !window.appId) {
-            console.error("AuthManager: Globálne premenné 'initialAuthToken' alebo 'appId' nie sú definované.");
-            return;
-        }
-
-        const app = initializeApp(firebaseConfig);
+        // Používame globálne premenné poskytnuté prostredím Canvas
+        const config = JSON.parse(__firebase_config);
+        const app = initializeApp(config);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
+        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
         // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
         window.doc = doc; 
@@ -50,15 +48,48 @@ function setupFirebase() {
 
 // Spracovanie stavu autentifikácie
 const handleAuthState = () => {
-    onAuthStateChanged(window.auth, async (user) => {
+    // Perform initial authentication using the provided custom token
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    if (initialAuthToken) {
+        signInWithCustomToken(window.auth, initialAuthToken)
+            .then(() => {
+                console.log("AuthManager: Úspešne prihlásený s vlastným tokenom.");
+            })
+            .catch((error) => {
+                console.error("AuthManager: Chyba pri prihlasovaní s vlastným tokenom:", error);
+            });
+    } else {
+        signInAnonymously(window.auth)
+            .then(() => {
+                console.log("AuthManager: Úspešne prihlásený anonymne.");
+            })
+            .catch((error) => {
+                console.error("AuthManager: Chyba pri anonymnom prihlasovaní:", error);
+            });
+    }
+
+
+    let unsubscribeUserDoc = null;
+    onAuthStateChanged(window.auth, (user) => {
+        if (!window.isGlobalAuthReady) {
+            window.isGlobalAuthReady = true;
+            console.log("AuthManager: Počiatočný stav autentifikácie skontrolovaný.");
+        }
+
+        if (unsubscribeUserDoc) {
+            unsubscribeUserDoc();
+        }
+
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
             
             // Načítanie profilu používateľa z Firestore
             // Používame onSnapshot pre sledovanie zmien v reálnom čase
+            // POZNÁMKA: Cesta k Firestore bola upravená tak, aby používala __app_id
             const userDocRef = doc(window.db, `artifacts/${window.appId}/users/${user.uid}/profile/data`);
             
-            const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     window.globalUserProfileData = docSnap.data();
                     console.log("AuthManager: Profil používateľa načítaný a aktuálny.", window.globalUserProfileData);
@@ -67,7 +98,6 @@ const handleAuthState = () => {
                     window.globalUserProfileData = null;
                 }
 
-                window.isGlobalAuthReady = true;
                 // Odošleme udalosť, že dáta boli aktualizované
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             }, (error) => {
@@ -85,8 +115,6 @@ const handleAuthState = () => {
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
             window.globalUserProfileData = null;
-            window.isGlobalAuthReady = true;
-
             // Odošleme udalosť aj pri odhlásení
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
         }
