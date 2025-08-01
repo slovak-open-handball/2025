@@ -1,6 +1,7 @@
 // index.js
-// Tento súbor bol upravený tak, aby bol plne samostatný a riešil potenciálne problémy
-// s chybou "Minified React error #130" tým, že všetky komponenty definuje priamo v sebe.
+// Tento súbor bol prepracovaný tak, aby sa predišlo zacykleniu pri načítavaní dát.
+// Používa jednu hlavnú useEffect funkciu na nastavenie všetkých potrebných listenerov,
+// čím zabezpečuje, že sa spúšťajú iba raz.
 
 // Importy pre React a Firebase sú spracované priamo v HTML súbore pre zjednodušenie.
 
@@ -32,7 +33,6 @@ const ErrorMessage = ({ message }) => {
     );
 };
 
-
 // Hlavný komponent aplikácie
 const App = () => {
     const [registrationData, setRegistrationData] = React.useState(null);
@@ -40,38 +40,22 @@ const App = () => {
     const [error, setError] = React.useState('');
     const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
     const [countdown, setCountdown] = React.useState('');
-    const [isAuthInitialized, setIsAuthInitialized] = React.useState(window.isGlobalAuthReady);
 
-    // Listener na globálne eventy z 'authentication.js'
+    // Hlavná useEffect funkcia, ktorá sa spustí iba raz (pri prvom vykreslení)
+    // a nastaví všetky potrebné listenery.
     React.useEffect(() => {
+        // Listener pre zmeny v autentifikácii
         const handleGlobalDataUpdate = (event) => {
             setGlobalUserProfileData(event.detail);
         };
         window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
-        // Tiež kontrolujeme stav inicializácie autentifikácie
-        const checkAuthReady = () => {
-            if (window.isGlobalAuthReady && !isAuthInitialized) {
-                setIsAuthInitialized(true);
-            }
-        };
-        checkAuthReady();
-
-        return () => window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-    }, [isAuthInitialized]);
-
-    // Načítanie registračných dát sa spustí iba raz, po inicializácii autentifikácie
-    React.useEffect(() => {
-        const fetchRegistrationData = async () => {
-            if (!window.db || !isAuthInitialized) {
-                return;
-            }
-
+        // Listener pre načítanie registračných dát z Firestore
+        let unsubscribe = () => {};
+        if (window.db && window.isGlobalAuthReady) {
             try {
-                // Tento listener sa pripojí iba raz, pretože v závislostiach je len `isAuthInitialized`
-                // a jeho hodnota sa zmení len raz na 'true'.
                 const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
-                const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         setRegistrationData(data);
@@ -79,30 +63,35 @@ const App = () => {
                         console.warn("Registračné dáta neboli nájdené.");
                         setError("Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.");
                     }
-                    setLoading(false); // Ukončíme načítavanie, akonáhle máme odpoveď
+                    setLoading(false);
                 }, (err) => {
                     console.error("Chyba pri načítaní registračných dát:", err);
                     setError("Chyba pri načítaní registračných dát. Skúste to prosím neskôr.");
                     setLoading(false);
                 });
-                
-                return () => unsubscribe();
             } catch (err) {
                 console.error("Chyba pri načítaní registračných dát:", err);
                 setError("Chyba pri načítaní registračných dát. Skúste to prosím neskôr.");
                 setLoading(false);
             }
-        };
-
-        if (isAuthInitialized) {
-            fetchRegistrationData();
+        } else {
+            console.warn("Firestore nie je pripravený na použitie.");
+            setError("Firestore nie je inicializovaný. Skúste obnoviť stránku.");
+            setLoading(false);
         }
-    }, [isAuthInitialized]); // Tento efekt závisí od inicializácie autentifikácie
+
+        // Cleanup funkcia pre odhlásenie všetkých listenerov, keď komponent zanikne
+        return () => {
+            unsubscribe();
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        };
+    }, []); // Prázdne pole závislostí zabezpečí, že sa tento efekt spustí iba raz
 
 
-    // Funkcia pre aktualizáciu odpočítavania
+    // Samostatný useEffect pre odpočítavanie, závisí iba od registračných dát
     React.useEffect(() => {
         if (!registrationData || !registrationData.registrationStartDate) {
+            setCountdown('');
             return;
         }
 
@@ -111,12 +100,11 @@ const App = () => {
             const now = new Date().getTime();
             const distance = regStart - now;
 
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
             if (distance > 0) {
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                 setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
             } else {
                 setCountdown('');
@@ -161,7 +149,6 @@ const App = () => {
                     'Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.'
                 )
             );
-
         } else {
             // Logika pre odhláseného používateľa
             mainContent = React.createElement(
@@ -201,7 +188,7 @@ const App = () => {
 // Export pre možnosť načítania v HTML
 window.App = App;
 
-// Vykreslí aplikáciu až po načítaní DOM a skryje loader
+// Vykreslí aplikáciu až po načítaní DOM
 window.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('root')) {
         ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
