@@ -8,6 +8,22 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/fireb
 window.registrationDates = null;
 
 /**
+ * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd.mm.yyyy o hh:mm".
+ * @param {import('firebase/firestore').Timestamp} timestamp - Objekt Timestamp z Firestore.
+ * @returns {string} Formátovaný dátum a čas.
+ */
+const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `dňa ${day}.${month}.${year} o ${hours}:${minutes}`;
+};
+
+/**
  * Nastaví onSnapshot listener na kategórie v Firestore a reaguje na ich zmeny.
  * Zobrazí/skryje tlačidlo na registráciu a zmení text na základe existencie kategórií
  * a platnosti dátumu registrácie.
@@ -23,9 +39,14 @@ const setupCategoriesListener = () => {
 
             // Získame aktuálny dátum
             const now = new Date();
+            const registrationStartDate = window.registrationDates?.registrationStartDate?.toDate();
+            const registrationEndDate = window.registrationDates?.registrationEndDate?.toDate();
+            
             const isRegistrationOpen = window.registrationDates &&
-                                       now >= window.registrationDates.registrationStartDate.toDate() &&
-                                       now <= window.registrationDates.registrationEndDate.toDate();
+                                       now >= registrationStartDate &&
+                                       now <= registrationEndDate;
+            const isRegistrationBeforeStart = window.registrationDates && now < registrationStartDate;
+            const isRegistrationEnded = window.registrationDates && now > registrationEndDate;
 
             if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
                 console.log("Dáta kategórií:", docSnap.data());
@@ -33,6 +54,12 @@ const setupCategoriesListener = () => {
                 if (isRegistrationOpen) {
                     toggleRegistrationButton(true);
                     updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
+                } else if (isRegistrationBeforeStart) {
+                    toggleRegistrationButton(false);
+                    updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
+                } else if (isRegistrationEnded) {
+                    toggleRegistrationButton(false);
+                    updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
                 } else {
                     toggleRegistrationButton(false);
                     updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
