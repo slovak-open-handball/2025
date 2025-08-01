@@ -20,7 +20,9 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 .497 0 .984.05 1.46.134m-3.97 3.97a3 3 0 106 0 3 3 0 00-6 0zm7.135 12.016a2 2 0 11-2.828-2.828m2.828 2.828L21 21m-6.865-8.175A10.05 10.05 0 0112 5c-4.478 0-8.268 2.943-9.542 7a10.05 10.05 0 001.666 2.857m-1.666-2.857L3 3' })
+    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
   
   return React.createElement(
