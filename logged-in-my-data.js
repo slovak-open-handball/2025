@@ -71,15 +71,23 @@ function MyDataApp() {
   // Pomocná funkcia na formátovanie telefónneho čísla
   const formatPhoneNumber = (number) => {
     if (!number) return '';
-    // Predpokladáme, že telefónne číslo je v tvare +XX XXX XXX XXX
-    const parts = number.split(' ');
-    if (parts.length > 1) {
-      const prefix = parts[0];
-      const rest = parts.slice(1).join('');
-      const formattedRest = rest.replace(/(\d{3})/g, '$1 ').trim();
-      return `${prefix} ${formattedRest}`;
+    // Odstránime všetky medzery pre lepšiu manipuláciu
+    const cleanedNumber = number.replace(/\s+/g, '');
+    
+    // Predpokladáme, že telefónne číslo začína predvoľbou (+xxxx)
+    const prefixMatch = cleanedNumber.match(/^(\+\d{1,4})/);
+    let prefix = '';
+    let remainingNumber = cleanedNumber;
+
+    if (prefixMatch) {
+      prefix = prefixMatch[1] + ' ';
+      remainingNumber = cleanedNumber.substring(prefixMatch[1].length);
     }
-    return number;
+
+    // Rozdelíme zvyšné číslice na skupiny po troch
+    const formattedRest = remainingNumber.replace(/(\d{3})/g, '$1 ').trim();
+    
+    return `${prefix}${formattedRest}`;
   };
 
 
