@@ -12,7 +12,7 @@ let timerId = null; // ID pre časovač, aby sme ho mohli zrušiť
 let countdownIntervalId = null; // ID pre interval odpočtu
 
 /**
- * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod".
+ * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod.".
  * Používa nezalomiteľné medzery (&nbsp;), aby sa zabránilo zalomeniu riadka v dátume.
  * @param {import('firebase/firestore').Timestamp} timestamp - Objekt Timestamp z Firestore.
  * @returns {string} Formátovaný dátum a čas.
@@ -91,14 +91,22 @@ const startCountdown = (targetDate) => {
 };
 
 /**
- * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie.
- * Obsahuje aj logiku pre automatickú kontrolu času a nastavenie časovača.
+ * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie a prihlásenia.
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
     const mainTextElement = document.getElementById('main-page-text');
     if (!mainTextElement) return;
     
+    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu bez ohľadu na stav registrácie
+    if (window.globalUserProfileData) {
+        toggleRegistrationButton(false);
+        // Ak sa registracna text nachadza na stranke, tak ho chceme skryt.
+        toggleMainText(false);
+        console.log("Používateľ je prihlásený, tlačidlo pre registráciu je skryté.");
+        return;
+    }
+
     toggleMainText(true);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
