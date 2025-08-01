@@ -42,14 +42,16 @@ const setupFirebase = () => {
 
 // Funkcia na overenie prístupu na stránku
 const checkPageAuthorization = (userProfile, pathname) => {
-    console.log("AuthManager: Kontrolujem prístup na stránku:", pathname);
     const currentPage = pathname.split('/').pop();
     const isPublicPage = PUBLIC_PAGES.includes(currentPage);
     const isLoggedIn = !!userProfile;
+    
+    console.log(`AuthManager: Kontrola prístupu na stránku '${currentPage}'. Používateľ prihlásený: ${isLoggedIn}. Stránka je verejná: ${isPublicPage}.`);
 
-    // Upravená podmienka: presmeruje len vtedy, ak používateľ nie je prihlásený a stránka nie je verejná
+    // Presmeruje len vtedy, ak používateľ nie je prihlásený a stránka nie je verejná.
+    // Zabraňuje presmerovaniu z verejných stránok.
     if (!isLoggedIn && !isPublicPage) {
-        console.log("AuthManager: Neprihlásený používateľ, presmerujem na login. Path:", pathname);
+        console.log("AuthManager: Neprihlásený používateľ a stránka nie je verejná, presmerujem na login.");
         window.location.href = 'login.html';
     }
 };
