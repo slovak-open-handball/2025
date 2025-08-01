@@ -52,9 +52,8 @@ const setupCategoriesListener = () => {
 /**
  * Spustí odpočet do cieľového dátumu a aktualizuje text na stránke.
  * @param {Date} targetDate - Dátum, do ktorého sa má odpočítavať.
- * @param {string} messagePrefix - Text, ktorý sa zobrazí pred odpočtom.
  */
-const startCountdown = (targetDate, messagePrefix) => {
+const startCountdown = (targetDate) => {
     // Zrušíme predchádzajúci odpočet
     if (countdownIntervalId) {
         clearInterval(countdownIntervalId);
@@ -68,7 +67,7 @@ const startCountdown = (targetDate, messagePrefix) => {
         if (distance < 0) {
             clearInterval(countdownIntervalId);
             if (countdownElement) {
-                countdownElement.innerHTML = '';
+                countdownElement.textContent = '';
             }
             // Získame najnovšie dáta o kategóriách a aktualizujeme UI
             getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
@@ -80,10 +79,10 @@ const startCountdown = (targetDate, messagePrefix) => {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const countdownText = `${messagePrefix} ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const countdownText = `Odpočet: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
         if (countdownElement) {
-            countdownElement.innerHTML = countdownText;
+            countdownElement.textContent = countdownText;
         }
     };
 
@@ -97,6 +96,9 @@ const startCountdown = (targetDate, messagePrefix) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
+    const mainTextElement = document.getElementById('main-page-text');
+    if (!mainTextElement) return;
+    
     toggleMainText(true);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
@@ -125,36 +127,38 @@ const updateRegistrationUI = (docSnap) => {
         
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
-            updateMainText(
-                "Registrácia na turnaj prebieha.",
-                `<br><span class="text-gray-500 text-sm">Registrácia sa končí ${formatDate(registrationEndDate)}</span>`
-            );
+            mainTextElement.innerHTML = `
+                <p>Registrácia na turnaj prebieha.</p>
+                <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
+                <p class="text-sm text-gray-500" id="countdown-timer"></p>
+            `;
             
             // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate.toDate(), `Registrácia sa končí o:`);
+            startCountdown(registrationEndDate.toDate());
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
-            updateMainText(
-                "Registrácia na turnaj ešte nebola spustená.",
-                `<br><span class="text-gray-500 text-sm">Registrácia sa spustí ${formatDate(registrationStartDate)}</span>`
-            );
+            mainTextElement.innerHTML = `
+                <p>Registrácia na turnaj ešte nebola spustená.</p>
+                <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
+                <p class="text-sm text-gray-500" id="countdown-timer"></p>
+            `;
             
             // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate.toDate(), `Registrácia sa začína o:`);
+            startCountdown(registrationStartDate.toDate());
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
-            updateMainText(
-                "Registrácia na turnaj je už ukončená.",
-                `<br><span class="text-gray-500 text-sm">Registrácia bola ukončená ${formatDate(registrationEndDate)}</span>`
-            );
+            mainTextElement.innerHTML = `
+                <p>Registrácia na turnaj je už ukončená.</p>
+                <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
+            `;
         } else {
             toggleRegistrationButton(false);
-            updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
+            mainTextElement.innerHTML = `<p>Registrácia na turnaj momentálne nie je otvorená.</p>`;
         }
     } else {
         console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
         toggleRegistrationButton(false);
-        updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
+        mainTextElement.innerHTML = `<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`;
     }
 };
 
@@ -207,19 +211,6 @@ const toggleMainText = (isVisible) => {
     if (mainTextElement) {
         mainTextElement.style.display = isVisible ? 'block' : 'none';
         console.log(`Text na domovskej stránke bol ${isVisible ? 'zobrazený' : 'skrytý'}.`);
-    }
-};
-
-/**
- * Aktualizuje text na domovskej stránke.
- * @param {string} text - Nový text pre element.
- * @param {string} countdownText - Voliteľný text pre odpočet.
- */
-const updateMainText = (text, countdownText = "") => {
-    const mainTextElement = document.getElementById('main-page-text');
-    if (mainTextElement) {
-        mainTextElement.innerHTML = `${text}<br><span id="countdown-timer"></span>${countdownText}`;
-        console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
     }
 };
 
