@@ -74,8 +74,8 @@ function MyDataApp() {
     // Odstránime všetky medzery pre lepšiu manipuláciu
     const cleanedNumber = number.replace(/\s+/g, '');
     
-    // Predpokladáme, že telefónne číslo začína predvoľbou +421
-    const prefixMatch = cleanedNumber.match(/^(\+421)/);
+    // Predpokladáme, že telefónne číslo začína predvoľbou (+[1-4 číslice])
+    const prefixMatch = cleanedNumber.match(/^(\+\d{1,4})/);
     let prefix = '';
     let remainingNumber = cleanedNumber;
 
@@ -84,7 +84,7 @@ function MyDataApp() {
       remainingNumber = cleanedNumber.substring(prefixMatch[1].length);
     }
     
-    // Rozdelíme zvyšné číslice na skupiny po troch, napr. 904 595 697
+    // Rozdelíme zvyšné číslice na skupiny po troch
     const formattedRest = remainingNumber.replace(/(\d{3})/g, '$1 ').trim();
     
     return `${prefix}${formattedRest}`;
