@@ -1,6 +1,6 @@
 // index.js
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
-// a podmienene zobrazil tlačidlo a text na základe existencie kategórií.
+// a podmienene zobrazil tlačidlá a text na základe existencie kategórií.
 
 import { getDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -65,6 +65,20 @@ const setupCategoriesListener = () => {
 };
 
 /**
+ * Prepína viditeľnosť tlačidla na prihlásenie.
+ * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
+ */
+const toggleLoginButton = (isVisible) => {
+    const loginButtonWrapper = document.getElementById('login-button-wrapper');
+    if (loginButtonWrapper) {
+        loginButtonWrapper.style.display = isVisible ? 'block' : 'none';
+        console.log(`Tlačidlo 'Prihlásenie' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
+    } else {
+        console.log("Wrapper pre tlačidlo 'Prihlásenie' nebol nájdený v DOM.");
+    }
+};
+
+/**
  * Prepína viditeľnosť tlačidla na registráciu na turnaj.
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
@@ -96,6 +110,8 @@ const updateMainText = (text) => {
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
+    // Zobrazíme tlačidlo na prihlásenie.
+    toggleLoginButton(true);
     // Po prijatí udalosti načítame dáta o registrácii a nastavíme listener pre kategórie.
     loadRegistrationData();
     setupCategoriesListener();
@@ -104,12 +120,7 @@ window.addEventListener('globalDataUpdated', () => {
 // Volanie funkcií aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
+    toggleLoginButton(true);
     loadRegistrationData();
     setupCategoriesListener();
 }
-
-// Skryjeme tlačidlo "Registrácia na turnaj" hneď po načítaní,
-// aby sa zobrazilo len po úspešnom načítaní kategórií.
-document.addEventListener('DOMContentLoaded', () => {
-    toggleRegistrationButton(false);
-});
