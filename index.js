@@ -1,21 +1,9 @@
-// authentication.js
-// Tento súbor spravuje globálnu autentifikáciu Firebase, načítanie profilových dát používateľa,
-// overovanie prístupu a nastavenie globálnych premenných pre celú aplikáciu.
-
-// Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
-window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializované a prvý stav používateľa skontrolovaný
-window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
-window.auth = null; // Inštancia Firebase Auth
-window.db = null; // Inštancia Firebase Firestore
-window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
-
-// Import necessary Firebase functions
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// index.js
+// Tento súbor bol upravený, aby sa predišlo duplicitnej inicializácii a spracovaniu autentifikácie.
+// Používa globálne premenné a funkcie definované v authentication.js.
 
 // Pevne definovaná konfigurácia Firebase, podľa požiadavky
-// POZNÁMKA: Táto konfigurácia bude prepísaná globálnou premennou '__firebase_config'.
+// POZNÁMKA: Táto konfigurácia sa nebude používať, ak je definovaná globálna premenná '__firebase_config'.
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
@@ -25,10 +13,16 @@ const firebaseConfig = {
     appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
 
+// Import necessary Firebase functions
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
 // Inicializácia Firebase a nastavenie globálnych premenných
-function setupFirebase() {
+// Táto funkcia zabezpečí, že sa Firebase inicializuje len raz.
+const setupFirebase = () => {
     try {
-        // Používame globálne premenné poskytnuté prostredím Canvas
         const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
         
         // Dôležitá zmena: Skontrolujeme, či už neexistuje inicializovaná aplikácia.
@@ -38,26 +32,23 @@ function setupFirebase() {
             window.db = getFirestore(app);
             window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             
-            // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
-            window.doc = doc; 
-
             console.log("AuthManager: Firebase inicializované.");
         } else {
             console.log("AuthManager: Firebase už bolo inicializované.");
             window.auth = getAuth();
             window.db = getFirestore();
             window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            window.doc = doc;
         }
+        
+        // Sprístupníme funkciu 'doc' globálne
+        window.doc = doc;
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
     }
-}
-
+};
 
 // Spracovanie stavu autentifikácie
 const handleAuthState = () => {
-    // Perform initial authentication using the provided custom token
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
     
     if (initialAuthToken) {
@@ -69,17 +60,16 @@ const handleAuthState = () => {
                 console.error("AuthManager: Chyba pri prihlasovaní s vlastným tokenom:", error);
             });
     } else {
-        // Ak nie je k dispozícii žiadny vlastný token, nebudeme sa pokúšať o anonymné prihlásenie
-        // Tým sa vyhneme chybe, ak je anonymné prihlásenie zakázané v Firebase.
         console.log("AuthManager: Nie je k dispozícii žiadny vlastný token, preskakujem prihlásenie.");
     }
-
 
     let unsubscribeUserDoc = null;
     onAuthStateChanged(window.auth, (user) => {
         if (!window.isGlobalAuthReady) {
             window.isGlobalAuthReady = true;
             console.log("AuthManager: Počiatočný stav autentifikácie skontrolovaný.");
+            // Po skontrolovaní počiatočného stavu odošleme udalosť, že autentifikácia je pripravená
+            window.dispatchEvent(new CustomEvent('authReady'));
         }
 
         if (unsubscribeUserDoc) {
@@ -89,14 +79,11 @@ const handleAuthState = () => {
         if (user) {
             console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
             
-            // Načítanie profilu používateľa z Firestore
-            // Používame onSnapshot pre sledovanie zmien v reálnom čase
-            // POZNÁMKA: Cesta k Firestore bola upravená tak, aby používala __app_id
             const userDocRef = doc(window.db, `artifacts/${window.appId}/users/${user.uid}/profile/data`);
             
             unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    window.globalUserProfileData = docSnap.data();
+                    window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
                     console.log("AuthManager: Profil používateľa načítaný a aktuálny.", window.globalUserProfileData);
                 } else {
                     console.log("AuthManager: Profil používateľa nebol nájdený.");
@@ -111,7 +98,6 @@ const handleAuthState = () => {
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
             });
 
-            // Pridáme listener na odhlásenie, ak je užívateľ na stránke
             window.addEventListener('beforeunload', () => {
                 if (unsubscribeUserDoc) {
                     unsubscribeUserDoc();
@@ -130,7 +116,7 @@ const handleAuthState = () => {
 
 
 // Spustenie inicializácie po načítaní DOM
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
     setupFirebase();
     handleAuthState();
 });
