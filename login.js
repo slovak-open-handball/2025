@@ -3,7 +3,7 @@
 // sú globálne definované v <head> login.html.
 
 // Importy pre potrebné Firebase funkcie
-import { onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Nechávam importy pre prípad, že by sa opäť použili
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -113,8 +113,11 @@ function ResetPasswordModal({ show, onClose, onReset }) {
     setMessage('');
     try {
       const auth = window.auth;
-      // Používame Firebase funkciu na reset hesla
-      await firebase.auth().sendPasswordResetEmail(email); 
+      if (!auth) {
+        throw new Error("Firebase Auth nie je inicializované.");
+      }
+      // Opravená verzia: Používame importovanú funkciu sendPasswordResetEmail
+      await sendPasswordResetEmail(auth, email);
       setMessage('E-mail na reset hesla bol odoslaný. Skontrolujte si schránku.');
       setMessageType('success');
       setTimeout(() => {
