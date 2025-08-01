@@ -16,7 +16,7 @@ import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasej
 
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    apiKey: "AIzaSyAhFyOppjWDY_zkCcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
     projectId: "soh2025-2s0o2h5",
     storageBucket: "soh2025-2s0o2h5.appspot.com",
@@ -26,7 +26,7 @@ const firebaseConfig = {
 };
 
 // Zoznam stránok, ktoré sú verejné a nevyžadujú prihlásenie
-const PUBLIC_PAGES = ['/index.html', '/login.html', '/register.html'];
+const PUBLIC_PAGES = ['index.html', 'login.html', 'register.html'];
 
 // Funkcia na inicializáciu Firebase
 const setupFirebase = () => {
@@ -43,9 +43,11 @@ const setupFirebase = () => {
 // Funkcia na overenie prístupu na stránku
 const checkPageAuthorization = (userProfile, pathname) => {
     console.log("AuthManager: Kontrolujem prístup na stránku:", pathname);
-    const isPublicPage = PUBLIC_PAGES.includes(pathname.split('/').pop());
+    const currentPage = pathname.split('/').pop();
+    const isPublicPage = PUBLIC_PAGES.includes(currentPage);
     const isLoggedIn = !!userProfile;
 
+    // Upravená podmienka: presmeruje len vtedy, ak používateľ nie je prihlásený a stránka nie je verejná
     if (!isLoggedIn && !isPublicPage) {
         console.log("AuthManager: Neprihlásený používateľ, presmerujem na login. Path:", pathname);
         window.location.href = 'login.html';
