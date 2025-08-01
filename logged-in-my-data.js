@@ -160,11 +160,11 @@ function MyDataApp() {
         React.createElement(
             'div',
             {
-                // Zmenené na priehľadný okraj a modrý vrch pre lepší vizuálny efekt
-                className: 'ease-linear rounded-full border-4 border-gray-200 border-t-4 border-blue-500 h-12 w-12 mb-4 animate-spin'
+                // Zmenené triedy pre lepšiu viditeľnosť rotujúcej časti
+                className: 'ease-linear rounded-full border-8 border-gray-300 border-t-8 border-blue-600 h-16 w-16 mb-4 animate-spin'
             }
         ),
-        React.createElement('p', { className: 'text-gray-600' }, 'Načítavam údaje...')
+        React.createElement('p', { className: 'text-gray-600' }, 'Načítavam dáta...')
     );
 
     if (loading) {
