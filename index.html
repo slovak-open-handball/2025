@@ -39,15 +39,12 @@
     <!--
     Logika pre načítanie hlavičky a následné spustenie React aplikácie.
     Zabezpečuje, že sa React aplikácia vykreslí až po načítaní všetkých potrebných modulov.
+    Chybný import 'loadHeader' bol odstránený, pretože 'header.js' sa spúšťa automaticky.
     -->
     <script type="module">
-        import { loadHeader } from './header.js';
-        
         window.addEventListener('DOMContentLoaded', async () => {
-            // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
-            if (typeof loadHeader !== 'undefined') {
-                await loadHeader();
-            }
+            // Počkáme, kým sa načíta 'header.js' a spustí svoju logiku.
+            // Starú logiku s importom loadHeader sme odstránili.
 
             // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
