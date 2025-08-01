@@ -2,7 +2,7 @@
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // po inicializácii Firebase a autentifikácii.
 
-import { getDoc, getDocs, doc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Načíta dátumové a časové údaje o registrácii z Firestore a vypíše ich do konzoly.
@@ -37,14 +37,14 @@ const loadRegistrationData = async () => {
 const loadCategoriesData = async () => {
     // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
-        // Vytvorenie referencie na dokument, kde sú uložené kategórie.
-        // Predpokladáme, že kategórie sú uložené v dokumente settings/registration.
-        const docRef = doc(window.db, "settings", "registration");
+        // Vytvorenie referencie na dokument, kde sú uložené kategórie, podľa obrázka.
+        const docRef = doc(window.db, "settings", "categories");
         try {
             // Pokus o načítanie dokumentu.
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data();
+                // Predpokladáme, že kategórie sú uložené ako pole v poli 'categories'.
                 if (data.categories && Array.isArray(data.categories)) {
                     // Ak dokument existuje a obsahuje pole 'categories', vypíšeme ho.
                     console.log("Dáta kategórií:", data.categories);
@@ -52,7 +52,7 @@ const loadCategoriesData = async () => {
                     console.log("Pole s kategóriami nebolo v dokumente nájdené!");
                 }
             } else {
-                console.log("Dokument o registrácii nebol nájdený, nemôžem načítať kategórie!");
+                console.log("Dokument s kategóriami nebol nájdený!");
             }
         } catch (e) {
             // V prípade chyby pri načítaní vypíšeme detail chyby.
