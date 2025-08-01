@@ -1,6 +1,7 @@
 // logged-in-my-data.js
 // Tento súbor bol upravený, aby počkal na dáta odoslané globálnou udalosťou z authentication.js.
 // Spravuje zobrazenie profilových a fakturačných dát na základe prijatých dát.
+// Teraz zobrazuje všetky dostupné údaje pre všetky roly používateľov.
 
 // Predvoľby krajín sa načítajú z globálnej premennej countryDialCodes
 // definovanej v countryDialCodes.js. Pre prípad, že súbor nie je načítaný, použijeme prázdne pole.
@@ -257,43 +258,24 @@ function MyDataApp() {
             React.createElement(
                 'div',
                 { className: 'p-6' },
-                userProfileData.role === 'admin' || userProfileData.role === 'hall' ? (
-                    React.createElement(React.Fragment, null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg' },
-                            React.createElement('span', { className: 'font-bold' }, 'Názov:'),
-                            ` ${userProfileData.firstName}`
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg' },
-                            React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                            ` ${userProfileData.email}`
-                        )
-                    )
-                ) : (
-                    React.createElement(React.Fragment, null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg' },
-                            React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-                            ` ${userProfileData.firstName} ${userProfileData.lastName}`
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg' },
-                            React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
-                            ` ${userProfileData.email}`
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg' },
-                            React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
-                            ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
-                        )
-                    )
-                )
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                    ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                    ` ${userProfileData.email}`
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
+                    ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
+                ),
             )
         ),
         renderBillingAndAddressInfo(userProfileData)
