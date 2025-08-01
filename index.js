@@ -3,6 +3,7 @@
 // pod hlavným nadpisom, ktorý zostáva nezmenený.
 // Logika sa teraz stará o prepínanie medzi správou pre prihláseného používateľa a
 // informáciami o stave registrácie pre odhlásených používateľov.
+// Pridané bolo rozšírené logovanie pre lepšiu diagnostiku.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -97,12 +98,17 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
+    console.log("Spustená funkcia updateRegistrationUI.");
+    console.log("Stav prihlásenia:", !!window.globalUserProfileData);
+    console.log("Dáta o registrácii:", window.registrationDates);
+    console.log("Dáta o kategóriách:", docSnap.exists() ? docSnap.data() : "Dokument neexistuje");
+
     // Ak je používateľ prihlásený, skryjeme text o registrácii a zobrazíme správu pre prihláseného používateľa.
     if (window.globalUserProfileData) {
         toggleRegistrationButton(false);
         updateRegistrationStatusText(''); // Vymaže a skryje text o registrácii
         toggleLoggedInMessage(true);
-        console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
+        console.log("Používateľ je prihlásený. Zobrazuje sa správa pre prihláseného používateľa.");
         return;
     }
 
@@ -120,9 +126,17 @@ const updateRegistrationUI = (docSnap) => {
     }
 
     const now = new Date();
-    // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
     const registrationStartDate = window.registrationDates?.registrationStartDate;
     const registrationEndDate = window.registrationDates?.registrationEndDate;
+
+    const hasCategories = docSnap.exists() && Object.keys(docSnap.data()).length > 0;
+    
+    if (!hasCategories) {
+        console.log("Žiadne kategórie neboli nájdené, registrácia nie je možná.");
+        toggleRegistrationButton(false);
+        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
+        return;
+    }
 
     const isRegistrationOpen = registrationStartDate && registrationEndDate &&
                                now >= registrationStartDate.toDate() &&
@@ -130,43 +144,39 @@ const updateRegistrationUI = (docSnap) => {
     const isRegistrationBeforeStart = registrationStartDate && now < registrationStartDate.toDate();
     const isRegistrationEnded = registrationEndDate && now >= registrationEndDate.toDate();
 
-    if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
-        console.log("Dáta kategórií:", docSnap.data());
+    if (isRegistrationOpen) {
+        console.log("Registrácia je otvorená. Zobrazuje sa tlačidlo a odpočet do konca.");
+        toggleRegistrationButton(true);
+        updateRegistrationStatusText(`
+            <p>Registrácia na turnaj je spustená.</p>
+            <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
+            <p class="text-sm text-gray-500" id="countdown-timer"></p>
+        `);
 
-        if (isRegistrationOpen) {
-            toggleRegistrationButton(true);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je spustená.</p>
-                <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
-
-            // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate.toDate());
-        } else if (isRegistrationBeforeStart) {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj ešte nebola spustená.</p>
-                <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
-
-            // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate.toDate());
-        } else if (isRegistrationEnded) {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je už ukončená.</p>
-                <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
-            `);
-        } else {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
-        }
-    } else {
-        console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
+        // Spustíme odpočet do konca registrácie
+        startCountdown(registrationEndDate.toDate());
+    } else if (isRegistrationBeforeStart) {
+        console.log("Registrácia ešte nezačala. Zobrazuje sa odpočet do začiatku.");
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
+        updateRegistrationStatusText(`
+            <p>Registrácia na turnaj ešte nebola spustená.</p>
+            <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
+            <p class="text-sm text-gray-500" id="countdown-timer"></p>
+        `);
+
+        // Spustíme odpočet do začiatku registrácie
+        startCountdown(registrationStartDate.toDate());
+    } else if (isRegistrationEnded) {
+        console.log("Registrácia bola ukončená.");
+        toggleRegistrationButton(false);
+        updateRegistrationStatusText(`
+            <p>Registrácia na turnaj je už ukončená.</p>
+            <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
+        `);
+    } else {
+        console.log("Stav registrácie nie je definovaný alebo je neplatný.");
+        toggleRegistrationButton(false);
+        updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
     }
 };
 
