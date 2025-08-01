@@ -11,20 +11,24 @@ window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych noti
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-  authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-  projectId: "soh2025-2s0o2h5",
-  storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-  messagingSenderId: "572988314768",
-  appId: "1:572988314768:web:781e27eb035179fe34b415"
+    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+    projectId: "soh2025-2s0o2h5",
+    storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+    messagingSenderId: "572988314768",
+    appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
 
-// Pomocná funkcia na inicializáciu Firebase a jej globálne sprístupnenie
+// Zabezpečíme, že appId je definované (používame globálnu premennú, ak je dostupná, inak vezmeme z configu)
+const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.projectId; 
+
+
+// Inicializuje Firebase služby
 const setupFirebase = () => {
     try {
         const app = initializeApp(firebaseConfig);
@@ -33,85 +37,70 @@ const setupFirebase = () => {
         console.log("AuthManager: Firebase inicializovaný.");
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
-        window.isGlobalAuthReady = true;
     }
 };
 
-// Funkcia na overenie autorizácie a presmerovanie
-const checkPageAuthorization = (profileData, path) => {
-    // Definuj povolené cesty pre rôzne roly
-    const allowedPaths = {
-        'admin': ['/index.html', '/logged-in-my-data.html', '/admin.html'],
-        'user': ['/index.html', '/logged-in-my-data.html', '/logged-in-registration.html'],
-        'hall': ['/index.html', '/logged-in-my-data.html', '/logged-in-hall.html'],
-        'unauthenticated': ['/index.html', '/login.html', '/register.html']
-    };
+// Funkcia pre kontrolu autorizácie na základe cesty a profilových dát
+const checkPageAuthorization = (userProfileData, pathname) => {
+    const protectedPages = ['/logged-in-my-data.html', '/logged-in-registration.html'];
+    const isProtectedPage = protectedPages.some(page => pathname.includes(page));
 
-    let userRole = profileData ? profileData.type : 'unauthenticated';
-    let currentPath = path.split('/').pop() || 'index.html';
-
-    // Špeciálne prípady pre login.html a register.html pre autentifikovaných
-    if (userRole !== 'unauthenticated' && (currentPath === 'login.html' || currentPath === 'register.html')) {
-        console.warn('AuthManager: Prihlásený používateľ bol presmerovaný z prihlasovacej/registračnej stránky.');
-        window.location.href = 'index.html';
+    if (!userProfileData && isProtectedPage) {
+        window.location.href = 'login.html';
         return false;
     }
 
-    if (!allowedPaths[userRole] || !allowedPaths[userRole].includes(`/${currentPath}`)) {
-        console.warn(`AuthManager: Používateľ s rolou '${userRole}' nemá prístup na stránku '${currentPath}'.`);
-        window.location.href = 'index.html';
+    if (userProfileData && pathname.includes('/login.html')) {
+        window.location.href = 'logged-in-my-data.html';
         return false;
     }
-
-    console.log(`AuthManager: Autorizácia pre rolu '${userRole}' na stránke '${currentPath}' úspešná.`);
+    
     return true;
 };
 
-// Hlavná funkcia, ktorá spracováva zmeny stavu autentifikácie
+// Funkcia, ktorá spravuje stav autentifikácie a načítava dáta používateľa
 const handleAuthState = () => {
-    onAuthStateChanged(window.auth, async (user) => {
+    onAuthStateChanged(window.auth, (user) => {
         window.isGlobalAuthReady = true;
         let unsubscribeUserDoc = null;
-        
-        if (user) {
-            console.log("AuthManager: Používateľ prihlásený.", user);
-            const userDocRef = doc(window.db, "artifacts", typeof __app_id !== 'undefined' ? __app_id : 'default-app-id', "users", user.uid);
 
+        if (user) {
+            console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
+            
+            // Nastavenie poslucháča na zmeny v profile používateľa v databáze Firestore.
+            const userDocRef = doc(window.db, 'users', user.uid);
             unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    window.globalUserProfileData = docSnap.data();
-                    console.log("AuthManager: Dáta profilu používateľa načítané a aktualizované.");
+                    window.globalUserProfileData = { id: docSnap.id, ...docSnap.data() };
+                    console.log("AuthManager: Údaje používateľa načítané a aktualizované.");
                 } else {
-                    console.warn("AuthManager: Pre prihláseného používateľa neboli nájdené žiadne dáta profilu.");
+                    console.warn("AuthManager: Údaje používateľa v databáze neexistujú.");
                     window.globalUserProfileData = null;
                 }
                 
-                // ODOSLANIE DÁT S CUSTOM EVENTOM
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+                // Dispečujeme globálnu udalosť, ktorá informuje ostatné komponenty
+                window.dispatchEvent(new Event('globalDataUpdated'));
 
+                // Kontrola autorizácie po načítaní dát
                 if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
                     console.warn("AuthManager: Autorizácia zlyhala alebo prebehlo presmerovanie.");
                 }
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                // Kontrola autorizácie aj pri chybe načítania profilu
+                window.dispatchEvent(new Event('globalDataUpdated'));
                 checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
             });
 
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
             window.globalUserProfileData = null;
-            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
+            window.dispatchEvent(new Event('globalDataUpdated'));
             
             // Kontrola autorizácie stránky po odhlásení
-            if (!checkPageAuthorization(window.globalUserProfileData, window.location.pathname)) {
-                // Prešiel som
-            }
+            checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
         }
 
-        // Uisti sa, že sa listener odhlási, ak sa používateľ odhlási
         window.addEventListener('beforeunload', () => {
             if (unsubscribeUserDoc) {
                 unsubscribeUserDoc();
@@ -125,8 +114,6 @@ const handleAuthState = () => {
 
 // Spustenie inicializácie po načítaní DOM
 window.addEventListener('DOMContentLoaded', async () => {
-    // Inicializácia Firebase
     setupFirebase();
-    // Spustenie logiky pre autentifikáciu (ktorá teraz spúšťa listener)
     handleAuthState();
 });
