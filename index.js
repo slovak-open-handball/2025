@@ -36,8 +36,9 @@ const App = () => {
     const [registrationData, setRegistrationData] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
-    const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
+    const [globalUserProfileData, setGlobalUserProfileData] = React.useState(null);
     const [countdown, setCountdown] = React.useState('');
+    const [isAuthReady, setIsAuthReady] = React.useState(false);
 
     React.useEffect(() => {
         let unsubscribeRegistrationData = () => {};
@@ -77,6 +78,7 @@ const App = () => {
         const handleGlobalDataUpdate = (event) => {
             console.log("App: Prijatá udalosť 'globalDataUpdated', aktualizujem profil a spúšťam načítavanie dát.");
             setGlobalUserProfileData(event.detail);
+            setIsAuthReady(true);
             fetchRegistrationData();
         };
 
@@ -87,6 +89,7 @@ const App = () => {
         // už prebehla pred pripojením nášho poslucháča.
         if (window.isGlobalAuthReady) {
             console.log("App: Firebase Auth je už pripravený, spúšťam načítavanie dát.");
+            setIsAuthReady(true);
             fetchRegistrationData();
         }
 
@@ -130,12 +133,15 @@ const App = () => {
 
     let mainContent;
 
-    if (loading) {
+    if (loading || !isAuthReady) {
         mainContent = React.createElement(LoaderComponent);
     } else if (error) {
         mainContent = React.createElement(ErrorMessage, { message: error });
     } else {
+        const now = Date.now();
         const registrationActive = registrationData && registrationData.registrationEnabled;
+        const regStart = registrationData && registrationData.registrationStartDate ? new Date(registrationData.registrationStartDate).getTime() : null;
+        const regEnd = registrationData && registrationData.registrationEndDate ? new Date(registrationData.registrationEndDate).getTime() : null;
         const categoriesExist = registrationData && registrationData.categories && registrationData.categories.length > 0;
         const userIsLoggedIn = globalUserProfileData !== null;
         
@@ -159,26 +165,65 @@ const App = () => {
             );
         } else {
             // Logika pre odhláseného používateľa
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Pre pokračovanie sa, prosím, prihláste, alebo sa zaregistrujte.'),
-                React.createElement(
+            if (!categoriesExist || !regStart || now < regStart) {
+                mainContent = React.createElement(
                     'div',
-                    { className: 'mt-8 flex justify-center space-x-4' },
+                    { className: 'text-center' },
+                    React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+                    React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registrácia sa začne čoskoro.'),
                     React.createElement(
-                        'a',
-                        { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                        'Prihlásenie'
+                        'div',
+                        { className: 'mt-4' },
+                        React.createElement('p', { className: 'text-2xl text-gray-800 font-bold' }, countdown)
                     ),
-                    registrationActive && React.createElement(
-                        'a',
-                        { href: 'registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                        'Registrácia'
+                    React.createElement(
+                        'div',
+                        { className: 'mt-8 flex justify-center space-x-4' },
+                        React.createElement(
+                            'a',
+                            { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                            'Prihlásenie'
+                        )
                     )
-                )
-            );
+                );
+            } else if (regEnd && now > regEnd) {
+                 mainContent = React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+                    React.createElement('p', { className: 'text-xl text-red-600 font-semibold' }, 'Registrácia je už uzavretá.'),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-8 flex justify-center space-x-4' },
+                        React.createElement(
+                            'a',
+                            { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                            'Prihlásenie'
+                        )
+                    )
+                );
+            } else {
+                mainContent = React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+                    React.createElement('p', { className: 'text-xl text-gray-700' }, 'Pre pokračovanie sa, prosím, prihláste, alebo sa zaregistrujte.'),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-8 flex justify-center space-x-4' },
+                        React.createElement(
+                            'a',
+                            { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                            'Prihlásenie'
+                        ),
+                        registrationActive && categoriesExist && React.createElement(
+                            'a',
+                            { href: 'registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                            'Registrovať sa'
+                        )
+                    )
+                );
+            }
         }
     }
 
