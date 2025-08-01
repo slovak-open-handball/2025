@@ -119,33 +119,39 @@ const App = () => {
         mainContent = React.createElement(LoaderComponent, null);
     } else if (error) {
         mainContent = React.createElement(ErrorMessage, { message: error });
-    } else if (registrationData) {
+    } else { // Removed registrationData check, because main content is now always present
         const now = new Date();
-        const regStart = new Date(registrationData.registrationStart);
-        const regEnd = new Date(registrationData.registrationEnd);
+        const regStart = registrationData ? new Date(registrationData.registrationStart) : null;
+        const regEnd = registrationData ? new Date(registrationData.registrationEnd) : null;
+        const registrationOpen = registrationData && now >= regStart && now <= regEnd;
 
-        if (now < regStart) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia sa ešte nezačala.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, `Registrácia začne o: ${countdown}`)
-            );
-        } else if (now >= regStart && now <= regEnd) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-green-600' }, 'Registrácia je otvorená!'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Môžete sa zaregistrovať na turnaj.')
-            );
-        } else { // now > regEnd
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-red-600' }, 'Registrácia skončila.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registračný proces pre tento rok bol už ukončený.')
-            );
-        }
+        mainContent = React.createElement(
+            'div',
+            { className: 'text-center p-8' },
+            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
+            React.createElement('p', { className: 'text-xl text-gray-700 mb-8' }, 
+                `Vitajte na stránke turnaja Slovak Open Handball. Pre pokračovanie sa prosím prihláste${registrationOpen ? ', alebo sa zaregistrujte.' : ''}` +
+                `${!registrationOpen && registrationData && now > regEnd ? ` Registrácia na turnaj bola ukončená dňa: ${regEnd.toLocaleDateString('sk-SK')}.` : '.'}`
+            ),
+            React.createElement('div', { className: 'flex justify-center space-x-4' },
+                React.createElement(
+                    'a',
+                    {
+                        href: 'login.html',
+                        className: 'bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200'
+                    },
+                    'Prihlásenie'
+                ),
+                registrationOpen && React.createElement(
+                    'a',
+                    {
+                        href: 'logged-in-registration.html',
+                        className: 'bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200'
+                    },
+                    'Registrácia na turnaj'
+                )
+            )
+        );
     }
 
     return React.createElement(
