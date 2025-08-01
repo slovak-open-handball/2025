@@ -43,7 +43,7 @@ const setupCategoriesListener = () => {
         }, (error) => {
             console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
-            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
+            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.", "");
         });
     }
 };
@@ -62,24 +62,22 @@ const startCountdown = (targetDate, messagePrefix) => {
     const updateCountdown = () => {
         const now = new Date().getTime();
         const distance = targetDate.getTime() - now;
-
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        const countdownElement = document.getElementById('countdown-timer');
 
         if (distance < 0) {
             clearInterval(countdownIntervalId);
-            const mainTextElement = document.getElementById('main-page-text');
-            if (mainTextElement) {
-                // Po skončení odpočtu odstránime odpočet zo zobrazenia
-                const originalText = mainTextElement.innerHTML.split('<br>')[0];
-                mainTextElement.innerHTML = originalText;
+            if (countdownElement) {
+                countdownElement.innerHTML = '';
             }
             // Získame najnovšie dáta o kategóriách a aktualizujeme UI
             getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
             return;
         }
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
             ${messagePrefix}
@@ -88,10 +86,9 @@ const startCountdown = (targetDate, messagePrefix) => {
                 ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
             </span>
         `;
-        const mainTextElement = document.getElementById('main-page-text');
-        if (mainTextElement) {
-            const originalText = mainTextElement.innerHTML.split('<br>')[0];
-            mainTextElement.innerHTML = originalText + countdownText;
+        
+        if (countdownElement) {
+            countdownElement.innerHTML = countdownText;
         }
     };
 
@@ -223,11 +220,18 @@ const toggleMainText = (isVisible) => {
 /**
  * Aktualizuje text na domovskej stránke.
  * @param {string} text - Nový text pre element.
+ * @param {string} countdownText - Voliteľný text pre odpočet.
  */
-const updateMainText = (text) => {
+const updateMainText = (text, countdownText = "") => {
     const mainTextElement = document.getElementById('main-page-text');
     if (mainTextElement) {
-        mainTextElement.innerHTML = text; // Používame innerHTML namiesto textContent, aby sme správne zobrazili HTML entity
+        mainTextElement.innerHTML = `${text}<span id="countdown-timer"></span>`;
+        if (countdownText) {
+            const countdownElement = document.getElementById('countdown-timer');
+            if (countdownElement) {
+                countdownElement.innerHTML = countdownText;
+            }
+        }
         console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
     }
 };
