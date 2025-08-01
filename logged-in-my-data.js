@@ -95,12 +95,14 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                 React.createElement('span', { className: 'font-bold' }, 'IČO:'),
                 ` ${billing.ico || billing.companyId || 'N/A'}`
             ),
+            // Zobrazí DIČ, ak existuje
             billing.taxId && React.createElement(
                 'p',
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                 ` ${billing.taxId}`
             ),
+            // Zobrazí IČ DPH, ak existuje
             billing.vatId && React.createElement(
                 'p',
                 { className: 'text-lg' },
@@ -146,26 +148,31 @@ const renderBillingAndAddressInfo = (userProfileData) => {
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
+    // Lokálny stav pre používateľské dáta, ktoré sa načítajú po globálnej autentifikácii
     const [userProfileData, setUserProfileData] = React.useState(null); 
-    const [loading, setLoading] = React.useState(true);
+    const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
     const [error, setError] = React.useState('');
     
+    // Zabezpečíme, že appId je definované (používame globálnu premennú)
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
+    // Funkcia na určenie farby hlavičky na základe roly
     const getHeaderColor = (role) => {
       switch (role) {
         case 'admin':
-          return '#47b3ff';
+          return '#47b3ff'; // admin
         case 'hall':
-          return '#b06835';
+          return '#b06835'; // hall
         case 'user':
-          return '#9333EA';
+          return '#9333EA'; // user
         default:
-          return '#1D4ED8';
+          return '#1D4ED8'; // default
       }
     };
   
+    // Effect pre nastavenie event listenera na globálnu udalosť
     React.useEffect(() => {
+        // Funkcia, ktorá sa zavolá, keď sa dáta aktualizujú
         const handleDataUpdate = (event) => {
             const data = event.detail;
             if (data) {
