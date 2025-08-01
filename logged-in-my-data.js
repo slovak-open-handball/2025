@@ -78,7 +78,7 @@ const getHeaderColor = (role) => {
 };
 
 // Funkcia na vykreslenie fakturačných údajov a adresy
-const renderBillingAndAddressInfo = (userProfileData) => {
+const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     // Teraz kontrolujeme existenciu objektu 'billing' A tiež kľúčových polí pre adresu
     const hasBillingData = userProfileData && userProfileData.billing && Object.keys(userProfileData.billing).length > 0;
     const hasAddressData = userProfileData && userProfileData.street && userProfileData.city && userProfileData.postalCode && userProfileData.country;
@@ -101,7 +101,7 @@ const renderBillingAndAddressInfo = (userProfileData) => {
         { className: 'bg-white rounded-lg shadow-lg mt-8' },
         React.createElement(
             'div',
-            { className: 'p-6 rounded-t-lg text-white font-bold', style: { backgroundColor: '#1D4ED8' } },
+            { className: 'p-6 rounded-t-lg text-white font-bold', style: { backgroundColor: headerColor } }, // Použijeme dynamickú farbu z parametra
             React.createElement(
                 'h2',
                 { className: 'text-2xl' },
@@ -275,7 +275,7 @@ function MyDataApp() {
                 ),
             )
         ),
-        renderBillingAndAddressInfo(userProfileData)
+        renderBillingAndAddressInfo(userProfileData, headerColor)
     );
 }
 
