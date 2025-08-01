@@ -79,11 +79,7 @@ const startCountdown = (targetDate, messagePrefix) => {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const countdownText = `
-            ${messagePrefix}&nbsp;<span class="font-semibold text-lg">
-                ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
-            </span>
-        `;
+        const countdownText = `${messagePrefix} ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
         if (countdownElement) {
             countdownElement.innerHTML = countdownText;
@@ -128,19 +124,28 @@ const updateRegistrationUI = (docSnap) => {
         
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
-            updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
+            updateMainText(
+                "Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.",
+                `<br><span class="text-gray-500 text-sm">Registrácia sa končí ${formatDate(registrationEndDate)}</span>`
+            );
             
             // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate.toDate(), `Registrácia sa končí ${formatDate(registrationEndDate)}`);
+            startCountdown(registrationEndDate.toDate(), `Registrácia sa končí o:`);
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
-            updateMainText(`Registrácia na turnaj bude spustená ${formatDate(registrationStartDate)}.`);
+            updateMainText(
+                "Registrácia na turnaj bude spustená",
+                `<br><span class="text-gray-500 text-sm">${formatDate(registrationStartDate)}</span>`
+            );
             
             // Spustíme odpočet do začiatku registrácie
             startCountdown(registrationStartDate.toDate(), `Registrácia sa začína o:`);
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
-            updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(registrationEndDate)}.`);
+            updateMainText(
+                "Registrácia na turnaj bola ukončená",
+                `<br><span class="text-gray-500 text-sm">${formatDate(registrationEndDate)}</span>`
+            );
         } else {
             toggleRegistrationButton(false);
             updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
@@ -224,13 +229,7 @@ const toggleMainText = (isVisible) => {
 const updateMainText = (text, countdownText = "") => {
     const mainTextElement = document.getElementById('main-page-text');
     if (mainTextElement) {
-        mainTextElement.innerHTML = `${text}<br><span id="countdown-timer"></span>`;
-        if (countdownText) {
-            const countdownElement = document.getElementById('countdown-timer');
-            if (countdownElement) {
-                countdownElement.innerHTML = countdownText;
-            }
-        }
+        mainTextElement.innerHTML = `${text}<br><span id="countdown-timer"></span>${countdownText}`;
         console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
     }
 };
