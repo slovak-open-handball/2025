@@ -45,8 +45,8 @@ const checkPageAuthorization = (userProfile, path) => {
     const adminPages = ['admin-register.html', 'admin-dashboard.html'];
     const hallPages = ['hall-dashboard.html'];
 
-    // Získame názov súboru z cesty
-    let currentPageName = path.split('/').pop();
+    // Získame názov súboru z cesty s lepšou robustnosťou pre cesty s a bez lomky
+    let currentPageName = path.split('/').pop().split('?')[0].split('#')[0];
 
     // Ak je cesta prázdna (napr. pre root '/'), predpokladáme, že ide o index.html
     if (currentPageName === '') {
