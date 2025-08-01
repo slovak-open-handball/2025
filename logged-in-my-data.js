@@ -66,7 +66,7 @@ const formatPhoneNumber = (phoneNumber) => {
 
 // Pomocná funkcia na renderovanie fakturačných údajov a adresy
 const renderBillingAndAddressInfo = (userProfileData) => {
-    if (!userProfileData || !userProfileData.billing) {
+    if (!userProfileData || (!userProfileData.billing && !userProfileData.address)) {
         return null;
     }
 
@@ -80,20 +80,20 @@ const renderBillingAndAddressInfo = (userProfileData) => {
             { className: 'text-2xl font-semibold mb-4 text-gray-800' },
             'Fakturačné údaje'
         ),
-        React.createElement(
+        billing && React.createElement(
             'div',
             { className: 'space-y-2 text-gray-700' },
             React.createElement(
                 'p',
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti/Organizácie:'),
-                ` ${billing.companyName || 'N/A'}`
+                ` ${billing.clubName || billing.companyName || 'N/A'}`
             ),
             React.createElement(
                 'p',
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                ` ${billing.companyId || 'N/A'}`
+                ` ${billing.ico || billing.companyId || 'N/A'}`
             ),
             billing.taxId && React.createElement(
                 'p',
@@ -119,8 +119,8 @@ const renderBillingAndAddressInfo = (userProfileData) => {
             React.createElement(
                 'p',
                 { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Ulica:'),
-                ` ${address.street || 'N/A'}`
+                React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo domu:'),
+                ` ${address.street || 'N/A'} ${address.houseNumber || ''}`
             ),
             React.createElement(
                 'p',
@@ -146,56 +146,58 @@ const renderBillingAndAddressInfo = (userProfileData) => {
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-    // Lokálny stav pre používateľské dáta, ktoré sa načítajú po globálnej autentifikácii
     const [userProfileData, setUserProfileData] = React.useState(null); 
-    const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
+    const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
     
-    // Zabezpečíme, že appId je definované (používame globálnu premennú)
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; 
 
-    // Funkcia na určenie farby hlavičky na základe roly
     const getHeaderColor = (role) => {
       switch (role) {
         case 'admin':
-          return '#47b3ff'; // admin
+          return '#47b3ff';
         case 'hall':
-          return '#b06835'; // hall
+          return '#b06835';
         case 'user':
-          return '#9333EA'; // user
+          return '#9333EA';
         default:
-          return '#1D4ED8'; // default
+          return '#1D4ED8';
       }
     };
   
-    // Effect pre nastavenie event listenera na globálnu udalosť
     React.useEffect(() => {
-        // Funkcia, ktorá sa zavolá, keď sa dáta aktualizujú
         const handleDataUpdate = (event) => {
-            console.log("MyDataApp: Event 'globalDataUpdated' received.", event.detail);
             const data = event.detail;
             if (data) {
-                setUserProfileData(data);
+                // Rekonštruujeme objekt pre konzistentné zobrazenie
+                const processedData = {
+                    ...data,
+                    address: {
+                        street: data.street,
+                        houseNumber: data.houseNumber,
+                        city: data.city,
+                        postalCode: data.postalCode,
+                        country: data.country
+                    },
+                    billing: data.billing || null
+                };
+                setUserProfileData(processedData);
                 setLoading(false);
                 setError('');
             } else {
-                // Ak dáta nie sú dostupné (napr. pri odhlásení)
                 setUserProfileData(null);
                 setLoading(false);
                 setError('Používateľské dáta neboli nájdené.');
             }
         };
 
-        // Pridáme listener
         window.addEventListener('globalDataUpdated', handleDataUpdate);
 
-        // Odstránime listener pri unmountovaní komponentu
         return () => {
             window.removeEventListener('globalDataUpdated', handleDataUpdate);
         };
-    }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí len raz pri načítaní komponentu
+    }, []);
 
-    // Zobrazíme loading stav, ak dáta ešte neboli načítané
     if (loading) {
         return React.createElement(
             'div',
@@ -205,7 +207,6 @@ function MyDataApp() {
         );
     }
 
-    // Zobrazíme chybu, ak nastala
     if (error) {
         return React.createElement(
             'div',
@@ -214,7 +215,6 @@ function MyDataApp() {
         );
     }
 
-    // Zobrazíme dáta, ak sú dostupné
     return React.createElement(
         'div',
         { className: 'container mx-auto p-8 mt-12 bg-gray-50 rounded-lg shadow-lg max-w-4xl' },
@@ -241,7 +241,6 @@ function MyDataApp() {
                 'div',
                 { className: 'space-y-2' },
                 userProfileData.role === 'admin' ? (
-                    // Pre administrátora
                     React.createElement(React.Fragment, null,
                         React.createElement(
                             'p',
@@ -257,7 +256,6 @@ function MyDataApp() {
                         )
                     )
                 ) : (
-                    // Pre bežného používateľa alebo halu
                     React.createElement(React.Fragment, null,
                         React.createElement(
                             'p',
@@ -282,7 +280,6 @@ function MyDataApp() {
             )
         ),
         
-        // Zobrazí fakturačné údaje a adresu, ak existujú
         renderBillingAndAddressInfo(userProfileData),
     );
 }
