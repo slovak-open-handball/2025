@@ -16,9 +16,12 @@ import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/f
 
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-    authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-    projectId: "soh2025-2s0o2h5"
+  apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
+  authDomain: "soh2025-2s0o2h5.firebaseapp.com",
+  projectId: "soh2025-2s0o2h5",
+  storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
+  messagingSenderId: "572988314768",
+  appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
 
 // Pomocná funkcia na inicializáciu Firebase a jej globálne sprístupnenie
