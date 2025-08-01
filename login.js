@@ -320,7 +320,6 @@ function App() {
       React.createElement(
         'div',
         { className: 'flex flex-col items-center justify-center' },
-        React.createElement('img', { src: 'image_12f9ea.png', alt: 'SOH Logo', className: 'h-24 w-auto mb-4' }),
         React.createElement('h2', { className: 'text-3xl font-extrabold text-gray-900 text-center mb-6' }, 'Prihlásenie'),
         React.createElement(
           'form',
