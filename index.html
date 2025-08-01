@@ -61,6 +61,40 @@
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="loader.js"></script>
+    
+    <!-- Nový skript pre načítanie dát po úspešnej autentifikácii -->
+    <script type="module">
+        import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const loadRegistrationData = async () => {
+            if (window.isGlobalAuthReady && window.db) {
+                const docRef = doc(window.db, "settings", "registration");
+                try {
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        console.log("Údaje o registrácii:", docSnap.data());
+                    } else {
+                        console.log("Dokument o registrácii nebol nájdený!");
+                    }
+                } catch (e) {
+                    console.error("Chyba pri načítaní údajov o registrácii:", e);
+                }
+            } else {
+                console.log("Firebase nie je pripravené, čakám na 'authReady' udalosť.");
+            }
+        };
+
+        // Čakáme, kým bude autentifikácia pripravená a potom načítame dáta
+        window.addEventListener('authReady', () => {
+            console.log("Udalosť 'authReady' bola prijatá.");
+            loadRegistrationData();
+        });
+        
+        // Načítanie dát aj pri prvom spustení, ak je už autentifikácia hotová (napr. pri rýchlom načítaní)
+        if (window.isGlobalAuthReady) {
+            loadRegistrationData();
+        }
+    </script>
 
     <!-- Načítanie React a ReactDOM z CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
