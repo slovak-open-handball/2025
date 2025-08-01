@@ -1,7 +1,6 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený tak, aby používal iba React.createElement() syntax.
-// Spravuje načítanie a zobrazenie profilových a fakturačných dát používateľa
-// z databázy Firestore.
+// Tento súbor bol upravený, aby počkal na dáta odoslané globálnou udalosťou z authentication.js.
+// Spravuje zobrazenie profilových a fakturačných dát na základe prijatých dát.
 
 // Definícia pomocných komponentov, ktoré sa používajú v App komponente
 const Loader = () => {
@@ -153,69 +152,34 @@ function MyDataApp() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState('');
 
-    // Zabezpečíme, že appId je definované (používame globálnu premennú)
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-    // Effect pre načítanie údajov z Firestore
+    // Effect pre načítanie údajov z globálnej udalosti
     React.useEffect(() => {
-        const fetchUserProfileData = async () => {
-            console.log("MyDataApp: Začínam načítavať používateľské dáta...");
-            try {
-                // Skontrolujeme, či sú globálne premenné definované
-                if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined') {
-                    console.error("Firebase config alebo auth token nie sú definované.");
-                    setError("Chyba pri inicializácii Firebase. Skontrolujte prosím konfiguráciu.");
-                    setLoading(false);
-                    return;
-                }
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const initialAuthToken = __initial_auth_token;
-                
-                // Inicializácia Firebase
-                const app = firebase.initializeApp(firebaseConfig);
-                const auth = firebase.auth(app);
-                const db = firebase.firestore(app);
-
-                // Prihlásenie s custom tokenom
-                await auth.signInWithCustomToken(initialAuthToken);
-                console.log("MyDataApp: Prihlásenie s custom tokenom úspešné.");
-
-                const userId = auth.currentUser?.uid;
-                if (!userId) {
-                    setError("Používateľ nie je prihlásený.");
-                    setLoading(false);
-                    return;
-                }
-                
-                // Načítanie profilových dát
-                const userDocRef = db.collection('artifacts').doc(appId).collection('users').doc(userId);
-                
-                const unsubscribe = userDocRef.onSnapshot(docSnapshot => {
-                    if (docSnapshot.exists) {
-                        const data = docSnapshot.data();
-                        console.log("MyDataApp: Dáta z Firestore načítané:", data);
-                        setUserProfileData(data);
-                    } else {
-                        console.log("MyDataApp: Dokument s používateľským profilom neexistuje.");
-                        setUserProfileData(null);
-                    }
-                    setLoading(false);
-                }, err => {
-                    console.error("MyDataApp: Chyba pri načítavaní dát z Firestore:", err);
-                    setError("Nepodarilo sa načítať profilové dáta. Skúste to neskôr.");
-                    setLoading(false);
-                });
-
-                return () => unsubscribe();
-
-            } catch (err) {
-                console.error("MyDataApp: Chyba v useEffect bloku:", err);
-                setError("Nastala neočakávaná chyba.");
-                setLoading(false);
-            }
+        // Funkcia na spracovanie udalosti s aktualizovanými dátami
+        const handleDataUpdate = (event) => {
+            console.log("MyDataApp: Prijatá globálna udalosť 'globalDataUpdated'. Aktualizujem stav.");
+            setUserProfileData(event.detail);
+            setLoading(false); // Dáta sú načítané, takže už neloadujeme
         };
 
-        fetchUserProfileData();
+        // Nastavenie listenera na globálnu udalosť
+        window.addEventListener('globalDataUpdated', handleDataUpdate);
+
+        // Počiatočná kontrola, ak už sú dáta dostupné z authentication.js pred pripojením listenera
+        if (window.isGlobalAuthReady) {
+            if (window.globalUserProfileData !== null) {
+                console.log("MyDataApp: Dáta už sú dostupné pri inicializácii. Nastavujem stav.");
+                setUserProfileData(window.globalUserProfileData);
+            } else {
+                console.log("MyDataApp: Autentifikácia dokončená, ale používateľské dáta neexistujú.");
+                // Nastavíme, že používateľ je prihlásený, ale nemá dáta, aby sme prestali zobrazovať loading
+            }
+            setLoading(false);
+        }
+
+        // Funkcia na vyčistenie listenera pri unmount
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleDataUpdate);
+        };
     }, []);
 
     if (loading) {
