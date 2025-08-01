@@ -1,12 +1,11 @@
 // index.js
-// Tento súbor bol upravený tak, aby správne spravoval stav a predchádzal nekonečnému
-// opakovaniu cyklov, ktoré môžu nastať pri nesprávnej interakcii Reactu a globálnych dát.
-// Teraz načítava údaje o registrácii z Firestore databázy.
+// Tento súbor bol upravený tak, aby sa spoliehal na globálne premenné
+// React, ReactDOM a LucideReact, ktoré sú načítané v index.html.
+// To eliminuje potenciálne konflikty pri načítavaní modulov.
 
-// Správne importy modulov priamo z CDN
-import React, { useState, useEffect } from 'https://unpkg.com/react@18/index.js';
-import ReactDOM from 'https://unpkg.com/react-dom@18/index.js';
-import { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } from 'https://unpkg.com/lucide-react@latest/dist/esm/lucide-react.js';
+// Prístup ku globálnym premenným
+const { useState, useEffect } = React;
+const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
 // Pomocné komponenty pre zobrazenie stavov načítania a chýb
 const LoaderComponent = () => {
@@ -123,7 +122,7 @@ const App = () => {
         const now = new Date();
         const regStart = registrationData ? new Date(registrationData.registrationStart) : null;
         const regEnd = registrationData ? new Date(registrationData.registrationEnd) : null;
-        const registrationOpen = registrationData && now >= regStart && now <= regEnd;
+        const registrationOpen = registrationData && regStart && regEnd && now >= regStart && now <= regEnd;
 
         let welcomeText = "Vitajte na stránke turnaja Slovak Open Handball.";
         let secondaryText = "Pre pokračovanie sa prosím prihláste.";
@@ -134,10 +133,8 @@ const App = () => {
         } else if (regStart && now < regStart) {
             secondaryText = `Pre pokračovanie sa prosím prihláste. Registrácia začne o: ${countdown}.`;
         } else if (registrationData && registrationData.isRegistrationOpen) {
-            // Prípad, kedy isRegistrationOpen existuje, ale dátumy sú neplatné
             secondaryText = "Pre pokračovanie sa prosím prihláste, alebo sa zaregistrujte.";
         }
-
 
         mainContent = React.createElement(
             'div',
