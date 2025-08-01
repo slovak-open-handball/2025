@@ -37,20 +37,22 @@ const loadRegistrationData = async () => {
 const loadCategoriesData = async () => {
     // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
-        // Vytvorenie referencie na kolekciu.
-        const collectionRef = collection(window.db, "settings", "categories");
+        // Vytvorenie referencie na dokument, kde sú uložené kategórie.
+        // Predpokladáme, že kategórie sú uložené v dokumente settings/registration.
+        const docRef = doc(window.db, "settings", "registration");
         try {
-            // Pokus o načítanie všetkých dokumentov z kolekcie.
-            const querySnapshot = await getDocs(collectionRef);
-            if (!querySnapshot.empty) {
-                console.log("Dáta kategórií:");
-                querySnapshot.forEach((doc) => {
-                    // Pre každý dokument v kolekcii vypíšeme jeho ID a dáta.
-                    console.log(`ID: ${doc.id}, Dáta:`, doc.data());
-                });
+            // Pokus o načítanie dokumentu.
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.categories && Array.isArray(data.categories)) {
+                    // Ak dokument existuje a obsahuje pole 'categories', vypíšeme ho.
+                    console.log("Dáta kategórií:", data.categories);
+                } else {
+                    console.log("Pole s kategóriami nebolo v dokumente nájdené!");
+                }
             } else {
-                // Ak kolekcia neobsahuje žiadne dokumenty, vypíšeme správu.
-                console.log("Žiadne kategórie neboli nájdené!");
+                console.log("Dokument o registrácii nebol nájdený, nemôžem načítať kategórie!");
             }
         } catch (e) {
             // V prípade chyby pri načítaní vypíšeme detail chyby.
