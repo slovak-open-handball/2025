@@ -2,6 +2,7 @@
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
+// Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -24,7 +25,7 @@ const formatDate = (timestamp) => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
+    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod`;
 };
 
 /**
@@ -186,18 +187,6 @@ const setupRegistrationDataListener = () => {
 };
 
 /**
- * Prepína viditeľnosť tlačidla na prihlásenie.
- * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
- */
-const toggleLoginButton = (isVisible) => {
-    const loginButtonWrapper = document.getElementById('login-button-wrapper');
-    if (loginButtonWrapper) {
-        loginButtonWrapper.style.display = isVisible ? 'block' : 'none';
-        console.log(`Tlačidlo 'Prihlásenie' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
-    }
-};
-
-/**
  * Prepína viditeľnosť tlačidla na registráciu na turnaj.
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
@@ -234,19 +223,42 @@ const updateMainText = (text, countdownText = "") => {
     }
 };
 
+/**
+ * Aktualizuje text a odkaz tlačidla pre prihlásenie na základe stavu autentifikácie.
+ * Ak je používateľ prihlásený, zobrazí "Moja zóna" a presmeruje na príslušnú stránku.
+ * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
+ */
+const updateLoginButton = (isLoggedIn) => {
+    const loginButtonWrapper = document.getElementById('login-button-wrapper');
+    const loginLink = loginButtonWrapper ? loginButtonWrapper.querySelector('a') : null;
+    const loginButton = loginLink ? loginLink.querySelector('button') : null;
+
+    if (loginLink && loginButton) {
+        if (isLoggedIn) {
+            loginLink.href = 'logged-in-my-data.html';
+            loginButton.textContent = 'Moja zóna';
+            loginButtonWrapper.style.display = 'block'; // Zabezpečí, že tlačidlo je viditeľné
+        } else {
+            loginLink.href = 'login.html';
+            loginButton.textContent = 'Prihlásenie';
+            loginButtonWrapper.style.display = 'block'; // Zabezpečí, že tlačidlo je viditeľné
+        }
+    }
+};
+
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    // Po prijatí udalosti zobrazíme tlačidlo na prihlásenie a začneme načítavať dáta o registrácii.
-    // Text a tlačidlo pre registráciu sa budú ovládať až po načítaní dát.
-    toggleLoginButton(true);
+    const isLoggedIn = !!window.globalUserProfileData;
+    updateLoginButton(isLoggedIn);
     setupRegistrationDataListener();
 });
 
-// Volanie funkcií aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
+// Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
-    toggleLoginButton(true);
+    const isLoggedIn = !!window.globalUserProfileData;
+    updateLoginButton(isLoggedIn);
     setupRegistrationDataListener();
 }
