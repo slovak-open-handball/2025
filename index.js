@@ -1,8 +1,9 @@
 // index.js
 // Tento súbor bol upravený tak, aby správne spravoval stav a predchádzal nekonečnému
 // opakovaniu cyklov, ktoré môžu nastať pri nesprávnej interakcii Reactu a globálnych dát.
-// Teraz načítava údaje o registrácii z Firestore databázy.
+// Teraz načítava údaje o registrácii z Firestore databázy a reaguje na globálne zmeny v stave autentifikácie.
 
+// Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
 // Pomocné komponenty pre zobrazenie stavov načítania a chýb
@@ -31,131 +32,147 @@ const ErrorMessage = ({ message }) => {
 };
 
 // Zástupný Header komponent. Skutočný header je načítavaný cez header.js.
+// Vďaka globálnemu listeneru, ktorý sa volá v index.html, sa obsah hlavičky aktualizuje
+// automaticky a tento komponent slúži len ako placeholder.
 const Header = () => null;
 
+// Hlavný komponent aplikácie
 const App = () => {
     const [registrationData, setRegistrationData] = React.useState(null);
+    const [userProfileData, setUserProfileData] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
     const [countdown, setCountdown] = React.useState('');
 
-    // Pre správne fungovanie pri zmene času, ak je užívateľ na stránke
+    // Efekt pre načítanie dát o registrácii z Firestore
     React.useEffect(() => {
-        const timer = setInterval(() => {
-            if (registrationData && Date.now() < registrationData.registrationStart.toMillis()) {
-                const now = new Date();
-                const diff = registrationData.registrationStart.toMillis() - now.getTime();
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-            } else {
-                setCountdown(null);
-            }
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [registrationData]);
-
-    // Načítanie registračných dát z Firestore
-    React.useEffect(() => {
-        const fetchData = () => {
-            // Skontrolujeme, či sú Firebase a Firestore funkcie dostupné
-            if (!window.db || !window.onSnapshot || !window.doc) {
-                console.error("Firebase služby nie sú dostupné.");
-                setLoading(false);
-                setError("Chyba: Firebase knižnice sa nepodarilo načítať.");
-                return;
-            }
-
-            try {
-                // Použijeme globálne dostupné funkcie a appId
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const regDocRef = window.doc(window.db, `artifacts/${appId}/public/settings/registrationSettings`);
-                
-                const unsubscribe = window.onSnapshot(regDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        console.log("Dáta o registrácii načítané:", docSnap.data());
-                        setRegistrationData(docSnap.data());
-                    } else {
-                        console.log("Dokument s registračnými nastaveniami nebol nájdený.");
-                        setRegistrationData({ registrationStart: null, registrationEnd: null });
-                    }
-                    setLoading(false);
-                }, (err) => {
-                    console.error("Chyba pri načítaní registračných nastavení:", err);
-                    setError("Chyba pri načítaní nastavení. Skúste to prosím neskôr.");
-                    setLoading(false);
-                });
-
-                return () => unsubscribe();
-            } catch (err) {
-                console.error("Všeobecná chyba pri načítavaní nastavení:", err);
-                setError("Vyskytla sa neočakávaná chyba.");
-                setLoading(false);
-            }
-        };
-
-        // Spustíme načítanie dát až po tom, čo je pripravená autentifikácia
-        // a máme prístup k window.db.
-        // Listener `globalDataUpdated` z `authentication.js` sa o to postará.
-        const handleGlobalDataUpdate = () => {
-            if (window.db && window.isGlobalAuthReady) {
-                fetchData();
-            }
-        };
-
-        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
-
-        // Počiatočné volanie pre prípad, že event už prebehol pred pripojením listenera
-        if (window.db && window.isGlobalAuthReady) {
-            fetchData();
+        // Kontrolujeme, či je databáza inicializovaná.
+        if (!window.db) {
+            console.error("Firebase Firestore nie je inicializovaný. Skontrolujte authentication.js.");
+            setError("Chyba pri inicializácii databázy.");
+            setLoading(false);
+            return;
         }
 
+        const db = window.db;
+        const registrationDocRef = doc(db, 'artifacts', 'config', 'public', 'data', 'registration');
+
+        const unsubscribe = onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setRegistrationData(data);
+                console.log("index.js: Načítané údaje o registrácii:", data);
+            } else {
+                console.log("index.js: Dokument s registračnými dátami neexistuje. Pravdepodobne ešte nebol vytvorený.");
+                setRegistrationData(null);
+            }
+            setLoading(false);
+        }, (err) => {
+            console.error("index.js: Chyba pri načítaní registračných dát:", err);
+            setError("Chyba pri načítaní dát registrácie z databázy.");
+            setLoading(false);
+        });
+
+        // Cleanup funkcia pre odhlásenie sa z listenera
+        return () => unsubscribe();
+    }, []);
+
+    // Efekt pre aktualizáciu profilových dát používateľa
+    React.useEffect(() => {
+        // Funkcia na aktualizáciu stavu z globálnej premennej
+        const updateUserData = () => {
+            const newUserData = window.globalUserProfileData;
+            setUserProfileData(newUserData);
+            console.log("index.js: Aktualizácia profilu používateľa.", newUserData);
+        };
+
+        // Pridanie listenera pre globálnu udalosť
+        window.addEventListener('globalDataUpdated', updateUserData);
+        
+        // Okamžité nastavenie po načítaní
+        updateUserData();
+
+        // Cleanup listenera pri odmountovaní komponentu
         return () => {
-            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+            window.removeEventListener('globalDataUpdated', updateUserData);
         };
     }, []);
 
+    // Efekt pre odpočet času do začiatku registrácie
+    React.useEffect(() => {
+        let timer = null;
+        if (registrationData && registrationData.registrationStart) {
+            const calculateCountdown = () => {
+                const now = new Date();
+                const regStart = new Date(registrationData.registrationStart.seconds * 1000);
+                const diff = regStart - now;
 
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+                } else {
+                    setCountdown('');
+                }
+            };
+            timer = setInterval(calculateCountdown, 1000);
+        }
+
+        // Cleanup funkcia pre zastavenie časovača
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [registrationData]); // Znova spustíme časovač, ak sa zmenia dáta
+
+    // Podmienené renderovanie
     if (loading) {
-        return React.createElement(LoaderComponent);
+        return React.createElement(LoaderComponent, null);
     }
 
     if (error) {
         return React.createElement(ErrorMessage, { message: error });
     }
-
-    let mainContent;
-    const now = Date.now();
     
-    // Ak registrácia nie je definovaná (dokument neexistuje)
-    if (!registrationData || !registrationData.registrationStart || !registrationData.registrationEnd) {
+    let mainContent;
+    const now = new Date();
+    const regStart = registrationData ? new Date(registrationData.registrationStart.seconds * 1000) : null;
+    const regEnd = registrationData ? new Date(registrationData.registrationEnd.seconds * 1000) : null;
+
+    if (!regStart || !regEnd) {
         mainContent = React.createElement(
             'div',
             { className: 'text-center' },
-            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-gray-800' }, 'Informácie o registrácii nie sú k dispozícii.'),
-            React.createElement('p', { className: 'text-xl text-gray-700' }, 'Prosím, skontrolujte stránku neskôr.')
+            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-gray-800' }, 'Stav registrácie nie je definovaný.'),
+            React.createElement('p', { className: 'text-xl text-gray-700' }, 'Prosím, skontrolujte neskôr.')
         );
     } else {
-        const regStart = registrationData.registrationStart.toMillis();
-        const regEnd = registrationData.registrationEnd.toMillis();
-
         if (now < regStart) {
             mainContent = React.createElement(
                 'div',
                 { className: 'text-center' },
                 React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia sa ešte nezačala.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, countdown ? `Registrácia začne o: ${countdown}` : 'Čakáme na začiatok registrácie.')
+                React.createElement('p', { className: 'text-xl text-gray-700' }, `Registrácia začne o: ${countdown}`)
             );
         } else if (now >= regStart && now <= regEnd) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-green-600' }, 'Registrácia je otvorená!'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Môžete sa zaregistrovať na turnaj.')
-            );
+            if (userProfileData) {
+                // Používateľ je prihlásený a registrácia je otvorená
+                mainContent = React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-green-600' }, 'Registrácia je otvorená!'),
+                    React.createElement('p', { className: 'text-xl text-gray-700' }, `Vitajte, ${userProfileData.firstName}! Môžete sa zaregistrovať na turnaj.`)
+                );
+            } else {
+                // Používateľ nie je prihlásený, ale registrácia je otvorená
+                mainContent = React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-green-600' }, 'Registrácia je otvorená!'),
+                    React.createElement('p', { className: 'text-xl text-gray-700' }, 'Pre registráciu sa prosím prihláste.')
+                );
+            }
         } else { // now > regEnd
             mainContent = React.createElement(
                 'div',
@@ -187,6 +204,5 @@ window.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('root')) {
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(App, null));
-        console.log("index.js: React App vykreslená.");
     }
 });
