@@ -95,15 +95,17 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
-    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu a registračný text.
+    // Ak je používateľ prihlásený, skryjeme všetky registratúra texty a tlačidlá,
+    // a zobrazíme len správu pre prihláseného používateľa.
     if (window.globalUserProfileData) {
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(); // Zavoláme bez parametra, aby sa obsah vymazal
+        updateRegistrationStatusText(''); // Vždy vymaže text o registrácii
         toggleLoggedInMessage(true);
         console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
         return;
     }
 
+    // Ak používateľ nie je prihlásený, skryjeme správu o prihlásení a pokračujeme s logikou registrácie
     toggleLoggedInMessage(false);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
