@@ -65,7 +65,7 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 // Pomocná funkcia na renderovanie fakturačných údajov a adresy
-const renderBillingAndAddressInfo = (userProfileData) => {
+const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     if (!userProfileData || (!userProfileData.billing && !userProfileData.address)) {
         return null;
     }
@@ -77,7 +77,8 @@ const renderBillingAndAddressInfo = (userProfileData) => {
 
     return React.createElement(
         'div',
-        { className: 'bg-white rounded-lg shadow-lg p-6 mt-6 max-w-2xl mx-auto border-t-4 border-purple-500' },
+        // Použitie inline štýlu pre farbu borderu
+        { className: 'bg-white rounded-lg shadow-lg p-6 mt-6 max-w-2xl mx-auto border-t-4', style: { borderColor: headerColor } },
         React.createElement(
             'h2',
             { className: 'text-2xl font-semibold mb-4 text-gray-800' },
@@ -236,6 +237,8 @@ function MyDataApp() {
         );
     };
 
+    const headerColor = getHeaderColor(userProfileData.role);
+
     return React.createElement(
         'div',
         { className: 'container mx-auto p-8 mt-12 bg-gray-50 rounded-lg shadow-lg max-w-4xl' },
@@ -243,7 +246,7 @@ function MyDataApp() {
             'div',
             {
                 className: `p-4 rounded-t-lg text-white text-center`,
-                style: { backgroundColor: getHeaderColor(userProfileData.role) }
+                style: { backgroundColor: headerColor }
             },
             React.createElement(
                 'h1',
@@ -266,7 +269,8 @@ function MyDataApp() {
             )
         ),
         
-        renderBillingAndAddressInfo(userProfileData),
+        // Funkciu renderBillingAndAddressInfo voláme s premennou headerColor
+        renderBillingAndAddressInfo(userProfileData, headerColor),
     );
 }
 
