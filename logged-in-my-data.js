@@ -62,6 +62,26 @@ function MyDataApp() {
     };
   }, []); // Prázdne pole znamená, že efekt sa spustí len raz, pri mountovaní
 
+  // Pomocná funkcia na formátovanie PSČ
+  const formatPostalCode = (code) => {
+    if (!code) return '';
+    return code.replace(/(\d{3})(\d{2})/, '$1 $2');
+  };
+
+  // Pomocná funkcia na formátovanie telefónneho čísla
+  const formatPhoneNumber = (number) => {
+    if (!number) return '';
+    // Predpokladáme, že telefónne číslo je v tvare +XX XXX XXX XXX
+    const parts = number.split(' ');
+    if (parts.length > 1) {
+      const prefix = parts[0];
+      const rest = parts.slice(1).join('');
+      const formattedRest = rest.replace(/(\d{3})/g, '$1 ').trim();
+      return `${prefix} ${formattedRest}`;
+    }
+    return number;
+  };
+
 
   // Funkcia pre renderovanie fakturačných údajov a adresy
   const renderBillingAndAddressInfo = () => {
@@ -87,12 +107,12 @@ function MyDataApp() {
           React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
           ` ${userProfileData.billing.clubName}`
         ),
-        // Zobrazenie adresy vrátane krajiny
+        // Zobrazenie adresy vrátane krajiny a formátovaného PSČ
         userProfileData.street && React.createElement(
             'p',
             { className: 'text-gray-800 text-lg' },
             React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-            ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}, ${userProfileData.country}`
+            ` ${userProfileData.street} ${userProfileData.houseNumber}, ${formatPostalCode(userProfileData.postalCode)} ${userProfileData.city}, ${userProfileData.country}`
         ),
         userProfileData.billing && userProfileData.billing.ico && React.createElement(
           'p',
@@ -205,7 +225,7 @@ function MyDataApp() {
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
-                    ` ${userProfileData.contactPhoneNumber}`
+                    ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
                   ),
               )
           )
