@@ -1,6 +1,6 @@
 // index.js
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
-// po inicializácii Firebase a autentifikácii.
+// a podmienene zobrazil tlačidlo na registráciu na základe existencie kategórií.
 
 import { getDoc, getDocs, doc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -33,26 +33,53 @@ const loadRegistrationData = async () => {
 
 /**
  * Načíta všetky kategórie z Firestore a vypíše ich do konzoly.
+ * Ak neexistujú žiadne kategórie, skryje tlačidlo na registráciu.
  */
 const loadCategoriesData = async () => {
     // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
-        // Vytvorenie referencie na dokument 'categories' pod kolekciou 'settings'.
-        const categoriesDocRef = doc(window.db, "settings", "categories");
+        // Vytvorenie referencie na kolekciu 'categories' pod dokumentom 'settings'.
+        const categoriesCollectionRef = collection(window.db, "settings", "categories");
         try {
-            // Pokus o načítanie dokumentu.
-            const docSnap = await getDoc(categoriesDocRef);
-            if (docSnap.exists()) {
-                // Ak dokument existuje, vypíšeme všetky jeho dáta, ktoré obsahujú kategórie.
-                console.log("Dáta kategórií:", docSnap.data());
+            // Pokus o načítanie všetkých dokumentov z kolekcie.
+            const querySnapshot = await getDocs(categoriesCollectionRef);
+            
+            // Kontrola, či existujú nejaké kategórie.
+            if (!querySnapshot.empty) {
+                console.log("Dáta kategórií:");
+                const categories = [];
+                querySnapshot.forEach((doc) => {
+                    categories.push({ id: doc.id, ...doc.data() });
+                });
+                console.log(categories);
+
+                // Ak existujú kategórie, uistíme sa, že tlačidlo je viditeľné.
+                toggleRegistrationButton(true);
+
             } else {
-                // Ak dokument nebol nájdený, vypíšeme správu.
-                console.log("Dokument s kategóriami nebol nájdený!");
+                // Ak kolekcia neobsahuje žiadne dokumenty, vypíšeme správu a skryjeme tlačidlo.
+                console.log("Žiadne kategórie neboli nájdené!");
+                toggleRegistrationButton(false);
             }
         } catch (e) {
-            // V prípade chyby pri načítaní vypíšeme detail chyby.
+            // V prípade chyby pri načítaní vypíšeme detail chyby a skryjeme tlačidlo pre istotu.
             console.error("Chyba pri načítaní údajov o kategóriách:", e);
+            toggleRegistrationButton(false);
         }
+    }
+};
+
+/**
+ * Prepína viditeľnosť tlačidla na registráciu na turnaj.
+ * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
+ */
+const toggleRegistrationButton = (isVisible) => {
+    const registrationButton = document.getElementById('tournament-registration-button');
+    if (registrationButton) {
+        registrationButton.style.display = isVisible ? 'block' : 'none';
+        console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
+    } else {
+        console.log("Tlačidlo 'Registrácia na turnaj' nebolo nájdené v DOM.");
     }
 };
 
