@@ -1,8 +1,7 @@
 // index.js
-// Tento súbor bol upravený tak, aby správne spravoval stav a predchádzal nekonečnému
-// opakovaniu cyklov, ktoré môžu nastať pri nesprávnej interakcii Reactu a globálnych dát.
+// Tento súbor bol upravený tak, aby fungoval ako stránka s profilom prihláseného používateľa.
+// Načítava globálne dáta používateľa z 'authentication.js' a zobrazuje ich.
 
-// Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
 // Pomocné komponenty pre zobrazenie stavov načítania a chýb
@@ -32,195 +31,199 @@ const ErrorMessage = ({ message }) => {
 
 // Jednoduchý Header komponent definovaný priamo tu.
 const Header = () => {
-    // Použijeme globálne dáta pre zobrazenie odkazov.
-    const userProfile = window.globalUserProfileData;
+    // Toto je zjednodušený zástupný header, pretože skutočný header je načítavaný cez header.js
+    return null;
+};
+
+// Pomocné funkcie, ktoré sú potrebné pre renderovanie dát
+const formatPhoneNumber = (number) => {
+    return number ? number.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3') : '';
+};
+
+const formatAddress = (address) => {
+    if (!address) return '';
+    const { street, city, postalCode, country } = address;
+    return `${street}, ${postalCode} ${city}, ${country}`;
+};
+
+// Funkcia na renderovanie detailov profilu používateľa
+const renderProfileInfo = (userProfileData, headerColor) => {
+    return React.createElement(
+        'div',
+        { className: 'bg-white rounded-lg shadow-md overflow-hidden' },
+        React.createElement(
+            'div',
+            { className: 'p-6 rounded-t-lg text-white font-bold', style: { backgroundColor: headerColor } },
+            React.createElement(
+                'h2',
+                { className: 'text-2xl' },
+                'Môj profil'
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'p-6' },
+            React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg mb-2' },
+                React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg mb-2' },
+                React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                ` ${userProfileData.email}`
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-gray-800 text-lg' },
+                React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
+                ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
+            ),
+        )
+    );
+};
+
+// Funkcia na renderovanie fakturačných a doručovacích údajov
+const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
+    const isBillingAddressSame = userProfileData.isBillingAddressSameAsDelivery;
+    const deliveryAddress = userProfileData.deliveryAddress;
+    const billingAddress = isBillingAddressSame ? userProfileData.deliveryAddress : userProfileData.billingAddress;
 
     return React.createElement(
-        'header',
-        { className: 'bg-white shadow-md rounded-b-lg sticky top-0 z-50' },
+        'div',
+        { className: 'grid md:grid-cols-2 gap-8 mt-8' },
+        // Karta s doručovacími údajmi
         React.createElement(
-            'nav',
-            { className: 'container mx-auto p-4 flex justify-between items-center' },
+            'div',
+            { className: 'bg-white rounded-lg shadow-md overflow-hidden' },
             React.createElement(
                 'div',
-                { className: 'flex items-center space-x-2' },
-                React.createElement('img', { src: 'https://placehold.co/40x40/0A2C49/white?text=SOH', alt: 'Logo SOH 2025', className: 'h-10 w-10 rounded-full' }),
-                React.createElement('a', { href: 'index.html', className: 'text-2xl font-bold text-gray-800' }, 'SOH 2025')
+                { className: 'p-6 rounded-t-lg text-white font-bold', style: { backgroundColor: headerColor } },
+                React.createElement('h2', { className: 'text-2xl' }, 'Doručovacie údaje')
             ),
             React.createElement(
                 'div',
-                { className: 'hidden md:flex space-x-6 items-center' },
-                React.createElement('a', { href: 'index.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Domov'),
-                // Zobrazíme "Registrácia" alebo "Moja zóna" na základe prihlásenia
-                userProfile ? (
-                    React.createElement('a', { href: 'logged-in-my-data.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Moja zóna')
-                ) : (
-                    React.createElement('a', { href: 'registration.html', className: 'text-gray-600 hover:text-gray-900 transition-colors duration-200' }, 'Registrácia')
+                { className: 'p-6' },
+                deliveryAddress && React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    formatAddress(deliveryAddress)
                 ),
-                React.createElement('a', { href: userProfile ? 'logged-in-my-data.html' : 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' }, userProfile ? 'Môj profil' : 'Prihlásenie')
+                !deliveryAddress && React.createElement(
+                    'p',
+                    { className: 'text-gray-500 italic' },
+                    'Žiadne doručovacie údaje neboli zadané.'
+                )
+            )
+        ),
+        // Karta s fakturačnými údajmi
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-lg shadow-md overflow-hidden' },
+            React.createElement(
+                'div',
+                { className: 'p-6 rounded-t-lg text-white font-bold', style: { backgroundColor: headerColor } },
+                React.createElement(
+                    'h2',
+                    { className: 'text-2xl' },
+                    'Fakturačné údaje',
+                    isBillingAddressSame && React.createElement(
+                        'span',
+                        { className: 'text-sm font-normal ml-4 bg-blue-100 text-blue-800 px-2 py-1 rounded-full' },
+                        'Rovnaké ako doručovacie'
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'p-6' },
+                billingAddress && React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    formatAddress(billingAddress)
+                ),
+                !billingAddress && !isBillingAddressSame && React.createElement(
+                    'p',
+                    { className: 'text-gray-500 italic' },
+                    'Žiadne fakturačné údaje neboli zadané.'
+                )
             )
         )
     );
 };
 
-// Hlavný komponent aplikácie
+// Hlavný komponent App
 const App = () => {
-    const [registrationData, setRegistrationData] = React.useState(null);
+    const [userProfileData, setUserProfileData] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState('');
-    const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
-    const [countdown, setCountdown] = React.useState('');
+    const [error, setError] = React.useState(null);
 
-    // Efekt pre načítanie registračných dát a nastavenie listenra
+    // Načítanie globálnych dát pri inicializácii
     React.useEffect(() => {
-        const fetchRegistrationData = () => {
-            if (!window.db) {
-                setError("Firestore nie je inicializovaný. Skontrolujte authentication.js.");
+        const handleGlobalDataUpdate = () => {
+            console.log('index.js: Prijatá udalosť "globalDataUpdated". Aktualizujem dáta.');
+            
+            // Keď sa zmení stav autentifikácie (prihlásenie/odhlásenie)
+            if (window.isGlobalAuthReady) {
                 setLoading(false);
-                return () => {}; // Vrátime prázdnu funkciu pre čistenie
-            }
-
-            const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
-            const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    setRegistrationData(docSnap.data());
+                const data = window.globalUserProfileData;
+                setUserProfileData(data);
+                if (!data) {
+                    setError("Nie ste prihlásený, alebo dáta neboli nájdené.");
                 } else {
-                    console.log("Dokument s registračnými dátami neexistuje.");
-                    setRegistrationData(null);
+                    setError(null);
                 }
-                setLoading(false);
-            }, (err) => {
-                console.error("Chyba pri načítaní registračných dát:", err);
-                setError("Chyba pri načítaní registračných dát. Skúste to neskôr.");
-                setLoading(false);
-            });
-
-            // Čistiaca funkcia pre listener
-            return () => unsubscribe();
+            } else {
+                 // Ak ešte nie je autentifikácia pripravená, zobrazíme loader
+                 setLoading(true);
+            }
         };
 
-        const unsubscribe = fetchRegistrationData();
-
-        // Uistíme sa, že po zmenách globálnych dát sa aktualizuje aj lokálny stav
-        const handleGlobalDataUpdate = (event) => {
-            setGlobalUserProfileData(window.globalUserProfileData);
-        };
+        // Pridáme event listener pre globálnu udalosť
         window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
-        return () => {
-            unsubscribe();
-            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-        };
-    }, []); // Prázdne pole závislostí zabezpečí, že sa efekt spustí len raz
-
-    // Efekt pre odpočítavanie času
-    React.useEffect(() => {
-        let timer = null;
-        if (registrationData && registrationData.registrationStart) {
-            const regStart = registrationData.registrationStart.toMillis();
-            timer = setInterval(() => {
-                const now = Date.now();
-                const diff = regStart - now;
-                if (diff > 0) {
-                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                    setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-                } else {
-                    setCountdown('Registrácia začala!');
-                    clearInterval(timer);
-                }
-            }, 1000);
+        // Počiatočná kontrola stavu, ak už sú dáta dostupné
+        if (window.isGlobalAuthReady) {
+             handleGlobalDataUpdate();
         }
 
-        // Čistiaca funkcia pre timer
-        return () => clearInterval(timer);
-    }, [registrationData]); // Tento efekt sa spustí len pri zmene registrationData
+        // Clean-up funkcia pri odpojení komponentu
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        };
+    }, []);
 
-    // Vykresľovanie na základe stavu aplikácie
-    if (loading) {
-        return React.createElement(LoaderComponent, null);
-    }
-
-    if (error) {
-        return React.createElement(ErrorMessage, { message: error });
-    }
-
-    // Získanie dát z registrationData
-    const now = Date.now();
-    const regStart = registrationData?.registrationStart?.toMillis();
-    const regEnd = registrationData?.registrationEnd?.toMillis();
-    const registrationActive = regStart && regEnd && now >= regStart && now <= regEnd;
-    const categoriesExist = registrationData?.categories && registrationData.categories.length > 0;
+    // Definovanie farby na základe stavu
+    const headerColor = userProfileData ? '#3A8D41' : '#F56565';
 
     let mainContent;
 
-    if (!categoriesExist || !regStart || !regEnd) {
-        mainContent = React.createElement(
-            'div',
-            { className: 'text-center' },
-            React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
-            React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registračné dáta nie sú k dispozícii. Skúste to, prosím, neskôr.')
-        );
+    if (loading) {
+        mainContent = React.createElement(LoaderComponent, null);
+    } else if (error) {
+        mainContent = React.createElement(ErrorMessage, { message: error });
     } else {
-        if (registrationActive) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia je otvorená!'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registrácia pre Slovak Open Handball 2025 je už spustená.'),
-                React.createElement(
-                    'div',
-                    { className: 'mt-8 flex justify-center space-x-4' },
-                    React.createElement(
-                        'a',
-                        { href: 'registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                        'Registrovať sa'
-                    ),
-                    React.createElement(
-                        'a',
-                        { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
-                        'Prihlásenie'
-                    )
-                )
-            );
-        } else if (now < regStart) {
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia sa ešte nezačala.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, `Registrácia začne o: ${countdown}`)
-            );
-        } else { // now > regEnd
-            mainContent = React.createElement(
-                'div',
-                { className: 'text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Registrácia skončila.'),
-                React.createElement('p', { className: 'text-xl text-gray-700' }, 'Registračný proces pre tento rok bol už ukončený.')
-            );
-        }
+        mainContent = React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(renderProfileInfo, { userProfileData, headerColor }),
+            React.createElement(renderBillingAndAddressInfo, { userProfileData, headerColor })
+        );
     }
 
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(Header, null),
+        React.createElement(Header, null), // Zástupný komponent
         React.createElement(
             'main',
-            { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl flex-grow flex items-center justify-center' },
+            { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl flex-grow' },
             mainContent
         )
     );
 };
 
-
 // Export pre možnosť načítania v HTML
 window.App = App;
-
-// Vykreslí aplikáciu až po načítaní DOM a skryje loader
-window.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('root')) {
-        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
-    }
-});
