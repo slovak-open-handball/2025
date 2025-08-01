@@ -64,6 +64,14 @@ const formatPhoneNumber = (phoneNumber) => {
     return phoneNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
 };
 
+// Nová funkcia na formátovanie PSČ na "xxx xx"
+const formatPostalCode = (postalCode) => {
+    if (!postalCode || postalCode.length !== 5) {
+        return postalCode || '-';
+    }
+    return `${postalCode.substring(0, 3)} ${postalCode.substring(3, 5)}`;
+};
+
 // Pomocná funkcia na renderovanie fakturačných údajov a adresy
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     if (!userProfileData || (!userProfileData.billing && !userProfileData.address)) {
@@ -72,8 +80,8 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
 
     const { billing, address } = userProfileData;
 
-    // Vytvoríme formátovanú adresu
-    const formattedAddress = address ? `${address.street || ''} ${address.houseNumber || ''}, ${address.postalCode || ''} ${address.city || ''}, ${address.country || ''}`.trim() : null;
+    // Vytvoríme formátovanú adresu s formátovaným PSČ
+    const formattedAddress = address ? `${address.street || ''} ${address.houseNumber || ''}, ${formatPostalCode(address.postalCode)} ${address.city || ''}, ${address.country || ''}`.trim() : null;
 
     return React.createElement(
         'div',
