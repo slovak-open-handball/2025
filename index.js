@@ -1,158 +1,204 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// index.js
+// Tento súbor bol upravený tak, aby bol plne samostatný a riešil potenciálne problémy
+// s chybou "Minified React error #130" tým, že všetky komponenty definuje priamo v sebe.
 
-// V tomto prostredí sa nebudú používať ikony z 'lucide-react'.
-// Namiesto toho použijeme inline SVG pre spoľahlivé zobrazenie.
-
-// Komponent Header
-const Header = () => {
-    // Definícia ikon vo forme SVG reťazca
-    const menuIcon = (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-            <line x1="4" x2="20" y1="12" y2="12" />
-            <line x1="4" x2="20" y1="6" y2="6" />
-            <line x1="4" x2="20" y1="18" y2="18" />
-        </svg>
-    );
-
-    return (
-        <header className="bg-white shadow-md rounded-b-lg sticky top-0 z-50">
-            <nav className="container mx-auto p-4 flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                    <img src="https://placehold.co/40x40/0A2C49/white?text=SOH" alt="Logo SOH 2025" className="h-10 w-10 rounded-full" />
-                    <a href="index.html" className="text-2xl font-bold text-gray-800">SOH 2025</a>
-                </div>
-                <div className="hidden md:flex space-x-6 items-center">
-                    <a href="index.html" className="text-gray-600 hover:text-gray-900 transition-colors duration-200">Domov</a>
-                    {/* ... ďalšie navigačné odkazy */}
-                </div>
-                <div className="md:hidden">
-                    <button className="text-gray-600 hover:text-gray-900">
-                        {menuIcon}
-                    </button>
-                </div>
-            </nav>
-        </header>
+// Pomocné komponenty pre zobrazenie stavov načítania a chýb
+const Loader = () => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
+        )
     );
 };
 
-// Hlavný komponent stránky
+const ErrorMessage = ({ message }) => {
+    return React.createElement(
+        'div',
+        { className: 'flex justify-center items-center h-screen' },
+        React.createElement(
+            'div',
+            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
+            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
+            React.createElement('p', null, message)
+        )
+    );
+};
+
+// Jednoduchý Header komponent definovaný priamo tu
+const Header = () => {
+    // Vytvoríme jednoduché odkazy, aby sme sa vyhli závislosti na externých súboroch
+    // Odkazy a ich viditeľnosť budú neskôr spravované na základe stavu používateľa
+    return React.createElement(
+        'header',
+        { className: 'w-full text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center transition-colors duration-300 bg-blue-800' },
+        React.createElement(
+            'div',
+            { className: 'flex items-center space-x-6' },
+            React.createElement(
+                'a',
+                { id: 'home-link', href: 'index.html', className: 'text-lg font-semibold hover:text-blue-200 transition-colors duration-200' },
+                'Domov'
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex items-center space-x-6' },
+            React.createElement(
+                'a',
+                { id: 'auth-link', href: 'login.html', className: 'text-lg font-semibold hover:text-blue-200 transition-colors duration-200' },
+                'Prihlásenie'
+            )
+        )
+    );
+};
+
+
 function App() {
-    const [registrationData, setRegistrationData] = React.useState(null);
+    // Lokálny stav aplikácie
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(null);
+    const [registrationData, setRegistrationData] = React.useState(null);
+    const [countdown, setCountdown] = React.useState('');
+    const [isGlobalAuthReady, setIsGlobalAuthReady] = React.useState(false);
 
+    // Effect pre načítanie údajov z Firestore
     React.useEffect(() => {
-        // Inicializácia Firebase a prihlásenie
-        const initFirebase = async () => {
+        const fetchRegistrationData = async () => {
+            console.log("App: Začínam načítavať registračné dáta...");
             try {
-                const firebaseConfig = JSON.parse(window.__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                window.db = db; // Nastavenie globálnej premennej
-
-                if (typeof window.__initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+                // Skontrolujeme, či sú globálne premenné definované
+                if (typeof __firebase_config === 'undefined' || typeof __initial_auth_token === 'undefined') {
+                    console.error("Firebase config alebo auth token nie sú definované.");
+                    setError("Chyba pri inicializácii Firebase. Skontrolujte prosím konfiguráciu.");
+                    setLoading(false);
+                    return;
                 }
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const initialAuthToken = __initial_auth_token;
 
-                // Listener pre zmeny stavu registračných dát
-                const registrationDocRef = doc(db, "artifacts", window.__app_id, "public", "data", "registration");
-                onSnapshot(registrationDocRef, (doc) => {
-                    if (doc.exists()) {
-                        setRegistrationData(doc.data());
+                // Inicializácia Firebase
+                const app = firebase.initializeApp(firebaseConfig);
+                const auth = firebase.auth(app);
+                const db = firebase.firestore(app);
+
+                // Prihlásenie s custom tokenom
+                await auth.signInWithCustomToken(initialAuthToken);
+                console.log("App: Prihlásenie s custom tokenom úspešné.");
+                
+                // Načítanie globálnych dát
+                const globalDataRef = db.collection('artifacts').doc('soh2025-app');
+                
+                const unsubscribe = globalDataRef.onSnapshot(docSnapshot => {
+                    if (docSnapshot.exists) {
+                        const data = docSnapshot.data();
+                        console.log("App: Dáta z Firestore načítané:", data);
+                        setRegistrationData(data);
                     } else {
-                        setError("Registračné dáta neboli nájdené.");
+                        console.log("App: Dokument s globálnymi dátami neexistuje.");
+                        setRegistrationData(null);
                     }
                     setLoading(false);
-                }, (err) => {
-                    console.error("Chyba pri načítaní registračných dát:", err);
-                    setError("Nepodarilo sa načítať registračné dáta.");
+                }, err => {
+                    console.error("App: Chyba pri načítavaní dát z Firestore:", err);
+                    setError("Nepodarilo sa načítať registračné dáta. Skúste to neskôr.");
                     setLoading(false);
                 });
 
+                return () => unsubscribe();
+
             } catch (err) {
-                console.error("Chyba pri inicializácii Firebase alebo prihlásení:", err);
-                setError("Chyba pri inicializácii aplikácie.");
+                console.error("App: Chyba v useEffect bloku:", err);
+                setError("Nastala neočakávaná chyba.");
                 setLoading(false);
             }
         };
 
-        if (typeof window.__firebase_config !== 'undefined' && window.__firebase_config) {
-            initFirebase();
-        } else {
-            console.warn("Firebase konfigurácia nie je dostupná. Dáta sa nenačítajú.");
-            setError("Firebase konfigurácia nie je dostupná.");
-            setLoading(false);
-        }
-
+        fetchRegistrationData();
     }, []);
 
-    const categoriesExist = registrationData && registrationData.categories && registrationData.categories.length > 0;
-    const registrationStartDate = registrationData ? registrationData.start_date : null;
-    const registrationEndDate = registrationData ? registrationData.end_date : null;
-    const isRegistrationOpen = registrationStartDate && registrationEndDate && (Date.now() >= new Date(registrationStartDate).getTime()) && (Date.now() <= new Date(registrationEndDate).getTime());
-    
-    // Nový stav a efekt pre odpočítavanie
-    const [countdown, setCountdown] = React.useState('');
+    // Effect pre odpočet času
     React.useEffect(() => {
-        if (!registrationStartDate || !registrationEndDate) return;
+        if (!registrationData || !registrationData.registrationStartDate) {
+            return;
+        }
 
+        const registrationStartDate = new Date(registrationData.registrationStartDate);
         const interval = setInterval(() => {
-            const now = new Date().getTime();
-            const regStart = new Date(registrationStartDate).getTime();
-            const regEnd = new Date(registrationEndDate).getTime();
+            const now = new Date();
+            const distance = registrationStartDate - now;
 
-            if (now < regStart) {
-                const distance = regStart - now;
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-            } else {
-                setCountdown('');
+            if (distance < 0) {
                 clearInterval(interval);
+                setCountdown('Registrácia je otvorená!');
+                return;
             }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [registrationStartDate, registrationEndDate]);
+    }, [registrationData]);
 
+    const registrationActive = registrationData && new Date() >= new Date(registrationData.registrationStartDate) && new Date() < new Date(registrationData.registrationEndDate);
+    const categoriesExist = registrationData && registrationData.categories && registrationData.categories.length > 0;
 
     if (loading) {
-        // Používame globálne definovaný komponent Loader
-        return React.createElement(window.Loader, null);
+        return React.createElement(Loader, null);
     }
-
+    
     if (error) {
-        return React.createElement(
-            'div',
-            { className: 'text-center p-8 text-red-500' },
-            React.createElement('p', null, error)
-        );
+        return React.createElement(ErrorMessage, { message: error });
     }
 
     return (
         React.createElement('div', { className: 'bg-gray-100 min-h-screen' },
             React.createElement(Header, null),
-            React.createElement('main', { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl text-center' },
-                React.createElement('h1', { className: 'text-4xl font-bold mb-4 text-blue-800' }, 'Slovak Open Handball 2025'),
-                React.createElement('div', { className: 'mt-8' },
-                    isRegistrationOpen && categoriesExist ? (
-                        React.createElement('div', null,
-                            React.createElement('p', { className: 'text-xl text-green-600 font-semibold mb-4' }, 'Registrácia je otvorená!'),
-                            React.createElement('a', { href: 'logged-in-registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200' }, 'Prejsť na registráciu')
-                        )
-                    ) : (
-                        React.createElement('div', null,
-                            React.createElement('p', { className: 'text-xl text-gray-700 mb-4' }, 'Pre pokračovanie sa, prosím, prihláste.'),
-                            React.createElement('div', { className: 'flex justify-center space-x-4' },
-                                React.createElement('a', { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' }, 'Prihlásenie'),
-                                React.createElement('a', { href: 'registration.html', className: 'bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' }, 'Registrácia')
+            React.createElement(
+                'main',
+                { className: 'container mx-auto p-8 mt-12 bg-white rounded-lg shadow-lg max-w-4xl text-center' },
+                React.createElement(
+                    'h1',
+                    { className: 'text-4xl font-bold mb-4 text-blue-800' },
+                    'Slovak Open Handball 2025'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-center items-center mt-8' },
+                    React.createElement(
+                        'div',
+                        { className: 'w-full' },
+                        React.createElement('p', { className: 'text-xl text-gray-700' }, 'Pre pokračovanie sa, prosím, prihláste, alebo sa zaregistrujte.'),
+                        React.createElement('div', { className: 'mt-6' },
+                            registrationActive && categoriesExist ? (
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex justify-center space-x-4' },
+                                    React.createElement(
+                                        'a',
+                                        { href: 'logged-in-registration.html', className: 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                                        'Registrovať sa'
+                                    ),
+                                    React.createElement(
+                                        'a',
+                                        { href: 'login.html', className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200' },
+                                        'Prihlásenie'
+                                    )
+                                )
+                            ) : (
+                                React.createElement(
+                                    'div',
+                                    { className: 'text-center' },
+                                    React.createElement('p', { className: 'text-xl text-red-600 font-semibold' }, 'Registrácia sa ešte nezačala.'),
+                                    React.createElement('p', { className: 'text-md text-gray-500 mt-2' }, `Registrácia začne o: ${countdown}`)
+                                )
                             )
                         )
                     )
@@ -162,4 +208,5 @@ function App() {
     );
 }
 
-export default App;
+// Export pre možnosť načítania v HTML
+window.App = App;
