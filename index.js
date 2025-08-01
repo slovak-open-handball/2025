@@ -220,8 +220,8 @@ const toggleMainText = (isVisible) => {
  * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
  */
 const updateLoginButton = (isLoggedIn) => {
-    const loginButtonWrapper = document.getElementById('login-button-wrapper');
-    const loginLink = loginButtonWrapper ? loginButtonWrapper.querySelector('a') : null;
+    // V HTML je ID "login-button-wrapper" priamo na <a> tagu, takže ho nájdeme priamo.
+    const loginLink = document.getElementById('login-button-wrapper');
     const loginButton = loginLink ? loginLink.querySelector('button') : null;
 
     if (loginLink && loginButton) {
@@ -232,8 +232,11 @@ const updateLoginButton = (isLoggedIn) => {
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
         }
-        // Vždy zobraziť tlačidlo, bez ohľadu na stav prihlásenia
-        loginButtonWrapper.style.display = 'block'; 
+        // Uistíme sa, že je tlačidlo viditeľné, ak by ho niečo iné skrylo.
+        loginLink.style.display = 'inline-block';
+        console.log(`Tlačidlo pre prihlásenie bolo aktualizované a zobrazené.`);
+    } else {
+        console.warn("Elementy pre tlačidlo prihlásenia neboli nájdené.");
     }
 };
 
