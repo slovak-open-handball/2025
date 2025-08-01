@@ -95,9 +95,9 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
 
 // Main React component for the logged-in-my-data.html page
 function MyDataApp() {
-    // Lokálny stav pre používateľské údaje, ktoré sa načítajú po globálnej autentifikácii
+    // Lokálny stav pre používateľské dáta, ktoré sa načítajú po globálnej autentifikácii
     const [userProfileData, setUserProfileData] = React.useState(null);
-    const [loading, setLoading] = React.useState(true); // Loading stav pre údaje
+    const [loading, setLoading] = React.useState(true); // Loading stav pre dáta
     const [error, setError] = React.useState('');
     
     // Zabezpečíme, že appId je definované (používame globálnu premennú)
@@ -119,7 +119,7 @@ function MyDataApp() {
   
     // Effect pre nastavenie event listenera na globálnu udalosť
     React.useEffect(() => {
-        // Funkcia, ktorá sa zavolá, keď sa údaje aktualizujú
+        // Funkcia, ktorá sa zavolá, keď sa dáta aktualizujú
         const handleDataUpdate = (event) => {
             const data = event.detail;
             if (data) {
@@ -138,9 +138,9 @@ function MyDataApp() {
                 setUserProfileData(processedData);
                 setError('');
             } else {
-                console.error("MyDataApp: Používateľské údaje neboli nájdené.");
+                console.error("MyDataApp: Používateľské dáta neboli nájdené.");
                 setUserProfileData(null);
-                setError('Používateľské údaje neboli nájdené.');
+                setError('Používateľské dáta neboli nájdené.');
             }
             // loading sa vždy vypne, aby sa predišlo nekonečnému načítavaniu
             setLoading(false);
@@ -153,22 +153,9 @@ function MyDataApp() {
         };
     }, []);
 
-    // Loader komponent so špecifickými štýlmi
-    const Loader = () => React.createElement(
-        'div',
-        { className: 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)]' },
-        React.createElement(
-            'div',
-            {
-                // Zmenené triedy pre lepšiu viditeľnosť rotujúcej časti a menšiu hrúbku
-                className: 'ease-linear rounded-full border-4 border-gray-200 border-t-4 border-t-blue-500 h-12 w-12 mb-4 animate-spin'
-            }
-        ),
-        React.createElement('p', { className: 'text-gray-600' }, 'Načítavam údaje...')
-    );
-
     if (loading) {
-        return React.createElement(Loader, null);
+        // Používame globálne definovaný komponent Loader
+        return React.createElement(window.Loader, null);
     }
 
     if (error) {
