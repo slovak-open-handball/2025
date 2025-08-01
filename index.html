@@ -14,13 +14,16 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
     <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia -->
-    <div id="root"></div>
+    <div id="root" class="flex-grow flex items-center justify-center"></div>
+
+    <!-- Globálny element pre notifikácie -->
+    <div id="global-notification"></div>
 
     <!-- Načítanie hlavných JavaScript súborov. -->
     <script type="module" src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -29,7 +32,39 @@
     
     <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script type="module" src="authentication.js"></script>
+    <script type="module" src="loader.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="index.js"></script>
+
+    <!--
+    Logika pre načítanie hlavičky a následné spustenie React aplikácie.
+    Zabezpečuje, že sa React aplikácia vykreslí až po načítaní všetkých potrebných modulov.
+    -->
+    <script type="module">
+        import { loadHeader } from './header.js';
+        
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
+            if (typeof loadHeader !== 'undefined') {
+                await loadHeader();
+            }
+
+            // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            if (typeof App === 'undefined') {
+                console.error("Chyba: Komponent App nie je definovaný. Skontrolujte index.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+            
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App, null));
+            console.log("index.html: React App vykreslená.");
+        });
+    </script>
 </body>
 </html>
