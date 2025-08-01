@@ -81,19 +81,20 @@ const updateHeaderLinks = () => {
     
     // Odstránenie všetkých tried farieb pred nastavením novej
     if (header) {
-        header.classList.remove('bg-blue-700', 'bg-[#9333EA]', 'bg-[#1D4ED8]', 'bg-[#3B82F6]');
+        header.classList.remove('bg-[#9333EA]', 'bg-[#1D4ED8]', 'bg-[#3B82F6]', 'bg-[#b06835]');
 
         // Farba hlavičky sa zmení na základe typu používateľa
         if (user && userProfileData) {
             if (userProfileData.type === 'user') {
-                header.classList.add('bg-[#9333EA]'); // Fialová pre používateľa
+                header.classList.add('bg-[#9333EA]'); // Tmavá fialová pre používateľa
             } else if (userProfileData.type === 'admin') {
-                header.classList.add('bg-[#3B82F6]'); // Modrá pre admina
-            } else {
-                header.classList.add('bg-blue-700'); // Predvolená farba
+                header.classList.add('bg-[#1D4ED8]'); // Tmavá modrá pre admina
+            } else if (userProfileData.type === 'hall') {
+                 header.classList.add('bg-[#b06835]'); // Oranžová farba pre halu
             }
         } else {
-            header.classList.add('bg-blue-700'); // Predvolená farba pre neprihlásených
+            // Ak nie je prihlásený, nastavíme farbu hlavičky na #3B82F6
+            header.classList.add('bg-[#3B82F6]');
         }
     }
 
