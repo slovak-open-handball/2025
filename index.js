@@ -1,6 +1,6 @@
 // index.js
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
-// a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
+// a podmienečne zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 // Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
@@ -14,7 +14,7 @@ let timerId = null; // ID pre časovač, aby sme ho mohli zrušiť
 let countdownIntervalId = null; // ID pre interval odpočtu
 
 /**
- * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod".
+ * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod.".
  * Používa nezalomiteľné medzery (&nbsp;), aby sa zabránilo zalomeniu riadka v dátume.
  * @param {import('firebase/firestore').Timestamp} timestamp - Objekt Timestamp z Firestore.
  * @returns {string} Formátovaný dátum a čas.
@@ -96,7 +96,7 @@ const startCountdown = (targetDate) => {
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60)) / (1000 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)); // Opravený výpočet minút
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
