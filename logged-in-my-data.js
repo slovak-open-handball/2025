@@ -86,7 +86,7 @@ const renderBillingAndAddressInfo = (userProfileData) => {
             React.createElement(
                 'p',
                 { className: 'text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti/Organizácie:'),
+                React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
                 ` ${billing.clubName || billing.companyName || '-'}`
             ),
             React.createElement(
@@ -238,12 +238,6 @@ function MyDataApp() {
         return React.createElement(
             React.Fragment,
             null,
-            React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Používateľské ID:'),
-                ` ${data.id || '-'}`
-            ),
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
