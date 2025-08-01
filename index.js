@@ -4,8 +4,7 @@
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 // Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
-// Predvolene je tlačidlo 'Registrácia na turnaj' skryté.
-// Pridaná logika na skrytie a zobrazenie tlačidla "Prihlásenie"/"Moja zóna".
+// Predvolene sú tlačidlá 'Prihlásenie' a 'Registrácia na turnaj' skryté.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -121,6 +120,13 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
+    // Zabezpečíme, že docSnap je platný objekt predtým, než k nemu pristupujeme.
+    if (!docSnap) {
+        console.warn("Chyba: Očakávaný objekt docSnap je null alebo undefined.");
+        toggleRegistrationButton(false);
+        return;
+    }
+    
     // Ak je používateľ prihlásený, skryjeme všetky registratúra texty a tlačidlá,
     // a zobrazíme len správu pre prihláseného používateľa.
     if (window.globalUserProfileData) {
@@ -304,8 +310,9 @@ const updateLoginButton = (isLoggedIn) => {
     }
 };
 
-// Predvolene skryjeme tlačidlo na registráciu na turnaj na začiatku.
+// Predvolene skryjeme tlačidlá na začiatku, tento kód je pre istotu.
 toggleRegistrationButton(false);
+updateLoginButton(false);
 
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
@@ -313,8 +320,8 @@ window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
-    // Vďaka tejto úprave sa UI aktualizuje po načítaní globálnych dát
-    updateRegistrationUI(null);
+    // Spustíme listener pre registračné dáta, ktorý sa postará o celú logiku zobrazenia
+    // registračného UI.
     setupRegistrationDataListener();
 });
 
