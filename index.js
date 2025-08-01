@@ -8,7 +8,8 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/fireb
 window.registrationDates = null;
 
 /**
- * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd.mm.yyyy o hh:mm".
+ * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm".
+ * Používa nezalomiteľné medzery (&nbsp;), aby sa zabránilo zalomeniu riadka v dátume.
  * @param {import('firebase/firestore').Timestamp} timestamp - Objekt Timestamp z Firestore.
  * @returns {string} Formátovaný dátum a čas.
  */
@@ -20,7 +21,7 @@ const formatDate = (timestamp) => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `dňa ${day}.${month}.${year} o ${hours}:${minutes}`;
+    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}`;
 };
 
 /**
@@ -148,7 +149,7 @@ const toggleMainText = (isVisible) => {
 const updateMainText = (text) => {
     const mainTextElement = document.getElementById('main-page-text');
     if (mainTextElement) {
-        mainTextElement.textContent = text;
+        mainTextElement.innerHTML = text; // Používame innerHTML namiesto textContent, aby sme správne zobrazili HTML entity
         console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
     }
 };
