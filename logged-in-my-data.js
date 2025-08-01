@@ -172,43 +172,51 @@ function MyDataApp() {
           React.createElement(
             'div',
             { className: 'space-y-2' },
-            // Zlúčené meno a priezvisko s novým popisom
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-              ` ${userProfileData.firstName} ${userProfileData.lastName}`
-            ),
-            // Email s novým popisom
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
-              ` ${userProfileData.email}`
-            ),
-            // Telefónne číslo s novým popisom
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
-              ` ${userProfileData.contactPhoneNumber}`
-            ),
+            // Podmienene zobrazenie popisov pre admina a ostatných
+            userProfileData.role === 'admin' ? (
+                // Pre administrátora
+                React.createElement(React.Fragment, null,
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-800 text-lg' },
+                      React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                      ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                    ),
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-800 text-lg' },
+                      React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                      ` ${userProfileData.email}`
+                    )
+                )
+            ) : (
+                // Pre bežného používateľa
+                React.createElement(React.Fragment, null,
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-800 text-lg' },
+                      React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
+                      ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                    ),
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-800 text-lg' },
+                      React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
+                      ` ${userProfileData.email}`
+                    ),
+                    React.createElement(
+                      'p',
+                      { className: 'text-gray-800 text-lg' },
+                      React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
+                      ` ${userProfileData.contactPhoneNumber}`
+                    ),
+                )
+            )
           )
         ),
         
         // Zobrazí fakturačné údaje a adresu, ak existujú
         renderBillingAndAddressInfo(userProfileData),
-        
-        // Zobrazenie unikátneho ID
-        React.createElement(
-          'div',
-          { className: 'mt-8 text-center' },
-          React.createElement(
-            'p',
-            { className: 'text-sm text-gray-500' },
-            `Vaše unikátne ID používateľa: ${userProfileData.id}`
-          )
-        )
       )
     )
   );
