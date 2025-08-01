@@ -34,107 +34,37 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px; /* Obmedzenie šírky modálneho okna */
-            width: 90%; /* Responzívna šírka */
-            text-align: left; /* Zabezpečí, že text v modale bude zarovnaný doľava */
+        }
+        .modal-content-sm {
+            max-width: 400px;
         }
     </style>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <!-- reCAPTCHA v3 -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
-
-    <!-- Kľúčová ZMENA: Inicializácia Firebase aplikácie tu, pred akýmikoľvek inými skriptami, ktoré ju používajú -->
-    <script>
-        const appId = '1:572988314768:web:781e27eb035179fe34b415';
-        const firebaseConfig = {
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        };
-        const initialAuthToken = null; // Stále globálne definované
-
-        try {
-            // Inicializovať predvolenú Firebase aplikáciu len raz
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-                console.log("login.html: Firebase App '[DEFAULT]' inicializovaná v head.");
-            } else {
-                console.log("login.html: Firebase App '[DEFAULT]' už existuje.");
-            }
-        } catch (e) {
-            console.error("login.html: Chyba pri inicializácii Firebase App v head:", e);
-        }
-    </script>
 </head>
-<body class="bg-gray-100">
-    <!-- Hlavička sa načíta dynamicky -->
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
-    <div id="root">
-        <!-- React aplikácia sa tu vykreslí -->
+    <!-- Kontajner pre hlavný obsah prihlasovacej stránky -->
+    <div id="root" class="flex-grow flex items-center justify-center">
+        <!-- Obsah bude dynamicky vygenerovaný pomocou React a login.js -->
     </div>
 
-    <!-- Placeholder pre push-up notifikácie (pre header.js) -->
-    <div id="header-notification-area" class="fixed top-20 right-4 z-50 w-full max-w-sm pointer-events-none"></div>
+    <!-- Globálny element pre notifikácie -->
+    <div id="global-notification"></div>
 
-    <!-- Načítanie hlavného React komponentu pre túto stránku -->
-    <script src="login.js"></script>
-    <script>
-        // Funkcia na načítanie hlavičky a jej JS
-        async function loadHeaderAndScripts() {
-            try {
-                // 1. Načítať HTML hlavičky
-                const headerResponse = await fetch('header.html');
-                if (!headerResponse.ok) {
-                    throw new Error(`HTTP error! status: ${headerResponse.status}`);
-                }
-                const headerHtml = await headerResponse.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-                console.log("login.html: header.html načítaný.");
+    <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
+    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
+    <!-- Opravil som poradie načítania a pridal chýbajúce skripty, ktoré sa používajú v celom projekte -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <script type="module" src="loader.js"></script>
 
-                // 2. Načítať a spustiť header.js
-                const headerScript = document.createElement('script');
-                headerScript.src = 'header.js';
-                headerScript.onload = () => {
-                    console.log("login.html: header.js načítaný a spustený.");
-                    // 3. Až potom renderovať React aplikáciu
-                    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                        console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
-                        return;
-                    }
-                    if (typeof App === 'undefined') { // Predpokladáme, že hlavný komponent v login.js sa volá App
-                        console.error("Chyba: Komponent App nie je definovaný. Skontrolujte login.js.");
-                        document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
-                        return;
-                    }
+    <!-- Načítanie React a ReactDOM z CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 
-                    const root = ReactDOM.createRoot(document.getElementById('root'));
-                    root.render(React.createElement(App, null));
-                    console.log("login.html: React App vykreslená.");
-                };
-                headerScript.onerror = (e) => {
-                    console.error("login.html: Chyba pri načítaní header.js:", e);
-                    document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní skriptu hlavičky.</div>';
-                };
-                document.body.appendChild(headerScript); // Pridáme skript do body
-            } catch (error) {
-                console.error("Chyba pri inicializácii stránky (načítanie hlavičky/skriptov):", error);
-                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri inicializácii stránky.</div>';
-            }
-        }
-
-        // Spustíme načítanie hlavičky a skriptov po načítaní DOM
-        window.onload = loadHeaderAndScripts;
-    </script>
+    <!-- Načítanie hlavného skriptu pre túto stránku ako modul -->
+    <script type="module" src="login.js"></script>
 </body>
 </html>
