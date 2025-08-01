@@ -18,11 +18,6 @@ const PUBLIC_PAGES = [
     // Ďalšie verejné stránky môžu byť pridané sem
 ];
 
-// Import necessary Firebase functions
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
@@ -33,66 +28,65 @@ const firebaseConfig = {
     appId: "1:572988314768:web:781e27eb035179fe34b415"
 };
 
-// Pomocná funkcia na overenie autorizácie stránky
-function checkPageAuthorization(userProfile, path) {
-    const isPublicPage = PUBLIC_PAGES.includes(path);
-    const isAuthenticated = !!userProfile;
+// Import necessary Firebase functions
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    if (!isPublicPage && !isAuthenticated) {
-        // Ak používateľ nie je prihlásený a stránka nie je verejná, presmerujeme ho na prihlasovaciu stránku
-        console.log(`AuthManager: Neautorizovaný prístup k ${path}. Presmerovanie na /login.html.`);
-        window.location.href = '/login.html';
-    }
-}
+let unsubscribeUserDoc = null;
 
-// Inicializácia Firebase a nastavenie globálnych premenných
-function setupFirebase() {
+// Funkcia na nastavenie Firebase
+const setupFirebase = () => {
     try {
-        // Predpokladáme, že appId a initialAuthToken sú definované globálne v HTML
-        if (!window.initialAuthToken || !window.appId) {
-            console.error("AuthManager: Globálne premenné 'initialAuthToken' alebo 'appId' nie sú definované.");
-            return;
-        }
-
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
-        
-        // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
-        window.doc = doc; 
-
-        console.log("AuthManager: Firebase inicializované.");
-
+        console.log("AuthManager: Firebase inicializovaný.");
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
     }
-}
+};
 
+// Funkcia na kontrolu autorizácie stránky
+const checkPageAuthorization = (userProfile, currentPath) => {
+    const isPublicPage = PUBLIC_PAGES.includes(currentPath) || PUBLIC_PAGES.includes(currentPath + '/');
+    const isLoggedIn = !!userProfile;
+    const isLoginPage = currentPath.endsWith('login.html');
 
-// Spracovanie stavu autentifikácie
+    // Ak je používateľ odhlásený a nie je na verejnej stránke, presmerujeme ho na prihlásenie
+    if (!isLoggedIn && !isPublicPage && !isLoginPage) {
+        console.log("AuthManager: Používateľ nie je prihlásený, presmerovanie na login.html.");
+        window.location.href = 'login.html';
+    }
+};
+
+// Funkcia, ktorá sa spustí pri zmene stavu autentifikácie
 const handleAuthState = () => {
-    onAuthStateChanged(window.auth, async (user) => {
-        if (user) {
-            console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
-            
-            // Načítanie profilu používateľa z Firestore
-            // Používame onSnapshot pre sledovanie zmien v reálnom čase
-            const userDocRef = doc(window.db, `artifacts/${window.appId}/users/${user.uid}/profile/data`);
-            
-            const unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    window.globalUserProfileData = docSnap.data();
-                    console.log("AuthManager: Profil používateľa načítaný a aktuálny.", window.globalUserProfileData);
-                } else {
-                    console.log("AuthManager: Profil používateľa nebol nájdený.");
-                    window.globalUserProfileData = null;
-                }
+    onAuthStateChanged(window.auth, (user) => {
+        // Ak existuje predchádzajúci listener, odhlásime ho
+        if (unsubscribeUserDoc) {
+            unsubscribeUserDoc();
+            unsubscribeUserDoc = null;
+        }
 
-                window.isGlobalAuthReady = true;
-                // Odošleme udalosť, že dáta boli aktualizované
-                window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                // Skontrolujeme autorizáciu po načítaní dát
-                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+        if (user) {
+            console.log("AuthManager: Používateľ prihlásený:", user.uid);
+            window.isGlobalAuthReady = true;
+
+            // Načítame dáta profilu používateľa v reálnom čase
+            const userDocRef = doc(window.db, `artifacts/${window.appId}/users/${user.uid}/profile/userProfile`);
+            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.globalUserProfileData = { ...docSnap.data(), uid: user.uid };
+                    console.log("AuthManager: Dáta profilu používateľa načítané.", window.globalUserProfileData);
+                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+                    checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+                } else {
+                    console.log("AuthManager: Žiadne dáta profilu, vytváram základný profil.");
+                    window.globalUserProfileData = { uid: user.uid, email: user.email };
+                    window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+                    checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
+                }
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
