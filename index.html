@@ -26,17 +26,15 @@
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
-    <!-- Hlavný kontajner, do ktorého sa vykreslí obsah aplikácie -->
-    <div id="root" class="flex-grow flex items-center justify-center">
-        <!-- Zobrazíme načítavaciu správu, kým sa nenačíta obsah -->
-        <p class="text-gray-500 text-lg animate-pulse">Načítavam obsah...</p>
-    </div>
+    <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia -->
+    <div id="root" class="flex-grow flex items-center justify-center"></div>
 
     <!-- Globálny element pre notifikácie -->
     <div id="global-notification"></div>
 
     <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
     <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
+    <!-- Predchádzajúci problém s duplicitným načítaním bol odstránený -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="loader.js"></script>
