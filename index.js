@@ -3,8 +3,12 @@
 // opakovaniu cyklov, ktoré môžu nastať pri nesprávnej interakcii Reactu a globálnych dát.
 // Teraz načítava údaje o registrácii z Firestore databázy.
 
-const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
+// Správne importy modulov priamo z CDN
+import React, { useState, useEffect } from 'https://unpkg.com/react@18/index.js';
+import ReactDOM from 'https://unpkg.com/react-dom@18/index.js';
+import { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } from 'https://unpkg.com/lucide-react@latest/dist/esm/lucide-react.js';
 
+// Pomocné komponenty pre zobrazenie stavov načítania a chýb
 const LoaderComponent = () => {
     return React.createElement(
         'div',
@@ -33,52 +37,81 @@ const ErrorMessage = ({ message }) => {
 const Header = () => null;
 
 const App = () => {
-    const [registrationData, setRegistrationData] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState(null);
+    const [registrationData, setRegistrationData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [countdown, setCountdown] = useState('');
 
-    React.useEffect(() => {
-        let unsubscribe = () => {};
+    useEffect(() => {
+        const fetchRegistrationSettings = async () => {
+            try {
+                if (!window.db) {
+                    console.error('Firestore databáza nie je inicializovaná.');
+                    setError('Chyba: Firestore databáza nie je inicializovaná.');
+                    setLoading(false);
+                    return;
+                }
+                const docRef = window.doc(window.db, "settings", "registration");
+                const unsubscribe = window.onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setRegistrationData(data);
+                        setError(null);
+                    } else {
+                        console.log("Dokument nastavení registrácie neexistuje.");
+                        setRegistrationData(null);
+                        setError("Chyba: Nastavenia registrácie sa nenašli.");
+                    }
+                    setLoading(false);
+                }, (e) => {
+                    console.error("Chyba pri načítaní nastavení registrácie:", e);
+                    setError("Chyba pri načítaní nastavení registrácie.");
+                    setLoading(false);
+                });
 
-        // Skontrolujeme, či sú globálne premenné dostupné
-        if (!window.db) {
-            setError("Chyba: Firebase databáza nie je inicializovaná.");
-            setLoading(false);
-            return;
-        }
-
-        const registrationDocRef = doc(window.db, 'settings', 'registration');
-        const onSnapshotCallback = (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setRegistrationData(data);
-                setLoading(false);
-                console.log("index.js: Dáta o registrácii načítané:", data);
-            } else {
-                setError("Chyba: Dokument o registrácii nebol nájdený.");
+                return () => unsubscribe();
+            } catch (e) {
+                console.error("Všeobecná chyba pri načítavaní nastavení:", e);
+                setError("Všeobecná chyba pri načítavaní nastavení.");
                 setLoading(false);
             }
         };
 
-        try {
-            unsubscribe = onSnapshot(registrationDocRef, onSnapshotCallback, (err) => {
-                console.error("index.js: Chyba pri načítaní dokumentu o registrácii:", err);
-                setError("Chyba pri načítaní dát o registrácii.");
-                setLoading(false);
+        const timer = setInterval(() => {
+            if (registrationData && registrationData.registrationStart) {
+                const now = new Date();
+                const regStart = new Date(registrationData.registrationStart);
+                const diff = regStart - now;
+
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    setCountdown(`${days} dní, ${hours} hodín, ${minutes} minút, ${seconds} sekúnd`);
+                } else {
+                    setCountdown('');
+                }
+            }
+        }, 1000);
+
+        // Skontrolujeme, či je Firebase inicializovaný, a až potom načítame dáta.
+        const checkFirebaseReady = () => {
+            if (window.isGlobalAuthReady && window.db) {
+                fetchRegistrationSettings();
+                return true;
+            }
+            return false;
+        };
+
+        if (!checkFirebaseReady()) {
+            window.addEventListener('globalDataUpdated', () => {
+                checkFirebaseReady();
             });
-        } catch (err) {
-            console.error("index.js: Chyba pri nastavení listenera:", err);
-            setError("Chyba pri nastavení listenera pre dáta o registrácii.");
-            setLoading(false);
         }
 
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
-    }, []);
-
+        return () => clearInterval(timer);
+    }, [registrationData]);
 
     let mainContent;
 
@@ -86,11 +119,10 @@ const App = () => {
         mainContent = React.createElement(LoaderComponent, null);
     } else if (error) {
         mainContent = React.createElement(ErrorMessage, { message: error });
-    } else {
+    } else if (registrationData) {
         const now = new Date();
         const regStart = new Date(registrationData.registrationStart);
         const regEnd = new Date(registrationData.registrationEnd);
-        const countdown = new Date(regStart - now).toISOString().substr(11, 8); // Zjednodušený odpočet
 
         if (now < regStart) {
             mainContent = React.createElement(
@@ -131,3 +163,11 @@ const App = () => {
 
 // Export pre možnosť načítania v HTML
 window.App = App;
+
+// Vykreslí aplikáciu až po načítaní DOM a skryje loader
+window.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('root')) {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App, null));
+    }
+});
