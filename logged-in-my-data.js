@@ -94,16 +94,9 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     const hasBillingData = userProfileData && userProfileData.billing && Object.keys(userProfileData.billing).length > 0;
     const hasAddressData = userProfileData && userProfileData.street && userProfileData.city && userProfileData.postalCode && userProfileData.country;
 
+    // Ak nie sú k dispozícii žiadne údaje, nevytvárame žiadny element.
     if (!hasBillingData && !hasAddressData) {
-        return React.createElement(
-            'div',
-            { className: 'bg-white rounded-lg shadow-lg mt-8 p-6 text-center' },
-            React.createElement(
-                'p',
-                { className: 'text-gray-500' },
-                'Fakturačné údaje a adresa neboli nájdené.'
-            )
-        );
+        return null;
     }
 
     // Ak existujú fakturačné údaje alebo adresa, vytvoríme samostatnú kartu
