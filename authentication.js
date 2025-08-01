@@ -7,7 +7,6 @@ window.isGlobalAuthReady = false; // Indikuje, či je Firebase Auth inicializova
 window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného používateľa
 window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
-window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 
 // Import necessary Firebase functions
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -105,6 +104,7 @@ const handleAuthState = () => {
 
         if (user) {
             console.log("AuthManager: Používateľ je prihlásený.", user.uid);
+            // Používame doc z getFirestore
             const userDocRef = doc(window.db, `artifacts/soh2025-2s0o2h5/users/${user.uid}/profile/data`);
 
             unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
