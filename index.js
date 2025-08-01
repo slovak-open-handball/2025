@@ -38,27 +38,22 @@ const loadRegistrationData = async () => {
 const loadCategoriesData = async () => {
     // Skontrolujeme, či je inštancia Firestore databázy pripravená.
     if (window.db) {
-        // Vytvorenie referencie na kolekciu 'categories' pod dokumentom 'settings'.
-        const categoriesCollectionRef = collection(window.db, "settings", "categories");
+        // Vytvorenie referencie na dokument 'categories' pod kolekciou 'settings'.
+        const categoriesDocRef = doc(window.db, "settings", "categories");
         try {
-            // Pokus o načítanie všetkých dokumentov z kolekcie.
-            const querySnapshot = await getDocs(categoriesCollectionRef);
-            
-            // Kontrola, či existujú nejaké kategórie.
-            if (!querySnapshot.empty) {
-                console.log("Dáta kategórií:");
-                const categories = [];
-                querySnapshot.forEach((doc) => {
-                    categories.push({ id: doc.id, ...doc.data() });
-                });
-                console.log(categories);
+            // Pokus o načítanie dokumentu.
+            const docSnap = await getDoc(categoriesDocRef);
 
-                // Ak existujú kategórie, uistíme sa, že tlačidlo je viditeľné.
+            // Kontrola, či dokument s kategóriami existuje.
+            if (docSnap.exists()) {
+                console.log("Dáta kategórií:", docSnap.data());
+                
+                // Ak dokument existuje, uistíme sa, že tlačidlo je viditeľné.
                 toggleRegistrationButton(true);
 
             } else {
-                // Ak kolekcia neobsahuje žiadne dokumenty, vypíšeme správu a skryjeme tlačidlo.
-                console.log("Žiadne kategórie neboli nájdené!");
+                // Ak dokument nebol nájdený, vypíšeme správu a skryjeme tlačidlo.
+                console.log("Dokument s kategóriami nebol nájdený!");
                 toggleRegistrationButton(false);
             }
         } catch (e) {
