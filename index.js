@@ -2,7 +2,6 @@
 // Tento súbor bol upravený tak, aby načítal dáta o registrácii aj kategórie
 // a podmienene zobrazil tlačidlá a text na základe existencie kategórií a aktuálneho dátumu.
 // Bola pridaná funkcia pre automatickú kontrolu času registrácie a odpočet.
-// Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -12,7 +11,7 @@ let timerId = null; // ID pre časovač, aby sme ho mohli zrušiť
 let countdownIntervalId = null; // ID pre interval odpočtu
 
 /**
- * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod.".
+ * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod".
  * Používa nezalomiteľné medzery (&nbsp;), aby sa zabránilo zalomeniu riadka v dátume.
  * @param {import('firebase/firestore').Timestamp} timestamp - Objekt Timestamp z Firestore.
  * @returns {string} Formátovaný dátum a čas.
@@ -25,7 +24,7 @@ const formatDate = (timestamp) => {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
+    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod`;
 };
 
 /**
@@ -44,7 +43,7 @@ const setupCategoriesListener = () => {
         }, (error) => {
             console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
-            updateRegistrationStatusText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
+            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.", "");
         });
     }
 };
@@ -52,8 +51,9 @@ const setupCategoriesListener = () => {
 /**
  * Spustí odpočet do cieľového dátumu a aktualizuje text na stránke.
  * @param {Date} targetDate - Dátum, do ktorého sa má odpočítavať.
+ * @param {string} messagePrefix - Text, ktorý sa zobrazí pred odpočtom.
  */
-const startCountdown = (targetDate) => {
+const startCountdown = (targetDate, messagePrefix) => {
     // Zrušíme predchádzajúci odpočet
     if (countdownIntervalId) {
         clearInterval(countdownIntervalId);
@@ -67,7 +67,7 @@ const startCountdown = (targetDate) => {
         if (distance < 0) {
             clearInterval(countdownIntervalId);
             if (countdownElement) {
-                countdownElement.textContent = '';
+                countdownElement.innerHTML = '';
             }
             // Získame najnovšie dáta o kategóriách a aktualizujeme UI
             getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
@@ -79,10 +79,16 @@ const startCountdown = (targetDate) => {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const countdownText = `Zostáva: ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const countdownText = `
+            ${messagePrefix}
+            <br>
+            <span class="font-semibold text-lg">
+                ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
+            </span>
+        `;
         
         if (countdownElement) {
-            countdownElement.textContent = countdownText;
+            countdownElement.innerHTML = countdownText;
         }
     };
 
@@ -91,20 +97,12 @@ const startCountdown = (targetDate) => {
 };
 
 /**
- * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie a prihlásenia.
+ * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie.
+ * Obsahuje aj logiku pre automatickú kontrolu času a nastavenie časovača.
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
-    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu a registračný text.
-    if (window.globalUserProfileData) {
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(); // Zavoláme bez parametra, aby sa obsah vymazal
-        toggleLoggedInMessage(true);
-        console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
-        return;
-    }
-
-    toggleLoggedInMessage(false);
+    toggleMainText(true);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
     if (timerId) {
@@ -117,53 +115,41 @@ const updateRegistrationUI = (docSnap) => {
     }
 
     const now = new Date();
-    // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
-    const registrationStartDate = window.registrationDates?.registrationStartDate;
-    const registrationEndDate = window.registrationDates?.registrationEndDate;
+    const registrationStartDate = window.registrationDates?.registrationStartDate?.toDate();
+    const registrationEndDate = window.registrationDates?.registrationEndDate?.toDate();
     
-    const isRegistrationOpen = registrationStartDate && registrationEndDate &&
-                               now >= registrationStartDate.toDate() &&
-                               now < registrationEndDate.toDate();
-    const isRegistrationBeforeStart = registrationStartDate && now < registrationStartDate.toDate();
-    const isRegistrationEnded = registrationEndDate && now >= registrationEndDate.toDate();
+    const isRegistrationOpen = window.registrationDates &&
+                               now >= registrationStartDate &&
+                               now < registrationEndDate;
+    const isRegistrationBeforeStart = window.registrationDates && now < registrationStartDate;
+    const isRegistrationEnded = window.registrationDates && now >= registrationEndDate;
 
     if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
         console.log("Dáta kategórií:", docSnap.data());
         
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je spustená.</p>
-                <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
+            updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
             
             // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate.toDate());
+            startCountdown(registrationEndDate, `Registrácia sa končí ${formatDate(registrationEndDate)}`);
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj ešte nebola spustená.</p>
-                <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
+            updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
             
             // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate.toDate());
+            startCountdown(registrationStartDate, `Registrácia sa začína o`);
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je už ukončená.</p>
-                <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
-            `);
+            updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
         } else {
             toggleRegistrationButton(false);
-            updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
+            updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
         }
     } else {
         console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
         toggleRegistrationButton(false);
-        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
+        updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
     }
 };
 
@@ -196,69 +182,57 @@ const setupRegistrationDataListener = () => {
 };
 
 /**
+ * Prepína viditeľnosť tlačidla na prihlásenie.
+ * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
+ */
+const toggleLoginButton = (isVisible) => {
+    const loginButtonWrapper = document.getElementById('login-button-wrapper');
+    if (loginButtonWrapper) {
+        loginButtonWrapper.style.display = isVisible ? 'block' : 'none';
+        console.log(`Tlačidlo 'Prihlásenie' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
+    }
+};
+
+/**
  * Prepína viditeľnosť tlačidla na registráciu na turnaj.
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
 const toggleRegistrationButton = (isVisible) => {
     const registrationButtonWrapper = document.getElementById('tournament-registration-button-wrapper');
     if (registrationButtonWrapper) {
-        registrationButtonWrapper.style.display = isVisible ? 'inline-block' : 'none';
+        registrationButtonWrapper.style.display = isVisible ? 'block' : 'none';
         console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
     }
 };
 
 /**
- * Prepína viditeľnosť textu o registrácii na domovskej stránke.
- * @param {string} [htmlContent=''] - HTML obsah na zobrazenie. Ak je prázdny, element sa skryje.
- */
-const updateRegistrationStatusText = (htmlContent = '') => {
-    const statusMessageElement = document.getElementById('registration-status-message');
-    if (statusMessageElement) {
-        if (htmlContent) {
-            statusMessageElement.innerHTML = htmlContent;
-            statusMessageElement.style.display = 'block';
-            console.log(`Registračný text bol aktualizovaný a zobrazený.`);
-        } else {
-            statusMessageElement.innerHTML = '';
-            statusMessageElement.style.display = 'none';
-            console.log(`Registračný text bol skrytý.`);
-        }
-    }
-};
-
-/**
- * Prepína viditeľnosť správy pre prihláseného používateľa.
+ * Prepína viditeľnosť textu na domovskej stránke.
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
-const toggleLoggedInMessage = (isVisible) => {
-    const messageElement = document.getElementById('logged-in-message');
-    if (messageElement) {
-        messageElement.style.display = isVisible ? 'block' : 'none';
-        console.log(`Správa pre prihláseného používateľa bola ${isVisible ? 'zobrazená' : 'skrytá'}.`);
+const toggleMainText = (isVisible) => {
+    const mainTextElement = document.getElementById('main-page-text');
+    if (mainTextElement) {
+        mainTextElement.style.display = isVisible ? 'block' : 'none';
+        console.log(`Text na domovskej stránke bol ${isVisible ? 'zobrazený' : 'skrytý'}.`);
     }
 };
 
 /**
- * Aktualizuje text a odkaz tlačidla pre prihlásenie na základe stavu autentifikácie.
- * Ak je používateľ prihlásený, zobrazí "Moja zóna" a presmeruje na príslušnú stránku.
- * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
+ * Aktualizuje text na domovskej stránke.
+ * @param {string} text - Nový text pre element.
+ * @param {string} countdownText - Voliteľný text pre odpočet.
  */
-const updateLoginButton = (isLoggedIn) => {
-    const loginLink = document.getElementById('login-button-wrapper');
-    const loginButton = loginLink ? loginLink.querySelector('button') : null;
-
-    if (loginLink && loginButton) {
-        if (isLoggedIn) {
-            loginLink.href = 'logged-in-my-data.html';
-            loginButton.textContent = 'Moja zóna';
-        } else {
-            loginLink.href = 'login.html';
-            loginButton.textContent = 'Prihlásenie';
+const updateMainText = (text, countdownText = "") => {
+    const mainTextElement = document.getElementById('main-page-text');
+    if (mainTextElement) {
+        mainTextElement.innerHTML = `${text}<span id="countdown-timer"></span>`;
+        if (countdownText) {
+            const countdownElement = document.getElementById('countdown-timer');
+            if (countdownElement) {
+                countdownElement.innerHTML = countdownText;
+            }
         }
-        loginLink.style.display = 'inline-block';
-        console.log(`Tlačidlo pre prihlásenie bolo aktualizované a zobrazené.`);
-    } else {
-        console.warn("Elementy pre tlačidlo prihlásenia neboli nájdené.");
+        console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
     }
 };
 
@@ -266,16 +240,15 @@ const updateLoginButton = (isLoggedIn) => {
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    const isLoggedIn = !!window.globalUserProfileData;
-    updateLoginButton(isLoggedIn);
-    updateRegistrationUI();
+    // Po prijatí udalosti zobrazíme tlačidlo na prihlásenie a začneme načítavať dáta o registrácii.
+    // Text a tlačidlo pre registráciu sa budú ovládať až po načítaní dát.
+    toggleLoginButton(true);
     setupRegistrationDataListener();
 });
 
-// Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
+// Volanie funkcií aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
-    const isLoggedIn = !!window.globalUserProfileData;
-    updateLoginButton(isLoggedIn);
+    toggleLoginButton(true);
     setupRegistrationDataListener();
 }
