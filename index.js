@@ -44,7 +44,7 @@ const setupCategoriesListener = () => {
         }, (error) => {
             console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
-            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
+            updateRegistrationStatusText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
         });
     }
 };
@@ -95,19 +95,16 @@ const startCountdown = (targetDate) => {
  * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
  */
 const updateRegistrationUI = (docSnap) => {
-    const mainTextElement = document.getElementById('main-page-text');
-    if (!mainTextElement) return;
-    
-    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu bez ohľadu na stav registrácie
+    // Ak je používateľ prihlásený, skryjeme tlačidlo na registráciu a registračný text.
     if (window.globalUserProfileData) {
         toggleRegistrationButton(false);
-        // Ak sa registracna text nachadza na stranke, tak ho chceme skryt.
-        toggleMainText(false);
-        console.log("Používateľ je prihlásený, tlačidlo pre registráciu je skryté.");
+        updateRegistrationStatusText(); // Zavoláme bez parametra, aby sa obsah vymazal
+        toggleLoggedInMessage(true);
+        console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
         return;
     }
 
-    toggleMainText(true);
+    toggleLoggedInMessage(false);
 
     // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
     if (timerId) {
@@ -135,38 +132,38 @@ const updateRegistrationUI = (docSnap) => {
         
         if (isRegistrationOpen) {
             toggleRegistrationButton(true);
-            mainTextElement.innerHTML = `
+            updateRegistrationStatusText(`
                 <p>Registrácia na turnaj je spustená.</p>
                 <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
                 <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `;
+            `);
             
             // Spustíme odpočet do konca registrácie
             startCountdown(registrationEndDate.toDate());
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
-            mainTextElement.innerHTML = `
+            updateRegistrationStatusText(`
                 <p>Registrácia na turnaj ešte nebola spustená.</p>
                 <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
                 <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `;
+            `);
             
             // Spustíme odpočet do začiatku registrácie
             startCountdown(registrationStartDate.toDate());
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
-            mainTextElement.innerHTML = `
+            updateRegistrationStatusText(`
                 <p>Registrácia na turnaj je už ukončená.</p>
                 <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
-            `;
+            `);
         } else {
             toggleRegistrationButton(false);
-            mainTextElement.innerHTML = `<p>Registrácia na turnaj momentálne nie je otvorená.</p>`;
+            updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
         }
     } else {
         console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
         toggleRegistrationButton(false);
-        mainTextElement.innerHTML = `<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`;
+        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
     }
 };
 
@@ -205,20 +202,39 @@ const setupRegistrationDataListener = () => {
 const toggleRegistrationButton = (isVisible) => {
     const registrationButtonWrapper = document.getElementById('tournament-registration-button-wrapper');
     if (registrationButtonWrapper) {
-        registrationButtonWrapper.style.display = isVisible ? 'block' : 'none';
+        registrationButtonWrapper.style.display = isVisible ? 'inline-block' : 'none';
         console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
     }
 };
 
 /**
- * Prepína viditeľnosť textu na domovskej stránke.
+ * Prepína viditeľnosť textu o registrácii na domovskej stránke.
+ * @param {string} [htmlContent=''] - HTML obsah na zobrazenie. Ak je prázdny, element sa skryje.
+ */
+const updateRegistrationStatusText = (htmlContent = '') => {
+    const statusMessageElement = document.getElementById('registration-status-message');
+    if (statusMessageElement) {
+        if (htmlContent) {
+            statusMessageElement.innerHTML = htmlContent;
+            statusMessageElement.style.display = 'block';
+            console.log(`Registračný text bol aktualizovaný a zobrazený.`);
+        } else {
+            statusMessageElement.innerHTML = '';
+            statusMessageElement.style.display = 'none';
+            console.log(`Registračný text bol skrytý.`);
+        }
+    }
+};
+
+/**
+ * Prepína viditeľnosť správy pre prihláseného používateľa.
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
  */
-const toggleMainText = (isVisible) => {
-    const mainTextElement = document.getElementById('main-page-text');
-    if (mainTextElement) {
-        mainTextElement.style.display = isVisible ? 'block' : 'none';
-        console.log(`Text na domovskej stránke bol ${isVisible ? 'zobrazený' : 'skrytý'}.`);
+const toggleLoggedInMessage = (isVisible) => {
+    const messageElement = document.getElementById('logged-in-message');
+    if (messageElement) {
+        messageElement.style.display = isVisible ? 'block' : 'none';
+        console.log(`Správa pre prihláseného používateľa bola ${isVisible ? 'zobrazená' : 'skrytá'}.`);
     }
 };
 
@@ -228,7 +244,6 @@ const toggleMainText = (isVisible) => {
  * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
  */
 const updateLoginButton = (isLoggedIn) => {
-    // V HTML je ID "login-button-wrapper" priamo na <a> tagu, takže ho nájdeme priamo.
     const loginLink = document.getElementById('login-button-wrapper');
     const loginButton = loginLink ? loginLink.querySelector('button') : null;
 
@@ -240,7 +255,6 @@ const updateLoginButton = (isLoggedIn) => {
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
         }
-        // Uistíme sa, že je tlačidlo viditeľné, ak by ho niečo iné skrylo.
         loginLink.style.display = 'inline-block';
         console.log(`Tlačidlo pre prihlásenie bolo aktualizované a zobrazené.`);
     } else {
@@ -254,6 +268,7 @@ window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
+    updateRegistrationUI();
     setupRegistrationDataListener();
 });
 
