@@ -36,71 +36,6 @@ const setupFirebase = () => {
     }
 };
 
-// Funkcia, ktorá skontroluje, či má používateľ prístup na danú stránku
-const checkPageAuthorization = (userProfile, path) => {
-    // Definujeme povolené roly pre jednotlivé stránky.
-    const publicPages = ['index.html', 'login.html', 'register.html'];
-    const loggedInPages = ['logged-in-my-data.html'];
-    const adminPages = ['admin-register.html', 'admin-dashboard.html'];
-    const hallPages = ['hall-dashboard.html'];
-
-    // DÔLEŽITÁ ZMENA: Spoľahlivejšie získanie názvu súboru
-    let currentPageName;
-    if (path.endsWith('/')) {
-        // Ak cesta končí lomkou, ide o root, takže predpokladáme 'index.html'
-        currentPageName = 'index.html';
-    } else {
-        // Inak získame názov súboru z cesty (ignorujeme parametre a fragmenty)
-        currentPageName = path.split('/').pop().split('?')[0].split('#')[0];
-    }
-    
-    // Logovanie pre účely ladenia, aby sme videli, čo sa deje
-    console.log(`AuthManager: Kontrola autorizácie pre cestu: '${path}'`);
-    console.log(`AuthManager: Identifikovaná stránka: '${currentPageName}'`);
-
-    // Skontrolujeme, či je aktuálna stránka vo verejnom zozname
-    const isPublicPage = publicPages.includes(currentPageName);
-
-    // DÔLEŽITÁ ZMENA: Ak je stránka verejná, umožníme prístup všetkým
-    // Toto pravidlo je nadradené a platí pre prihlásených aj neprihlásených používateľov
-    if (isPublicPage) {
-        console.log(`AuthManager: Stránka '${path}' je verejná, prístup povolený.`);
-        return true;
-    }
-
-    // Ak je používateľ odhlásený a stránka nie je verejná, presmerujeme ho
-    if (!userProfile) {
-        console.warn("AuthManager: Používateľ je odhlásený a stránka nie je verejná, presmerovávam na prihlásenie.");
-        window.location.href = './login.html';
-        return false;
-    }
-    
-    // Ak je používateľ prihlásený, pokračujeme v kontrole prístupu na základe roly
-    const userRole = userProfile.role;
-    console.log(`AuthManager: Prihlásený používateľ s rolou '${userRole}'.`);
-
-    // Kontrola prístupu na základe roly
-    if (adminPages.includes(currentPageName) && userRole !== 'admin') {
-        console.warn(`AuthManager: Používateľ nemá prístup na admin stránku.`);
-        window.location.href = './logged-in-my-data.html';
-        return false;
-    }
-    if (hallPages.includes(currentPageName) && userRole !== 'hall') {
-        console.warn(`AuthManager: Používateľ nemá prístup na stránku haly.`);
-        window.location.href = './logged-in-my-data.html';
-        return false;
-    }
-    if (loggedInPages.includes(currentPageName) && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
-        console.warn(`AuthManager: Používateľ nemá prístup na prihlásenú stránku.`);
-        window.location.href = './logged-in-my-data.html';
-        return false;
-    }
-
-    // Ak sa prihlásený používateľ dostane až sem, má prístup
-    console.log(`AuthManager: Prihlásený používateľ s rolou '${userRole}' má prístup na stránku '${path}'.`);
-    return true;
-};
-
 // Funkcia pre odhlásenie používateľa
 const handleLogout = async () => {
     try {
@@ -138,24 +73,20 @@ const handleAuthState = () => {
                     window.globalUserProfileData = userProfileData;
                     console.log("AuthManager: Používateľské dáta načítané:", userProfileData);
                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: userProfileData }));
-                    checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
                 } else {
                     console.error("AuthManager: Profil používateľa nebol nájdený!");
                     window.globalUserProfileData = null;
                     window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                    checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
                 }
             }, (error) => {
                 console.error("AuthManager: Chyba pri načítaní profilu:", error);
                 window.globalUserProfileData = null;
                 window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-                checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
             });
         } else {
             console.log("AuthManager: Používateľ odhlásený.");
             window.globalUserProfileData = null;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: null }));
-            checkPageAuthorization(window.globalUserProfileData, window.location.pathname);
         }
 
         window.addEventListener('beforeunload', () => {
