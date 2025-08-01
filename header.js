@@ -100,9 +100,7 @@ const updateHeaderLinks = (userProfileData) => {
         }
         
         // Zobrazí odkaz na registráciu len ak je používateľ prihlásený a má povolenú rolu
-        if (userProfileData.role === 'admin' || userProfileData.role === 'hall') {
-            registerLink.classList.remove('hidden');
-        } else {
+        if (userProfileData.role === 'admin' || userProfileData.role === 'hall' || userProfileData.role === 'user') {
             registerLink.classList.add('hidden');
         }
 
