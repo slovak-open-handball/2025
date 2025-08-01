@@ -28,24 +28,22 @@
 
     <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia -->
     <div id="root" class="flex-grow flex items-center justify-center">
-        <!-- Biely zaoblený obdĺžnik, ktorý obalí celý obsah -->
-        <div class="bg-white p-8 rounded-xl shadow-xl max-w-lg w-full text-center">
-            <!-- Nadpis H1 s textom "Slovak Open Handball 2025" -->
-            <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
-            
-            <!-- Pridaný text a tlačidlá podľa požiadavky -->
-            <p class="text-lg text-gray-600 mb-6">Pre pokračovanie sa prosím prihláste alebo sa zaregistrujte.</p>
-            
-            <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4">
+        <!-- Biely zaoblený kontajner pre obsah domovskej stránky -->
+        <div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl w-full mx-4 my-8 md:my-12 lg:my-16">
+            <h1 class="text-4xl font-bold text-center text-blue-800 mb-6">Vitajte na Slovak Open Handball 2025!</h1>
+            <p class="text-center text-lg text-gray-700 mb-8">
+                Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.
+            </p>
+            <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
                 <!-- Tlačidlo pre prihlásenie -->
                 <a href="login.html" class="inline-block">
                     <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Prihlásenie
                     </button>
                 </a>
-                <!-- Tlačidlo pre registráciu na turnaj -->
-                <a href="register.html" class="inline-block">
-                    <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                <!-- Tlačidlo pre registráciu na turnaj s unikátnym ID -->
+                <a href="register.html" class="inline-block" id="tournament-registration-button-wrapper">
+                    <button id="tournament-registration-button" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Registrácia na turnaj
                     </button>
                 </a>
