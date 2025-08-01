@@ -237,12 +237,12 @@ const updateLoginButton = (isLoggedIn) => {
         if (isLoggedIn) {
             loginLink.href = 'logged-in-my-data.html';
             loginButton.textContent = 'Moja zóna';
-            loginButtonWrapper.style.display = 'block'; // Zabezpečí, že tlačidlo je viditeľné
         } else {
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
-            loginButtonWrapper.style.display = 'block'; // Zabezpečí, že tlačidlo je viditeľné
         }
+        // Vždy zobraziť tlačidlo, bez ohľadu na stav prihlásenia
+        loginButtonWrapper.style.display = 'block'; 
     }
 };
 
