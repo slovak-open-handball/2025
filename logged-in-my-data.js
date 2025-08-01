@@ -169,7 +169,6 @@ function MyDataApp() {
         const handleDataUpdate = (event) => {
             const data = event.detail;
             if (data) {
-                // Rekonštruujeme objekt pre konzistentné zobrazenie
                 const processedData = {
                     ...data,
                     address: {
@@ -198,13 +197,21 @@ function MyDataApp() {
         };
     }, []);
 
-    if (loading) {
-        return React.createElement(
+    // Loader komponent so špecifickými štýlmi
+    const Loader = () => React.createElement(
+        'div',
+        { className: 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)]' },
+        React.createElement(
             'div',
-            { className: 'text-center p-8' },
-            React.createElement('div', { className: 'loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4' }),
-            React.createElement('p', null, 'Načítavam dáta...')
-        );
+            {
+                className: 'loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 animate-spin'
+            }
+        ),
+        React.createElement('p', { className: 'text-gray-600' }, 'Načítavam dáta...')
+    );
+
+    if (loading) {
+        return React.createElement(Loader, null);
     }
 
     if (error) {
