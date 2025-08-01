@@ -26,8 +26,11 @@
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
-    <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia -->
-    <div id="root" class="flex-grow flex items-center justify-center"></div>
+    <!-- Hlavný kontajner, do ktorého sa vykreslí obsah aplikácie -->
+    <div id="root" class="flex-grow flex items-center justify-center">
+        <!-- Zobrazíme načítavaciu správu, kým sa nenačíta obsah -->
+        <p class="text-gray-500 text-lg animate-pulse">Načítavam obsah...</p>
+    </div>
 
     <!-- Globálny element pre notifikácie -->
     <div id="global-notification"></div>
@@ -41,9 +44,5 @@
     <!-- Načítanie React a ReactDOM z CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    
-    <!-- Váš hlavný React súbor sa načíta ako posledný, aby sa zabezpečilo, že všetky závislosti sú pripravené -->
-    <script type="module" src="index.js"></script>
-
 </body>
 </html>
