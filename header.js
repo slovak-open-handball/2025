@@ -25,99 +25,68 @@ window.showGlobalNotification = (message, type = 'success') => {
 
     // Nastavíme obsah a farbu na základe typu notifikácie
     // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
-    const bgColorClass = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-\[#[a-fA-F0-9]{6}\]|bg-red-600/, bgColorClass);
-    notificationElement.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success'
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-            }
-        </svg>
-        <span>${message}</span>
-    `;
+    const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+    const icon = type === 'success' ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-8.5"></path><path d="M22 4L12 14.01l-3-3"></path></svg>` : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-circle"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>`;
 
-    // Zobrazíme notifikáciu
-    requestAnimationFrame(() => {
-        notificationElement.classList.remove('opacity-0', 'pointer-events-none');
-        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
-    });
-
-    // Skryjeme notifikáciu po 5 sekundách
+    notificationElement.className = `fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out flex items-center space-x-2 ${bgColor}`;
+    notificationElement.innerHTML = `${icon}<span>${message}</span>`;
+    
+    // Zobrazenie notifikácie
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
-        notificationElement.classList.add('opacity-0', 'pointer-events-none');
+        notificationElement.style.opacity = '1';
+        notificationElement.style.transform = 'translate(-50%, 0)';
+    }, 100);
+
+    // Automatické skrytie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.style.opacity = '0';
+        notificationElement.style.transform = 'translate(-50%, -20px)';
     }, 5000);
 };
 
-// Obsluha odhlásenia
-const handleLogout = async () => {
-    try {
-        await window.auth.signOut();
-        console.log('header.js: Používateľ bol úspešne odhlásený.');
-        window.showGlobalNotification('Boli ste úspešne odhlásený.', 'success');
-        // Presmerovanie na hlavnú stránku alebo na prihlasovaciu stránku
-        window.location.href = 'index.html';
-    } catch (error) {
-        console.error('header.js: Chyba pri odhlasovaní:', error);
-        window.showGlobalNotification('Chyba pri odhlasovaní. Skúste to prosím znova.', 'error');
-    }
-};
-
-// Funkcia, ktorá dynamicky mení zobrazenie odkazov v hlavičke na základe stavu prihlásenia
+// Funkcia na aktualizáciu odkazov v hlavičke na základe stavu prihlásenia
 const updateHeaderLinks = (userProfileData) => {
-    // Definujeme odkazy
-    const homeLink = document.getElementById('home-link');
-    const registerLink = document.getElementById('register-link');
     const profileLink = document.getElementById('profile-link');
+    const registerLink = document.getElementById('register-link');
     const authLink = document.getElementById('auth-link');
     const logoutButton = document.getElementById('logout-button');
-    const header = document.querySelector('header');
 
-    // Nastavenie farby hlavičky na základe roly
-    if (header) {
-        let color = '#1D4ED8'; // Predvolená farba (#1D4ED8 je ekvivalent bg-blue-800, ale user chce default)
-        if (userProfileData && userProfileData.role) {
-            switch (userProfileData.role) {
-                case 'admin':
-                    color = '#47b3ff';
-                    break;
-                case 'hall':
-                    color = '#b06835';
-                    break;
-                case 'user':
-                    color = '#9333EA';
-                    break;
-                default:
-                    // Predvolená farba už je nastavená
-                    break;
-            }
-        }
-        header.style.backgroundColor = color;
-    }
-
-    // Nastavenie viditeľnosti odkazov
     if (userProfileData) {
         // Používateľ je prihlásený
-        homeLink?.classList.remove('hidden');
-        profileLink?.classList.remove('hidden');
-        logoutButton?.classList.remove('hidden');
-        authLink?.classList.add('hidden');
-        registerLink?.classList.add('hidden');
+        profileLink.classList.remove('hidden');
+        registerLink.classList.remove('hidden');
+        authLink.classList.add('hidden');
+        logoutButton.classList.remove('hidden');
     } else {
         // Používateľ je odhlásený
-        homeLink?.classList.remove('hidden');
-        authLink?.classList.remove('hidden');
-        registerLink?.classList.add('hidden');
-        profileLink?.classList.add('hidden');
-        logoutButton?.classList.add('hidden');
+        profileLink.classList.add('hidden');
+        registerLink.classList.add('hidden');
+        authLink.classList.remove('hidden');
+        logoutButton.classList.add('hidden');
     }
 };
 
-// Funkcia na asynchrónne načítanie hlavičky a nastavenie listenerov
-window.loadHeader = async () => {
+// Funkcia na spracovanie odhlásenia
+const handleLogout = async () => {
+    // Používame globálnu inštanciu auth
+    if (window.auth) {
+        try {
+            await window.auth.signOut();
+            window.location.href = 'index.html'; // Presmerovanie na domovskú stránku po odhlásení
+        } catch (error) {
+            console.error("Chyba pri odhlasovaní:", error);
+            // Ak je k dispozícii globálna funkcia, použijeme ju
+            if (window.showGlobalNotification) {
+                window.showGlobalNotification('Nepodarilo sa odhlásiť. Skúste to prosím znova.', 'error');
+            }
+        }
+    }
+};
+
+
+// Načítanie a inicializácia hlavičky
+const loadHeader = async () => {
     try {
-        // Načítanie hlavičky HTML
         const response = await fetch('header.html');
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
@@ -145,6 +114,8 @@ window.loadHeader = async () => {
         updateHeaderLinks(window.globalUserProfileData);
         
     } catch (error) {
-        console.error('header.js: Chyba pri načítaní hlavičky:', error);
+        console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
+
+window.addEventListener('DOMContentLoaded', loadHeader);
