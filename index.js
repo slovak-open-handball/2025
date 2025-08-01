@@ -7,31 +7,6 @@
 // Potrebné ikony z lucide-react sú dostupné globálne cez CDN.
 const { Menu, User, LogIn, LogOut, Loader, X, ChevronDown, Check, UserPlus } = LucideReact;
 
-// Pomocné komponenty pre zobrazenie stavov načítania a chýb
-const LoaderComponent = () => {
-    return React.createElement(
-        'div',
-        { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
-            'div',
-            { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
-        )
-    );
-};
-
-const ErrorMessage = ({ message }) => {
-    return React.createElement(
-        'div',
-        { className: 'flex justify-center items-center h-screen' },
-        React.createElement(
-            'div',
-            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
-            React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
-            React.createElement('p', null, message)
-        )
-    );
-};
-
 // Hlavný komponent aplikácie
 const App = () => {
     const [registrationData, setRegistrationData] = React.useState(null);
@@ -39,14 +14,13 @@ const App = () => {
     const [error, setError] = React.useState('');
     const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
 
+    // Načítanie registračných dát
     React.useEffect(() => {
-        // Listener na globálnu udalosť
         const handleGlobalDataUpdate = (event) => {
             setGlobalUserProfileData(event.detail);
         };
         window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
-        // Funkcia pre načítanie registračných dát
         const fetchRegistrationData = async () => {
             try {
                 if (!window.db) {
@@ -77,7 +51,6 @@ const App = () => {
             }
         };
 
-        // Načítanie dát po inicializácii Firebase
         if (window.isGlobalAuthReady) {
             fetchRegistrationData();
         } else {
@@ -93,14 +66,27 @@ const App = () => {
         };
     }, []);
 
-    if (loading) {
-        return React.createElement(LoaderComponent, null);
-    }
+    // Skryjeme globálny loader, keď je aplikácia pripravená
+    React.useEffect(() => {
+        if (!loading) {
+            window.hideGlobalLoader();
+        }
+    }, [loading]);
 
     if (error) {
-        return React.createElement(ErrorMessage, { message: error });
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-screen' },
+            React.createElement(
+                'div',
+                { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
+                React.createElement('p', { className: 'font-bold' }, 'Chyba pri načítaní dát'),
+                React.createElement('p', null, error)
+            )
+        );
     }
-
+    
+    // Zobrazenie hlavného obsahu
     const { registrationStart, registrationEnd, registrationOpen } = registrationData || {};
     const now = new Date().getTime();
     const registrationActive = registrationOpen && registrationStart && registrationEnd && now >= registrationStart && now <= registrationEnd;
@@ -165,3 +151,12 @@ const App = () => {
 
 // Export pre možnosť načítania v HTML
 window.App = App;
+
+// Vykreslí aplikáciu až po načítaní DOM a skryje loader
+window.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('root')) {
+        ReactDOM.createRoot(document.getElementById('root')).render(
+            React.createElement(App)
+        );
+    }
+});
