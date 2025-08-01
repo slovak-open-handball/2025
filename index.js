@@ -10,8 +10,8 @@ window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 
 // Import necessary Firebase functions
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Pevne definovaná konfigurácia Firebase, podľa požiadavky
@@ -30,16 +30,25 @@ function setupFirebase() {
     try {
         // Používame globálne premenné poskytnuté prostredím Canvas
         const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfig;
-        const app = initializeApp(config);
-        window.auth = getAuth(app);
-        window.db = getFirestore(app);
-        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         
-        // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
-        window.doc = doc; 
+        // Dôležitá zmena: Skontrolujeme, či už neexistuje inicializovaná aplikácia.
+        if (getApps().length === 0) {
+            const app = initializeApp(config);
+            window.auth = getAuth(app);
+            window.db = getFirestore(app);
+            window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            
+            // Dôležitý fix: Sprístupníme funkciu 'doc' globálne
+            window.doc = doc; 
 
-        console.log("AuthManager: Firebase inicializované.");
-
+            console.log("AuthManager: Firebase inicializované.");
+        } else {
+            console.log("AuthManager: Firebase už bolo inicializované.");
+            window.auth = getAuth();
+            window.db = getFirestore();
+            window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            window.doc = doc;
+        }
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
     }
