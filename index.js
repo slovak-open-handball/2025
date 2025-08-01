@@ -43,6 +43,8 @@ const setupCategoriesListener = () => {
         // Nastavenie onSnapshot listenera.
         onSnapshot(categoriesDocRef, (docSnap) => {
             console.log("Dáta kategórií boli aktualizované!");
+            // V oboch prípadoch - existencie alebo neexistencie kategórií - text zobrazíme.
+            toggleMainText(true);
             if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
                 console.log("Dáta kategórií:", docSnap.data());
                 
@@ -93,6 +95,20 @@ const toggleRegistrationButton = (isVisible) => {
 };
 
 /**
+ * Prepína viditeľnosť textu na domovskej stránke.
+ * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
+ */
+const toggleMainText = (isVisible) => {
+    const mainTextElement = document.getElementById('main-page-text');
+    if (mainTextElement) {
+        mainTextElement.style.display = isVisible ? 'block' : 'none';
+        console.log(`Text na domovskej stránke bol ${isVisible ? 'zobrazený' : 'skrytý'}.`);
+    } else {
+        console.log("Element s textom na domovskej stránke nebol nájdený v DOM.");
+    }
+};
+
+/**
  * Aktualizuje text na domovskej stránke.
  * @param {string} text - Nový text pre element.
  */
@@ -101,8 +117,6 @@ const updateMainText = (text) => {
     if (mainTextElement) {
         mainTextElement.textContent = text;
         console.log(`Text na domovskej stránke bol zmenený na: "${text}"`);
-    } else {
-        console.log("Element s textom na domovskej stránke nebol nájdený v DOM.");
     }
 };
 
@@ -110,9 +124,11 @@ const updateMainText = (text) => {
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    // Zobrazíme tlačidlo na prihlásenie.
+    // Po prijatí udalosti zobrazíme tlačidlo na prihlásenie a text,
+    // a následne načítame dáta o registrácii a nastavíme listener pre kategórie.
     toggleLoginButton(true);
-    // Po prijatí udalosti načítame dáta o registrácii a nastavíme listener pre kategórie.
+    // Text zobrazíme až po načítaní dát
+    // toggleMainText(true);
     loadRegistrationData();
     setupCategoriesListener();
 });
@@ -121,6 +137,7 @@ window.addEventListener('globalDataUpdated', () => {
 // skôr, ako sa stihne pripojiť listener.
 if (window.db) {
     toggleLoginButton(true);
+    // toggleMainText(true);
     loadRegistrationData();
     setupCategoriesListener();
 }
