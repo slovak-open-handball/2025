@@ -50,39 +50,42 @@ const checkPageAuthorization = (userProfile, path) => {
     const isAdminPage = adminPages.includes(currentPage);
     const isHallPage = hallPages.includes(currentPage);
 
-    // Ak je používateľ odhlásený
-    if (!userProfile) {
-        if (!isPublicPage) {
-            console.warn("AuthManager: Používateľ je odhlásený, presmerovávam na prihlásenie.");
-            window.location.href = 'login.html';
-            return false;
-        }
-    } else { // Ak je používateľ prihlásený
-        const userRole = userProfile.role;
-
-        // Ak sa prihlásený používateľ pokúša dostať na verejnú stránku (login, register), presmerujeme ho do jeho zóny
-        if (currentPage === 'login.html' || currentPage === 'register.html') {
-            window.location.href = 'logged-in-my-data.html';
-            return false;
-        }
-
-        // Kontrola prístupu na základe roly
-        if (isAdminPage && userRole !== 'admin') {
-            console.warn(`AuthManager: Rola '${userRole}' nemá prístup na admin stránku.`);
-            window.location.href = 'logged-in-my-data.html';
-            return false;
-        }
-        if (isHallPage && userRole !== 'hall') {
-            console.warn(`AuthManager: Rola '${userRole}' nemá prístup na stránku haly.`);
-            window.location.href = 'logged-in-my-data.html';
-            return false;
-        }
-        if (isLoggedInPage && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
-            console.warn(`AuthManager: Rola '${userRole}' nemá prístup na prihlásenú stránku.`);
-            window.location.href = 'logged-in-my-data.html';
-            return false;
-        }
+    // DÔLEŽITÁ ZMENA: Ak je stránka verejná, umožníme prístup všetkým
+    // Toto pravidlo je nadradené a platí pre prihlásených aj neprihlásených používateľov
+    if (isPublicPage) {
+        console.log(`AuthManager: Stránka '${currentPage}' je verejná, prístup povolený.`);
+        return true;
     }
+
+    // Ak je používateľ odhlásený a stránka nie je verejná, presmerujeme ho
+    if (!userProfile) {
+        console.warn("AuthManager: Používateľ je odhlásený a stránka nie je verejná, presmerovávam na prihlásenie.");
+        window.location.href = 'login.html';
+        return false;
+    }
+    
+    // Ak je používateľ prihlásený, pokračujeme v kontrole prístupu na základe roly
+    const userRole = userProfile.role;
+
+    // Kontrola prístupu na základe roly
+    if (isAdminPage && userRole !== 'admin') {
+        console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na admin stránku.`);
+        window.location.href = 'logged-in-my-data.html';
+        return false;
+    }
+    if (isHallPage && userRole !== 'hall') {
+        console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na stránku haly.`);
+        window.location.href = 'logged-in-my-data.html';
+        return false;
+    }
+    if (isLoggedInPage && (userRole !== 'user' && userRole !== 'admin' && userRole !== 'hall')) {
+        console.warn(`AuthManager: Prihlásený používateľ s rolou '${userRole}' nemá prístup na prihlásenú stránku.`);
+        window.location.href = 'logged-in-my-data.html';
+        return false;
+    }
+
+    // Ak sa prihlásený používateľ dostane až sem, má prístup
+    console.log(`AuthManager: Prihlásený používateľ s rolou '${userRole}' má prístup na stránku '${currentPage}'.`);
     return true;
 };
 
