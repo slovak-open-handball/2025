@@ -1,7 +1,6 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený, aby počkal na dáta odoslané globálnou udalosťou z authentication.js.
-// Spravuje zobrazenie profilových a fakturačných dát na základe prijatých dát.
-// Teraz zobrazuje všetky dostupné údaje pre všetky roly používateľov.
+// Tento súbor bol opravený tak, aby správne interpretoval štruktúru dát profilu používateľa,
+// najmä pokiaľ ide o fakturačné údaje a adresu.
 
 // Predvoľby krajín sa načítajú z globálnej premennej countryDialCodes
 // definovanej v countryDialCodes.js. Pre prípad, že súbor nie je načítaný, použijeme prázdne pole.
@@ -80,7 +79,11 @@ const getHeaderColor = (role) => {
 
 // Funkcia na vykreslenie fakturačných údajov a adresy
 const renderBillingAndAddressInfo = (userProfileData) => {
-    if (!userProfileData || (!userProfileData.billingInfo && !userProfileData.billingAddress)) {
+    // Teraz kontrolujeme existenciu objektu 'billing' A tiež kľúčových polí pre adresu
+    const hasBillingData = userProfileData && userProfileData.billing && Object.keys(userProfileData.billing).length > 0;
+    const hasAddressData = userProfileData && userProfileData.street && userProfileData.city && userProfileData.postalCode && userProfileData.country;
+
+    if (!hasBillingData && !hasAddressData) {
         return React.createElement(
             'div',
             { className: 'bg-white rounded-lg shadow-lg mt-8 p-6 text-center' },
@@ -109,7 +112,7 @@ const renderBillingAndAddressInfo = (userProfileData) => {
             'div',
             { className: 'p-6' },
             // Zobrazí fakturačné údaje
-            userProfileData.billingInfo && React.createElement(React.Fragment, null,
+            hasBillingData && React.createElement(React.Fragment, null,
                 React.createElement(
                     'h3',
                     { className: 'text-xl font-bold mb-2 text-gray-800' },
@@ -122,37 +125,31 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                        ` ${userProfileData.billingInfo.companyName}`
+                        ` ${userProfileData.billing.clubName}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                        ` ${userProfileData.billingInfo.ico}`
+                        ` ${userProfileData.billing.ico}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                        ` ${userProfileData.billingInfo.dic}`
+                        ` ${userProfileData.billing.dic}`
                     ),
-                    userProfileData.billingInfo.icDPH && React.createElement(
+                    userProfileData.billing.icDPH && React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                        ` ${userProfileData.billingInfo.icDPH}`
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800' },
-                        React.createElement('span', { className: 'font-bold' }, 'Bankový účet:'),
-                        ` ${userProfileData.billingInfo.bankAccount}`
+                        ` ${userProfileData.billing.icDPH}`
                     ),
                 )
             ),
 
             // Zobrazí fakturačnú adresu
-            userProfileData.billingAddress && React.createElement(React.Fragment, null,
+            hasAddressData && React.createElement(React.Fragment, null,
                 React.createElement(
                     'h3',
                     { className: 'text-xl font-bold mb-2 text-gray-800' },
@@ -165,25 +162,25 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo:'),
-                        ` ${userProfileData.billingAddress.street} ${userProfileData.billingAddress.streetNumber}`
+                        ` ${userProfileData.street} ${userProfileData.houseNumber}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'Mesto:'),
-                        ` ${userProfileData.billingAddress.city}`
+                        ` ${userProfileData.city}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'PSČ:'),
-                        ` ${userProfileData.billingAddress.zipCode}`
+                        ` ${userProfileData.postalCode}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800' },
                         React.createElement('span', { className: 'font-bold' }, 'Krajina:'),
-                        ` ${userProfileData.billingAddress.country}`
+                        ` ${userProfileData.country}`
                     )
                 )
             )
