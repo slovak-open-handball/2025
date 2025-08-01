@@ -95,19 +95,19 @@ const renderBillingAndAddressInfo = (userProfileData) => {
                 React.createElement('span', { className: 'font-bold' }, 'IČO:'),
                 ` ${billing.ico || billing.companyId || '-'}`
             ),
-            // Zobrazí DIČ, ak existuje
+            // Opravené pole 'dic' namiesto 'taxId'
             React.createElement(
                 'p',
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                ` ${billing.taxId || '-'}`
+                ` ${billing.dic || '-'}`
             ),
-            // Zobrazí IČ DPH, ak existuje
+            // Opravené pole 'icdph' namiesto 'vatId'
             React.createElement(
                 'p',
                 { className: 'text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                ` ${billing.vatId || '-'}`
+                ` ${billing.icdph || '-'}`
             ),
         ),
         address && React.createElement(
