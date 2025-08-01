@@ -72,7 +72,7 @@ function MyDataApp() {
     
     return React.createElement(
       'div',
-      { className: 'p-6 bg-white rounded-lg shadow-md mb-6' },
+      { className: 'p-6 bg-white rounded-lg shadow-md' },
       React.createElement(
         'h2',
         { className: 'text-2xl font-semibold text-blue-800 mb-4' },
@@ -138,12 +138,12 @@ function MyDataApp() {
     // Data loaded state
     !loading && !error && userProfileData && React.createElement(
       'div',
-      null,
-      // Nadpis s dynamickou farbou pozadia
+      { className: 'max-w-4xl mx-auto space-y-6' }, // Hlavný kontajner s obmedzenou šírkou
+      // Pásik s dynamickou farbou (teraz v kontajneri)
       React.createElement(
           'div',
           {
-              className: 'p-6 rounded-lg shadow-md mb-6',
+              className: 'p-6 rounded-lg shadow-md',
               style: { backgroundColor: getHeaderColor(userProfileData.role), color: 'white' }
           },
           React.createElement(
@@ -157,67 +157,63 @@ function MyDataApp() {
           )
       ),
 
+      // Karta s osobnými údajmi
       React.createElement(
         'div',
-        { className: 'max-w-4xl mx-auto space-y-6' },
-        // Karta s osobnými údajmi
+        { className: 'p-6 bg-white rounded-lg shadow-md' },
+        React.createElement(
+          'h2',
+          { className: 'text-2xl font-semibold text-blue-800 mb-4' },
+          'Osobné údaje'
+        ),
         React.createElement(
           'div',
-          { className: 'p-6 bg-white rounded-lg shadow-md' },
-          React.createElement(
-            'h2',
-            { className: 'text-2xl font-semibold text-blue-800 mb-4' },
-            'Osobné údaje'
-          ),
-          React.createElement(
-            'div',
-            { className: 'space-y-2' },
-            // Podmienene zobrazenie popisov pre admina a ostatných
-            userProfileData.role === 'admin' ? (
-                // Pre administrátora
-                React.createElement(React.Fragment, null,
-                    React.createElement(
-                      'p',
-                      { className: 'text-gray-800 text-lg' },
-                      React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
-                      ` ${userProfileData.firstName} ${userProfileData.lastName}`
-                    ),
-                    React.createElement(
-                      'p',
-                      { className: 'text-gray-800 text-lg' },
-                      React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                      ` ${userProfileData.email}`
-                    )
-                )
-            ) : (
-                // Pre bežného používateľa
-                React.createElement(React.Fragment, null,
-                    React.createElement(
-                      'p',
-                      { className: 'text-gray-800 text-lg' },
-                      React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-                      ` ${userProfileData.firstName} ${userProfileData.lastName}`
-                    ),
-                    React.createElement(
-                      'p',
-                      { className: 'text-gray-800 text-lg' },
-                      React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
-                      ` ${userProfileData.email}`
-                    ),
-                    React.createElement(
-                      'p',
-                      { className: 'text-gray-800 text-lg' },
-                      React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
-                      ` ${userProfileData.contactPhoneNumber}`
-                    ),
-                )
-            )
+          { className: 'space-y-2' },
+          // Podmienene zobrazenie popisov pre admina a ostatných
+          userProfileData.role === 'admin' ? (
+              // Pre administrátora
+              React.createElement(React.Fragment, null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                    ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                  ),
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                    ` ${userProfileData.email}`
+                  )
+              )
+          ) : (
+              // Pre bežného používateľa
+              React.createElement(React.Fragment, null,
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
+                    ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                  ),
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
+                    ` ${userProfileData.email}`
+                  ),
+                  React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo kontaktnej osoby:'),
+                    ` ${userProfileData.contactPhoneNumber}`
+                  ),
+              )
           )
-        ),
-        
-        // Zobrazí fakturačné údaje a adresu, ak existujú
-        renderBillingAndAddressInfo(userProfileData),
-      )
+        )
+      ),
+      
+      // Zobrazí fakturačné údaje a adresu, ak existujú
+      renderBillingAndAddressInfo(userProfileData),
     )
   );
 }
