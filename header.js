@@ -79,15 +79,21 @@ const updateHeaderLinks = () => {
     if (logoutButton) logoutButton.classList.add('hidden');
     if (registerLink) registerLink.classList.add('hidden');
     
-    // Farba hlavičky sa zmení na základe typu používateľa
+    // Odstránenie všetkých tried farieb pred nastavením novej
     if (header) {
-        if (user && userProfileData && userProfileData.type === 'user') {
-            header.classList.remove('bg-blue-700');
-            header.classList.add('bg-[#9333EA]');
+        header.classList.remove('bg-blue-700', 'bg-[#9333EA]', 'bg-[#1D4ED8]');
+
+        // Farba hlavičky sa zmení na základe typu používateľa
+        if (user && userProfileData) {
+            if (userProfileData.type === 'user') {
+                header.classList.add('bg-[#9333EA]'); // Fialová pre používateľa
+            } else if (userProfileData.type === 'admin') {
+                header.classList.add('bg-[#1D4ED8]'); // Tmavá modrá pre admina
+            } else {
+                header.classList.add('bg-blue-700'); // Predvolená farba
+            }
         } else {
-            // Predvolená farba pre neprihlásených a adminov/iných
-            header.classList.remove('bg-[#9333EA]');
-            header.classList.add('bg-blue-700');
+            header.classList.add('bg-blue-700'); // Predvolená farba pre neprihlásených
         }
     }
 
@@ -96,16 +102,18 @@ const updateHeaderLinks = () => {
         if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
         
-        // Zobrazí odkaz na registráciu iba, ak je používateľ typu 'user'
+        // Zobrazí odkaz na registráciu iba, ak je používateľ typu 'user' alebo 'admin'
         if (userProfileData && userProfileData.type === 'user') {
              if (registerLink) {
                  registerLink.classList.remove('hidden');
                  registerLink.textContent = 'Registrácia na turnaj';
+                 registerLink.href = 'logged-in-registration.html';
              }
         } else if (userProfileData && userProfileData.type === 'admin') {
              if (registerLink) {
                  registerLink.classList.remove('hidden');
                  registerLink.textContent = 'Správa registrácií';
+                 registerLink.href = 'admin.html';
              }
         } else {
             // Pre iné typy používateľov, alebo ak dáta ešte nie sú načítané
