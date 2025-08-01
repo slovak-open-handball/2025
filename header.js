@@ -26,76 +26,71 @@ window.showGlobalNotification = (message, type = 'success') => {
     // Nastavíme obsah a farbu na základe typu notifikácie
     // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
     const bgColorClass = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-\w+-\d+/g, bgColorClass);
-    notificationElement.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success' 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-            }
-        </svg>
-        <span>${message}</span>
-    `;
+    notificationElement.className = notificationElement.className.replace(/bg-\[#3A8D41\]|bg-red-600/g, '') + ` ${bgColorClass}`;
+    notificationElement.innerHTML = `<span>${message}</span>`;
+    
+    // Zobrazíme notifikáciu a po 5 sekundách ju skryjeme
+    notificationElement.classList.remove('opacity-0', 'pointer-events-none');
+    notificationElement.classList.add('opacity-100');
 
-    // Zobrazenie notifikácie
-    setTimeout(() => {
-        notificationElement.classList.add('opacity-100');
-        notificationElement.classList.remove('opacity-0', 'pointer-events-none');
-    }, 100);
-
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100');
         notificationElement.classList.add('opacity-0', 'pointer-events-none');
     }, 5000);
 };
 
-// Funkcia pre odhlásenie používateľa
-const handleLogout = async () => {
-    // Používame globálnu inštanciu Firebase Auth
-    if (window.auth) {
-        try {
-            await window.auth.signOut();
-            window.showGlobalNotification('Boli ste úspešne odhlásení.', 'success');
-            console.log("header.js: Používateľ odhlásený, presmerúvam na domovskú stránku.");
-            // Presmerovanie po úspešnom odhlásení
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000); // Malé oneskorenie pre zobrazenie notifikácie
-        } catch (error) {
-            window.showGlobalNotification(`Chyba pri odhlasovaní: ${error.message}`, 'error');
-            console.error("header.js: Chyba pri odhlasovaní:", error);
-        }
-    }
-};
 
-// Funkcia, ktorá dynamicky aktualizuje odkazy v hlavičke
-const updateHeaderLinks = () => {
-    // Získanie referencií na všetky relevantné odkazy a tlačidlá
+// Funkcia pre aktualizáciu navigačných odkazov na základe stavu používateľa a roly
+const updateHeaderLinks = (userProfileData) => {
     const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
+    const profileLink = document.getElementById('profile-link');
     const registerLink = document.getElementById('register-link');
-    const userProfileData = window.globalUserProfileData;
+    const header = document.querySelector('header');
+
+    if (!header) {
+        console.error("Header element not found.");
+        return;
+    }
+
+    // Odstránime všetky triedy s farbou pozadia, aby sme predišli duplikátom
+    header.classList.remove('bg-blue-700', 'bg-red-700', 'bg-green-700');
 
     if (userProfileData) {
         // Používateľ je prihlásený
         if (authLink) authLink.classList.add('hidden');
-        if (profileLink) profileLink.classList.remove('hidden');
         if (logoutButton) logoutButton.classList.remove('hidden');
-        if (registerLink) registerLink.classList.remove('hidden'); // Zobrazí sa, ak je prihlásený
+        if (profileLink) profileLink.classList.remove('hidden');
+        if (registerLink) registerLink.classList.remove('hidden');
+
+        // Nastavíme farbu hlavičky podľa roly
+        switch (userProfileData.role) {
+            case 'admin':
+                header.classList.add('bg-red-700');
+                break;
+            case 'hall':
+                header.classList.add('bg-green-700');
+                break;
+            case 'user':
+            default:
+                header.classList.add('bg-blue-700');
+                break;
+        }
+
     } else {
         // Používateľ nie je prihlásený
         if (authLink) authLink.classList.remove('hidden');
-        if (profileLink) profileLink.classList.add('hidden');
         if (logoutButton) logoutButton.classList.add('hidden');
-        if (registerLink) registerLink.classList.add('hidden'); // Skryje sa, ak nie je prihlásený
+        if (profileLink) profileLink.classList.add('hidden');
+        if (registerLink) registerLink.classList.add('hidden');
+        
+        // Predvolená farba pre neprihlásených používateľov
+        header.classList.add('bg-blue-700');
     }
-    console.log("header.js: Odkazy v hlavičke aktualizované.");
 };
 
-// Načíta a vloží obsah hlavičky do zástupného elementu
-const loadHeader = async () => {
+// Funkcia na asynchrónne načítanie hlavičky
+window.loadHeader = async () => {
     try {
         // Načítanie hlavičky HTML
         const response = await fetch('header.html');
@@ -113,21 +108,21 @@ const loadHeader = async () => {
         // Kľúčová časť: Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         // Týmto sa zabezpečí, že hlavička sa aktualizuje, až keď sú dáta z databázy
         // načítané a globálna premenná 'globalUserProfileData' je dostupná.
-        window.addEventListener('globalDataUpdated', () => {
+        window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť \"globalDataUpdated\". Aktualizujem hlavičku.');
-            updateHeaderLinks();
+            // Dáta prevezmeme z event.detail
+            updateHeaderLinks(event.detail);
         });
 
         // Zavoláme funkciu hneď po načítaní, pre prípad, že dáta boli načítané
         // pred pripojením listenera. Ak nie, listener to zachytí neskôr.
-        updateHeaderLinks();
+        // Spoliehame sa na globálnu premennú len pre počiatočné volanie
+        updateHeaderLinks(window.globalUserProfileData);
         
     } catch (error) {
         console.error('header.js: Chyba pri načítaní hlavičky:', error);
     }
 };
 
-// Spustenie načítania a inicializácie hlavičky po načítaní DOM
-document.addEventListener('DOMContentLoaded', () => {
-    loadHeader();
-});
+// Spustíme načítanie hlavičky po načítaní DOM
+window.addEventListener('DOMContentLoaded', loadHeader);
