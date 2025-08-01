@@ -147,7 +147,7 @@ function MyDataApp() {
   // Hlavné renderovanie komponentu
   return React.createElement(
     'div',
-    { className: 'bg-gray-100 min-h-screen p-8 mt-16 md:mt-20' },
+    { className: 'bg-gray-100 min-h-screen p-8 mt-4 md:mt-4' },
     // Loading state
     loading && React.createElement(
       'div',
