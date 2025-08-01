@@ -169,6 +169,7 @@ function MyDataApp() {
         const handleDataUpdate = (event) => {
             const data = event.detail;
             if (data) {
+                // Rekonštruujeme objekt pre konzistentné zobrazenie
                 const processedData = {
                     ...data,
                     address: {
@@ -181,13 +182,14 @@ function MyDataApp() {
                     billing: data.billing || null
                 };
                 setUserProfileData(processedData);
-                setLoading(false);
                 setError('');
             } else {
+                console.error("MyDataApp: Používateľské dáta neboli nájdené.");
                 setUserProfileData(null);
-                setLoading(false);
                 setError('Používateľské dáta neboli nájdené.');
             }
+            // loading sa vždy vypne, aby sa predišlo nekonečnému načítavaniu
+            setLoading(false);
         };
 
         window.addEventListener('globalDataUpdated', handleDataUpdate);
@@ -228,7 +230,8 @@ function MyDataApp() {
         React.createElement(
             'div',
             {
-                className: `bg-${userProfileData.role === 'admin' ? 'blue' : userProfileData.role === 'hall' ? 'orange' : 'purple'}-600 p-4 rounded-t-lg text-white text-center`
+                className: `p-4 rounded-t-lg text-white text-center`,
+                style: { backgroundColor: getHeaderColor(userProfileData.role) }
             },
             React.createElement(
                 'h1',
