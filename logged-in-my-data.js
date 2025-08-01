@@ -225,22 +225,24 @@ function MyDataApp() {
     const renderPersonalData = (data) => {
         if (!data) return null;
 
+        const isUser = data.role === 'user';
+
         return React.createElement(
             'div',
             { className: 'space-y-4 text-gray-700' }, // Pridáme vertikálny priestor medzi jednotlivé polia
             React.createElement(
                 'div',
                 null,
-                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a priezvisko kontaktnej osoby:'),
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a priezvisko:'),
                 React.createElement('p', { className: 'text-lg mt-1' }, `${data.firstName || '-'} ${data.lastName || ''}`)
             ),
             React.createElement(
                 'div',
                 null,
-                React.createElement('p', { className: 'font-bold text-gray-800' }, 'E-mailová adresa kontaktnej osoby:'),
+                React.createElement('p', { className: 'font-bold text-gray-800' }, 'E-mailová adresa:'),
                 React.createElement('p', { className: 'text-lg mt-1' }, data.email || '-')
             ),
-            React.createElement(
+            isUser && React.createElement(
                 'div',
                 null,
                 React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo kontaktnej osoby:'),
