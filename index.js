@@ -96,12 +96,12 @@ const startCountdown = (targetDate) => {
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)); // Opravený výpočet minút
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
             <br>
-            <span class="font-semibold text-lg">
+            <span class="font-semibold text-lg">Zostáva: 
                 ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
             </span>
         `;
