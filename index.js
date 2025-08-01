@@ -5,6 +5,7 @@
 // Pridaná bola aj logika pre zmenu textu a presmerovania tlačidla na základe stavu prihlásenia.
 // Upravená bola aj funkcia na zmenu farby tlačidla "Moja zóna" podľa role používateľa.
 // Predvolene je tlačidlo 'Registrácia na turnaj' skryté.
+// Pridaná logika na skrytie a zobrazenie tlačidla "Prihlásenie"/"Moja zóna".
 
 import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -275,6 +276,9 @@ const updateLoginButton = (isLoggedIn) => {
     const loginButton = loginLink ? loginLink.querySelector('button') : null;
 
     if (loginLink && loginButton) {
+        // Na začiatku funkcie skryjeme tlačidlo, aby sa zabránilo blikaniu
+        loginLink.style.display = 'none';
+
         if (isLoggedIn) {
             loginLink.href = 'logged-in-my-data.html';
             loginButton.textContent = 'Moja zóna';
@@ -292,6 +296,8 @@ const updateLoginButton = (isLoggedIn) => {
             loginButton.style.backgroundColor = ''; // Odstránime inline štýl
             console.log("Používateľ odhlásený. Tlačidlo 'Prihlásenie' bolo obnovené.");
         }
+        
+        // Zobrazíme tlačidlo až po nastavení všetkých vlastností
         loginLink.style.display = 'inline-block';
     } else {
         console.warn("Elementy pre tlačidlo prihlásenia neboli nájdené.");
