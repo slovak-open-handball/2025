@@ -264,12 +264,11 @@ window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
-    updateRegistrationUI();
-    setupRegistrationDataListener();
+    // Už nevoláme updateRegistrationUI() priamo, ale necháme
+    // listenerom, aby sa spustili a aktualizovali UI.
 });
 
-// Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
-// skôr, ako sa stihne pripojiť listener.
+// Volanie funkcie pre nastavenie listenerov pri prvom spustení
 if (window.db) {
     const isLoggedIn = !!window.globalUserProfileData;
     updateLoginButton(isLoggedIn);
