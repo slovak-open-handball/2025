@@ -103,12 +103,7 @@ const updateHeaderLinks = (userProfileData) => {
         profileLink?.classList.remove('hidden');
         logoutButton?.classList.remove('hidden');
         authLink?.classList.add('hidden');
-        // Zobrazíme registráciu iba, ak je používateľ "user" a schválený
-        if (userProfileData.role === 'user' && userProfileData.approved) {
-            registerLink?.classList.remove('hidden');
-        } else {
-            registerLink?.classList.add('hidden');
-        }
+        registerLink?.classList.add('hidden');
     } else {
         // Používateľ je odhlásený
         homeLink?.classList.remove('hidden');
