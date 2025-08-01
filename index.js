@@ -43,7 +43,7 @@ const setupCategoriesListener = () => {
         }, (error) => {
             console.error("Chyba pri načítaní údajov o kategóriách:", error);
             toggleRegistrationButton(false);
-            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.", "");
+            updateMainText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
         });
     }
 };
@@ -115,14 +115,15 @@ const updateRegistrationUI = (docSnap) => {
     }
 
     const now = new Date();
-    const registrationStartDate = window.registrationDates?.registrationStartDate?.toDate();
-    const registrationEndDate = window.registrationDates?.registrationEndDate?.toDate();
+    // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
+    const registrationStartDate = window.registrationDates?.registrationStartDate;
+    const registrationEndDate = window.registrationDates?.registrationEndDate;
     
-    const isRegistrationOpen = window.registrationDates &&
-                               now >= registrationStartDate &&
-                               now < registrationEndDate;
-    const isRegistrationBeforeStart = window.registrationDates && now < registrationStartDate;
-    const isRegistrationEnded = window.registrationDates && now >= registrationEndDate;
+    const isRegistrationOpen = registrationStartDate && registrationEndDate &&
+                               now >= registrationStartDate.toDate() &&
+                               now < registrationEndDate.toDate();
+    const isRegistrationBeforeStart = registrationStartDate && now < registrationStartDate.toDate();
+    const isRegistrationEnded = registrationEndDate && now >= registrationEndDate.toDate();
 
     if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
         console.log("Dáta kategórií:", docSnap.data());
@@ -132,16 +133,16 @@ const updateRegistrationUI = (docSnap) => {
             updateMainText("Pre pokračovanie sa, prosím, prihláste alebo sa zaregistrujte.");
             
             // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate, `Registrácia sa končí ${formatDate(registrationEndDate)}`);
+            startCountdown(registrationEndDate.toDate(), `Registrácia sa končí ${formatDate(registrationEndDate)}`);
         } else if (isRegistrationBeforeStart) {
             toggleRegistrationButton(false);
-            updateMainText(`Registrácia na turnaj bude spustená ${formatDate(window.registrationDates.registrationStartDate)}.`);
+            updateMainText(`Registrácia na turnaj bude spustená ${formatDate(registrationStartDate)}.`);
             
             // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate, `Registrácia sa začína o:`);
+            startCountdown(registrationStartDate.toDate(), `Registrácia sa začína o:`);
         } else if (isRegistrationEnded) {
             toggleRegistrationButton(false);
-            updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(window.registrationDates.registrationEndDate)}.`);
+            updateMainText(`Registrácia na turnaj bola ukončená ${formatDate(registrationEndDate)}.`);
         } else {
             toggleRegistrationButton(false);
             updateMainText("Registrácia na turnaj momentálne nie je otvorená.");
