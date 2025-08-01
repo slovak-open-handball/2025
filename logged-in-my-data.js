@@ -74,7 +74,11 @@ const formatPostalCode = (postalCode) => {
 
 // Pomocná funkcia na renderovanie fakturačných údajov a adresy
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-    if (!userProfileData || (!userProfileData.billing && !userProfileData.address)) {
+    // Upravená podmienka: Skontrolujeme, či existujú nejaké zmysluplné údaje
+    const hasBillingData = userProfileData.billing && Object.values(userProfileData.billing).some(value => value);
+    const hasAddressData = userProfileData.address && Object.values(userProfileData.address).some(value => value);
+
+    if (!hasBillingData && !hasAddressData) {
         return null;
     }
 
@@ -278,7 +282,7 @@ function MyDataApp() {
             )
         ),
         
-        // Funkciu renderBillingAndAddressInfo voláme iba vtedy, ak existujú údaje
+        // Funkciu renderBillingAndAddressInfo voláme iba vtedy, ak existujú nejaké zmysluplné údaje
         (userProfileData.billing || userProfileData.address) && renderBillingAndAddressInfo(userProfileData, headerColor)
     );
 }
