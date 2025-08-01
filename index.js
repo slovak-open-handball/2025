@@ -80,9 +80,7 @@ const startCountdown = (targetDate, messagePrefix) => {
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         const countdownText = `
-            ${messagePrefix}
-            <br>
-            <span class="font-semibold text-lg">
+            ${messagePrefix}&nbsp;<span class="font-semibold text-lg">
                 ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
             </span>
         `;
