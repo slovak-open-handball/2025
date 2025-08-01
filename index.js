@@ -38,7 +38,7 @@ const App = () => {
     const [error, setError] = React.useState(null);
 
     React.useEffect(() => {
-        const unsubscribe = () => {};
+        let unsubscribe = () => {};
 
         // Skontrolujeme, či sú globálne premenné dostupné
         if (!window.db) {
@@ -47,7 +47,7 @@ const App = () => {
             return;
         }
 
-        const registrationDocRef = window.db.doc('/settings/registration');
+        const registrationDocRef = doc(window.db, 'settings', 'registration');
         const onSnapshotCallback = (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
