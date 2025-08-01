@@ -228,7 +228,7 @@ function MyDataApp() {
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko: '),
                     ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
                 ),
                 React.createElement(
