@@ -107,3 +107,9 @@ if (window.db) {
     loadRegistrationData();
     setupCategoriesListener();
 }
+
+// Skryjeme tlačidlo "Registrácia na turnaj" hneď po načítaní,
+// aby sa zobrazilo len po úspešnom načítaní kategórií.
+document.addEventListener('DOMContentLoaded', () => {
+    toggleRegistrationButton(false);
+});
