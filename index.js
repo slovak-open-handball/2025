@@ -40,47 +40,52 @@ const App = () => {
     const [error, setError] = React.useState('');
     const [globalUserProfileData, setGlobalUserProfileData] = React.useState(window.globalUserProfileData);
     const [countdown, setCountdown] = React.useState('');
+    const [isAuthInitialized, setIsAuthInitialized] = React.useState(window.isGlobalAuthReady);
 
     // Listener na globálne eventy z 'authentication.js'
-    // Toto zabezpečí, že sa stav aktualizuje, keď sa prihlási alebo odhlási používateľ
     React.useEffect(() => {
         const handleGlobalDataUpdate = (event) => {
             setGlobalUserProfileData(event.detail);
         };
         window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
-        return () => window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-    }, []);
 
-    // Načítanie registračných dát sa vykoná až po tom, čo sú k dispozícii používateľské dáta
+        // Tiež kontrolujeme stav inicializácie autentifikácie
+        const checkAuthReady = () => {
+            if (window.isGlobalAuthReady && !isAuthInitialized) {
+                setIsAuthInitialized(true);
+            }
+        };
+        checkAuthReady();
+
+        return () => window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+    }, [isAuthInitialized]);
+
+    // Načítanie registračných dát sa spustí iba raz, po inicializácii autentifikácie
     React.useEffect(() => {
         const fetchRegistrationData = async () => {
-            if (!window.db || !window.isGlobalAuthReady) {
-                // Ešte nie je pripravené, počkáme na ďalšiu zmenu stavu
+            if (!window.db || !isAuthInitialized) {
                 return;
             }
 
             try {
-                // Počkáme, kým sa načítajú dáta používateľa
-                // Tento useEffect je spustený iba, keď sa zmení `globalUserProfileData`,
-                // čo je ideálne miesto na začatie ďalšieho načítavania dát.
+                // Tento listener sa pripojí iba raz, pretože v závislostiach je len `isAuthInitialized`
+                // a jeho hodnota sa zmení len raz na 'true'.
                 const docRef = doc(window.db, "artifacts", "soh2025-2s0o2h5");
                 const unsubscribe = onSnapshot(docRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         setRegistrationData(data);
-                        setLoading(false);
                     } else {
                         console.warn("Registračné dáta neboli nájdené.");
                         setError("Registračné dáta nie sú k dispozícii. Kontaktujte administrátora.");
-                        setLoading(false);
                     }
+                    setLoading(false); // Ukončíme načítavanie, akonáhle máme odpoveď
                 }, (err) => {
                     console.error("Chyba pri načítaní registračných dát:", err);
                     setError("Chyba pri načítaní registračných dát. Skúste to prosím neskôr.");
                     setLoading(false);
                 });
                 
-                // Vrátime funkciu na odhlásenie z listenera
                 return () => unsubscribe();
             } catch (err) {
                 console.error("Chyba pri načítaní registračných dát:", err);
@@ -89,14 +94,10 @@ const App = () => {
             }
         };
 
-        // Načítame dáta iba, ak je používateľ prihlásený, inak zobrazíme hlavnú stránku
-        if (globalUserProfileData || window.isGlobalAuthReady) {
+        if (isAuthInitialized) {
             fetchRegistrationData();
-        } else {
-            // Ak nie je prihlásený, ale ani nenačítal dáta, ukážeme loader
-            setLoading(true);
         }
-    }, [globalUserProfileData]); // Tento efekt závisí od stavu používateľa
+    }, [isAuthInitialized]); // Tento efekt závisí od inicializácie autentifikácie
 
 
     // Funkcia pre aktualizáciu odpočítavania
