@@ -1,6 +1,8 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
+// Používa rovnakú logiku pre načítavanie dát ako logged-in-my-data.js,
+// čím zabezpečuje konzistentnosť v celej aplikácii.
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
