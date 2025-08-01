@@ -192,12 +192,12 @@ function MyDataApp() {
               React.createElement('span', { className: 'font-bold' }, 'Telefón:'),
               ` ${userProfileData.contactPhoneNumber}`
             ),
-            // Zobrazenie adresy
+            // Zobrazenie adresy vrátane krajiny
             React.createElement(
               'p',
               { className: 'text-gray-800 text-lg' },
               React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-              ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}`
+              ` ${userProfileData.street} ${userProfileData.houseNumber}, ${userProfileData.postalCode} ${userProfileData.city}, ${userProfileData.country}`
             ),
           )
         ),
