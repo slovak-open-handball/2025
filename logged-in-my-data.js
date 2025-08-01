@@ -80,7 +80,15 @@ const getHeaderColor = (role) => {
 // Funkcia na vykreslenie fakturačných údajov a adresy
 const renderBillingAndAddressInfo = (userProfileData) => {
     if (!userProfileData || (!userProfileData.billingInfo && !userProfileData.billingAddress)) {
-        return null;
+        return React.createElement(
+            'div',
+            { className: 'bg-white rounded-lg shadow-lg mt-8 p-6 text-center' },
+            React.createElement(
+                'p',
+                { className: 'text-gray-500' },
+                'Fakturačné údaje a adresa neboli nájdené.'
+            )
+        );
     }
 
     // Ak existujú fakturačné údaje alebo adresa, vytvoríme samostatnú kartu
