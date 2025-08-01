@@ -168,17 +168,12 @@ function MyDataApp() {
           React.createElement(
             'div',
             { className: 'space-y-2' },
+            // Zlúčené meno a priezvisko
             React.createElement(
               'p',
               { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Meno:'),
-              ` ${userProfileData.firstName}`
-            ),
-            React.createElement(
-              'p',
-              { className: 'text-gray-800 text-lg' },
-              React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
-              ` ${userProfileData.lastName}`
+              React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko:'),
+              ` ${userProfileData.firstName} ${userProfileData.lastName}`
             ),
             React.createElement(
               'p',
