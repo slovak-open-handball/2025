@@ -60,13 +60,9 @@ const handleAuthState = () => {
                 console.error("AuthManager: Chyba pri prihlasovaní s vlastným tokenom:", error);
             });
     } else {
-        signInAnonymously(window.auth)
-            .then(() => {
-                console.log("AuthManager: Úspešne prihlásený anonymne.");
-            })
-            .catch((error) => {
-                console.error("AuthManager: Chyba pri anonymnom prihlasovaní:", error);
-            });
+        // Ak nie je k dispozícii žiadny vlastný token, nebudeme sa pokúšať o anonymné prihlásenie
+        // Tým sa vyhneme chybe, ak je anonymné prihlásenie zakázané v Firebase.
+        console.log("AuthManager: Nie je k dispozícii žiadny vlastný token, preskakujem prihlásenie.");
     }
 
 
