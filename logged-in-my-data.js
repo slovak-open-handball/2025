@@ -4,6 +4,7 @@
 // Logika zmeny e-mailu bola prenesená z z-logged-in-change-email.js.
 // Kód bol aktualizovaný, aby bol odolnejší voči chybám s "undefined" premennými.
 // Bola pridaná aktualizovaná funkcia pre zobrazenie farebných notifikácií.
+// Farba hlavičky sa teraz mení dynamicky na základe roly používateľa.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -328,6 +329,20 @@ const ErrorMessage = ({ message }) => {
     );
 };
 
+// Funkcia na získanie farby hlavičky na základe roly
+const getHeaderColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return 'bg-[#47b3ff]';
+        case 'hall':
+            return 'bg-[#b06835]';
+        case 'user':
+            return 'bg-[#9333EA]';
+        default:
+            return 'bg-blue-800';
+    }
+};
+
 /**
  * Hlavný React komponent MyDataApp, ktorý zobrazuje profil používateľa.
  */
@@ -371,7 +386,7 @@ const MyDataApp = () => {
         return React.createElement(ErrorMessage, { message: error || 'Používateľské dáta neboli nájdené.' });
     }
 
-    const headerColor = 'bg-blue-600';
+    const headerColorClass = getHeaderColor(userProfileData.role);
 
     const PencilIcon = React.createElement(
         'svg',
@@ -398,7 +413,7 @@ const MyDataApp = () => {
             { className: `bg-white p-8 rounded-xl shadow-lg mt-8` },
             React.createElement(
                 'div',
-                { className: `p-6 rounded-lg shadow-lg ${headerColor} mb-8 flex items-center` },
+                { className: `p-6 rounded-lg shadow-lg ${headerColorClass} mb-8 flex items-center` },
                 React.createElement(
                     'h2',
                     { className: 'text-2xl font-bold text-white flex-grow' },
