@@ -146,11 +146,19 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
             hasBillingData && React.createElement(
                 'div',
                 null,
+                // Upravený text na "Oficiálny názov klubu"
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
+                    React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
                     ` ${userProfileData.billing.clubName || '-'}`
+                ),
+                // Presunutý riadok s adresou pod "Oficiálny názov klubu"
+                hasAddressData && React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                    ` ${formattedAddress}`
                 ),
                 React.createElement(
                     'p',
@@ -170,13 +178,6 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
                     React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                     ` ${userProfileData.billing.icdph || '-'}`
                 )
-            ),
-            // Podmienene vykreslíme údaje o adrese, ak existujú.
-            hasAddressData && React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                ` ${formattedAddress}`
             )
         )
     );
