@@ -105,9 +105,6 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    // Vždy zobrazíme hlavičku po načítaní
-    headerElement.classList.remove('invisible');
-
     if (userProfileData) {
         // Používateľ je prihlásený
         authLink.classList.add('hidden');
@@ -126,6 +123,9 @@ const updateHeaderLinks = (userProfileData) => {
 
     // Aktualizujeme viditeľnosť odkazu na registráciu
     updateRegistrationLinkVisibility(window.globalUserProfileData);
+
+    // Až po nastavení všetkých prvkov nastavíme hlavičku ako viditeľnú
+    headerElement.classList.remove('invisible');
 };
 
 /**
@@ -252,6 +252,7 @@ window.loadHeaderAndScripts = async () => {
         setupFirestoreListeners();
 
         // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
+        // Až tu sa nastaví viditeľnosť hlavičky, keď sú všetky dáta pripravené
         updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
