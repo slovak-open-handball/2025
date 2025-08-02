@@ -531,12 +531,13 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         ),
                         React.createElement(
                             'div',
-                            { className: 'mt-1 flex rounded-lg shadow-sm border border-gray-200 focus-within:ring-2',
-                               style: {
-                                   borderColor: isPhoneNumberFocused ? roleColor : '',
-                                   outlineColor: isPhoneNumberFocused ? roleColor : '',
-                                   boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
-                               }
+                            {
+                                className: `mt-1 flex rounded-lg shadow-sm border ${isPhoneNumberFocused ? 'focus-within:ring-2' : 'border-gray-200'}`,
+                                style: {
+                                    borderColor: isPhoneNumberFocused ? roleColor : '',
+                                    outlineColor: isPhoneNumberFocused ? roleColor : '',
+                                    boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
+                                }
                             },
                             React.createElement(
                                 'button',
@@ -544,7 +545,10 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                                     type: 'button',
                                     onClick: () => setShowDialCodeModal(true),
                                     disabled: loading,
-                                    className: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border-r border-gray-200 rounded-l-lg hover:bg-gray-100 disabled:opacity-50'
+                                    className: `px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border-r border-gray-200 rounded-l-lg disabled:opacity-50 hover:bg-gray-100`,
+                                    style: {
+                                        borderColor: isPhoneNumberFocused ? roleColor : ''
+                                    }
                                 },
                                 selectedDialCode || 'Predvoľba'
                             ),
