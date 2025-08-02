@@ -287,6 +287,10 @@ const MyDataApp = () => {
         // Vylepšená kontrola, či existujú platné dáta, a ak nie, zobrazí správu.
         const hasBillingInfo = data.billing && Object.keys(data.billing).length > 0;
         
+        // Formátovanie PSČ
+        const postalCode = data.postalCode || '';
+        const formattedPostalCode = postalCode.length === 5 ? `${postalCode.substring(0, 3)} ${postalCode.substring(3)}` : postalCode;
+
         return React.createElement(
             'div',
             { className: 'bg-white rounded-lg shadow-xl overflow-hidden mb-8' },
@@ -335,7 +339,7 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.street || ''} ${data.houseNumber || ''}, ${data.postalCode || ''} ${data.city || ''}, ${data.country || ''}`.trim()
+                        ` ${data.street || ''} ${data.houseNumber || ''}, ${formattedPostalCode} ${data.city || ''}, ${data.country || ''}`.trim()
                     )
                 ) :
                 React.createElement(
