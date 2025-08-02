@@ -105,6 +105,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const billingAddress2 = `${data.billing?.postalCode || ''} ${data.billing?.city || ''}`.trim();
         const billingAddress3 = `${data.billing?.country || ''}`;
         const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
+        
+        // Vytvorenie reťazca pre kontaktnú adresu - už sa nezobrazuje, ale pre poriadok nechám komentár.
+        // const contactAddress = `${data.contact?.street || ''} ${data.contact?.houseNumber || ''}`.trim();
 
         return React.createElement(
             'div',
