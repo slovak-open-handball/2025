@@ -7,7 +7,7 @@
 const { useState, useEffect } = React;
 // Dôležité: Opravená chyba pridaním importov pre funkcie Firestore
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Dôležité: Importy pre reautentifikáciu a aktualizáciu e-mailu
+// Dôležité: Importy pre reautentifikáciu, aktualizáciu e-mailu a overenie
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -276,15 +276,22 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
             return;
         }
 
-        // Overenie hesla pred aktualizáciou údajov
         try {
+            // Reautentifikácia používateľa s aktuálnym heslom
             const credential = EmailAuthProvider.credential(currentUser.email, password);
             await reauthenticateWithCredential(currentUser, credential);
             
             // Reautentifikácia bola úspešná, pokračujeme s aktualizáciou
             const userId = currentUser.uid;
             const userDocRef = doc(db, 'users', userId);
+
+            // Skontrolujeme, či sa zmenil e-mail a ak áno, zmeníme ho vo Firebase Auth
+            if (formData.email !== currentUser.email) {
+                await updateEmail(currentUser, formData.email);
+            }
             
+            // Uložíme aktualizované dáta do Firestore.
+            // Použijeme setDoc s merge: true, aby sa aktualizovali len zadané polia.
             await setDoc(userDocRef, {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -292,15 +299,16 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                 contactPhoneNumber: formData.contactPhoneNumber,
             }, { merge: true });
 
-            console.log("Kontaktné údaje boli úspešne uložené!");
+            console.log("Kontaktné údaje a/alebo e-mail boli úspešne uložené!");
             onClose();
 
         } catch (error) {
             console.error("Chyba pri overovaní hesla alebo ukladaní údajov: ", error);
-            if (error.code === 'auth/wrong-password') {
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                 setPasswordError('Nesprávne heslo. Prosím, skúste to znova.');
-            } else if (error.code === 'auth/invalid-credential') {
-                setPasswordError('Zadané heslo je neplatné.');
+            } else if (error.code === 'auth/email-already-in-use') {
+                // Toto ošetrenie je dôležité, ak sa niekto pokúša zmeniť e-mail na už existujúci
+                setPasswordError('E-mailová adresa je už používaná iným používateľom.');
             } else {
                 setPasswordError('Nastala chyba pri overovaní hesla. Skúste to neskôr.');
             }
