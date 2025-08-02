@@ -83,23 +83,42 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             { className: 'max-w-4xl w-full bg-white shadow-xl rounded-2xl p-8' },
             React.createElement(
                 'div',
-                { className: 'flex justify-between items-center mb-6' },
+                { className: 'flex justify-between items-start mb-6' },
                 React.createElement(
-                    'h2',
-                    { className: 'text-3xl font-bold text-gray-900' },
-                    fullName
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement(
+                        'h2',
+                        { className: 'text-3xl font-bold text-gray-900' },
+                        fullName
+                    ),
+                    // Nový zaoblený obdĺžnik s rolou používateľa
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'px-3 py-1 text-sm font-semibold rounded-full mt-2',
+                            style: { backgroundColor: roleColor, color: 'white' }
+                        },
+                        userProfileData.role
+                    )
                 ),
                 React.createElement(
                     'button',
                     {
                         onClick: () => setShowModal(true),
-                        className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
-                        style: { backgroundColor: roleColor, borderColor: roleColor }
+                        className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
+                        // Invertovanie farieb podľa požiadavky
+                        style: {
+                            backgroundColor: 'white',
+                            color: roleColor,
+                            border: `2px solid ${roleColor}`,
+                            '--tw-ring-color': roleColor
+                        }
                     },
                     // SVG ikona ceruzky pridaná do tlačidla
                     React.createElement(
                         'svg',
-                        { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', style: { color: roleColor } },
                         React.createElement('path', {
                             strokeLinecap: 'round',
                             strokeLinejoin: 'round',
