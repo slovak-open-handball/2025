@@ -7,7 +7,7 @@ import { doc, getFirestore, getDoc } from "https://www.gstatic.com/firebasejs/11
 import { countryDialCodes } from "./countryDialCodes.js";
 
 // Import komponentu pre modálne okno, ktorý je teraz v samostatnom súbore
-import { ChangeProfileModal } from "./ChangeProfileModal.js";
+import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 
 const { useState, useEffect } = React;
 
