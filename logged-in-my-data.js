@@ -107,19 +107,86 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
         postalCode: userProfileData.postalCode || '',
         country: userProfileData.country || '',
     });
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+
+    // Funkcia na validáciu formulára
+    const validateForm = () => {
+        const newErrors = {};
+        let isValid = true;
+
+        // Validácia PSČ
+        const postalCodeClean = formData.postalCode.replace(/\s/g, '');
+        if (!/^\d{5}$/.test(postalCodeClean)) {
+            newErrors.postalCode = 'PSČ musí obsahovať presne 5 číslic.';
+            isValid = false;
+        }
+
+        // Validácia IČO
+        if (formData.ico && !/^\d+$/.test(formData.ico)) {
+            newErrors.ico = 'IČO môže obsahovať iba číslice.';
+            isValid = false;
+        }
+
+        // Validácia DIČ
+        if (formData.dic && !/^\d+$/.test(formData.dic)) {
+            newErrors.dic = 'DIČ môže obsahovať iba číslice.';
+            isValid = false;
+        }
+
+        // Validácia IČ DPH
+        if (formData.icDph && !/^[A-Z]{2}\d+$/.test(formData.icDph)) {
+            newErrors.icDph = 'IČ DPH musí začínať dvoma veľkými písmenami a nasledovať musia číslice.';
+            isValid = false;
+        }
+
+        setErrors(newErrors);
+        return isValid;
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({ ...prevData, [name]: value }));
+        let newValue = value;
+
+        // Logika pre validáciu a formátovanie
+        if (name === 'postalCode') {
+            const cleaned = value.replace(/\D/g, '');
+            newValue = cleaned;
+            if (cleaned.length > 3) {
+                newValue = `${cleaned.substring(0, 3)} ${cleaned.substring(3, 5)}`;
+            }
+        } else if (name === 'ico' || name === 'dic') {
+             newValue = value.replace(/\D/g, '');
+        } else if (name === 'icDph') {
+            // Kontrola formátu pre IČ DPH
+            const currentIcDph = value.toUpperCase();
+            if (currentIcDph.length >= 2) {
+                const firstTwoChars = currentIcDph.substring(0, 2);
+                const remainingChars = currentIcDph.substring(2).replace(/\D/g, '');
+                newValue = `${firstTwoChars.replace(/[^A-Z]/g, '')}${remainingChars}`;
+            } else {
+                newValue = currentIcDph.replace(/[^A-Z]/g, '');
+            }
+        }
+
+        setFormData(prevData => ({ ...prevData, [name]: newValue }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            console.error("Formulár obsahuje chyby, uloženie zablokované.");
+            return;
+        }
+
+        setLoading(true);
         const db = window.db;
         const auth = window.auth;
 
         if (!db || !auth || !auth.currentUser) {
             console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
+            setLoading(false);
             return;
         }
 
@@ -139,7 +206,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                 street: formData.street,
                 houseNumber: formData.houseNumber,
                 city: formData.city,
-                postalCode: formData.postalCode,
+                postalCode: formData.postalCode.replace(/\s/g, ''), // Uložíme PSČ bez medzery
                 country: formData.country,
             }, { merge: true });
             console.log("Fakturačné údaje boli úspešne uložené!");
@@ -147,10 +214,15 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
         } catch (error) {
             console.error("Chyba pri ukladaní fakturačných údajov: ", error);
             // Tu by sa mohla zobraziť chybová správa používateľovi
+        } finally {
+            setLoading(false);
         }
     };
 
     if (!isOpen) return null;
+
+    const isFormValid = validateForm();
+    const buttonClasses = `bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${!isFormValid || loading ? 'opacity-50 cursor-not-allowed' : ''}`;
 
     return React.createElement(
         'div',
@@ -197,19 +269,23 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                 ),
                 React.createElement('div', { className: 'mb-4' },
                     React.createElement('label', { htmlFor: 'postalCode', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'PSČ'),
-                    React.createElement('input', { type: 'text', id: 'postalCode', name: 'postalCode', value: formData.postalCode, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                    React.createElement('input', { type: 'text', id: 'postalCode', name: 'postalCode', value: formData.postalCode, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700', maxLength: '6' }),
+                    errors.postalCode && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, errors.postalCode)
                 ),
                 React.createElement('div', { className: 'mb-4' },
                     React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
-                    React.createElement('input', { type: 'text', id: 'ico', name: 'ico', value: formData.ico, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                    React.createElement('input', { type: 'text', id: 'ico', name: 'ico', value: formData.ico, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' }),
+                    errors.ico && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, errors.ico)
                 ),
                 React.createElement('div', { className: 'mb-4' },
                     React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
-                    React.createElement('input', { type: 'text', id: 'dic', name: 'dic', value: formData.dic, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                    React.createElement('input', { type: 'text', id: 'dic', name: 'dic', value: formData.dic, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' }),
+                    errors.dic && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, errors.dic)
                 ),
                 React.createElement('div', { className: 'mb-6' },
                     React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
-                    React.createElement('input', { type: 'text', id: 'icDph', name: 'icDph', value: formData.icDph, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                    React.createElement('input', { type: 'text', id: 'icDph', name: 'icDph', value: formData.icDph, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' }),
+                    errors.icDph && React.createElement('p', { className: 'text-red-500 text-xs italic mt-1' }, errors.icDph)
                 ),
                 React.createElement(
                     'div',
@@ -218,9 +294,10 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                         'button',
                         {
                             type: 'submit',
-                            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline',
+                            className: buttonClasses,
+                            disabled: !isFormValid || loading,
                         },
-                        'Uložiť zmeny'
+                        loading ? 'Ukladám...' : 'Uložiť zmeny'
                     ),
                     React.createElement(
                         'button',
@@ -570,7 +647,7 @@ const MyDataApp = () => {
                         'svg',
                         { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z' })
-                    )
+                        )
                 )
             ),
             React.createElement(
