@@ -24,88 +24,47 @@
         }
         /* Štýly pre modálne okná */
         .modal {
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding-top: 50px;
+            transition: opacity 0.3s ease-in-out;
         }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            animation-name: animatetop;
-            animation-duration: 0.4s
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
-        @keyframes animatetop {
-            from {top: -300px; opacity: 0}
-            to {top: 0; opacity: 1}
-        }
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
+        .modal.visible {
+            opacity: 1;
+            pointer-events: auto;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- Kontajner pre hlavičku -->
-    <div id="header-placeholder" class="invisible"></div>
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
+    <div id="header-placeholder"></div>
 
-    <!-- Hlavný obsah stránky, kam sa vykreslí React aplikácia -->
-    <main class="flex-1 overflow-x-auto">
-        <div id="root" class="p-4">
-            <!-- Tu sa bude vykresľovať React aplikácia -->
-            <div class="flex justify-center items-center h-full">
-                <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-            </div>
-        </div>
-    </main>
+    <!-- Hlavný obsah stránky, vykreslený Reactom -->
+    <div id="root" class="flex-grow flex items-center justify-center p-4"></div>
 
-    <!-- Modálne okno pre notifikácie -->
-    <div id="global-notification-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <p id="global-notification-text" class="text-center"></p>
-        </div>
-    </div>
-    
-    <!-- Skripty - poradie je dôležité! -->
+    <!-- Globálny element pre notifikácie -->
+    <div id="global-notification"></div>
+
+    <!-- Načítanie hlavných JavaScript súborov ako modulov -->
+    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <script src="countryDialCodes.js"></script>
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="countryDialCodes.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="logged-in-my-data.js"></script>
 
-    <script type="text/javascript">
-        // Tento skript spúšťa renderovanie React aplikácie, ale až po načítaní ostatných modulov.
+    <script>
+        // Spustenie hlavnej logiky po načítaní celého DOM
         window.addEventListener('DOMContentLoaded', async () => {
             // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
-            if (typeof loadHeader !== 'undefined') {
-                await loadHeader();
+            if (typeof window.loadHeaderAndScripts !== 'undefined') {
+                await window.loadHeaderAndScripts();
             }
 
             // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
-            // Starú logiku s setTimeout sme odstránili, pretože komponent už reaguje na udalosti.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
@@ -116,10 +75,14 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
+            
+            // Reagujeme na udalosti z authentication.js a zamedzíme blikaniu
+            window.addEventListener('globalDataUpdated', () => {
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(MyDataApp, null));
+                console.log("logged-in-my-data.html: React App vykreslená na základe udalosti 'globalDataUpdated'.");
+            });
 
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(MyDataApp, null));
-            console.log("logged-in-my-data.html: React App vykreslená.");
         });
     </script>
 </body>
