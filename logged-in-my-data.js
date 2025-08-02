@@ -136,7 +136,6 @@ const MyDataApp = () => {
                 // Nadpis a tlačidlo v samostatnom bloku s farbou role
                 React.createElement('div', { className: `flex justify-between items-center p-6 md:p-8 rounded-t-xl text-white ${roleBgColor}`, style: { backgroundColor: roleColor } },
                     React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold' }, 'Moje údaje'),
-                    userProfileData?.role !== 'admin' &&
                     React.createElement('button', {
                         onClick: () => setShowModal(true),
                         className: 'flex items-center bg-white text-gray-800 px-4 py-2 rounded-full font-semibold shadow hover:bg-gray-100 transition-colors duration-300 transform hover:scale-105 focus:outline-none'
@@ -168,8 +167,7 @@ const MyDataApp = () => {
                             React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a Priezvisko:'),
                             React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim())
                         ),
-                        // Riadok s telefónnym číslom (iba pre bežných používateľov)
-                        userProfileData?.role !== 'admin' &&
+                        // Riadok s telefónnym číslom
                         React.createElement('div', { className: 'flex-1' },
                             React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo:'),
                             React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formatPhoneNumber(userProfileData.phoneNumber))
