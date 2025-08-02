@@ -12,38 +12,6 @@
     <!-- React a ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // Globálne premenné, ktoré budú dostupné pre všetky ostatné skripty
-        window.firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        window.initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Uložíme inštancie globálne pre jednoduchý prístup v React komponente
-        window.auth = auth;
-        window.db = db;
-        
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                if (window.initialAuthToken) {
-                    await signInWithCustomToken(auth, window.initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                console.log("logged-in-my-data.html: Prihlásenie úspešné.");
-            } catch (error) {
-                console.error("logged-in-my-data.html: Chyba pri prihlasovaní:", error);
-            }
-        });
-    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -63,8 +31,12 @@
             <!-- Obsah aplikácie bude vykreslený tu -->
         </div>
     </main>
-    <div id="footer-placeholder"></div>
-    
+
+    <!-- Načítanie súborov pre autentifikáciu a hlavičku -->
+    <!-- POZNÁMKA: Všetky JavaScript súbory budeme načítavať ako moduly pre konzistentnosť a správne spracovanie 'import'. -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
+    <!-- Načítanie hlavnej aplikácie, tiež ako modul -->
     <script type="module" src="logged-in-my-data.js"></script>
 </body>
 </html>
