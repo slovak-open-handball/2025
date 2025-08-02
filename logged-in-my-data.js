@@ -1,13 +1,10 @@
 // logged-in-my-data.js
 // Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
 // profilové a registračné dáta prihláseného používateľa.
-// Bol upravený tak, aby ukladal zmeny do Cloud Firestore a reagoval na zmeny v reálnom čase.
+// Bol upravený tak, aby ukladal zmeny do Cloud Firestore a reagoval na zmeny v reálnom čase,
+// pričom využíva globálne inštancie Firebase z 'authentication.js'.
 
 const { useState, useEffect } = React;
-// Importy pre Firebase
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 /**
  * Pomocný komponent pre načítavanie dát.
@@ -93,7 +90,7 @@ const getRoleColor = (role) => {
 /**
  * Komponent pre modálne okno na úpravu fakturačných údajov.
  */
-const EditBillingModal = ({ userProfileData, isOpen, onClose, db, userId, appId }) => {
+const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
     const [formData, setFormData] = useState({
         clubName: userProfileData.billing?.clubName || '',
         ico: userProfileData.billing?.ico || '',
@@ -113,14 +110,20 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose, db, userId, appId 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!db || !userId) {
-            console.error("Firestore nie je inicializovaný alebo userId nie je k dispozícii.");
+        const db = window.db;
+        const auth = window.auth;
+
+        if (!db || !auth || !auth.currentUser) {
+            console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
             return;
         }
 
-        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/userProfile`, userId);
+        const userId = auth.currentUser.uid;
+        // Pevne zadefinovaná cesta na základe štruktúry databázy v 'authentication.js'
+        const userDocRef = doc(db, 'users', userId);
         
         try {
+            // Použitie setDoc s merge: true, aby sa aktualizovali len zadané polia
             await setDoc(userDocRef, {
                 billing: {
                     clubName: formData.clubName,
@@ -133,7 +136,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose, db, userId, appId 
                 city: formData.city,
                 postalCode: formData.postalCode,
                 country: formData.country,
-            }, { merge: true }); // Použitie merge: true, aby sa aktualizovali len zmenené polia
+            }, { merge: true });
             console.log("Fakturačné údaje boli úspešne uložené!");
             onClose();
         } catch (error) {
@@ -232,7 +235,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose, db, userId, appId 
 /**
  * Komponent pre modálne okno na úpravu kontaktných údajov.
  */
-const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin, db, userId, appId }) => {
+const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => {
     const [formData, setFormData] = useState({
         firstName: userProfileData.firstName || '',
         lastName: userProfileData.lastName || '',
@@ -246,12 +249,17 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin, db, u
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!db || !userId) {
-            console.error("Firestore nie je inicializovaný alebo userId nie je k dispozícii.");
+        const db = window.db;
+        const auth = window.auth;
+
+        if (!db || !auth || !auth.currentUser) {
+            console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
             return;
         }
         
-        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/userProfile`, userId);
+        const userId = auth.currentUser.uid;
+        // Pevne zadefinovaná cesta na základe štruktúry databázy v 'authentication.js'
+        const userDocRef = doc(db, 'users', userId);
 
         try {
             await setDoc(userDocRef, {
@@ -381,79 +389,34 @@ const MyDataApp = () => {
     const [error, setError] = useState(null);
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
     const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
-
-    const [db, setDb] = useState(null);
-    const [auth, setAuth] = useState(null);
-    const [userId, setUserId] = useState(null);
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
+    
     useEffect(() => {
-        const initializeFirebase = async () => {
-            try {
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
-                const firestoreDb = getFirestore(app);
-                const firestoreAuth = getAuth(app);
-                
-                setDb(firestoreDb);
-                setAuth(firestoreAuth);
-
-                if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(firestoreAuth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(firestoreAuth);
-                }
-            } catch (err) {
-                console.error("Chyba pri inicializácii Firebase:", err);
-                setError("Chyba pri načítaní aplikácie. Skúste to prosím neskôr.");
+        // Počúva na globálnu udalosť, ktorá signalizuje, že dáta sú pripravené
+        const handleGlobalDataUpdated = (event) => {
+            if (event.detail) {
+                setUserProfileData(event.detail);
                 setIsLoading(false);
-            }
-        };
-
-        initializeFirebase();
-    }, []);
-
-    useEffect(() => {
-        if (!auth || !db) return;
-
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                const currentUserId = user.uid;
-                setUserId(currentUserId);
-                
-                const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/userProfile`, currentUserId);
-                
-                const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setUserProfileData(docSnap.data());
-                        setIsLoading(false);
-                    } else {
-                        // Ak dokument neexistuje, môžete vytvoriť základný dokument s ID používateľa
-                        setDoc(userDocRef, {
-                            email: user.email || 'neznámy@email.sk',
-                            firstName: '',
-                            lastName: '',
-                            role: 'user',
-                            billing: {},
-                        });
-                        console.log("Nový dokument pre užívateľa vytvorený.");
-                    }
-                }, (error) => {
-                    console.error("Chyba pri načítavaní dát z Firestore:", error);
-                    setError("Chyba pri načítavaní dát. Skúste to prosím neskôr.");
-                    setIsLoading(false);
-                });
-
-                return () => unsubscribeSnapshot();
             } else {
                 setError('Nie ste prihlásený. Prosím, prihláste sa, aby ste videli svoje údaje.');
                 setIsLoading(false);
             }
-        });
+        };
 
-        return () => unsubscribeAuth();
-    }, [auth, db, appId]);
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+
+        // Ak už dáta existujú, nastavíme ich okamžite
+        if (window.isGlobalAuthReady && window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+            setIsLoading(false);
+        } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
+             setError('Nie ste prihlásený. Prosím, prihláste sa, aby ste videli svoje údaje.');
+             setIsLoading(false);
+        }
+
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
+        };
+    }, []);
     
     if (isLoading) {
         return React.createElement(Loader);
@@ -601,20 +564,15 @@ const MyDataApp = () => {
             userProfileData: userProfileData,
             isOpen: isEditContactModalOpen,
             onClose: () => setIsEditContactModalOpen(false),
-            isUserAdmin: isUserAdmin,
-            db: db,
-            userId: userId,
-            appId: appId
+            isUserAdmin: isUserAdmin
         }),
         React.createElement(EditBillingModal, {
             userProfileData: userProfileData,
             isOpen: isEditBillingModalOpen,
-            onClose: () => setIsEditBillingModalOpen(false),
-            db: db,
-            userId: userId,
-            appId: appId
+            onClose: () => setIsEditBillingModalOpen(false)
         })
     );
 };
 
+// Export pre možnosť načítania v HTML
 window.MyDataApp = MyDataApp;
