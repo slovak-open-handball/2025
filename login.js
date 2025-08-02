@@ -1,6 +1,7 @@
 // login.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> login.html.
+// Bol upravený, aby sa React aplikácia vykreslila až po načítaní všetkých globálnych závislostí.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -20,184 +21,93 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 .264-.852.585-1.666.953-2.433m7.447-3.045a3.003 3.003 0 01-2.906 2.906m7.88-1.572a9.96 9.96 0 00-6.38-2.944M12 5c4.478 0 8.268 2.943 9.542 7a10.05 10.05 0 01-2.433 3.868M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 14L2 6' })
   );
   
+  // Zabezpečíme, aby input nebol autocomplete pri prihlasovaní
   return React.createElement(
     'div',
-    { className: 'relative mb-4' },
+    { className: 'mb-4' },
     React.createElement(
       'label',
       { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: id },
       label
     ),
     React.createElement(
-      'input',
-      {
-        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 focus:ring-2 focus:ring-blue-500',
+      'div',
+      { className: 'relative' },
+      React.createElement('input', {
+        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
         id: id,
         type: showPassword ? 'text' : 'password',
         placeholder: placeholder,
         value: value,
         onChange: onChange,
-        autoComplete: autoComplete,
-        disabled: disabled,
+        autoComplete: 'new-password', // Použijeme 'new-password', aby sa zabránilo ukladaniu hesla
         onCopy: onCopy,
         onPaste: onPaste,
         onCut: onCut,
-        tabIndex: tabIndex
-      }
-    ),
-    description && React.createElement(
-      'p',
-      { className: 'text-gray-500 text-xs italic mt-1' },
-      description
-    ),
-    React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: toggleShowPassword,
-        className: 'absolute inset-y-0 right-0 top-6 pr-3 flex items-center',
-        tabIndex: -1 // Nechceme, aby bolo tlačidlo dostupné cez tab
-      },
-      showPassword ? EyeOffIcon : EyeIcon
-    )
-  );
-}
-
-// Funkcia pre zobrazenie notifikačného modalu
-function NotificationModal({ show, message, type, onClose }) {
-  if (!show) return null;
-
-  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-  const icon = type === 'success' ? '✅' : '❌';
-
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: `bg-white p-6 rounded-xl shadow-xl max-w-md w-full text-center ${bgColor}` },
-      React.createElement(
-        'p',
-        { className: 'text-white text-lg font-semibold flex items-center justify-center space-x-2' },
-        React.createElement('span', null, icon),
-        React.createElement('span', null, message)
-      ),
+        disabled: disabled,
+        tabIndex: tabIndex,
+        // Dôležitý atribút, ktorý hovorí prehliadaču, že toto pole je nové a nemá ho automaticky dopĺňať
+        name: 'password'
+      }),
       React.createElement(
         'button',
         {
-          className: 'mt-4 bg-white text-black px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors duration-200',
-          onClick: onClose
+          type: 'button',
+          onClick: toggleShowPassword,
+          className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
         },
-        'Zavrieť'
+        showPassword ? EyeOffIcon : EyeIcon
       )
+    ),
+    description && React.createElement(
+        'p',
+        { className: 'text-xs text-gray-500 mt-1' },
+        description
     )
   );
 }
 
-// Modálne okno pre reset hesla
-function ResetPasswordModal({ show, onClose, onReset }) {
-  const [email, setEmail] = React.useState('');
-  const [message, setMessage] = React.useState('');
-  const [messageType, setMessageType] = React.useState('success');
-  const [loading, setLoading] = React.useState(false);
+// GlobalModal component (prerobený na React.createElement)
+const GlobalModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
 
-  // Funkcia pre reset hesla
-  const handleReset = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage('');
-    try {
-      const auth = window.auth;
-      if (!auth) {
-        throw new Error("Firebase Auth nie je inicializované.");
-      }
-      // Opravená verzia: Používame importovanú funkciu sendPasswordResetEmail
-      await sendPasswordResetEmail(auth, email);
-      setMessage('E-mail na reset hesla bol odoslaný. Skontrolujte si schránku vrátane spamu.');
-      setMessageType('success');
-      setTimeout(() => {
-        onClose(); // Zatvorí modal
-        setEmail(''); // Vyčistí pole
-      }, 3000);
-    } catch (error) {
-      console.error("Chyba pri odosielaní e-mailu na reset hesla:", error);
-      setMessage('Chyba: ' + error.message);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!show) return null;
-
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: 'bg-white p-6 rounded-xl shadow-xl max-w-md w-full text-center' },
-      React.createElement('h2', { className: 'text-2xl font-bold mb-4 text-center' }, 'Resetovať heslo'),
-      React.createElement(
-        'form',
-        { onSubmit: handleReset },
+    return React.createElement(
+        'div',
+        { className: 'modal' },
         React.createElement(
-          'div',
-          { className: 'mb-4' },
-          React.createElement(
-            'label',
-            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reset-email' },
-            'E-mail'
-          ),
-          React.createElement(
-            'input',
-            {
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-              id: 'reset-email',
-              type: 'email',
-              placeholder: 'Zadajte svoj e-mail',
-              value: email,
-              onChange: (e) => setEmail(e.target.value),
-              autoComplete: 'email',
-              required: true
-            }
-          )
-        ),
-        message && React.createElement(
-          'div',
-          { className: `p-2 my-2 rounded-lg text-white ${messageType === 'success' ? 'bg-green-500' : 'bg-red-500'}` },
-          message
-        ),
-        React.createElement(
-          'div',
-          { className: 'flex items-center justify-between mt-6' },
-          React.createElement(
-            'button',
-            {
-              className: `bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`,
-              type: 'submit',
-              disabled: loading
-            },
-            loading ? 'Odosielam...' : 'Odoslať e-mail'
-          ),
-          React.createElement(
-            'button',
-            {
-              className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-              type: 'button',
-              onClick: onClose
-            },
-            'Zrušiť'
-          )
+            'div',
+            { className: 'modal-content modal-content-sm' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center pb-3' },
+                React.createElement(
+                    'p',
+                    { className: 'text-2xl font-bold' },
+                    title
+                ),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'modal-close cursor-pointer z-50' },
+                    React.createElement(
+                        'svg',
+                        { className: 'fill-current text-black', xmlns: 'http://www.w3.org/2000/svg', width: '18', height: '18', viewBox: '0 0 18 18' },
+                        React.createElement('path', { d: 'M14.53 4.53l-1.06-1.06L9 7.94 4.53 3.47 3.47 4.53 7.94 9l-4.47 4.47 1.06 1.06L9 10.06l4.47 4.47 1.06-1.06L10.06 9z' })
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                null,
+                children
+            )
         )
-      )
-    )
-  );
-}
+    );
+};
 
 // Hlavný React komponent pre prihlasovaciu stránku
 function App() {
@@ -205,174 +115,171 @@ function App() {
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
-  const [showNotification, setShowNotification] = React.useState(false);
-  const [notificationMessage, setNotificationMessage] = React.useState('');
-  const [notificationType, setNotificationType] = React.useState('error');
+  const [error, setError] = React.useState('');
   const [showResetPasswordModal, setShowResetPasswordModal] = React.useState(false);
-  
-  // Pridal som túto funkciu na zmenu farby hlavičky, je prevzatá z index.js
-  const getRoleColor = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#47b3ff';
-        case 'hall':
-            return '#b06835';
-        case 'user':
-            return '#9333EA';
-        default:
-            return '#1d4ed8';
-    }
-  };
+  const [resetEmail, setResetEmail] = React.useState('');
+  const auth = window.auth;
 
-  React.useEffect(() => {
-    // Sledujeme zmeny v stave autentifikácie
-    const unsubscribe = onAuthStateChanged(window.auth, async (user) => {
-      console.log("login.js: onAuthStateChanged - Používateľ je", user ? "prihlásený" : "odhlásený");
-      
-      // Ak je používateľ prihlásený, presmerujeme ho na profilovú stránku
-      if (user && window.isGlobalAuthReady) {
-        console.log("login.js: Používateľ je prihlásený, presmerujem na logged-in-my-data.html");
-        window.location.href = 'logged-in-my-data.html';
-      }
-    });
-
-    const handleGlobalDataUpdated = (event) => {
-      const userProfileData = event.detail;
-      const header = document.querySelector('header');
-      if (header) {
-          if (userProfileData && userProfileData.role) {
-              const roleColor = getRoleColor(userProfileData.role);
-              header.style.backgroundColor = roleColor;
-              console.log(`login.js: Nastavujem farbu hlavičky na základe roly: ${userProfileData.role}, Farba: ${roleColor}`);
-          } else {
-              header.style.backgroundColor = '#1d4ed8'; // Predvolená farba pre neprihlásených
-              console.log("login.js: Používateľ nie je prihlásený alebo nemá rolu. Nastavujem predvolenú farbu hlavičky.");
-          }
-      }
-    };
-    
-    // Zaregistrujeme listener pre globálnu udalosť
-    window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
-
-    // Clean-up funkcia pre listener
-    return () => {
-      unsubscribe();
-      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
-    };
-  }, []);
-
-  const handleLogin = async (event) => {
-    event.preventDefault();
+  // Funkcia na obsluhu prihlásenia
+  const handleLogin = async (e) => {
+    e.preventDefault();
     setLoading(true);
-    setNotificationMessage('');
+    setError('');
 
-    if (window.grecaptcha) {
-      const reCaptchaToken = await new Promise((resolve) => {
-        window.grecaptcha.ready(() => {
-          window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'login' }).then(resolve);
-        });
-      });
-      console.log("ReCAPTCHA token:", reCaptchaToken);
+    if (!email || !password) {
+      setError('E-mail a heslo sú povinné.');
+      setLoading(false);
+      return;
     }
 
     try {
-      if (!window.auth) {
-          throw new Error("Firebase Auth nie je inicializované.");
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log('Prihlásenie bolo úspešné!');
+      window.showGlobalNotification('Prihlásenie bolo úspešné!', 'success');
+      // Presmerovanie na domovskú stránku po úspešnom prihlásení
+      window.location.href = 'index.html';
+    } catch (err) {
+      console.error('Chyba pri prihlasovaní:', err);
+      // Firebase kód chyby
+      let errorMessage = 'Nastala neznáma chyba. Skúste to prosím znova.';
+      switch (err.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'Neplatný formát e-mailu.';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'Používateľ s týmto e-mailom neexistuje.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Nesprávne heslo.';
+          break;
+        case 'auth/invalid-credential':
+          errorMessage = 'Nesprávne prihlasovacie údaje.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Príliš veľa neúspešných pokusov o prihlásenie. Skúste to prosím neskôr.';
+          break;
       }
-      const userCredential = await signInWithEmailAndPassword(window.auth, email, password);
-      console.log("Prihlásenie úspešné pre používateľa:", userCredential.user.email);
-    } catch (error) {
-      console.error("Chyba pri prihlasovaní:", error);
-      setNotificationMessage('Prihlásenie zlyhalo: ' + error.message);
-      setNotificationType('error');
-      setShowNotification(true);
+      setError(errorMessage);
+      window.showGlobalNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCloseNotification = () => {
-    setShowNotification(false);
-    setNotificationMessage('');
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!resetEmail) {
+        window.showGlobalNotification('Zadajte prosím e-mailovú adresu pre obnovenie hesla.', 'error');
+        return;
+    }
+    
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      window.showGlobalNotification('E-mail na obnovenie hesla bol odoslaný. Skontrolujte si schránku.', 'success');
+      setShowResetPasswordModal(false);
+      setResetEmail('');
+    } catch (err) {
+        console.error('Chyba pri odosielaní e-mailu na obnovenie hesla:', err);
+        let errorMessage = 'Nastala chyba pri odosielaní e-mailu. Skúste to prosím znova.';
+        if (err.code === 'auth/invalid-email') {
+            errorMessage = 'Neplatná e-mailová adresa.';
+        } else if (err.code === 'auth/user-not-found') {
+            errorMessage = 'Pre zadanú e-mailovú adresu neexistuje používateľský účet.';
+        }
+        window.showGlobalNotification(errorMessage, 'error');
+    }
   };
 
-  const handleToggleShowPassword = () => {
-    setShowPassword(prev => !prev);
-  };
-  
-  // Komponent pre prihlásenie
+
   return React.createElement(
     'div',
-    { className: 'flex-grow flex items-center justify-center' },
-    React.createElement(
-      NotificationModal,
-      {
-        show: showNotification,
-        message: notificationMessage,
-        type: notificationType,
-        onClose: handleCloseNotification
-      }
-    ),
-    React.createElement(
-      ResetPasswordModal,
-      {
-        show: showResetPasswordModal,
-        onClose: () => setShowResetPasswordModal(false)
-      }
+    { className: 'w-full max-w-lg mx-auto p-8' },
+    React.createElement(GlobalModal, {
+        isOpen: showResetPasswordModal,
+        onClose: () => setShowResetPasswordModal(false),
+        title: 'Obnovenie hesla'
+    },
+    React.createElement('form', { onSubmit: handlePasswordReset, className: 'space-y-4' },
+        React.createElement('p', null, 'Zadajte vašu e-mailovú adresu a my vám pošleme odkaz na obnovenie hesla.'),
+        React.createElement('input', {
+            type: 'email',
+            value: resetEmail,
+            onChange: (e) => setResetEmail(e.target.value),
+            placeholder: 'E-mail',
+            className: 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300',
+            required: true
+        }),
+        React.createElement('div', { className: 'flex justify-end space-x-2 mt-4' },
+            React.createElement('button', {
+                type: 'button',
+                onClick: () => setShowResetPasswordModal(false),
+                className: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300'
+            }, 'Zrušiť'),
+            React.createElement('button', {
+                type: 'submit',
+                className: 'px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600'
+            }, 'Odoslať')
+        )
+    )
     ),
     React.createElement(
       'div',
-      { className: 'bg-white p-8 rounded-xl shadow-2xl w-full max-w-md' },
+      { className: 'w-full bg-white rounded-xl shadow-2xl p-8' },
       React.createElement(
         'div',
-        { className: 'flex flex-col items-center justify-center' },
-        React.createElement('h2', { className: 'text-3xl font-extrabold text-gray-900 text-center mb-6' }, 'Prihlásenie'),
+        { className: 'flex justify-center' },
         React.createElement(
-          'form',
-          { className: 'w-full', onSubmit: handleLogin },
+          'h1',
+          { className: 'text-3xl font-bold text-gray-900 mb-6' },
+          'Prihlásenie'
+        )
+      ),
+      React.createElement(
+        'form',
+        { onSubmit: handleLogin },
+        React.createElement(
+          'div',
+          { className: 'mb-4' },
           React.createElement(
-            'div',
-            { className: 'mb-4' },
-            React.createElement(
-              'label',
-              { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
-              'E-mail'
-            ),
-            React.createElement(
-              'input',
-              {
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-all duration-200 focus:ring-2 focus:ring-blue-500',
-                id: 'email',
-                type: 'email',
-                placeholder: 'Zadajte svoj e-mail',
-                value: email,
-                onChange: (e) => setEmail(e.target.value),
-                autoComplete: 'email',
-                required: true,
-                tabIndex: 1
-              }
-            )
+            'label',
+            { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
+            'E-mailová adresa'
           ),
-          React.createElement(
-            PasswordInput,
-            {
-              id: 'password',
-              label: 'Heslo',
-              value: password,
-              onChange: (e) => setPassword(e.target.value),
-              placeholder: 'Zadajte heslo',
-              autoComplete: 'current-password',
-              showPassword: showPassword,
-              toggleShowPassword: handleToggleShowPassword,
-              disabled: loading,
-              description: '',
-              tabIndex: 2
-            }
-          ),
+          React.createElement('input', {
+            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+            id: 'email',
+            type: 'email',
+            placeholder: 'Váš e-mail',
+            value: email,
+            onChange: (e) => setEmail(e.target.value),
+            autoComplete: 'email',
+            disabled: loading,
+            tabIndex: 1
+          })
+        ),
+        React.createElement(PasswordInput, {
+            id: 'password',
+            label: 'Heslo',
+            value: password,
+            onChange: (e) => setPassword(e.target.value),
+            placeholder: '**************',
+            autoComplete: 'current-password',
+            showPassword: showPassword,
+            toggleShowPassword: () => setShowPassword(!showPassword),
+            disabled: loading,
+            tabIndex: 2
+        }),
+        error && React.createElement(
+          'div',
+          { className: 'mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg', role: 'alert' },
+          error
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex items-center justify-between' },
           React.createElement(
             'button',
             {
-              type: 'submit',
               className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
               disabled: loading,
               tabIndex: 3
@@ -410,9 +317,11 @@ const checkAndRender = () => {
     }
   } else {
     // Ak ešte nie sú všetky globálne premenné dostupné, skúsi to znova neskôr
-    setTimeout(checkAndRender, 100);
+    setTimeout(checkAndRender, 50);
   }
 };
 
-// Spustíme vykreslenie po načítaní stránky
-window.addEventListener('load', checkAndRender);
+// Spustenie vykreslenia po načítaní všetkých globálnych premenných
+window.addEventListener('DOMContentLoaded', () => {
+  checkAndRender();
+});
