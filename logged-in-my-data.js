@@ -14,52 +14,53 @@ const { useState, useEffect } = React;
  * Používa sa pre pole aktuálneho hesla v modálnom okne.
  */
 const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled }) => {
-const EyeIcon = React.createElement(
-  'svg',
-  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
-);
+    // Použitie nových SVG ikon, ktoré ste poskytli
+    const EyeIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+    );
 
-const EyeOffIcon = React.createElement(
-  'svg',
-  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-  React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-  React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-  React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
-);
+    const EyeOffIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+        React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+    );
 
-  return React.createElement(
-    'div',
-    { className: 'relative' },
-    React.createElement(
-      'label',
-      { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
-      label
-    ),
-    React.createElement(
-      'div',
-      { className: 'mt-1 relative rounded-md shadow-sm' },
-      React.createElement(
-        'input',
-        {
-          id: id,
-          type: showPassword ? 'text' : 'password',
-          className: 'appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
-          value: value,
-          onChange: onChange,
-          placeholder: placeholder,
-          required: true,
-          disabled: disabled
-        }
-      ),
-      React.createElement(
+    return React.createElement(
         'div',
-        { className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 cursor-pointer', onClick: toggleShowPassword },
-        showPassword ? EyeIcon : EyeOffIcon
-      )
-    )
-  );
+        { className: 'relative' },
+        React.createElement(
+            'label',
+            { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
+            label
+        ),
+        React.createElement(
+            'div',
+            { className: 'mt-1 relative rounded-md shadow-sm' },
+            React.createElement(
+                'input',
+                {
+                    id: id,
+                    type: showPassword ? 'text' : 'password',
+                    className: 'appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm',
+                    value: value,
+                    onChange: onChange,
+                    placeholder: placeholder,
+                    required: true,
+                    disabled: disabled
+                }
+            ),
+            React.createElement(
+                'div',
+                { className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5 cursor-pointer', onClick: toggleShowPassword },
+                showPassword ? EyeIcon : EyeOffIcon
+            )
+        )
+    );
 };
 
 /**
@@ -110,7 +111,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
             await reauthenticateWithCredential(user, credential);
 
             await verifyBeforeUpdateEmail(user, newEmail);
-            
+
             const db = getFirestore();
             const userDocRef = doc(db, 'users', user.uid);
             await updateDoc(userDocRef, {
@@ -146,7 +147,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         return null;
     }
 
-    const buttonClasses = `w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 
+    const buttonClasses = `w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
                            ${(loading || !newEmail || !password)
                              ? 'bg-white text-gray-400 border border-gray-300 cursor-not-allowed'
                              : `text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500`
