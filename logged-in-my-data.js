@@ -116,6 +116,24 @@ const getHeaderColor = (role) => {
     }
 };
 
+/**
+ * Vráti Tailwind CSS triedy pre farbu tlačidla na základe roly používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
+ * @returns {string} Tailwind CSS triedy.
+ */
+const getButtonColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return 'bg-blue-500 hover:bg-blue-600 focus:ring-blue-500';
+        case 'hall':
+            return 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500';
+        case 'user':
+            return 'bg-purple-600 hover:bg-purple-700 focus:ring-purple-500';
+        default:
+            return 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
+    }
+};
+
 
 /**
  * Hlavný React komponent MyDataApp, ktorý zobrazuje údaje profilu
@@ -301,6 +319,7 @@ const MyDataApp = () => {
 
     const role = userProfileData?.role || 'default'; // Získame rolu z profilu, alebo použijeme 'default'
     const headerColor = getHeaderColor(role);
+    const buttonColorClass = getButtonColor(role); // Získame farbu tlačidla na základe role
 
     return React.createElement(
         // Spoločný kontajner pre celú oblasť
@@ -458,11 +477,11 @@ const MyDataApp = () => {
                         'button',
                         {
                             type: 'submit',
-                            className: `w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 
+                            className: `w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 
                             ${
                               (loading || !newEmail || !password) 
-                                ? 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed' // Upravené štýly pre disabled stav: biela výplň, modrý text a modrý obrys
-                                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                                ? `bg-white text-gray-400 border border-gray-300 cursor-not-allowed` 
+                                : `text-white ${buttonColorClass}`
                             }`,
                             disabled: loading || !newEmail || !password,
                         },
