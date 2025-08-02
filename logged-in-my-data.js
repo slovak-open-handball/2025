@@ -297,5 +297,11 @@ const handleDataUpdateAndRender = (event) => {
 };
 
 
-// Prihlásenie používateľa
+// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
+// skontrolujeme, či sú dáta už dostupné.
+if (window.globalUserProfileData) {
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+}
