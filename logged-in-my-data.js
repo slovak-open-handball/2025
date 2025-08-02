@@ -23,7 +23,9 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
   const EyeOffIcon = React.createElement(
     'svg',
     { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.082-1.272m6.113-1.074a3 3 0 11-4.838-3.238M15 12a3 3 0 11-6 0 3 3 0 016 0zm-2.067 2.067L22 22M2 2l20 20M12 5c4.477 0 8.268 2.943 9.542 7a9.97 9.97 0 01-1.082 1.272M7.18 10.18a3.001 3.001 0 014.18 4.18' })
+    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
   );
 
   return React.createElement(
@@ -417,7 +419,12 @@ const MyDataApp = () => {
                         'button',
                         {
                             type: 'submit',
-                            className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors duration-200`,
+                            className: `w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 
+                            ${
+                              (loading || !newEmail || !password) 
+                                ? 'bg-white text-blue-600 border border-blue-600 cursor-not-allowed' // Upravené štýly pre disabled stav: biela výplň, modrý text a modrý obrys
+                                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                            }`,
                             disabled: loading || !newEmail || !password,
                         },
                         loading ? 'Odosielam...' : 'Odoslať overovací e-mail'
