@@ -38,13 +38,27 @@ const ErrorMessage = ({ message }) => {
     );
 };
 
+// Funkcia na určenie farby na základe roly používateľa
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff'; // Farba pre admina
+        case 'hall':
+            return '#b06835'; // Farba pre halu
+        case 'user':
+            return '#9333EA'; // Farba pre bežného používateľa
+        default:
+            return '#1D4ED8'; // Predvolená farba (napr. pre tímy alebo iné roly)
+    }
+};
+
 /**
  * Zobrazuje dáta o fakturácii používateľa.
  * @param {object} userProfileData - Dáta profilu používateľa.
- * @param {string} headerColor - Farba hlavičky sekcie.
+ * @param {string} roleColor - Hex kód farby na základe roly.
  * @returns {React.Element} - Vykreslený komponent.
  */
-const renderBillingInfo = (userProfileData, headerColor) => {
+const renderBillingInfo = (userProfileData, roleColor) => {
     const hasBillingAddress = userProfileData.billingAddress && Object.keys(userProfileData.billingAddress).length > 0;
 
     // Obsah sekcie pre fakturačné dáta
@@ -68,13 +82,14 @@ const renderBillingInfo = (userProfileData, headerColor) => {
         { className: 'bg-white rounded-lg shadow-md p-6' },
         React.createElement(
             'div',
-            { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
+            { className: 'flex items-center justify-between pb-4 mb-4 border-b-2', style: { borderColor: roleColor } },
             React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Fakturačné údaje'),
             React.createElement(
                 'button',
                 {
                     onClick: () => { /* Otvoriť modálne okno na úpravu */ },
-                    className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
+                    className: 'transition-colors duration-200',
+                    style: { color: roleColor }
                 },
                 React.createElement(
                     'svg',
@@ -306,8 +321,6 @@ const MyDataApp = () => {
     // Nový stav pre modálne okno na zmenu e-mailu
     const [isChangeEmailModalOpen, setIsChangeEmailModalOpen] = useState(false);
 
-    const isUserAdmin = userProfileData && userProfileData.isUserAdmin;
-
     useEffect(() => {
         const handleDataUpdate = (event) => {
             console.log("MyDataApp: Prijatá udalosť 'globalDataUpdated', aktualizujem dáta.");
@@ -368,24 +381,27 @@ const MyDataApp = () => {
         return phoneNumber;
     };
 
-    const headerColor = userProfileData.registrationType === 'team' ? 'yellow' : 'blue';
+    // Určíme farbu na základe roly používateľa
+    const userRole = userProfileData.role;
+    const roleColor = getRoleColor(userRole);
 
     return React.createElement(
         'div',
-        { className: 'container mx-auto p-4 md:p-8 lg:p-12 space-y-8' }, // Pridaný space-y-8 pre vertikálny rozostup
+        { className: 'container mx-auto p-4 md:p-8 lg:p-12 space-y-8' },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-lg shadow-md p-6 w-full' }, // Zmenené z lg:w-1/2 na w-full
+            { className: 'bg-white rounded-lg shadow-md p-6 w-full' },
             React.createElement(
                 'div',
-                { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
+                { className: 'flex items-center justify-between pb-4 mb-4 border-b-2', style: { borderColor: roleColor } },
                 React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Kontaktná osoba'),
                 // Ikona ceruzky pre otvorenie modálneho okna na zmenu e-mailu
                 React.createElement(
                     'button',
                     {
                         onClick: () => setIsChangeEmailModalOpen(true),
-                        className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
+                        className: 'transition-colors duration-200',
+                        style: { color: roleColor }
                     },
                     React.createElement(
                         'svg',
@@ -409,7 +425,7 @@ const MyDataApp = () => {
                     React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                     ` ${userProfileData.email}`
                 ),
-                !isUserAdmin && React.createElement(
+                React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
@@ -417,7 +433,7 @@ const MyDataApp = () => {
                 ),
             )
         ),
-        renderBillingInfo(userProfileData, headerColor),
+        renderBillingInfo(userProfileData, roleColor),
         // Modálne okno na zmenu e-mailu s logikou z ChangeEmailApp
         React.createElement(ChangeEmailApp, {
             isOpen: isChangeEmailModalOpen,
