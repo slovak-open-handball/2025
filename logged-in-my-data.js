@@ -100,9 +100,18 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const contactValueColor = 'text-gray-900';
         const invertedButtonColor = getRoleColor(data.role);
 
+        // Vytvorenie reťazca pre fakturačnú adresu
         const billingAddress = `${data.billing?.street || ''} ${data.billing?.houseNumber || ''}`.trim();
         const billingAddress2 = `${data.billing?.postalCode || ''} ${data.billing?.city || ''}`.trim();
         const billingAddress3 = `${data.billing?.country || ''}`;
+        const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
+
+        // Vytvorenie reťazca pre kontaktnú adresu
+        const contactAddress = `${data.street || ''} ${data.houseNumber || ''}`.trim();
+        const contactAddress2 = `${data.postalCode || ''} ${data.city || ''}`.trim();
+        const contactAddress3 = `${data.country || ''}`;
+        const fullContactAddress = `${contactAddress}${contactAddress ? ', ' : ''}${contactAddress2}${contactAddress2 ? ', ' : ''}${contactAddress3}`.trim().replace(/^,|,$/g, '').trim();
+
 
         return React.createElement(
             'div',
@@ -213,66 +222,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.contactPhoneNumber || 'Nezadané'
                             )
-                        ),
-                        // Adresa
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Adresa'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                `${data.street || ''} ${data.houseNumber || ''}`.trim() || 'Nezadaná'
-                            )
-                        ),
-                        // Mesto
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Mesto'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.city || 'Nezadané'
-                            )
-                        ),
-                        // PSČ
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'PSČ'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.postalCode || 'Nezadané'
-                            )
-                        ),
-                        // Krajina
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Krajina'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.country || 'Nezadaná'
-                            )
                         )
                     )
                 )
@@ -336,7 +285,22 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim() || 'Nezadané'
+                                fullBillingAddress || 'Nezadané'
+                            )
+                        ),
+                        // Adresa kontaktnej osoby
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Fakturačná adresa' // Zmena textu na Fakturačná adresa
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                fullContactAddress || 'Nezadané'
                             )
                         ),
                         // IČO
