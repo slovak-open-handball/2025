@@ -96,7 +96,6 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         return null;
     }
     
-    // Nová logika pre formátovanie adresy bez čiarky za ulicou a mestom.
     let addressParts = [];
 
     // Ulica a číslo domu
@@ -277,7 +276,7 @@ const MyDataApp = () => {
                     React.createElement(
                         'h2',
                         { className: 'text-2xl' },
-                        'Môj profil'
+                        'Kontaktná osoba'
                     )
                 ),
                 React.createElement(
