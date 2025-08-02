@@ -50,23 +50,26 @@ const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber || typeof phoneNumber !== 'string') return '';
     
     // Zistíme, či je telefónne číslo vo formáte s predvoľbou.
-    const hasPrefix = phoneNumber.startsWith('+');
     const digits = phoneNumber.replace(/\D/g, '');
 
-    // Ak má predvoľbu a má dostatočnú dĺžku, sformátujeme ho.
-    if (hasPrefix && digits.length > 4) {
-        // Získame predvoľbu (napr. +421) a zvyšok čísla
-        const prefix = digits.substring(0, digits.length - 9);
-        const number = digits.substring(digits.length - 9);
-        
-        const part1 = number.substring(0, 3);
-        const part2 = number.substring(3, 6);
-        const part3 = number.substring(6, 9);
-        
-        return `+${prefix} ${part1} ${part2} ${part3}`;
+    // Použijeme databázu predvolieb z countryDialCodes.js
+    if (window.countryDialCodes) {
+        const countryDialCodes = window.countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
+        for (const country of countryDialCodes) {
+            if (phoneNumber.startsWith(country.dialCode)) {
+                const numberWithoutPrefix = phoneNumber.substring(country.dialCode.length).trim().replace(/\D/g, '');
+                
+                if (numberWithoutPrefix.length === 9) {
+                    const part1 = numberWithoutPrefix.substring(0, 3);
+                    const part2 = numberWithoutPrefix.substring(3, 6);
+                    const part3 = numberWithoutPrefix.substring(6, 9);
+                    return `${country.dialCode} ${part1} ${part2} ${part3}`;
+                }
+            }
+        }
     }
 
-    // Ak nemá predvoľbu, ale má 9 číslic, formátujeme ho ako lokálne číslo.
+    // Ak nemá predvoľbu alebo sa nenašla v databáze, ale má 9 číslic, formátujeme ho ako lokálne číslo.
     if (digits.length === 9) {
         const part1 = digits.substring(0, 3);
         const part2 = digits.substring(3, 6);
