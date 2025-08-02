@@ -1,6 +1,9 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený tak, aby sa spúšťal až po udalosti `globalDataUpdated`,
-// čím sa zabezpečí, že Firebase a profilové dáta sú dostupné.
+// Tento súbor bol upravený, aby bol sám o sebe zodpovedný za načítanie dát,
+// čím sa eliminuje závislosť na časovaní udalosti DOMContentLoaded a globalDataUpdated.
+
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
 
@@ -104,35 +107,46 @@ const MyDataApp = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        const auth = window.auth;
-        const user = auth ? auth.currentUser : null;
+        // Priamo inicializujeme Firebase auth a db
+        const auth = getAuth();
         const db = window.db;
         const appId = window.__app_id;
-        
-        // Získavame funkcie doc a onSnapshot z globálneho objektu window
-        const doc = window.doc;
-        const onSnapshot = window.onSnapshot;
 
-        if (user && db && doc && onSnapshot) {
-            const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
-            const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    setUserProfileData(docSnap.data());
-                } else {
-                    // Ak dokument neexistuje, nastavíme email z auth objektu
-                    setUserProfileData({ email: user.email });
-                }
-                setLoading(false);
-            }, (error) => {
-                console.error("Chyba pri načítaní profilu:", error);
-                setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
-                setLoading(false);
-            });
-            return () => unsubscribeFirestore();
-        } else {
+        if (!auth || !db) {
+            console.error("Firebase Auth alebo Firestore nie je inicializovaný.");
+            setError("Chyba pri inicializácii služieb. Skúste prosím neskôr.");
             setLoading(false);
-            setError("Používateľ nie je prihlásený alebo Firebase nie je inicializovaný.");
+            return;
         }
+
+        const unsubscribeAuth = auth.onAuthStateChanged(user => {
+            if (user) {
+                const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
+                
+                const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setUserProfileData(docSnap.data());
+                    } else {
+                        // Ak dokument neexistuje, nastavíme email z auth objektu
+                        setUserProfileData({ email: user.email });
+                    }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Chyba pri načítaní profilu:", error);
+                    setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
+                    setLoading(false);
+                });
+                // Vrátime funkciu na odhlásenie z odberu, ak sa komponent odpojí
+                return unsubscribeFirestore;
+            } else {
+                console.log("Používateľ odhlásený.");
+                setError("Používateľ nie je prihlásený.");
+                setLoading(false);
+            }
+        });
+        
+        // Vrátime funkciu na odhlásenie z odberu stavu autentifikácie
+        return () => unsubscribeAuth();
     }, []);
 
     const handleOpenModal = () => {
@@ -186,7 +200,7 @@ const MyDataApp = () => {
             return;
         }
         
-        const auth = window.auth;
+        const auth = getAuth();
         const user = auth.currentUser;
         if (!user) {
             setError("Používateľ nie je prihlásený.");
@@ -201,10 +215,6 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
-            const EmailAuthProvider = window.EmailAuthProvider;
-            const reauthenticateWithCredential = window.reauthenticateWithCredential;
-            const updateEmail = window.updateEmail;
-            
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
             await updateEmail(user, newEmail);
@@ -212,7 +222,6 @@ const MyDataApp = () => {
             if (window.showGlobalNotification) {
                 window.showGlobalNotification("E-mailová adresa bola úspešne zmenená.", 'success');
             } else {
-                // Použitie modálneho okna namiesto `alert()`
                 setError("E-mailová adresa bola úspešne zmenená.");
             }
             handleCloseModal();
@@ -375,22 +384,14 @@ const MyDataApp = () => {
     );
 };
 
-// Po načítaní DOM a Reactu vykreslíme aplikáciu.
-const renderApp = () => {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, null));
-        console.log("logged-in-my-data.js: Aplikácia vykreslená.");
-    } else {
-        console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
-    }
-};
-
-window.addEventListener('DOMContentLoaded', () => {
-    // Čakáme na DOM, potom na event, ktorý indikuje, že sú načítané všetky moduly
-    // a globálne dáta.
-    window.addEventListener('globalDataUpdated', renderApp);
-});
+// Vykreslíme aplikáciu hneď, ako je DOM pripravený, a komponent sa postará o svoj stav
+const rootElement = document.getElementById('root');
+if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(React.createElement(MyDataApp, null));
+    console.log("logged-in-my-data.js: Aplikácia vykreslená.");
+} else {
+    console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+}
 
 window.MyDataApp = MyDataApp;
