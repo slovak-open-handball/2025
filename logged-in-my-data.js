@@ -49,6 +49,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
           placeholder: placeholder,
           disabled: disabled,
           required: true,
+          autoComplete: "current-password", // Pridané pre lepšiu použiteľnosť
           // Upravené štýly inputu pre rovnakú výšku ako tlačidlo
           className: 'block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3'
         }
@@ -77,7 +78,7 @@ const Loader = () => {
 };
 
 /**
- * Pomocný komponent pre zobrazenie chybovej/úspešnej správy.
+ * Pomocný komponent pre zobrazenie celostránkovej chybovej/úspešnej správy (teraz už nepoužívaný).
  * @param {object} props - Vlastnosti komponentu.
  * @param {string} props.message - Správa na zobrazenie.
  * @param {boolean} [props.isSuccess=false] - Ak je true, zobrazí úspešnú správu.
@@ -96,6 +97,70 @@ const ErrorMessage = ({ message, isSuccess = false }) => {
             React.createElement('p', null, message)
         )
     );
+};
+
+/**
+ * Nový komponent pre pop-up notifikácie.
+ * @param {object} props - Vlastnosti komponentu.
+ * @param {string} props.message - Správa na zobrazenie.
+ * @param {string} props.type - Typ správy ('success' alebo 'error').
+ * @param {function} props.onClose - Funkcia na zavretie pop-upu.
+ */
+const NotificationPopup = ({ message, type, onClose }) => {
+  const isSuccess = type === 'success';
+  const colorClasses = isSuccess ? 'bg-green-100 border-green-500 text-green-700' : 'bg-red-100 border-red-500 text-red-700';
+  const titleText = isSuccess ? 'Úspech' : 'Chyba';
+
+  useEffect(() => {
+    // Automaticky zavrieť pop-up po 5 sekundách
+    const timer = setTimeout(() => {
+      onClose();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose, message]);
+
+  return React.createElement(
+    'div',
+    { className: `fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-full mx-auto p-4 rounded-xl shadow-lg flex items-start space-x-4 transition-transform duration-300 transform scale-100 border-l-4 ${colorClasses}` },
+    React.createElement(
+      'div',
+      { className: 'flex-shrink-0' },
+      isSuccess
+        ? React.createElement(
+            'svg',
+            { className: 'h-6 w-6 text-green-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M9 12l2 2l4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
+          )
+        : React.createElement(
+            'svg',
+            { className: 'h-6 w-6 text-red-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' })
+          )
+    ),
+    React.createElement(
+      'div',
+      { className: 'flex-1' },
+      React.createElement(
+        'p',
+        { className: 'text-sm font-medium' },
+        titleText
+      ),
+      React.createElement(
+        'p',
+        { className: 'mt-1 text-sm' },
+        message
+      )
+    ),
+    React.createElement(
+      'div',
+      { className: 'flex-shrink-0 flex items-center justify-center' },
+      React.createElement(
+        'button',
+        { onClick: onClose, className: `p-1 rounded-full text-sm font-medium ${isSuccess ? 'text-green-500 hover:bg-green-200' : 'text-red-500 hover:bg-red-200'} focus:outline-none focus:ring-2 focus:ring-offset-2` },
+        React.createElement('span', null, 'X')
+      )
+    )
+  );
 };
 
 /**
@@ -142,19 +207,17 @@ const getButtonColor = (role) => {
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
     const [currentAuthEmail, setCurrentAuthEmail] = useState('');
+    const [notification, setNotification] = useState({ message: '', type: '', visible: false });
 
     // Stav pre dynamickú farbu ikony ceruzky
     const [pencilHover, setPencilHover] = useState(false);
-
 
     useEffect(() => {
         const auth = getAuth();
@@ -162,7 +225,7 @@ const MyDataApp = () => {
 
         if (!auth || !db) {
             console.error("Firebase Auth alebo Firestore nie je inicializovaný.");
-            setError("Chyba pri inicializácii služieb. Skúste prosím neskôr.");
+            setNotification({ message: "Chyba pri inicializácii služieb. Skúste prosím neskôr.", type: "error", visible: true });
             setLoading(false);
             return;
         }
@@ -170,7 +233,6 @@ const MyDataApp = () => {
         const unsubscribeAuth = onAuthStateChanged(auth, user => {
             if (user) {
                 setCurrentAuthEmail(user.email);
-                // Správna cesta k profilovému dokumentu používateľa na základe vašich pravidiel a štruktúry databázy.
                 const userDocRef = doc(db, `users/${user.uid}`);
                 
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
@@ -180,10 +242,8 @@ const MyDataApp = () => {
                         const firestoreData = docSnap.data();
                         const latestFirestoreEmail = firestoreData.email;
 
-                        // Ak sa e-mail v Auth líši od e-mailu vo Firestore, aktualizujeme Firestore
                         if (latestAuthEmail !== latestFirestoreEmail) {
                             console.log("Synchronizujem e-mail: Auth a Firestore sa líšia.");
-                            // Použitie updateDoc na aktualizáciu len e-mailu
                             updateDoc(userDocRef, { email: latestAuthEmail })
                                 .then(() => console.log("E-mail vo Firestore bol úspešne aktualizovaný."))
                                 .catch(e => console.error("Chyba pri aktualizácii e-mailu vo Firestore:", e));
@@ -191,19 +251,18 @@ const MyDataApp = () => {
 
                         setUserProfileData(firestoreData);
                     } else {
-                        // Ak dokument neexistuje, nastavíme e-mail z auth objektu
                         setUserProfileData({ email: latestAuthEmail });
                     }
                     setLoading(false);
                 }, (error) => {
                     console.error("Chyba pri načítaní profilu:", error);
-                    setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
+                    setNotification({ message: "Chyba pri načítaní dát profilu. Skúste to prosím neskôr.", type: "error", visible: true });
                     setLoading(false);
                 });
                 return unsubscribeFirestore;
             } else {
                 console.log("Používateľ odhlásený.");
-                setError("Používateľ nie je prihlásený.");
+                setNotification({ message: "Používateľ nie je prihlásený.", type: "error", visible: true });
                 setLoading(false);
             }
         });
@@ -213,8 +272,11 @@ const MyDataApp = () => {
 
     const handleOpenModal = () => {
         setIsModalOpen(true);
-        // Po otvorení modálneho okna nepredvyplňovať novú e-mailovú adresu
         setNewEmail(''); 
+        setPassword(''); // Dôležité: Reset hesla pri otvorení modalu
+        setEmailError('');
+        setPasswordError('');
+        setNotification({ message: '', type: '', visible: false }); // Vymazať predchádzajúce notifikácie
     };
 
     const handleCloseModal = () => {
@@ -223,7 +285,6 @@ const MyDataApp = () => {
         setPassword('');
         setEmailError('');
         setPasswordError('');
-        setSuccessMessage('');
     };
 
     const handleNewEmailChange = (event) => {
@@ -245,7 +306,7 @@ const MyDataApp = () => {
         event.preventDefault();
         setEmailError('');
         setPasswordError('');
-        setSuccessMessage('');
+        setNotification({ message: '', type: '', visible: false });
 
         let hasError = false;
 
@@ -266,7 +327,7 @@ const MyDataApp = () => {
         const auth = getAuth();
         const user = auth.currentUser;
         if (!user) {
-            setError("Používateľ nie je prihlásený.");
+            setNotification({ message: "Používateľ nie je prihlásený.", type: "error", visible: true });
             return;
         }
 
@@ -278,26 +339,28 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
+            console.log("Pokúšam sa o re-autentifikáciu s heslom...");
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
+            console.log("Re-autentifikácia úspešná.");
             
-            // POUŽITIE verifyBeforeUpdateEmail pre overenie
             await verifyBeforeUpdateEmail(user, newEmail);
             
             console.log("Overovací e-mail bol úspešne odoslaný.");
             
-            setSuccessMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, overte ho pre dokončenie zmeny.");
+            setNotification({ message: "Overovací e-mail bol odoslaný na novú adresu. Prosím, overte ho pre dokončenie zmeny.", type: "success", visible: true });
             
             handleCloseModal();
         } catch (error) {
             setLoading(false);
             console.error("Chyba pri zmene e-mailu:", error);
-            if (error.code === 'auth/wrong-password') {
-                setPasswordError("Nesprávne heslo.");
+
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                setNotification({ message: "Nesprávne heslo. Skúste to prosím znova.", type: "error", visible: true });
             } else if (error.code === 'auth/email-already-in-use') {
-                setEmailError("Táto e-mailová adresa sa už používa.");
+                setNotification({ message: "Táto e-mailová adresa sa už používa.", type: "error", visible: true });
             } else {
-                setError(`Chyba: ${error.message}`);
+                setNotification({ message: `Chyba: ${error.message}`, type: "error", visible: true });
             }
         } finally {
             setLoading(false);
@@ -307,26 +370,28 @@ const MyDataApp = () => {
     if (loading) {
         return React.createElement(Loader, null);
     }
-
-    // Ak je k dispozícii správa o úspechu, zobrazíme ju. Inak zobrazíme chybu, ak existuje.
-    if (successMessage) {
-        return React.createElement(ErrorMessage, { message: successMessage, isSuccess: true });
-    }
     
-    if (error) {
-        return React.createElement(ErrorMessage, { message: error });
-    }
+    // Odstránené celostránkové chybové/úspešné správy. Teraz používame pop-up notifikáciu.
+    // if (successMessage) {
+    //     return React.createElement(ErrorMessage, { message: successMessage, isSuccess: true });
+    // }
+    // if (error) {
+    //     return React.createElement(ErrorMessage, { message: error });
+    // }
 
-    const role = userProfileData?.role || 'default'; // Získame rolu z profilu, alebo použijeme 'default'
+    const role = userProfileData?.role || 'default';
     const headerColor = getHeaderColor(role);
-    const buttonColorClass = getButtonColor(role); // Získame farbu tlačidla na základe role
+    const buttonColorClass = getButtonColor(role);
 
     return React.createElement(
-        // Spoločný kontajner pre celú oblasť
         'div',
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8' },
+        notification.visible && React.createElement(NotificationPopup, {
+            message: notification.message,
+            type: notification.type,
+            onClose: () => setNotification({ ...notification, visible: false })
+        }),
         React.createElement(
-            // Hlavička s modrou farbou a zaoblenými len hornými rohmi
             'div',
             { className: `p-6 shadow-lg rounded-t-xl`, style: { backgroundColor: headerColor } },
             React.createElement(
@@ -336,7 +401,6 @@ const MyDataApp = () => {
             )
         ),
         React.createElement(
-            // Biely obsahový blok, ktorý začína hneď pod hlavičkou a má zaoblené iba spodné rohy
             'div',
             { className: `bg-white p-8 rounded-b-xl shadow-lg` },
             React.createElement(
@@ -356,16 +420,14 @@ const MyDataApp = () => {
                         { 
                           onClick: handleOpenModal, 
                           className: 'p-2 rounded-full hover:bg-gray-100 transition-colors',
-                          // Použijeme onMouseEnter a onMouseLeave na dynamickú zmenu farby
                           onMouseEnter: () => setPencilHover(true),
                           onMouseLeave: () => setPencilHover(false),
                         },
                         React.createElement(
                             'svg',
-                            // Dynamický štýl pre farbu ceruzky na základe stavu hoveru
                             { 
                                 className: 'h-6 w-6 transition-colors',
-                                style: { color: pencilHover ? headerColor : '#6b7280' }, // #6b7280 je text-gray-500
+                                style: { color: pencilHover ? headerColor : '#6b7280' },
                                 fill: 'none', 
                                 viewBox: '0 0 24 24', 
                                 stroke: 'currentColor' 
@@ -381,8 +443,7 @@ const MyDataApp = () => {
             { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' },
             React.createElement(
                 'div',
-                // Šírka modálneho okna je teraz širšia
-                { className: 'relative p-8 bg-white w-1/2 max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
+                { className: 'relative p-8 bg-white w-full max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-center pb-4 border-b border-gray-200' },
@@ -409,7 +470,6 @@ const MyDataApp = () => {
                 React.createElement(
                     'form',
                     { onSubmit: handleSubmit, className: 'mt-6 space-y-4' },
-                    // Nový zablokovaný input box pre aktuálnu e-mailovú adresu
                     React.createElement(
                         'div',
                         null,
@@ -425,7 +485,6 @@ const MyDataApp = () => {
                                 id: 'current-email',
                                 value: currentAuthEmail,
                                 disabled: true,
-                                // Moderné štýly s rovnakou výškou ako tlačidlo
                                 className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 cursor-not-allowed sm:text-sm py-2 px-3'
                             }
                         )
@@ -445,7 +504,6 @@ const MyDataApp = () => {
                                 id: 'new-email',
                                 value: newEmail,
                                 onChange: handleNewEmailChange,
-                                // Pridané moderné štýly inputu s rovnakou výškou
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3 ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`,
                                 placeholder: 'Zadajte novú e-mailovú adresu',
                                 disabled: loading,
@@ -493,7 +551,6 @@ const MyDataApp = () => {
     );
 };
 
-// Vykreslíme aplikáciu hneď, ako je DOM pripravený, a komponent sa postará o svoj stav
 const rootElement = document.getElementById('root');
 if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
     const root = ReactDOM.createRoot(rootElement);
