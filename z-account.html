@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOH 2025 - Account</title> <!-- Toto bude dynamicky zmenené JS -->
+    <title>SOH 2025 - z-account</title> <!-- Toto bude dynamicky zmenené JS -->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts - Inter -->
@@ -73,16 +73,16 @@
         // Inicializácia Firebase aplikácie
         if (firebase.apps.length === 0) {
             window.firebaseApp = firebase.initializeApp(firebaseConfig);
-            console.log("account.html: Firebase aplikácia inicializovaná s konfiguráciou:", firebaseConfig);
+            console.log("z-account.html: Firebase aplikácia inicializovaná s konfiguráciou:", firebaseConfig);
         } else {
             window.firebaseApp = firebase.app();
-            console.log("account.html: Firebase aplikácia už bola inicializovaná.");
+            console.log("z-account.html: Firebase aplikácia už bola inicializovaná.");
         }
 
         // Získanie inštancií Auth a Firestore a ich sprístupnenie globálne
         window.auth = window.firebaseApp.auth();
         window.db = window.firebaseApp.firestore();
-        console.log("account.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
+        console.log("z-account.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
 
         // Funkcia na získanie URL parametrov pre dynamický názov karty
         function getUrlParams() {
@@ -111,15 +111,15 @@
         </div>
     </div>
 
-    <!-- Načítanie header.js a account.js -->
+    <!-- Načítanie header.js a z-account.js -->
     <!-- DÔLEŽITÁ ZMENA: header.js sa načítava po DOM elementoch, ktoré potrebuje -->
     <script src="authentication.js"></script>
     <script src="header.js"></script>
-    <script src="account.js"></script>
+    <script src="z-account.js"></script>
 
     <script>
         // Spustíme vykreslenie React aplikácie po načítaní DOM
-        // Header.js a account.js sú už načítané v <head> alebo pred týmto skriptom
+        // Header.js a z-account.js sú už načítané v <head> alebo pred týmto skriptom
         window.onload = async () => {
             // Skontrolujeme, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
@@ -127,9 +127,9 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Zabezpečíme, že ResetPasswordApp je definovaná (je v account.js)
+            // Zabezpečíme, že ResetPasswordApp je definovaná (je v z-account.js)
             if (typeof ResetPasswordApp === 'undefined') {
-                console.error("Chyba: Komponent ResetPasswordApp nie je definovaný. Skontrolujte account.js.");
+                console.error("Chyba: Komponent ResetPasswordApp nie je definovaný. Skontrolujte z-account.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
@@ -147,13 +147,13 @@
                 } else if (mode === 'recoverEmail') { // NOVINKA: Pridaný režim pre obnovenie e-mailu
                     titleElement.textContent = 'SOH 2025 - Obnovenie e-mailovej adresy';
                 } else {
-                    titleElement.textContent = 'SOH 2025 - Account'; // Predvolený názov
+                    titleElement.textContent = 'SOH 2025 - z-account'; // Predvolený názov
                 }
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(ResetPasswordApp, null));
-            console.log("account.html: React App vykreslená.");
+            console.log("z-account.html: React App vykreslená.");
         };
     </script>
 </body>
