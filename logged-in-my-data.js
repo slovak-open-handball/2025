@@ -383,8 +383,9 @@ const MyDataApp = () => {
     const headerColor = 'bg-blue-600';
 
     return React.createElement(
+        // Zmena: Použitie triedy 'max-w-xl' na obmedzenie šírky kontajnera
         'div',
-        { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8' },
+        { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-xl' },
         React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-xl shadow-lg mt-8' },
