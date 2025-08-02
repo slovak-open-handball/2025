@@ -121,7 +121,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 };
 
 /**
- * Komponent ChangeProfileModal - modálne okno pre zmenu e-mailovej adresy, mena a priezviska
+ * Komponent ChangeProfileModal - modálne okno pre zmenu e-mailovej adresy, mena, priezviska a telefónneho čísla
  */
 const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Inicializácia stavov s prázdnymi reťazcami, aby sa polia nepredvyplnili
@@ -129,6 +129,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [newEmail, setNewEmail] = useState('');
     const [newFirstName, setNewFirstName] = useState('');
     const [newLastName, setNewLastName] = useState('');
+    const [newPhoneNumber, setNewPhoneNumber] = useState(''); // Nové pole pre telefónne číslo
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     
@@ -136,6 +137,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [isEmailFocused, setIsEmailFocused] = useState(false);
     const [isFirstNameFocused, setIsFirstNameFocused] = useState(false);
     const [isLastNameFocused, setIsLastNameFocused] = useState(false);
+    const [isPhoneNumberFocused, setIsPhoneNumberFocused] = useState(false); // Nový stav pre fokus telefónneho čísla
 
     useEffect(() => {
         // Reset stavu pri zatvorení modálu
@@ -144,11 +146,13 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             setNewEmail('');
             setNewFirstName('');
             setNewLastName('');
+            setNewPhoneNumber('');
             setLoading(false);
             setShowPassword(false);
             setIsEmailFocused(false);
             setIsFirstNameFocused(false);
             setIsLastNameFocused(false);
+            setIsPhoneNumberFocused(false);
         }
     }, [show]);
 
@@ -162,20 +166,29 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const isPasswordValid = (password) => {
         return password.length >= 10;
     };
+
+    // Validácia telefónneho čísla
+    const isPhoneNumberValid = (phoneNumber) => {
+        // Jednoduchá validácia, že číslo obsahuje len číslice a má aspoň 9 znakov (Slovenské čísla)
+        const phoneRegex = /^\+?(\d[\s-]?){9,15}$/;
+        return phoneRegex.test(phoneNumber);
+    };
     
     // Kontrola, či nastali nejaké zmeny
     const hasNameChanged = (newFirstName !== '' && newFirstName !== userProfileData?.firstName) || (newLastName !== '' && newLastName !== userProfileData?.lastName);
     const hasEmailChanged = newEmail !== '' && newEmail !== userProfileData?.email;
+    const hasPhoneNumberChanged = newPhoneNumber !== '' && newPhoneNumber !== userProfileData?.contactPhoneNumber;
 
     // Celková validácia formulára pre tlačidlo "Uložiť"
-    const isFormValid = hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword));
+    const isFormValid = hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword)) || (hasPhoneNumberChanged && isPhoneNumberValid(newPhoneNumber));
+
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         // Ak sa nič nezmenilo, zobrazíme notifikáciu a zatvoríme modál
-        if (!hasNameChanged && !hasEmailChanged) {
+        if (!hasNameChanged && !hasEmailChanged && !hasPhoneNumberChanged) {
             window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
             setLoading(false);
             onClose();
@@ -183,7 +196,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         }
 
         try {
-            // Inicializujeme objekt pre aktualizácie mena a priezviska
+            // Inicializujeme objekt pre aktualizácie mena, priezviska a telefónneho čísla
             const updates = {};
             // Skontrolujeme, či bolo zmenené meno
             if (newFirstName !== '' && newFirstName !== userProfileData.firstName) {
@@ -193,13 +206,17 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             if (newLastName !== '' && newLastName !== userProfileData.lastName) {
                 updates.lastName = newLastName;
             }
+            // Skontrolujeme, či bolo zmenené telefónne číslo
+            if (newPhoneNumber !== '' && newPhoneNumber !== userProfileData.contactPhoneNumber) {
+                updates.contactPhoneNumber = newPhoneNumber;
+            }
 
-            // Ak existujú nejaké zmeny v mene alebo priezvisku, uložíme ich
+            // Ak existujú nejaké zmeny v mene, priezvisku alebo telefónnom čísle, uložíme ich
             if (Object.keys(updates).length > 0) {
                 const db = window.db;
                 const userDocRef = doc(db, 'users', userProfileData.id);
                 await updateDoc(userDocRef, updates);
-                window.showGlobalNotification('Meno a priezvisko boli úspešne zmenené.', 'success');
+                window.showGlobalNotification('Profilové údaje boli úspešne zmenené.', 'success');
             }
 
             // Zmena e-mailu (vyžaduje re-autentifikáciu a heslo)
@@ -258,6 +275,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const firstNamePlaceholder = userProfileData?.firstName || 'Meno';
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
+    const phoneNumberPlaceholder = userProfileData?.contactPhoneNumber || '+421...';
 
     return React.createElement(
         'div',
@@ -384,6 +402,37 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         })
                     )
                 ),
+                // Pole pre telefónne číslo
+                 React.createElement(
+                    'div',
+                    null,
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'new-phone-number', className: 'block text-sm font-medium text-gray-700' },
+                        'Telefónne číslo'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-1' },
+                        React.createElement('input', {
+                            id: 'new-phone-number',
+                            name: 'new-phone-number',
+                            type: 'tel', // Používame typ tel pre lepšiu klávesnicu na mobiloch
+                            value: newPhoneNumber,
+                            onChange: (e) => setNewPhoneNumber(e.target.value),
+                            onFocus: () => setIsPhoneNumberFocused(true),
+                            onBlur: () => setIsPhoneNumberFocused(false),
+                            placeholder: phoneNumberPlaceholder,
+                            disabled: loading,
+                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
+                            style: {
+                                borderColor: isPhoneNumberFocused ? roleColor : '',
+                                outlineColor: isPhoneNumberFocused ? roleColor : '',
+                                boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
+                            }
+                        })
+                    )
+                ),
                 // Pole pre aktuálne heslo
                 React.createElement(PasswordInput, {
                     id: 'current-password',
@@ -413,8 +462,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         'button',
                         {
                             type: 'submit',
-                            disabled: loading || (!hasNameChanged && !hasEmailChanged) || (hasEmailChanged && (!isEmailValid(newEmail) || !isPasswordValid(currentPassword))),
-                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200 ${loading || (!hasNameChanged && !hasEmailChanged) || (hasEmailChanged && (!isEmailValid(newEmail) || !isPasswordValid(currentPassword))) ? 'cursor-not-allowed' : ''}`,
+                            disabled: loading || (!hasNameChanged && !hasEmailChanged && !hasPhoneNumberChanged) || (hasEmailChanged && (!isEmailValid(newEmail) || !isPasswordValid(currentPassword))),
+                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200 ${loading || (!hasNameChanged && !hasEmailChanged && !hasPhoneNumberChanged) || (hasEmailChanged && (!isEmailValid(newEmail) || !isPasswordValid(currentPassword))) ? 'cursor-not-allowed' : ''}`,
                             style: {
                                 backgroundColor: isFormValid ? roleColor : 'white',
                                 color: isFormValid ? 'white' : roleColor,
@@ -480,7 +529,7 @@ const MyDataApp = () => {
         );
     }
     
-    const { role, firstName, lastName, email } = userProfileData;
+    const { role, firstName, lastName, email, contactPhoneNumber } = userProfileData;
     const headerColor = getRoleColor(role);
 
     return React.createElement(
@@ -545,6 +594,21 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg mt-1' },
                         `${userProfileData.email}`
+                    )
+                ),
+                // Zobrazíme telefónne číslo, iba ak existuje
+                userProfileData.contactPhoneNumber && React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800 flex items-center' },
+                        'Telefónne číslo:'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        `${userProfileData.contactPhoneNumber}`
                     )
                 )
             )
