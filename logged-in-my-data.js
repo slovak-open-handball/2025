@@ -126,7 +126,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 /**
  * Komponent pre modálne okno s predvoľbami telefónnych čísiel
  */
-const DialCodeModal = ({ show, onClose, onSelect }) => {
+const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
     // Vytvoríme referenciu pre pole, aby sme ho mohli použiť pre vyhľadávanie
     const inputRef = useRef(null);
 
@@ -202,17 +202,25 @@ const DialCodeModal = ({ show, onClose, onSelect }) => {
                 React.createElement(
                     'div',
                     { className: 'grid grid-cols-3 gap-2 overflow-y-auto max-h-80' },
-                    filteredDialCodes.map((country, index) =>
-                        React.createElement(
+                    filteredDialCodes.map((country, index) => {
+                        const isSelected = country.dialCode === selectedDialCode;
+                        const buttonClass = `px-2 py-1 rounded-lg text-sm font-medium transition-colors duration-200 ${isSelected
+                            ? 'text-white'
+                            : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                        }`;
+                        const buttonStyle = isSelected ? { backgroundColor: roleColor } : {};
+
+                        return React.createElement(
                             'button',
                             {
                                 key: index,
                                 onClick: () => onSelect(country.dialCode),
-                                className: 'px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200',
+                                className: buttonClass,
+                                style: buttonStyle,
                             },
                             `${country.code} (${country.dialCode})`
-                        )
-                    )
+                        );
+                    })
                 )
             )
         ),
@@ -616,6 +624,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                     setSelectedDialCode(dialCode);
                     setShowDialCodeModal(false);
                 },
+                selectedDialCode: selectedDialCode,
+                roleColor: roleColor,
             })
         ),
         document.body
