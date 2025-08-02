@@ -44,10 +44,10 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: `mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none sm:text-sm ${
-                    disabled ? 'bg-gray-100 border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-offset-1'
+                className: `mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-0 sm:text-sm ${
+                    disabled ? 'bg-gray-100 border-gray-200' : 'border-gray-300 focus:border-transparent'
                 }`,
-                style: disabled ? {} : { 'borderColor': roleColor, 'ringColor': roleColor }
+                style: disabled ? {} : { 'borderColor': roleColor }
             }
         ),
         React.createElement(
@@ -91,8 +91,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                 placeholder: 'Hľadať krajinu alebo predvoľbu...',
                 value: searchQuery,
                 onChange: (e) => setSearchQuery(e.target.value),
-                className: 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1',
-                style: { 'focus-ring-color': roleColor }
+                className: 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500' // Tu je zachované modré orámovanie pri focus
             }
         )
     );
@@ -301,7 +300,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     }
 
     // Spoločná trieda pre štýlovanie vstupných polí
-    const inputStyleClass = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm';
+    const inputStyleClass = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-0 sm:text-sm';
     
     const modal = React.createElement(
         'div',
@@ -380,7 +379,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             { className: 'relative mt-1' },
                             React.createElement(
                                 'div',
-                                { className: 'flex rounded-md shadow-sm border border-gray-300 overflow-hidden', style: { 'borderColor': roleColor } },
+                                { className: 'flex rounded-md shadow-sm border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-offset-1 focus-within:ring-transparent', style: { 'borderColor': roleColor, 'ringColor': roleColor } }, // focus-within class
                                 React.createElement(
                                     'button',
                                     {
@@ -397,8 +396,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                                     value: formData.contactPhoneNumber,
                                     onChange: handleChange,
                                     placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
-                                    className: 'flex-1 block w-full rounded-r-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm',
-                                    style: { 'ringColor': roleColor }
+                                    className: 'flex-1 block w-full rounded-r-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-0 sm:text-sm', // focus:ring-0 removes blue ring
+                                    style: { 'borderColor': roleColor, 'ringColor': roleColor }
                                 })
                             )
                         )
