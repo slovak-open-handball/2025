@@ -58,9 +58,10 @@ window.showGlobalNotification = (message, type = 'success') => {
  * @param {string} props.roleColor - Farba priradená role používateľa.
  */
 const MyDataApp = ({ userProfileData, roleColor }) => {
-    const [isMyDataLoaded, setIsMyDataLoaded] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+    // Inicializujeme stav s počiatočnými dátami.
     const [data, setData] = useState(userProfileData);
+    const [isMyDataLoaded, setIsMyDataLoaded] = useState(!!userProfileData && Object.keys(userProfileData).length > 0);
+    const [showModal, setShowModal] = useState(false);
 
     // Načítanie a spracovanie globálnych dát
     useEffect(() => {
@@ -95,7 +96,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Profilový box
             React.createElement(
                 'div',
-                { className: `bg-white rounded-xl shadow-xl p-6 ${isMyDataLoaded ? 'block' : 'hidden'}` },
+                { className: `bg-white rounded-xl shadow-xl p-6` },
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-center mb-4' },
@@ -306,14 +307,5 @@ if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
 
-// Úprava, aby sa MyDataApp mohol vykresliť aj s existujúcimi dátami priamo, bez udalosti
-if (window.globalUserProfileData) {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const userRole = window.globalUserProfileData.role;
-        const roleColor = getRoleColor(userRole);
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: window.globalUserProfileData, roleColor: roleColor }));
-        console.log("MyDataApp.js: Aplikácia vykreslená s existujúcimi dátami.");
-    }
-}
+// Odstránil som duplicitný kód na konci, pretože to môže spôsobovať preblikávanie alebo zlé stavy.
+// Teraz sa všetko riadi cez handleDataUpdateAndRender, ktorá sa volá buď po udalosti, alebo hneď po načítaní skriptu, ak sú dáta už dostupné.
