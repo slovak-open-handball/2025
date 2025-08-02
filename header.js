@@ -106,28 +106,29 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    if (userProfileData) {
-        // Používateľ je prihlásený
-        authLink.classList.add('hidden');
-        profileLink.classList.remove('hidden');
-        logoutButton.classList.remove('hidden');
-        // Nastavíme farbu hlavičky podľa roly
-        headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
-    } else {
-        // Používateľ nie je prihlásený
-        authLink.classList.remove('hidden');
-        profileLink.classList.add('hidden');
-        logoutButton.classList.add('hidden');
-        // Nastavíme predvolenú farbu
-        headerElement.style.backgroundColor = getHeaderColorByRole(null);
-    }
-
-    // Aktualizujeme viditeľnosť odkazu na registráciu
-    updateRegistrationLinkVisibility(userProfileData);
-
-    // Dôležitá zmena: Hlavička sa stane viditeľnou LEN ak sú všetky dáta načítané
+    // Až keď sú všetky dáta načítané, vykonáme zmeny
     if (window.isGlobalAuthReady && window.registrationDates && window.hasCategories !== null) {
-         headerElement.classList.remove('invisible');
+        if (userProfileData) {
+            // Používateľ je prihlásený
+            authLink.classList.add('hidden');
+            profileLink.classList.remove('hidden');
+            logoutButton.classList.remove('hidden');
+            // Nastavíme farbu hlavičky podľa roly
+            headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+        } else {
+            // Používateľ nie je prihlásený
+            authLink.classList.remove('hidden');
+            profileLink.classList.add('hidden');
+            logoutButton.classList.add('hidden');
+            // Nastavíme predvolenú farbu
+            headerElement.style.backgroundColor = getHeaderColorByRole(null);
+        }
+
+        // Aktualizujeme viditeľnosť odkazu na registráciu
+        updateRegistrationLinkVisibility(userProfileData);
+
+        // Hlavička sa stane viditeľnou LEN ak sú všetky dáta načítané
+        headerElement.classList.remove('invisible');
     }
 };
 
@@ -255,7 +256,6 @@ window.loadHeaderAndScripts = async () => {
         setupFirestoreListeners();
 
         // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
-        // Až tu sa nastaví viditeľnosť hlavičky, keď sú všetky dáta pripravené
         updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
