@@ -387,10 +387,11 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 setLoading(false);
                 console.error("Chyba pri overení hesla alebo zmene e-mailu:", error);
                 
-                if (error.code === 'auth/wrong-password') {
+                // Zobrazíme špecifickú správu pre akúkoľvek Firebase Authentication chybu
+                if (error.code && error.code.startsWith('auth/')) {
                     setReauthError('Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.');
                 } else {
-                    setReauthError(`Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.`);
+                    setReauthError(`Chyba: ${error.message}`);
                 }
                 return;
             }
