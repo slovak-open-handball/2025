@@ -52,38 +52,54 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 3000);
 };
 
-// Zabezpečenie, že konfigurácia je globálne dostupná
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-
-// Inicializácia Firebase až po skontrolovaní, či je konfigurácia k dispozícii
-const app = Object.keys(firebaseConfig).length ? initializeApp(firebaseConfig) : null;
-const auth = app ? getAuth(app) : null;
-const db = app ? getFirestore(app) : null;
-
 // Hlavný komponent aplikácie
 const MyDataApp = () => {
-    // Definícia stavov pre používateľské dáta, načítavanie, chyby, modálne okno, a informácie o používateľovi
+    // Definícia stavov pre Firebase služby, používateľské dáta, načítavanie, chyby a modálne okno
     const [userProfileData, setUserProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [user, setUser] = useState(null);
+    const [auth, setAuth] = useState(null); // Nový stav pre auth objekt
+    const [db, setDb] = useState(null);     // Nový stav pre db objekt
 
-    // useEffect pre prihlásenie používateľa
+    // useEffect pre inicializáciu Firebase služieb
+    useEffect(() => {
+        // Zabezpečenie, že konfigurácia je globálne dostupná
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        if (Object.keys(firebaseConfig).length) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const authInstance = getAuth(app);
+                const dbInstance = getFirestore(app);
+                setAuth(authInstance);
+                setDb(dbInstance);
+            } catch (e) {
+                console.error("MyDataApp.js: Chyba pri inicializácii Firebase:", e);
+                setError("Chyba inicializácie: Firebase nie je k dispozícii.");
+                setLoading(false);
+            }
+        } else {
+            console.error("MyDataApp.js: Firebase konfigurácia nie je k dispozícii.");
+            setError("Chyba inicializácie: Firebase konfigurácia chýba.");
+            setLoading(false);
+        }
+    }, []); // Prázdne pole závislostí zaručí, že sa vykoná len raz
+
+    // useEffect pre sledovanie stavu autentifikácie používateľa
     useEffect(() => {
         if (!auth) {
-            console.error("Firebase Auth nie je k dispozícii.");
-            setError("Chyba inicializácie: Firebase Auth nie je k dispozícii.");
-            setLoading(false);
+            // Ak nie je k dispozícii `auth` inštancia, nebudeme nastavovať listener
             return;
         }
 
-        // Nastavenie listenera na zmeny autentifikačného stavu
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
+                console.log("MyDataApp.js: Používateľ je prihlásený, UID:", currentUser.uid);
                 setUser(currentUser);
             } else {
-                console.log("Žiadny prihlásený používateľ.");
+                console.log("MyDataApp.js: Žiadny prihlásený používateľ.");
                 setUser(null);
                 setUserProfileData(null);
                 setLoading(false);
@@ -92,10 +108,11 @@ const MyDataApp = () => {
 
         // Cleanup funkcia pre odhlásenie listenera
         return () => unsubscribe();
-    }, []);
+    }, [auth]); // Spustí sa len pri zmene auth
 
     // useEffect pre načítanie používateľských dát z Firestore
     useEffect(() => {
+        // Spustíme sa len, keď je používateľ prihlásený a je inicializovaná databáza
         if (user && db) {
             setLoading(true);
             const userDocRef = doc(db, 'users', user.uid);
@@ -124,14 +141,14 @@ const MyDataApp = () => {
             // Ak nie je používateľ, ukončíme načítavanie
             setLoading(false);
         }
-    }, [user, db]);
+    }, [user, db]); // Spustí sa len pri zmene používateľa alebo databázy
 
     // Vytvorenie farby role
     const roleColor = userProfileData?.role === 'admin' ? '#ef4444' : '#3b82f6';
     const roleBgColor = userProfileData?.role === 'admin' ? 'bg-red-500' : 'bg-blue-500';
 
     // Stav načítavania
-    if (loading || !user) {
+    if (loading || !user || !db) {
         return (
             React.createElement('div', { className: 'flex justify-center pt-16' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
