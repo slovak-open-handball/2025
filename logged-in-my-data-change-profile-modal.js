@@ -12,20 +12,20 @@ const { useState, useEffect, useRef } = React;
  */
 export const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, roleColor }) => {
     // Použitie SVG ikon pre zobrazenie/skrytie hesla
-const EyeIcon = React.createElement(
-  'svg',
-  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
-);
+    const EyeIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+    );
 
-const EyeOffIcon = React.createElement(
-  'svg',
-  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-  React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-  React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-  React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
-);
+    const EyeOffIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+        React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+    );
 
     return React.createElement(
         'div',
@@ -47,7 +47,7 @@ const EyeOffIcon = React.createElement(
                 className: `mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none sm:text-sm ${
                     disabled ? 'bg-gray-100 border-gray-200' : 'border-gray-300 focus:ring-2 focus:ring-offset-1'
                 }`,
-                style: disabled ? {} : { 'border-color': roleColor, 'ring-color': roleColor }
+                style: disabled ? {} : { 'borderColor': roleColor, 'ringColor': roleColor }
             }
         ),
         React.createElement(
@@ -299,6 +299,9 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         dialCodeForPlaceholder = foundDialCodeForPlaceholder.dialCode;
         phoneNumberForPlaceholder = initialPhoneNumber.substring(dialCodeForPlaceholder.length);
     }
+
+    // Spoločná trieda pre štýlovanie vstupných polí
+    const inputStyleClass = 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm';
     
     const modal = React.createElement(
         'div',
@@ -341,8 +344,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             value: formData.firstName,
                             onChange: handleChange,
                             placeholder: userProfileData.firstName || '', // Placeholder
-                            className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
-                            style: { 'focus-ring-color': roleColor }
+                            className: `${inputStyleClass}`,
+                            style: { 'borderColor': roleColor, 'ringColor': roleColor }
                         })
                     ),
                     React.createElement(
@@ -360,8 +363,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             value: formData.lastName,
                             onChange: handleChange,
                             placeholder: userProfileData.lastName || '', // Placeholder
-                            className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
-                            style: { 'focus-ring-color': roleColor }
+                            className: `${inputStyleClass}`,
+                            style: { 'borderColor': roleColor, 'ringColor': roleColor }
                         })
                     ),
                     React.createElement(
@@ -395,8 +398,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                                 value: formData.contactPhoneNumber,
                                 onChange: handleChange,
                                 placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
-                                className: 'flex-1 block w-full rounded-none rounded-r-md px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm',
-                                style: { 'focus-ring-color': roleColor }
+                                className: `flex-1 block w-full rounded-none rounded-r-md px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm`,
+                                style: { 'borderColor': roleColor, 'ringColor': roleColor }
                             })
                         )
                     ),
@@ -415,8 +418,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             value: formData.email,
                             onChange: handleChange,
                             placeholder: userProfileData.email || '', // Placeholder
-                            className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
-                            style: { 'focus-ring-color': roleColor }
+                            className: `${inputStyleClass}`,
+                            style: { 'borderColor': roleColor, 'ringColor': roleColor }
                         })
                     ),
                     React.createElement(PasswordInput, {
