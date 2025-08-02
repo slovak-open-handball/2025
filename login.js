@@ -6,7 +6,8 @@
 // globálne dáta sú pripravené.
 // Taktiež boli aktualizované SVG ikony pre zobrazenie/skrytie hesla na základe požiadavky používateľa.
 // Bola pridaná logika na validáciu e-mailu a hesla a zablokovanie prihlasovacieho tlačidla.
-// Táto verzia tiež zabezpečuje, že zablokované tlačidlo nereaguje na hover efekt zväčšenia.
+// Táto verzia tiež zabezpečuje, že zablokované tlačidlo nereaguje na hover efekt zväčšenia
+// a pridáva rovnakú validáciu a štýly aj do modálneho okna na obnovenie hesla.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -83,15 +84,25 @@ const ResetPasswordModal = ({ show, onClose }) => {
   const [message, setMessage] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
+  // Funkcia na validáciu e-mailovej adresy
+  const isEmailValid = (email) => {
+    const re = /\S+@\S+\.\S{2,}/;
+    return re.test(email);
+  };
+  
+  const isSendButtonDisabled = loading || !isEmailValid(email);
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-    if (!email) {
+    
+    if (!isEmailValid(email)) {
       setMessage('Prosím, zadajte platnú e-mailovú adresu.');
       setLoading(false);
       return;
     }
+
     try {
       if (!window.auth) {
         console.error("Firebase Auth nie je inicializovaný.");
@@ -135,7 +146,7 @@ const ResetPasswordModal = ({ show, onClose }) => {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-colors duration-200',
               id: 'email',
               type: 'email',
-              placeholder: 'Zadajte svoj e-mail',
+              placeholder: 'Zadajte Váš e-mail',
               value: email,
               onChange: (e) => setEmail(e.target.value),
               disabled: loading,
@@ -150,8 +161,12 @@ const ResetPasswordModal = ({ show, onClose }) => {
             'button',
             {
               type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-              disabled: loading,
+              className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline 
+                          ${isSendButtonDisabled
+                            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                            : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
+                          }`,
+              disabled: isSendButtonDisabled,
               tabIndex: 2
             },
             loading ? 'Odosielam...' : 'Odoslať'
@@ -162,7 +177,6 @@ const ResetPasswordModal = ({ show, onClose }) => {
               type: 'button',
               onClick: onClose,
               className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
-              disabled: loading,
               tabIndex: 3
             },
             'Zrušiť'
