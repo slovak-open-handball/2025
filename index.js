@@ -54,7 +54,7 @@ const updateRegistrationStatusText = (dates) => {
     if (now < registrationStart) {
         // Registrácia sa ešte nezačala
         messageElement.innerHTML = `
-            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}</p>
+            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}.</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationStart);
@@ -72,7 +72,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je už ukončená
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Registrácia na turnaj je už ukončená.</p>
-            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}</p>
+            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}.</p>
         `;
         toggleRegistrationButton(false, 'end');
     }
@@ -143,7 +143,7 @@ const updateLoginButton = (isLoggedIn) => {
             const roleColor = getRoleColor(userRole);
             
             // Odstránime pôvodné triedy a nastavíme novú farbu pomocou inline štýlu
-            loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'bg-green-500', 'hover:bg-green-600', 'bg-red-500', 'hover:bg-red-600');
+            loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
             loginButton.style.backgroundColor = roleColor;
             loginButton.style.borderColor = roleColor;
             console.log(`Používateľ je prihlásený ako ${userRole}. Tlačidlo 'Moja zóna' bolo nastavené s farbou ${roleColor}.`);
@@ -170,13 +170,17 @@ const updateLoginButton = (isLoggedIn) => {
  * @returns {string} - Hex kód farby.
  */
 const getRoleColor = (role) => {
+    const defaultColor = '#4299E1'; // Modrá pre bežného používateľa
+
     switch (role) {
         case 'admin':
-            return '#E53E3E'; // Červená pre admina
+            return '#47b3ff'; // Tvoja farba pre admina
         case 'hall':
-            return '#38A169'; // Zelená pre halu
+            return '#b06835'; // Tvoja farba pre halu
+        case 'user':
+            return '#9333EA'; // Tvoja farba pre bežného používateľa
         default:
-            return '#4299E1'; // Modrá pre bežného používateľa
+            return defaultColor; // Predvolená farba, ak rola nie je definovaná
     }
 };
 
