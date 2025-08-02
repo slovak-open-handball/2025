@@ -2,7 +2,8 @@
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> login.html.
 // Bol upravený tak, aby sa zachovalo pôvodné rozloženie s textom "Zabudli ste heslo?" pod tlačidlom "Prihlásiť"
-// a aby sa React aplikácia vykreslila až po načítaní všetkých globálnych závislostí.
+// a aby sa React aplikácia vykreslila až po prijatí udalosti z authentication.js, ktorá signalizuje, že
+// globálne dáta sú pripravené.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -347,21 +348,20 @@ const App = () => {
 };
 
 // Funkcia na overenie, či sú všetky potrebné globálne premenné dostupné
-const checkAndRender = () => {
-    // Čakáme, kým bude authentication.js pripravený
-    if (window.isGlobalAuthReady && window.React && window.ReactDOM) {
-        try {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(React.createElement(App, null));
-            console.log("login.js: React App vykreslená.");
-        } catch (error) {
-            console.error("Chyba pri vykresľovaní React komponentu:", error);
-        }
-    } else {
-        // Ak ešte nie sú všetky globálne premenné dostupné, skúsi to znova neskôr
-        setTimeout(checkAndRender, 100);
+const renderApp = () => {
+    try {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App, null));
+        console.log("login.js: React App vykreslená po prijatí udalosti 'globalDataUpdated'.");
+    } catch (error) {
+        console.error("Chyba pri vykresľovaní React komponentu:", error);
     }
 };
 
-// Keď je DOM plne načítaný, spustíme kontrolu a vykreslenie
-document.addEventListener('DOMContentLoaded', checkAndRender);
+// Počkajte na udalosť 'globalDataUpdated' predtým, ako vykreslíme aplikáciu.
+// Ak sa udalosť už odoslala predtým, ako sa tento skript načíta, vykreslíme ju okamžite.
+window.addEventListener('globalDataUpdated', renderApp);
+
+if (window.isGlobalAuthReady) {
+    renderApp();
+}
