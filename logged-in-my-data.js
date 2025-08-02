@@ -1,12 +1,11 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený, aby fungoval bez 'import' príkazov a spoliehal sa na globálne premenné.
-// Na správnu funkčnosť je potrebné, aby súbor 'authentication.js' sprístupnil všetky
-// potrebné funkcie (auth, db, updateEmail, reauthenticateWithCredential, EmailAuthProvider)
-// na globálnom objekte 'window'.
+// Tento súbor je teraz navrhnutý ako modul (ESM) pre moderné prehliadače.
+// Používa import príkazy pre funkcie Firebase a React.
+// Samotný skript sa postará o vykreslenie komponentu do DOM.
 
-// Používame priamy prístup k globálnemu objektu React a jeho metódam
-const useState = React.useState;
-const useEffect = React.useEffect;
+import { useState, useEffect } from "react";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -111,14 +110,11 @@ const MyDataApp = () => {
     useEffect(() => {
         const handleGlobalDataUpdate = () => {
             console.log('MyDataApp: Prijatá udalosť "globalDataUpdated". Firebase je inicializovaný.');
-            const user = window.auth.currentUser;
-            const db = window.db;
+            const user = getAuth().currentUser;
+            const db = getFirestore();
             const appId = window.__app_id;
             
             if (user && db) {
-                // Pre správne fungovanie je potrebné, aby funkcie doc a onSnapshot boli globálne.
-                // Môžeš ich sprístupniť v authentication.js takto: window.doc = doc; window.onSnapshot = onSnapshot;
-                // V tomto kóde predpokladáme, že sú dostupné.
                 const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -140,6 +136,7 @@ const MyDataApp = () => {
             }
         };
 
+        // Kontrola, či už je auth hotové
         if (window.isGlobalAuthReady) {
             handleGlobalDataUpdate();
         } else {
@@ -202,7 +199,7 @@ const MyDataApp = () => {
             return;
         }
         
-        const user = window.auth.currentUser;
+        const user = getAuth().currentUser;
         if (!user) {
             setError("Používateľ nie je prihlásený.");
             return;
@@ -216,12 +213,10 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
-            // Používame správne globálne funkcie, ktoré sú sprístupnené z authentication.js
-            const credential = window.EmailAuthProvider.credential(user.email, password);
-            await window.reauthenticateWithCredential(user, credential);
-            await window.updateEmail(user, newEmail);
+            const credential = EmailAuthProvider.credential(user.email, password);
+            await reauthenticateWithCredential(user, credential);
+            await updateEmail(user, newEmail);
             console.log("E-mailová adresa bola úspešne zmenená.");
-            // Namiesto alertu použijeme globálnu notifikáciu, ak je definovaná.
             if (window.showGlobalNotification) {
                 window.showGlobalNotification("E-mailová adresa bola úspešne zmenená.", 'success');
             } else {
@@ -255,7 +250,6 @@ const MyDataApp = () => {
         return React.createElement(ErrorMessage, { message: error });
     }
 
-    // Predpokladáme, že farba hlavičky pre všetkých bude modrá, keďže sa nejedná o admina.
     const headerColor = 'bg-blue-600';
 
     return React.createElement(
@@ -288,7 +282,6 @@ const MyDataApp = () => {
                     React.createElement(
                         'button',
                         { onClick: handleOpenModal, className: 'p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors' },
-                        // Ikona ceruzky (SVG)
                         React.createElement(
                             'svg',
                             { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -320,7 +313,6 @@ const MyDataApp = () => {
                             { className: 'sr-only' },
                             'Zatvoriť'
                         ),
-                        // Ikona krížika
                         React.createElement(
                             'svg',
                             { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -388,5 +380,23 @@ const MyDataApp = () => {
     );
 };
 
-// Explicitne sprístupniť komponent globálne
-window.MyDataApp = MyDataApp;
+// Po načítaní DOM a Reactu vykreslíme aplikáciu.
+// Táto funkcia zabezpečí, že kód beží až po pripravenosti prostredia.
+const renderApp = () => {
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(MyDataApp, null));
+        console.log("logged-in-my-data.js: Aplikácia vykreslená.");
+    } else {
+        console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+    }
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    // Čakáme na DOM, potom na event, ktorý indikuje, že sú načítané všetky moduly
+    // a globálne dáta.
+    window.addEventListener('globalDataUpdated', renderApp);
+});
+
+export default MyDataApp;
