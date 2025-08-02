@@ -370,8 +370,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         })
                     )
                 ),
-                // Pole pre telefónne číslo (presunuté nad e-mail)
-                 React.createElement(
+                // Podmienečne zobrazenie poľa pre telefónne číslo
+                userProfileData.contactPhoneNumber && React.createElement(
                     'div',
                     null,
                     React.createElement(
