@@ -38,6 +38,11 @@
         .modal-content-sm {
             max-width: 400px;
         }
+        /* Dočasný štýl pre vynútenie zobrazenia hlavičky. Odstráňte ho po oprave v header.js */
+        header {
+            visibility: visible !important;
+            background-color: #1e40af; /* Použijeme modrú farbu, ak sa header.js nezavola */
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -57,14 +62,11 @@
     <!-- Dôležité: authentication.js sa musí načítať ako prvý, pretože ho header.js používa! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <script type="module" src="loader.js"></script>
-
+    <!-- Načítanie hlavného skriptu pre túto stránku -->
+    <script type="module" src="login.js"></script>
+    
     <!-- Načítanie React a ReactDOM z CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-    <!-- Načítanie hlavného skriptu pre túto stránku -->
-    <script type="module" src="login.js"></script>
-
 </body>
 </html>
