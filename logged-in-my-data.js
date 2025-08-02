@@ -2,7 +2,10 @@
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const { useState, useEffect } = React;
+// Import zoznamu predvolieb
+import { countryDialCodes } from "./countryDialCodes.js";
+
+const { useState, useEffect, useRef } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -10,7 +13,7 @@ const { useState, useEffect } = React;
  */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
-    
+
     // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
     if (!notificationElement) {
         notificationElement = document.createElement('div');
@@ -19,7 +22,7 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-    
+
     // Určíme farby na základe typu správy
     let bgColorClass, textColorClass;
     if (type === 'success') {
@@ -37,7 +40,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     // Aktualizujeme obsah a triedy
     notificationElement.innerHTML = `<p class="font-semibold">${message}</p>`;
     notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
-    
+
     // Zobrazíme notifikáciu (fade-in)
     setTimeout(() => {
         notificationElement.style.opacity = '1';
@@ -74,7 +77,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
         React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
         React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
     );
-    
+
     // Stav pre sledovanie fokusu
     const [isFocused, setIsFocused] = useState(false);
 
@@ -121,6 +124,100 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 };
 
 /**
+ * Komponent pre modálne okno s predvoľbami telefónnych čísiel
+ */
+const DialCodeModal = ({ show, onClose, onSelect }) => {
+    // Vytvoríme referenciu pre pole, aby sme ho mohli použiť pre vyhľadávanie
+    const inputRef = useRef(null);
+
+    // Stav pre vyhľadávací filter
+    const [filter, setFilter] = useState('');
+
+    useEffect(() => {
+        // Keď sa modálne okno otvorí, nastavíme fokus na input pole
+        if (show && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [show]);
+
+
+    const handleOutsideClick = (e) => {
+        if (e.target.id === 'dialcode-modal-backdrop') {
+            onClose();
+        }
+    };
+
+    if (!show) {
+        return null;
+    }
+
+    // Filter zoznamu predvolieb na základe vstupu používateľa
+    const filteredDialCodes = countryDialCodes.filter(
+        (country) =>
+            country.code.toLowerCase().includes(filter.toLowerCase()) ||
+            country.dialCode.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    return React.createElement(
+        'div',
+        {
+            id: 'dialcode-modal-backdrop',
+            className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4',
+            onClick: handleOutsideClick,
+        },
+        React.createElement(
+            'div',
+            { className: 'relative p-4 border w-full max-w-sm shadow-lg rounded-lg bg-white' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center pb-3 border-b-2 mb-4' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-semibold text-gray-900' },
+                    'Vyberte predvoľbu'
+                ),
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+                    )
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('input', {
+                    ref: inputRef,
+                    type: 'text',
+                    placeholder: 'Vyhľadať...',
+                    value: filter,
+                    onChange: (e) => setFilter(e.target.value),
+                    className: 'w-full px-4 py-2 border rounded-lg',
+                })
+            ),
+            React.createElement(
+                'div',
+                { className: 'grid grid-cols-3 gap-2 overflow-y-auto max-h-80' },
+                filteredDialCodes.map((country, index) =>
+                    React.createElement(
+                        'button',
+                        {
+                            key: index,
+                            onClick: () => onSelect(country.dialCode),
+                            className: 'px-2 py-1 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200',
+                        },
+                        `${country.code} (${country.dialCode})`
+                    )
+                )
+            ),
+        )
+    );
+};
+
+/**
  * Komponent ChangeProfileModal - modálne okno pre zmenu e-mailovej adresy, mena, priezviska a telefónneho čísla
  */
 const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
@@ -130,9 +227,11 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [newFirstName, setNewFirstName] = useState('');
     const [newLastName, setNewLastName] = useState('');
     const [newPhoneNumber, setNewPhoneNumber] = useState(''); // Nové pole pre telefónne číslo
+    const [showDialCodeModal, setShowDialCodeModal] = useState(false); // Stav pre zobrazenie modálu s predvoľbami
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    
+    const [selectedDialCode, setSelectedDialCode] = useState('');
+
     // Stavy pre sledovanie fokusu
     const [isEmailFocused, setIsEmailFocused] = useState(false);
     const [isFirstNameFocused, setIsFirstNameFocused] = useState(false);
@@ -147,14 +246,29 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             setNewFirstName('');
             setNewLastName('');
             setNewPhoneNumber('');
+            setSelectedDialCode('');
             setLoading(false);
             setShowPassword(false);
             setIsEmailFocused(false);
             setIsFirstNameFocused(false);
             setIsLastNameFocused(false);
             setIsPhoneNumberFocused(false);
+        } else {
+             // Nastavíme predvolený dial code pri otvorení modálu, ak nejaký existuje
+            if (userProfileData.contactPhoneNumber) {
+                // Skúsime nájsť predvoľbu v existujúcom čísle a oddeliť ju
+                let foundDialCode = countryDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
+                if (foundDialCode) {
+                    setSelectedDialCode(foundDialCode.dialCode);
+                    setNewPhoneNumber(userProfileData.contactPhoneNumber.substring(foundDialCode.dialCode.length).trim());
+                } else {
+                    // Ak sa nenašla predvoľba, nastavíme ju na prázdno
+                    setSelectedDialCode('');
+                    setNewPhoneNumber(userProfileData.contactPhoneNumber);
+                }
+            }
         }
-    }, [show]);
+    }, [show, userProfileData]);
 
     // Validácia e-mailu
     const isEmailValid = (email) => {
@@ -173,14 +287,14 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         const phoneRegex = /^\+?(\d[\s-]?){9,15}$/;
         return phoneRegex.test(phoneNumber);
     };
-    
+
     // Kontrola, či nastali nejaké zmeny
     const hasNameChanged = (newFirstName !== '' && newFirstName !== userProfileData?.firstName) || (newLastName !== '' && newLastName !== userProfileData?.lastName);
     const hasEmailChanged = newEmail !== '' && newEmail !== userProfileData?.email;
-    const hasPhoneNumberChanged = newPhoneNumber !== '' && newPhoneNumber !== userProfileData?.contactPhoneNumber;
+    const hasPhoneNumberChanged = newPhoneNumber !== '' && `${selectedDialCode}${newPhoneNumber}` !== userProfileData?.contactPhoneNumber;
 
     // Celková validácia formulára pre tlačidlo "Uložiť"
-    const isFormValid = hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword)) || (hasPhoneNumberChanged && isPhoneNumberValid(newPhoneNumber));
+    const isFormValid = hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword)) || (hasPhoneNumberChanged && isPhoneNumberValid(`${selectedDialCode}${newPhoneNumber}`));
 
 
     const handleFormSubmit = async (e) => {
@@ -207,8 +321,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                 updates.lastName = newLastName;
             }
             // Skontrolujeme, či bolo zmenené telefónne číslo
-            if (newPhoneNumber !== '' && newPhoneNumber !== userProfileData.contactPhoneNumber) {
-                updates.contactPhoneNumber = newPhoneNumber;
+            if (newPhoneNumber !== '' && `${selectedDialCode}${newPhoneNumber}` !== userProfileData.contactPhoneNumber) {
+                updates.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber}`;
             }
 
             // Ak existujú nejaké zmeny v mene, priezvisku alebo telefónnom čísle, uložíme ich
@@ -234,7 +348,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                 await window.verifyBeforeUpdateEmail(user, newEmail);
                 window.showGlobalNotification('Potvrďte zmenu e-mailovej adresy kliknutím na odkaz vo vašej novej e-mailovej schránke.', 'success');
             }
-            
+
             // Zavrieme modálne okno po úspešnej zmene, alebo ak sa nič nezmenilo
             onClose();
 
@@ -275,11 +389,11 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const firstNamePlaceholder = userProfileData?.firstName || 'Meno';
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
-    const phoneNumberPlaceholder = userProfileData?.contactPhoneNumber || '+421...';
+    const phoneNumberPlaceholder = userProfileData?.contactPhoneNumber || ''; // Prázdny placeholder pre tel. číslo
 
     return React.createElement(
         'div',
-        { 
+        {
             id: 'modal-backdrop',
             className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4',
             onClick: handleOutsideClick
@@ -381,7 +495,23 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                     ),
                     React.createElement(
                         'div',
-                        { className: 'mt-1' },
+                        { className: 'mt-1 flex rounded-lg shadow-sm border border-gray-200 focus-within:ring-2',
+                           style: {
+                               borderColor: isPhoneNumberFocused ? roleColor : '',
+                               outlineColor: isPhoneNumberFocused ? roleColor : '',
+                               boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
+                           }
+                        },
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => setShowDialCodeModal(true),
+                                disabled: loading,
+                                className: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 border-r border-gray-200 rounded-l-lg hover:bg-gray-100 disabled:opacity-50'
+                            },
+                            selectedDialCode || 'Predvoľba'
+                        ),
                         React.createElement('input', {
                             id: 'new-phone-number',
                             name: 'new-phone-number',
@@ -392,12 +522,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                             onBlur: () => setIsPhoneNumberFocused(false),
                             placeholder: phoneNumberPlaceholder,
                             disabled: loading,
-                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
-                            style: {
-                                borderColor: isPhoneNumberFocused ? roleColor : '',
-                                outlineColor: isPhoneNumberFocused ? roleColor : '',
-                                boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
-                            }
+                            className: 'flex-1 block w-full px-4 py-2 rounded-r-lg disabled:bg-gray-100 disabled:text-gray-500 border-none focus:ring-0',
                         })
                     )
                 ),
@@ -475,7 +600,15 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                     )
                 )
             )
-        )
+        ),
+        React.createElement(DialCodeModal, {
+            show: showDialCodeModal,
+            onClose: () => setShowDialCodeModal(false),
+            onSelect: (dialCode) => {
+                setSelectedDialCode(dialCode);
+                setShowDialCodeModal(false);
+            },
+        })
     );
 };
 
@@ -516,7 +649,7 @@ const MyDataApp = () => {
                 return '#1D4ED8'; // Predvolená farba (bg-blue-800)
         }
     };
-    
+
     // Zobrazíme spinner, kým sa načítajú dáta
     if (!userProfileData) {
         return React.createElement(
@@ -528,7 +661,7 @@ const MyDataApp = () => {
             )
         );
     }
-    
+
     const { role, firstName, lastName, email, contactPhoneNumber } = userProfileData;
     const headerColor = getRoleColor(role);
 
