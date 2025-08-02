@@ -1,11 +1,9 @@
 // logged-in-my-data.js
-// Tento súbor je teraz navrhnutý ako modul (ESM) pre moderné prehliadače.
-// Používa import príkazy pre funkcie Firebase a React.
-// Samotný skript sa postará o vykreslenie komponentu do DOM.
+// Tento súbor bol upravený tak, aby používal globálne premenné 'React', 'ReactDOM', 'getAuth' a 'getFirestore',
+// ktoré sú načítané cez `<script>` tagy v `logged-in-my-data.html` a `authentication.js`.
+// Tým sa rieši chyba "Failed to resolve module specifier".
 
-import { useState, useEffect } from "react";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+const { useState, useEffect } = React;
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -110,11 +108,14 @@ const MyDataApp = () => {
     useEffect(() => {
         const handleGlobalDataUpdate = () => {
             console.log('MyDataApp: Prijatá udalosť "globalDataUpdated". Firebase je inicializovaný.');
-            const user = getAuth().currentUser;
-            const db = getFirestore();
+            const auth = window.auth;
+            const user = auth ? auth.currentUser : null;
+            const db = window.db;
             const appId = window.__app_id;
-            
+
             if (user && db) {
+                const doc = window.doc;
+                const onSnapshot = window.onSnapshot;
                 const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -199,7 +200,8 @@ const MyDataApp = () => {
             return;
         }
         
-        const user = getAuth().currentUser;
+        const auth = window.auth;
+        const user = auth.currentUser;
         if (!user) {
             setError("Používateľ nie je prihlásený.");
             return;
@@ -213,6 +215,10 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
+            const EmailAuthProvider = window.EmailAuthProvider;
+            const reauthenticateWithCredential = window.reauthenticateWithCredential;
+            const updateEmail = window.updateEmail;
+            
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
             await updateEmail(user, newEmail);
@@ -220,7 +226,8 @@ const MyDataApp = () => {
             if (window.showGlobalNotification) {
                 window.showGlobalNotification("E-mailová adresa bola úspešne zmenená.", 'success');
             } else {
-                alert("E-mailová adresa bola úspešne zmenená."); 
+                // Použitie modálneho okna namiesto `alert()`
+                setError("E-mailová adresa bola úspešne zmenená.");
             }
             handleCloseModal();
         } catch (error) {
@@ -247,7 +254,9 @@ const MyDataApp = () => {
     }
 
     if (error) {
-        return React.createElement(ErrorMessage, { message: error });
+        // Zobrazí buď prechodnú chybu alebo potvrdenie zmeny emailu
+        const isSuccessMessage = error.includes("E-mailová adresa bola úspešne zmenená.");
+        return React.createElement(ErrorMessage, { message: error, isSuccess: isSuccessMessage });
     }
 
     const headerColor = 'bg-blue-600';
@@ -381,7 +390,6 @@ const MyDataApp = () => {
 };
 
 // Po načítaní DOM a Reactu vykreslíme aplikáciu.
-// Táto funkcia zabezpečí, že kód beží až po pripravenosti prostredia.
 const renderApp = () => {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
