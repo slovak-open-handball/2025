@@ -204,13 +204,24 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
         setShowPassword(!showPassword);
     };
 
+    // Funkcia na zatvorenie modálneho okna pri kliknutí mimo neho
+    const handleOutsideClick = (e) => {
+        if (e.target.id === 'modal-backdrop') {
+            onClose();
+        }
+    };
+
     if (!show) {
         return null;
     }
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4' },
+        { 
+            id: 'modal-backdrop',
+            className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4',
+            onClick: handleOutsideClick
+        },
         React.createElement(
             'div',
             { className: 'relative p-8 border w-full max-w-2xl shadow-lg rounded-lg bg-white' },
@@ -296,7 +307,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
                         {
                             type: 'submit',
                             disabled: loading || !isFormValid,
-                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200`,
+                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200 ${(!isFormValid || loading) ? 'cursor-not-allowed' : ''}`,
                             style: {
                                 backgroundColor: isFormValid ? roleColor : 'white',
                                 color: isFormValid ? 'white' : roleColor,
