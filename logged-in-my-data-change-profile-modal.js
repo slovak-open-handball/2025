@@ -230,18 +230,13 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             const changes = hasFirstNameChanged || hasLastNameChanged || hasPhoneNumberChanged || hasEmailChanged;
             setHasAnyChanges(changes);
 
-            // Podmienka pre odomknutie tlačidla
-            // Tlačidlo je aktívne, ak nastala akákoľvek zmena a ak sa mení email, heslo musí mať min. 10 znakov
-            const isEmailValid = formData.email === initialData.email || (validateEmail(formData.email) && formData.email.length >= 10);
-            const isPasswordValid = hasEmailChanged ? password.length >= 10 : true;
-            
-            // Tlačidlo "Uložiť zmeny" je aktívne, ak nastala aspoň jedna zmena
-            // a ak sa mení e-mail, heslo musí byť zadané a musí mať minimálne 10 znakov.
-            const buttonEnabled = changes && (!hasEmailChanged || (isPasswordValid && password.length >= 10));
-
-            // Nastavíme stav na základe validácie hesla
-            if (hasEmailChanged && password.length > 0 && password.length < 10) {
-                setPasswordError('Heslo musí mať aspoň 10 znakov.');
+            // Validácia hesla sa vyžaduje len pri zmene e-mailu
+            if (hasEmailChanged) {
+                if (password.length > 0 && password.length < 10) {
+                    setPasswordError('Heslo musí mať aspoň 10 znakov.');
+                } else {
+                    setPasswordError(null);
+                }
             } else {
                 setPasswordError(null);
             }
@@ -308,17 +303,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     const handlePasswordChange = (e) => {
         const newPassword = e.target.value;
         setPassword(newPassword);
-    
-        // Validácia hesla - aspoň 10 znakov
-        if (formData.email !== initialData.email) {
-            if (newPassword.length > 0 && newPassword.length < 10) {
-                setPasswordError('Heslo musí mať aspoň 10 znakov.');
-            } else {
-                setPasswordError(null);
-            }
-        } else {
-            setPasswordError(null);
-        }
         setReauthError(null);
     };
     
@@ -344,12 +328,13 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
 
         // Overenie, či došlo k zmene e-mailu
         const hasEmailChanged = formData.email !== initialData.email;
+        const isPasswordProvided = password.length > 0;
 
         // Ak sa mení e-mail, vyžadujeme overenie hesla
         if (hasEmailChanged) {
-            if (!password || password.length < 10) {
+            if (!isPasswordProvided || password.length < 10) {
                 setLoading(false);
-                setPasswordError('Heslo je povinné a musí mať aspoň 10 znakov pre zmenu e-mailu.');
+                setPasswordError('Pre zmenu e-mailu je potrebné zadať heslo s aspoň 10 znakmi.');
                 return;
             }
 
@@ -398,6 +383,12 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         } else {
             // Ak sa e-mail nemení, aktualizujeme len ostatné údaje
             try {
+                // Overíme, či bolo zadané heslo aj keď sa nemení email
+                if (isPasswordProvided) {
+                    const credential = EmailAuthProvider.credential(user.email, password);
+                    await reauthenticateWithCredential(user, credential);
+                }
+                
                 const userDocRef = doc(db, 'users', user.uid);
                 const updatedFields = {};
 
@@ -430,8 +421,9 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     };
 
     const isEmailValidForSubmit = formData.email === initialData.email || (validateEmail(formData.email) && !emailError);
+    const isPasswordRequiredForEmailChange = formData.email !== initialData.email;
 
-    const isButtonDisabled = !hasAnyChanges || loading || emailError || (formData.email !== initialData.email && (password.length < 10 || passwordError));
+    const isButtonDisabled = !hasAnyChanges || loading || emailError || (isPasswordRequiredForEmailChange && (password.length < 10 || passwordError));
 
 
     const ModalHeader = React.createElement(
@@ -531,15 +523,15 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 emailError
             )
         ),
-        // Pole pre heslo, ktoré sa zobrazí, ak sa zmení email
-        formData.email !== initialData.email && React.createElement(
+        // Pole pre heslo, ktoré sa zobrazí vždy
+        React.createElement(
             'div',
             { className: 'mb-4' },
             React.createElement(
                 PasswordInput,
                 {
                     id: 'password',
-                    label: 'Heslo pre overenie zmeny e-mailu',
+                    label: 'Heslo pre overenie zmien',
                     value: password,
                     onChange: handlePasswordChange,
                     placeholder: 'Zadajte heslo',
