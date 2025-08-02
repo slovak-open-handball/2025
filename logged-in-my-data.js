@@ -8,7 +8,7 @@ const { useState, useEffect } = React;
 // Dôležité: Opravená chyba pridaním importov pre funkcie Firestore
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Dôležité: Importy pre reautentifikáciu, aktualizáciu e-mailu a overenie
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
 /**
@@ -250,6 +250,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
     const [password, setPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -265,6 +266,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
         e.preventDefault();
         setLoading(true);
         setPasswordError('');
+        setSuccessMessage('');
 
         const db = window.db;
         const auth = window.auth;
@@ -285,22 +287,27 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
             const userId = currentUser.uid;
             const userDocRef = doc(db, 'users', userId);
 
-            // Skontrolujeme, či sa zmenil e-mail a ak áno, zmeníme ho vo Firebase Auth
+            // Skontrolujeme, či sa zmenil e-mail a ak áno, pošleme verifikačný e-mail
             if (formData.email !== currentUser.email) {
-                await updateEmail(currentUser, formData.email);
+                // Posielame verifikačný e-mail na novú adresu.
+                await sendEmailVerification(currentUser, { url: window.location.href });
+                setSuccessMessage('Bol Vám zaslaný verifikačný e-mail na novú adresu. Pre dokončenie zmeny kliknite na odkaz v e-maile.');
             }
-            
+
             // Uložíme aktualizované dáta do Firestore.
             // Použijeme setDoc s merge: true, aby sa aktualizovali len zadané polia.
             await setDoc(userDocRef, {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
-                email: formData.email,
+                email: formData.email, // Uložíme nový e-mail do Firestore
                 contactPhoneNumber: formData.contactPhoneNumber,
             }, { merge: true });
 
             console.log("Kontaktné údaje a/alebo e-mail boli úspešne uložené!");
-            onClose();
+
+            // Modálne okno sa zatvorí po úspešnom uložení
+            // Použijeme setTimeout, aby sa používateľovi stihla zobraziť success správa
+            setTimeout(onClose, 3000);
 
         } catch (error) {
             console.error("Chyba pri overovaní hesla alebo ukladaní údajov: ", error);
@@ -355,6 +362,11 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                     'h3',
                     { className: 'text-2xl font-bold mb-4 text-gray-800' },
                     'Upraviť kontaktné údaje'
+                ),
+                successMessage && React.createElement(
+                    'div',
+                    { className: 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4' },
+                    React.createElement('p', null, successMessage)
                 ),
                 React.createElement(
                     'div',
