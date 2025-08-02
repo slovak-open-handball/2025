@@ -1,14 +1,12 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený, aby zobrazoval e-mailovú adresu prihláseného používateľa
-// a umožňoval jej zmenu prostredníctvom modálneho okna.
-// Kód teraz čaká na globálnu udalosť od `authentication.js`, aby zabezpečil správne načítanie.
+// Tento súbor bol upravený, aby fungoval bez 'import' príkazov a spoliehal sa na globálne premenné.
+// Na správnu funkčnosť je potrebné, aby súbor 'authentication.js' sprístupnil všetky
+// potrebné funkcie (auth, db, updateEmail, reauthenticateWithCredential, EmailAuthProvider)
+// na globálnom objekte 'window'.
 
-const { useState, useEffect } = React;
-
-// Dôležité: Importujeme potrebné funkcie pre Firestore priamo,
-// aby sme predišli chybám s chýbajúcimi globálnymi objektmi.
-import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+// Používame priamy prístup k globálnemu objektu React a jeho metódam
+const useState = React.useState;
+const useEffect = React.useEffect;
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -117,8 +115,10 @@ const MyDataApp = () => {
             const db = window.db;
             const appId = window.__app_id;
             
-            if (user) {
-                // Používame importované funkcie doc a onSnapshot
+            if (user && db) {
+                // Pre správne fungovanie je potrebné, aby funkcie doc a onSnapshot boli globálne.
+                // Môžeš ich sprístupniť v authentication.js takto: window.doc = doc; window.onSnapshot = onSnapshot;
+                // V tomto kóde predpokladáme, že sú dostupné.
                 const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -136,17 +136,15 @@ const MyDataApp = () => {
                 return () => unsubscribeFirestore();
             } else {
                 setLoading(false);
-                setError("Používateľ nie je prihlásený.");
+                setError("Používateľ nie je prihlásený alebo Firebase nie je inicializovaný.");
             }
         };
 
-        if (window.globalUserProfileData) {
-            // Ak už sú dáta k dispozícii, spracujeme ich okamžite
-            setUserProfileData(window.globalUserProfileData);
-            setLoading(false);
+        if (window.isGlobalAuthReady) {
+            handleGlobalDataUpdate();
+        } else {
+            window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
         }
-
-        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
 
         return () => {
             window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
