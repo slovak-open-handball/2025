@@ -303,21 +303,23 @@ const MyDataApp = () => {
     const headerColor = getHeaderColor(role);
 
     return React.createElement(
+        // Spoločný kontajner pre celú oblasť
         'div',
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8' },
         React.createElement(
+            // Hlavička s modrou farbou a zaoblenými len hornými rohmi
             'div',
-            { className: `bg-white p-8 rounded-xl shadow-lg mt-8` },
+            { className: `p-6 shadow-lg rounded-t-xl`, style: { backgroundColor: headerColor } },
             React.createElement(
-                'div',
-                // Použijeme inline style pre dynamické nastavenie farby
-                { className: 'p-6 rounded-lg shadow-lg mb-8', style: { backgroundColor: headerColor } },
-                React.createElement(
-                    'h2',
-                    { className: 'text-2xl font-bold text-white' },
-                    'Môj profil'
-                )
-            ),
+                'h2',
+                { className: 'text-2xl font-bold text-white' },
+                'Môj profil'
+            )
+        ),
+        React.createElement(
+            // Biely obsahový blok, ktorý začína hneď pod hlavičkou a má zaoblené iba spodné rohy
+            'div',
+            { className: `bg-white p-8 rounded-b-xl shadow-lg` },
             React.createElement(
                 'div',
                 { className: 'space-y-4' },
