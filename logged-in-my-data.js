@@ -104,6 +104,33 @@ const MyDataApp = () => {
         };
     }, []);
 
+    // Nová funkcia na opätovné načítanie dát používateľa
+    const fetchUserProfile = async () => {
+        setLoading(true);
+        const auth = getAuth();
+        const db = getFirestore();
+        if (auth.currentUser) {
+            const userDocRef = doc(db, 'users', auth.currentUser.uid);
+            try {
+                const docSnap = await getDoc(userDocRef);
+                if (docSnap.exists()) {
+                    const data = { id: docSnap.id, ...docSnap.data() };
+                    setUserProfileData(data);
+                } else {
+                    setUserProfileData(null);
+                }
+            } catch (error) {
+                console.error("Chyba pri načítaní profilu:", error);
+                setUserProfileData(null);
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            setUserProfileData(null);
+            setLoading(false);
+        }
+    };
+
     if (loading) {
         return React.createElement(
             'div',
@@ -196,6 +223,8 @@ const MyDataApp = () => {
             onSaveSuccess: () => {
                 setShowModal(false);
                 window.showGlobalNotification('Profilové údaje boli úspešne zmenené', 'success');
+                // Po úspešnom uložení opäť načíta dáta používateľa
+                fetchUserProfile();
             },
             userProfileData: userProfileData,
             roleColor: headerColor
