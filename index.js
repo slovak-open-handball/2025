@@ -35,14 +35,15 @@ const formatDate = (timestamp) => {
  * @param {object} dates - Objekt s dátumami začiatku a konca registrácie.
  */
 const updateRegistrationStatusText = (dates) => {
-    if (!dates || !dates.registrationStart || !dates.registrationEnd) {
-        console.warn("Dáta o registrácii (registrationStart alebo registrationEnd) nie sú k dispozícii alebo sú neúplné.");
+    // Upravená podmienka na kontrolu existencie správne pomenovaných polí.
+    if (!dates || !dates.registrationStartDate || !dates.registrationEndDate) {
+        console.warn("Dáta o registrácii (registrationStartDate alebo registrationEndDate) nie sú k dispozícii alebo sú neúplné.");
         return;
     }
 
     const now = new Date();
-    const registrationStart = dates.registrationStart.toDate();
-    const registrationEnd = dates.registrationEnd.toDate();
+    const registrationStart = dates.registrationStartDate.toDate();
+    const registrationEnd = dates.registrationEndDate.toDate();
     const messageElement = document.getElementById('registration-status-message');
 
     if (!messageElement) {
@@ -53,7 +54,7 @@ const updateRegistrationStatusText = (dates) => {
     if (now < registrationStart) {
         // Registrácia sa ešte nezačala
         messageElement.innerHTML = `
-            <p>Registrácia sa spustí ${formatDate(dates.registrationStart)}.</p>
+            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}.</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationStart);
@@ -62,7 +63,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je spustená
         messageElement.innerHTML = `
             <p class="text-green-600 font-semibold">Registrácia je spustená!</p>
-            <p>Končí ${formatDate(dates.registrationEnd)}.</p>
+            <p>Končí ${formatDate(dates.registrationEndDate)}.</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationEnd);
@@ -71,7 +72,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je už ukončená
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Registrácia na turnaj je už ukončená.</p>
-            <p>Registrácia bola ukončená ${formatDate(dates.registrationEnd)}.</p>
+            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}.</p>
         `;
         toggleRegistrationButton(false, 'end');
     }
