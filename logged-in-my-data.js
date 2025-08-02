@@ -360,11 +360,6 @@ const MyDataApp = () => {
                 'div',
                 { className: 'bg-white p-8 space-y-6' },
                 React.createElement(
-                    'h2',
-                    { className: 'text-xl font-bold text-gray-900' },
-                    'Moje údaje'
-                ),
-                React.createElement(
                     'div',
                     { className: 'flex flex-col' },
                     React.createElement(
