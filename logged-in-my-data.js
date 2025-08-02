@@ -59,8 +59,6 @@ const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [auth, setAuth] = useState(null);
-    const [db, setDb] = useState(null);
 
     const getRoleColor = (role) => {
         switch (role) {
@@ -73,59 +71,24 @@ const MyDataApp = () => {
 
     const headerColor = getRoleColor(userProfileData?.role);
 
-    const fetchUserData = async (user, dbInstance) => {
-        if (!user || !dbInstance) return;
-        try {
-            const userDocRef = doc(dbInstance, 'users', user.uid);
-            const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-                setUserProfileData({ id: docSnap.id, ...docSnap.data(), email: user.email });
-            } else {
-                console.warn("Profil používateľa nebol nájdený v databáze Firestore.");
-                setUserProfileData({ id: user.uid, email: user.email, firstName: '', lastName: '', contactPhoneNumber: '' });
-            }
-        } catch (e) {
-            console.error("Chyba pri načítaní profilu používateľa:", e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Načítanie používateľských dát z globálnej premennej
     useEffect(() => {
-        const init = async () => {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const initializedApp = initializeApp(firebaseConfig);
-            const authInstance = getAuth(initializedApp);
-            const dbInstance = getFirestore(initializedApp);
-
-            setAuth(authInstance);
-            setDb(dbInstance);
-            window.app = initializedApp;
-
-            const unsubscribe = onAuthStateChanged(authInstance, (user) => {
-                if (user) {
-                    fetchUserData(user, dbInstance);
-                } else {
-                    setUserProfileData(null);
-                    setLoading(false);
-                }
-            });
-
-            return () => unsubscribe();
+        const handleDataUpdate = (e) => {
+            const data = e.detail;
+            if (data) {
+                setUserProfileData(data);
+            } else {
+                setUserProfileData(null);
+            }
+            setLoading(false);
         };
 
-        if (typeof window.firebase === 'undefined') {
-            console.error("Firebase SDK nebolo načítané.");
+        // Kontrola, či sú dáta už načítané pri štarte
+        if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
             setLoading(false);
-        } else {
-            init();
         }
 
-        const handleDataUpdate = () => {
-            if (auth && db && auth.currentUser) {
-                fetchUserData(auth.currentUser, db);
-            }
-        };
         window.addEventListener('globalDataUpdated', handleDataUpdate);
 
         return () => {
