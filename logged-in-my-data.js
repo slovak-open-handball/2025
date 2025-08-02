@@ -251,23 +251,29 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Efekt pre resetovanie stavov pri otvorení/zatvorení modálu
     useEffect(() => {
         if (show) {
-            // Všetky polia sa vynulujú
+            // Všetky polia sa vynulujú okrem telefónneho čísla
             setNewFirstName('');
             setNewLastName('');
             setNewEmail('');
             setCurrentPassword('');
-            setNewPhoneNumber('');
             
-            // Predvoľba telefónneho čísla sa nastaví na základe existujúcich údajov
+            // Predvoľba telefónneho čísla a samotné číslo sa nastaví na základe existujúcich údajov
             if (userProfileData?.contactPhoneNumber) {
-                const foundDialCode = countryDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
+                // Skúsime nájsť najdlhšiu zhodnú predvoľbu
+                const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+                const foundDialCode = sortedDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
+                
                 if (foundDialCode) {
                     setSelectedDialCode(foundDialCode.dialCode);
+                    // Odstránime predvoľbu a medzery zo začiatku
+                    setNewPhoneNumber(userProfileData.contactPhoneNumber.substring(foundDialCode.dialCode.length).trim());
                 } else {
                     setSelectedDialCode('');
+                    setNewPhoneNumber(userProfileData.contactPhoneNumber.trim());
                 }
             } else {
                 setSelectedDialCode('');
+                setNewPhoneNumber('');
             }
         }
     }, [show, userProfileData]);
@@ -377,12 +383,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
     
-    // Zmena: Extrahuje len samotné telefónne číslo bez predvoľby pre placeholder
-    const contactPhoneNumber = userProfileData?.contactPhoneNumber || '';
-    let phoneNumberPlaceholder = contactPhoneNumber;
-    if (contactPhoneNumber && selectedDialCode && contactPhoneNumber.startsWith(selectedDialCode)) {
-        phoneNumberPlaceholder = contactPhoneNumber.substring(selectedDialCode.length);
-    }
+    // Zjednodušená logika pre placeholder, aby nikdy neobsahoval predvoľbu
+    const phoneNumberPlaceholder = 'Zadajte telefónne číslo';
     
     return ReactDOM.createPortal(
         React.createElement(
