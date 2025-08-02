@@ -1,17 +1,12 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-// Bol upravený tak, aby podmienečne zobrazoval odkaz na registráciu na turnaj,
-// ak je registrácia otvorená a existujú kategórie, rovnako ako na hlavnej stránke.
-// Tiež bol upravený, aby sa farba hlavičky menila na základe roly prihláseného používateľa.
-// Časovač pre kontrolu stavu registrácie bol zmenený na 1 sekundu.
+// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase
+// namiesto periodickej kontroly pomocou časovača, čím je kód efektívnejší a rýchlejší.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
-let registrationCheckIntervalId = null;
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -126,7 +121,7 @@ const updateHeaderLinks = (userProfileData) => {
         headerElement.style.backgroundColor = getHeaderColorByRole(null);
     }
 
-    // Teraz skontrolujeme stav registrácie na turnaj, aby sme vedeli, či zobraziť link na registráciu
+    // Aktualizujeme viditeľnosť odkazu na registráciu
     updateRegistrationLinkVisibility(window.globalUserProfileData);
 };
 
@@ -194,24 +189,6 @@ const setupFirestoreListeners = () => {
             updateRegistrationLinkVisibility(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
-        });
-
-        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
-        if (registrationCheckIntervalId) {
-            clearInterval(registrationCheckIntervalId);
-        }
-        registrationCheckIntervalId = setInterval(() => {
-            console.log("header.js: Kontrola času pre registračný odkaz...");
-            updateRegistrationLinkVisibility(window.globalUserProfileData);
-        }, 1000); // 1000 ms = 1 sekunda
-        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
-        
-        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
-        window.addEventListener('beforeunload', () => {
-            if (registrationCheckIntervalId) {
-                clearInterval(registrationCheckIntervalId);
-                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
-            }
         });
 
     } catch (error) {
