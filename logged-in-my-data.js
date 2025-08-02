@@ -43,7 +43,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const getRoleText = (role) => {
+const getRoleColor = (role) => {
     switch (role) {
         case 'organizator':
             return '#F97316'; // Orange
@@ -89,18 +89,18 @@ const MyDataApp = ({ initialData, roleColor }) => {
     }
 
     // Pomocná funkcia pre získanie textu podľa roly
-const getRoleColor = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#47b3ff'; // Farba pre admina
-        case 'hall':
-            return '#b06835'; // Farba pre halu
-        case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
-        default:
-            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
-    }
-};
+    const getRoleText = (role) => {
+        switch (role) {
+            case 'organizator':
+                return 'Organizátor';
+            case 'ucastnik':
+                return 'Účastník';
+            case 'host':
+                return 'Hosť';
+            default:
+                return 'Neznáma rola';
+        }
+    };
 
     const UserDataRow = ({ label, value }) => {
         return React.createElement('div', { className: 'flex justify-between items-center py-4 border-b border-gray-200' },
