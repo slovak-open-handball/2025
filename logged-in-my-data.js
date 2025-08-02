@@ -99,20 +99,43 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Profilový box
             React.createElement(
                 'div',
-                { className: `bg-white rounded-xl shadow-xl p-6` },
+                { className: `bg-white rounded-xl shadow-xl p-8 md:p-12 mb-8` },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center mb-4' },
+                    { className: 'flex justify-between items-start flex-wrap gap-4 mb-6' },
+                    // Left side: Name, Role, Email
                     React.createElement(
-                        'h2',
-                        { className: 'text-2xl font-semibold' },
-                        'Môj profil'
+                        'div',
+                        { className: 'flex-1 min-w-0' },
+                        React.createElement(
+                            'h1',
+                            { className: 'text-3xl md:text-4xl font-bold text-gray-900 truncate' },
+                            data.role === 'user'
+                                ? 'Údaje kontaktnej osoby'
+                                : data.role === 'hall' || data.role === 'admin'
+                                    ? 'Moje údaje'
+                                    : `${data.firstName || ''} ${data.lastName || ''}`
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-lg text-gray-600 mt-1' },
+                            data.email || 'E-mail neznámy'
+                        ),
+                        React.createElement(
+                            'span',
+                            {
+                                className: 'mt-3 inline-block px-4 py-1 text-sm font-semibold text-white rounded-full shadow-md',
+                                style: { backgroundColor: roleColor }
+                            },
+                            data.role || 'Používateľ'
+                        )
                     ),
+                    // Right side: Edit button
                     React.createElement(
                         'button',
                         {
                             onClick: () => setShowModal(true),
-                            className: `flex items-center space-x-2 px-4 py-2 rounded-lg shadow hover:opacity-90 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50`,
+                            className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
                             style: {
                                 backgroundColor: roleColor,
                                 color: 'white'
@@ -129,114 +152,95 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             },
                             React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
                         ),
-                        'Upraviť'
-                    )
-                ),
-                // Zobrazenie rolí, mena a e-mailu
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'span',
-                        {
-                            className: 'inline-block px-3 py-1 text-sm font-semibold text-white rounded-full',
-                            style: { backgroundColor: roleColor }
-                        },
-                        data.role || 'Používateľ'
-                    ),
-                    // Zmena nadpisu na základe roly
-                    React.createElement(
-                        'h1',
-                        { className: 'mt-2 text-3xl font-bold text-gray-800' },
-                        data.role === 'user'
-                            ? 'Údaje kontaktnej osoby'
-                            : data.role === 'hall' || data.role === 'admin'
-                                ? 'Moje údaje'
-                                : `${data.firstName || ''} ${data.lastName || ''}`
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-lg text-gray-600' },
-                        data.email || 'E-mail neznámy'
+                        'Upraviť profil'
                     )
                 ),
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 mt-6' },
-                    // Telefónne číslo
+                    { className: 'mt-8 border-t border-gray-200 pt-8' },
                     React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm font-medium text-gray-500' },
-                            'Telefón'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'mt-1 text-gray-800 font-semibold' },
-                            data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
-                        )
+                        'h3',
+                        { className: 'text-xl font-semibold text-gray-800 mb-4' },
+                        'Kontaktné údaje'
                     ),
-                    // Adresa
                     React.createElement(
-                        'div',
-                        null,
+                        'dl',
+                        { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
+                        // Telefónne číslo
                         React.createElement(
-                            'p',
-                            { className: 'text-sm font-medium text-gray-500' },
-                            'Adresa'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: 'text-sm font-medium text-gray-500' },
+                                'Telefón'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
+                            )
                         ),
+                        // Adresa
                         React.createElement(
-                            'p',
-                            { className: 'mt-1 text-gray-800 font-semibold' },
-                            data.address || 'Nezadaná'
-                        )
-                    ),
-                    // Mesto
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm font-medium text-gray-500' },
-                            'Mesto'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: 'text-sm font-medium text-gray-500' },
+                                'Adresa'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                data.address || 'Nezadaná'
+                            )
                         ),
+                        // Mesto
                         React.createElement(
-                            'p',
-                            { className: 'mt-1 text-gray-800 font-semibold' },
-                            data.city || 'Nezadané'
-                        )
-                    ),
-                    // PSČ
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm font-medium text-gray-500' },
-                            'PSČ'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: 'text-sm font-medium text-gray-500' },
+                                'Mesto'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                data.city || 'Nezadané'
+                            )
                         ),
+                        // PSČ
                         React.createElement(
-                            'p',
-                            { className: 'mt-1 text-gray-800 font-semibold' },
-                            data.zipCode || 'Nezadané'
-                        )
-                    ),
-                    // Krajina
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm font-medium text-gray-500' },
-                            'Krajina'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: 'text-sm font-medium text-gray-500' },
+                                'PSČ'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                data.zipCode || 'Nezadané'
+                            )
                         ),
+                        // Krajina
                         React.createElement(
-                            'p',
-                            { className: 'mt-1 text-gray-800 font-semibold' },
-                            data.country || 'Nezadaná'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: 'text-sm font-medium text-gray-500' },
+                                'Krajina'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                data.country || 'Nezadaná'
+                            )
                         )
                     )
                 )
