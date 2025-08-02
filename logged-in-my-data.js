@@ -60,6 +60,66 @@ const ErrorMessage = ({ message }) => {
 };
 
 /**
+ * NOVÝ Komponent pre pole hesla s prepínaním viditeľnosti.
+ * Presunutý mimo hlavných komponentov, aby sa predišlo strate fokusu.
+ * @param {object} props - Vlastnosti komponentu.
+ * @param {string} props.id - ID poľa.
+ * @param {string} props.label - Text popisu poľa.
+ * @param {string} props.value - Hodnota poľa.
+ * @param {function} props.onChange - Funkcia pre zmenu hodnoty.
+ * @param {string} props.placeholder - Zástupný text.
+ * @param {boolean} props.disabled - Či je pole zablokované.
+ * @param {boolean} props.showPassword - Či sa má heslo zobraziť.
+ * @param {function} props.toggleShowPassword - Funkcia na prepínanie viditeľnosti.
+ */
+const PasswordInput = ({ id, label, value, onChange, placeholder, disabled, showPassword, toggleShowPassword }) => {
+    const EyeIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7C20.477 16.057 16.688 19 12 19c-4.688 0-8.477-2.943-9.542-7z' })
+    );
+
+    const EyeOffIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 .255-.785.528-1.554.825-2.298M18.175 13.875A10.05 10.05 0 0122 12c-1.274-4.057-5.064-7-9.542-7a9.998 9.998 0 00-2.298.825' }),
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' })
+    );
+
+    return React.createElement(
+        'div',
+        { className: 'relative mb-4' },
+        React.createElement(
+            'label',
+            { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
+            label
+        ),
+        React.createElement('input', {
+            type: showPassword ? 'text' : 'password',
+            id: id,
+            name: id,
+            value: value,
+            onChange: onChange,
+            placeholder: placeholder,
+            disabled: disabled,
+            className: `mt-1 block w-full pr-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${disabled ? 'bg-gray-100' : ''}`,
+        }),
+        React.createElement(
+            'button',
+            {
+                type: 'button',
+                onClick: toggleShowPassword,
+                className: 'absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-sm leading-5',
+                'aria-label': showPassword ? 'Skryť heslo' : 'Zobraziť heslo',
+                disabled: disabled,
+            },
+            showPassword ? EyeOffIcon : EyeIcon
+        )
+    );
+};
+
+/**
  * Komponent pre editáciu kontaktných údajov (Modal).
  * Ponechané bez zmien, len pre štruktúru
  */
@@ -88,6 +148,7 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false); // Stav pre zobrazenie/skrytie hesla
     
     // Získanie inštancií z globálneho objektu
     const auth = window.auth;
@@ -163,29 +224,6 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
     
     if (!isOpen) return null;
 
-    // Komponent pre pole hesla je použitý aj tu
-    const PasswordInput = ({ id, label, value, onChange, placeholder, disabled }) => {
-      return React.createElement(
-        'div',
-        { className: 'relative mb-4' },
-        React.createElement(
-          'label',
-          { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
-          label
-        ),
-        React.createElement('input', {
-          type: 'password', // Nastavíme typ na password
-          id: id,
-          name: id,
-          value: value,
-          onChange: onChange,
-          placeholder: placeholder,
-          disabled: disabled,
-          className: `mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${disabled ? 'bg-gray-100' : ''}`,
-        })
-      );
-    };
-    
     // Získanie farby podľa role pre tlačidlo
     const roleColor = getRoleColor(userRoles);
 
@@ -238,6 +276,8 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
                     onChange: handlePasswordChange,
                     placeholder: 'Zadajte svoje aktuálne heslo',
                     disabled: loading,
+                    showPassword: showCurrentPassword,
+                    toggleShowPassword: () => setShowCurrentPassword(!showCurrentPassword),
                 }),
                 passwordError && React.createElement(
                     'p',
