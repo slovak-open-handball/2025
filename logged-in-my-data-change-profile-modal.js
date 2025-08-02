@@ -301,7 +301,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     }
 
     // Spoločná trieda pre štýlovanie vstupných polí
-    const inputStyleClass = 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm';
+    const inputStyleClass = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm';
     
     const modal = React.createElement(
         'div',
@@ -377,30 +377,30 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         ),
                         React.createElement(
                             'div',
-                            { className: 'mt-1 flex rounded-md shadow-sm' },
+                            { className: 'relative mt-1' },
                             React.createElement(
                                 'div',
-                                { className: 'relative' },
+                                { className: 'flex rounded-md shadow-sm border border-gray-300 overflow-hidden', style: { 'borderColor': roleColor } },
                                 React.createElement(
                                     'button',
                                     {
                                         type: 'button',
                                         onClick: () => setShowDialCodeModal(true),
-                                        className: 'inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm hover:bg-gray-100 transition-colors duration-200'
+                                        className: 'px-3 py-2 text-gray-500 sm:text-sm hover:bg-gray-100 transition-colors duration-200'
                                     },
                                     selectedDialCode
-                                )
-                            ),
-                            React.createElement('input', {
-                                type: 'text',
-                                id: 'contactPhoneNumber',
-                                name: 'contactPhoneNumber',
-                                value: formData.contactPhoneNumber,
-                                onChange: handleChange,
-                                placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
-                                className: `flex-1 block w-full rounded-none rounded-r-md px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm`,
-                                style: { 'borderColor': roleColor, 'ringColor': roleColor }
-                            })
+                                ),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    id: 'contactPhoneNumber',
+                                    name: 'contactPhoneNumber',
+                                    value: formData.contactPhoneNumber,
+                                    onChange: handleChange,
+                                    placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
+                                    className: 'flex-1 block w-full rounded-r-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm',
+                                    style: { 'ringColor': roleColor }
+                                })
+                            )
                         )
                     ),
                     React.createElement(
