@@ -43,7 +43,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const getRoleColor = (role) => {
+const getRoleText = (role) => {
     switch (role) {
         case 'organizator':
             return '#F97316'; // Orange
