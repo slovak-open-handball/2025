@@ -35,8 +35,8 @@ const formatDate = (timestamp) => {
  * @param {object} dates - Objekt s dátumami začiatku a konca registrácie.
  */
 const updateRegistrationStatusText = (dates) => {
-    if (!dates) {
-        console.warn("Dáta o registrácii nie sú k dispozícii.");
+    if (!dates || !dates.registrationStart || !dates.registrationEnd) {
+        console.warn("Dáta o registrácii (registrationStart alebo registrationEnd) nie sú k dispozícii alebo sú neúplné.");
         return;
     }
 
@@ -275,10 +275,3 @@ window.addEventListener('globalDataUpdated', () => {
     // registračného UI.
     setupRegistrationDataListener();
 });
-
-// ZMENA: Táto časť bola odstránená, aby sa inicializácia nespúšťala duplicitne.
-// Ak už existujú globálne dáta, spustíme listener hneď.
-// if (window.globalUserProfileData !== undefined) {
-//     console.log("Globálne dáta existujú už pri štarte, spúšťam listener.");
-//     setupRegistrationDataListener();
-// }
