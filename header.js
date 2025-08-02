@@ -146,6 +146,10 @@ window.loadHeaderAndScripts = async () => {
 
         // Zavoláme funkciu hneď po načítaní, pre prípad, že dáta boli načítané
         // pred pripojením listenera. Ak nie, listener to zachytí neskôr.
+        // Hlavička bude skrytá, kým funkcia updateHeaderLinks nebeží
+        if (headerPlaceholder) {
+             headerPlaceholder.classList.add('invisible');
+        }
         updateHeaderLinks(window.globalUserProfileData);
         
     } catch (error) {
