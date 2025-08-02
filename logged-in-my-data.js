@@ -93,9 +93,20 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     'button',
                     {
                         onClick: () => setShowModal(true),
-                        className: `px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
+                        className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
                         style: { backgroundColor: roleColor, borderColor: roleColor }
                     },
+                    // SVG ikona ceruzky pridaná do tlačidla
+                    React.createElement(
+                        'svg',
+                        { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', {
+                            strokeLinecap: 'round',
+                            strokeLinejoin: 'round',
+                            strokeWidth: '2',
+                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                        })
+                    ),
                     'Upraviť profil'
                 )
             ),
