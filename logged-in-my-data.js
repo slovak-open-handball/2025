@@ -97,10 +97,10 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
 
     // Spojíme informácie o adrese pre prehľadnejšie zobrazenie
     const formattedAddress = [
-        userProfileData.billingAddress.street,
-        userProfileData.billingAddress.city,
-        userProfileData.billingAddress.zip,
-        userProfileData.billingAddress.country
+        userProfileData.billingInfo.street,
+        userProfileData.billingInfo.city,
+        userProfileData.billingInfo.zip,
+        userProfileData.billingInfo.country
     ].filter(Boolean).join(', ');
 
     return React.createElement(
@@ -223,20 +223,6 @@ const MyDataApp = () => {
     return React.createElement(
         'div',
         { className: 'w-full max-w-4xl p-8 bg-white rounded-xl shadow-2xl space-y-8' },
-        React.createElement(
-            'div',
-            { className: 'bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-md text-white p-6' },
-            React.createElement(
-                'h1',
-                { className: 'text-3xl md:text-4xl font-extrabold' },
-                `Moja zóna`
-            ),
-            React.createElement(
-                'p',
-                { className: 'mt-2 text-lg font-light' },
-                'Prehľad vašich osobných údajov a registrácií.'
-            )
-        ),
         React.createElement(
             'div',
             { className: 'bg-gray-100 rounded-lg shadow-inner overflow-hidden' },
