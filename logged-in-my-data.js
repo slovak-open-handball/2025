@@ -43,57 +43,60 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const UserIcon = (props) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
+// Ikonka pre používateľa ako React element
+const UserIcon = (props) => React.createElement(
+  'svg',
+  {
+    ...props,
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  React.createElement('path', { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }),
+  React.createElement('circle', { cx: "12", cy: "7", r: "4" })
 );
 
-const MailIcon = (props) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="20" height="16" x="2" y="4" rx="2" />
-    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-  </svg>
+// Ikonka pre e-mail ako React element
+const MailIcon = (props) => React.createElement(
+  'svg',
+  {
+    ...props,
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  React.createElement('rect', { width: "20", height: "16", x: "2", y: "4", rx: "2" }),
+  React.createElement('path', { d: "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" })
 );
 
-const PhoneIcon = (props) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-  </svg>
+// Ikonka pre telefón ako React element
+const PhoneIcon = (props) => React.createElement(
+  'svg',
+  {
+    ...props,
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  },
+  React.createElement('path', { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" })
 );
 
 /**
@@ -175,16 +178,48 @@ const MyDataApp = () => {
     const formatRole = (role) => {
         if (!role) return 'Nezadané';
         return role.charAt(0).toUpperCase() + role.slice(1);
-    }
+    };
+    
+    const profileIconSvg = React.createElement(
+        'svg',
+        {
+            xmlns: 'http://www.w3.org/2000/svg',
+            className: 'h-24 w-24',
+            fill: 'none',
+            viewBox: '0 0 24 24',
+            stroke: 'currentColor'
+        },
+        React.createElement('path', {
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            strokeWidth: '1.5',
+            d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
+        })
+    );
+    
+    const editIconSvg = React.createElement(
+        'svg',
+        {
+            xmlns: 'http://www.w3.org/2000/svg',
+            className: 'h-5 w-5',
+            fill: 'none',
+            viewBox: '0 0 24 24',
+            stroke: 'currentColor'
+        },
+        React.createElement('path', {
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            strokeWidth: '2',
+            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+        })
+    );
 
     return React.createElement(
         'div',
         { className: 'bg-white shadow-lg shadow-gray-200 rounded-3xl p-8 max-w-4xl mx-auto my-8 md:my-16' },
-        // Hlavný kontajner s flexboxom pre rozloženie
         React.createElement(
             'div',
             { className: 'flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8' },
-            // Profilový obrázok a detaily
             React.createElement(
                 'div',
                 { className: 'flex flex-col items-center text-center w-full md:w-auto' },
@@ -194,22 +229,7 @@ const MyDataApp = () => {
                         className: 'flex-shrink-0 flex items-center justify-center h-40 w-40 rounded-full text-white mb-4 shadow-md',
                         style: { backgroundColor: roleColor }
                     },
-                    React.createElement(
-                        'svg',
-                        {
-                            xmlns: 'http://www.w3.org/2000/svg',
-                            className: 'h-24 w-24',
-                            fill: 'none',
-                            viewBox: '0 0 24 24',
-                            stroke: 'currentColor'
-                        },
-                        React.createElement('path', {
-                            strokeLinecap: 'round',
-                            strokeLinejoin: 'round',
-                            strokeWidth: '1.5',
-                            d: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'
-                        })
-                    )
+                    profileIconSvg
                 ),
                 React.createElement(
                     'h2',
@@ -222,7 +242,6 @@ const MyDataApp = () => {
                     'Registrácia: ' + new Date(userProfileData.createdAt?.toDate()).toLocaleDateString()
                 )
             ),
-            // Sekcia s kontaktnými údajmi a rolou
             React.createElement(
                 'div',
                 { className: 'flex-1 w-full space-y-6 md:space-y-8 mt-6 md:mt-0' },
@@ -231,7 +250,6 @@ const MyDataApp = () => {
                     { className: 'text-xl font-bold text-gray-800 border-b pb-2 mb-4' },
                     'Údaje'
                 ),
-                // Tlačidlo na úpravu profilu
                 React.createElement(
                     'div',
                     { className: 'flex justify-end' },
@@ -242,26 +260,10 @@ const MyDataApp = () => {
                             className: `px-6 py-3 flex items-center space-x-2 text-sm font-medium rounded-full shadow-md transition-all duration-200 transform hover:scale-105 hover:shadow-lg focus:outline-none`,
                             style: { backgroundColor: roleColor, color: 'white' }
                         },
-                        React.createElement(
-                            'svg',
-                            {
-                                xmlns: 'http://www.w3.org/2000/svg',
-                                className: 'h-5 w-5',
-                                fill: 'none',
-                                viewBox: '0 0 24 24',
-                                stroke: 'currentColor'
-                            },
-                            React.createElement('path', {
-                                strokeLinecap: 'round',
-                                strokeLinejoin: 'round',
-                                strokeWidth: '2',
-                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                            })
-                        ),
+                        editIconSvg,
                         React.createElement('span', null, 'Upraviť profil')
                     )
                 ),
-                // Zobrazenie emailu
                 React.createElement(
                     'div',
                     { className: 'flex items-center space-x-4 p-4 rounded-xl border border-gray-200' },
@@ -281,7 +283,6 @@ const MyDataApp = () => {
                         )
                     )
                 ),
-                // Zobrazenie telefónneho čísla
                 React.createElement(
                     'div',
                     { className: 'flex items-center space-x-4 p-4 rounded-xl border border-gray-200' },
@@ -301,7 +302,6 @@ const MyDataApp = () => {
                         )
                     )
                 ),
-                // Zobrazenie roly
                 React.createElement(
                     'div',
                     { className: 'flex items-center space-x-4 p-4 rounded-xl border border-gray-200' },
@@ -323,7 +323,6 @@ const MyDataApp = () => {
                 )
             )
         ),
-        // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
         React.createElement(ChangeProfileModal, {
             show: showModal,
             onClose: () => setShowModal(false),
