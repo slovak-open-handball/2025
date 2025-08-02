@@ -88,7 +88,7 @@ const formatPhoneNumber = (phoneNumber) => {
  */
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     // Skontrolujeme, či existujú fakturačné údaje alebo údaje o adrese.
-    const hasBillingData = userProfileData.billing && userProfileData.billing.clubName;
+    const hasBillingData = userProfileData.billing && (userProfileData.billing.clubName || userProfileData.billing.ico || userProfileData.billing.dic || userProfileData.billing.icdph);
     const hasAddressData = userProfileData.street;
 
     // Zobrazíme sekciu iba ak máme nejaké dáta na zobrazenie.
@@ -128,19 +128,25 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                    ` ${userProfileData.billing.clubName || ''}`
+                    ` ${userProfileData.billing.clubName || '-'}`
                 ),
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                    ` ${userProfileData.billing.ico || ''}`
+                    ` ${userProfileData.billing.ico || '-'}`
                 ),
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                    ` ${userProfileData.billing.dic || ''}`
+                    ` ${userProfileData.billing.dic || '-'}`
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
+                    ` ${userProfileData.billing.icdph || '-'}`
                 )
             ),
             // Podmienene vykreslíme údaje o adrese, ak existujú.
