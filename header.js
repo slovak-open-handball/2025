@@ -105,8 +105,9 @@ const updateHeaderLinks = (userProfileData) => {
     }
     
     // Po nastavení všetkých vlastností zviditeľníme hlavičku
-    if (header) {
-        header.classList.remove('invisible');
+    const headerPlaceholder = document.getElementById('header-placeholder');
+    if (headerPlaceholder) {
+        headerPlaceholder.classList.remove('invisible');
     }
 };
 
