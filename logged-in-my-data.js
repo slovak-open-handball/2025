@@ -370,6 +370,37 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         })
                     )
                 ),
+                // Pole pre telefónne číslo (presunuté nad e-mail)
+                 React.createElement(
+                    'div',
+                    null,
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'new-phone-number', className: 'block text-sm font-medium text-gray-700' },
+                        'Telefónne číslo'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-1' },
+                        React.createElement('input', {
+                            id: 'new-phone-number',
+                            name: 'new-phone-number',
+                            type: 'tel', // Používame typ tel pre lepšiu klávesnicu na mobiloch
+                            value: newPhoneNumber,
+                            onChange: (e) => setNewPhoneNumber(e.target.value),
+                            onFocus: () => setIsPhoneNumberFocused(true),
+                            onBlur: () => setIsPhoneNumberFocused(false),
+                            placeholder: phoneNumberPlaceholder,
+                            disabled: loading,
+                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
+                            style: {
+                                borderColor: isPhoneNumberFocused ? roleColor : '',
+                                outlineColor: isPhoneNumberFocused ? roleColor : '',
+                                boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
+                            }
+                        })
+                    )
+                ),
                 // Pole pre e-mail
                 React.createElement(
                     'div',
@@ -398,37 +429,6 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                                 borderColor: isEmailFocused ? roleColor : '',
                                 outlineColor: isEmailFocused ? roleColor : '',
                                 boxShadow: isEmailFocused ? `0 0 0 2px ${roleColor}25` : ''
-                            }
-                        })
-                    )
-                ),
-                // Pole pre telefónne číslo
-                 React.createElement(
-                    'div',
-                    null,
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'new-phone-number', className: 'block text-sm font-medium text-gray-700' },
-                        'Telefónne číslo'
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'mt-1' },
-                        React.createElement('input', {
-                            id: 'new-phone-number',
-                            name: 'new-phone-number',
-                            type: 'tel', // Používame typ tel pre lepšiu klávesnicu na mobiloch
-                            value: newPhoneNumber,
-                            onChange: (e) => setNewPhoneNumber(e.target.value),
-                            onFocus: () => setIsPhoneNumberFocused(true),
-                            onBlur: () => setIsPhoneNumberFocused(false),
-                            placeholder: phoneNumberPlaceholder,
-                            disabled: loading,
-                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
-                            style: {
-                                borderColor: isPhoneNumberFocused ? roleColor : '',
-                                outlineColor: isPhoneNumberFocused ? roleColor : '',
-                                boxShadow: isPhoneNumberFocused ? `0 0 0 2px ${roleColor}25` : ''
                             }
                         })
                     )
@@ -582,20 +582,6 @@ const MyDataApp = () => {
                         `${userProfileData.firstName} ${userProfileData.lastName}`
                     )
                 ),
-                React.createElement(
-                    'div',
-                    { className: 'flex flex-col' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800 flex items-center' },
-                        'E-mailová adresa kontaktnej osoby:'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        `${userProfileData.email}`
-                    )
-                ),
                 // Zobrazíme telefónne číslo, iba ak existuje
                 userProfileData.contactPhoneNumber && React.createElement(
                     'div',
@@ -609,6 +595,20 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg mt-1' },
                         `${userProfileData.contactPhoneNumber}`
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800 flex items-center' },
+                        'E-mailová adresa kontaktnej osoby:'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        `${userProfileData.email}`
                     )
                 )
             )
