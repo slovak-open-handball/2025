@@ -225,15 +225,15 @@ const DialCodeModal = ({ show, onClose, onSelect }) => {
  */
 const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [currentPassword, setCurrentPassword] = useState('');
-    const [newEmail, setNewEmail] = useState(userProfileData?.email || '');
-    const [newFirstName, setNewFirstName] = useState(userProfileData?.firstName || '');
-    const [newLastName, setNewLastName] = useState(userProfileData?.lastName || '');
-    const [newPhoneNumber, setNewPhoneNumber] = useState(''); // Zmenené: inicializované na prázdny reťazec
+    const [newEmail, setNewEmail] = useState(''); // Zmena: už sa nepredvyplňuje
+    const [newFirstName, setNewFirstName] = useState(''); // Zmena: už sa nepredvyplňuje
+    const [newLastName, setNewLastName] = useState(''); // Zmena: už sa nepredvyplňuje
+    const [newPhoneNumber, setNewPhoneNumber] = useState('');
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    // Nastavíme predvolený dial code pri otvorení modálu, ak nejaký existuje
+    // Nastavíme predvolený dial code, ale len ak existuje
     const [selectedDialCode, setSelectedDialCode] = useState(() => {
         if (userProfileData?.contactPhoneNumber) {
             const foundDialCode = countryDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
@@ -251,11 +251,14 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Efekt pre resetovanie stavov pri otvorení/zatvorení modálu
     useEffect(() => {
         if (show) {
-            setNewFirstName(userProfileData?.firstName || '');
-            setNewLastName(userProfileData?.lastName || '');
-            setNewEmail(userProfileData?.email || '');
+            // Všetky polia sa vynulujú
+            setNewFirstName('');
+            setNewLastName('');
+            setNewEmail('');
             setCurrentPassword('');
-            setNewPhoneNumber(''); // Vyčistíme pole pri otvorení
+            setNewPhoneNumber('');
+            
+            // Predvoľba telefónneho čísla sa nastaví na základe existujúcich údajov
             if (userProfileData?.contactPhoneNumber) {
                 const foundDialCode = countryDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
                 if (foundDialCode) {
@@ -287,9 +290,9 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     };
 
     // Kontrola, či nastali nejaké zmeny
-    const hasNameChanged = (newFirstName !== userProfileData?.firstName) || (newLastName !== userProfileData?.lastName);
-    const hasEmailChanged = newEmail !== userProfileData?.email;
-    const hasPhoneNumberChanged = newPhoneNumber !== '' && `${selectedDialCode}${newPhoneNumber.replace(/\s/g, '')}` !== (userProfileData?.contactPhoneNumber ? userProfileData.contactPhoneNumber.replace(/\s/g, '') : '');
+    const hasNameChanged = (newFirstName !== '') || (newLastName !== '');
+    const hasEmailChanged = newEmail !== '';
+    const hasPhoneNumberChanged = newPhoneNumber !== '';
 
     const isFormValid = hasNameChanged || hasEmailChanged || hasPhoneNumberChanged;
 
@@ -307,11 +310,11 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         try {
             const updates = {};
             if (hasNameChanged) {
-                updates.firstName = newFirstName;
-                updates.lastName = newLastName;
+                updates.firstName = newFirstName || userProfileData.firstName;
+                updates.lastName = newLastName || userProfileData.lastName;
             }
             if (hasPhoneNumberChanged) {
-                updates.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber.replace(/\s/g, '')}`;
+                 updates.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber.replace(/\s/g, '')}`;
             }
 
             if (Object.keys(updates).length > 0) {
@@ -501,11 +504,11 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                                 id: 'new-phone-number',
                                 name: 'new-phone-number',
                                 type: 'tel',
-                                value: newPhoneNumber, // Toto pole je prázdne pri inicializácii
+                                value: newPhoneNumber,
                                 onChange: (e) => setNewPhoneNumber(e.target.value),
                                 onFocus: () => setIsPhoneNumberFocused(true),
                                 onBlur: () => setIsPhoneNumberFocused(false),
-                                placeholder: phoneNumberPlaceholder, // Použitie existujúceho čísla ako placeholder
+                                placeholder: phoneNumberPlaceholder,
                                 disabled: loading,
                                 className: 'flex-1 block w-full px-4 py-2 rounded-r-lg disabled:bg-gray-100 disabled:text-gray-500 border-none focus:ring-0',
                             })
