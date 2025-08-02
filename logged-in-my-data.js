@@ -49,6 +49,18 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+// Funkcia, ktorá na základe roly vráti farbu
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#EF4444'; // Červená
+        case 'editor':
+            return '#F59E0B'; // Oranžová
+        default: // 'user' a iné
+            return '#10B981'; // Zelená
+    }
+};
+
 // Vytvorenie React komponentu pre hlavnú aplikáciu
 const MyDataApp = ({ userProfileData, roleColor }) => {
     const [showModal, setShowModal] = useState(false);
@@ -76,10 +88,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     const formatPhoneNumber = (dialCode, number) => {
         if (!dialCode || !number) return 'Nezadané';
-
+    
         // Odstránenie všetkých nečíslic z čísla, okrem znaku +
         const cleanedNumber = number.replace(/[^\d+]/g, '');
-
+    
         // Predvolený formát pre telefónne čísla (napr. 09XX XXX XXX)
         // Predpokladáme, že dialCode už má na začiatku '+'
         return `${dialCode} ${cleanedNumber.substring(0, 3)} ${cleanedNumber.substring(3, 6)} ${cleanedNumber.substring(6)}`;
@@ -97,18 +109,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 return 'Nezadané';
         }
     };
-
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#EF4444'; // červená
-            case 'editor':
-                return '#F59E0B'; // oranžová
-            default: // user
-                return '#10B981'; // zelená
-        }
-    };
-
+    
     return React.createElement(
         'div',
         { className: 'min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12' },
@@ -153,7 +154,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         { className: 'text-2xl font-bold text-gray-900' },
                         'Informácie o profile'
                     ),
-                    // Tlačidlo s ikonkou ceruzky a zmeneným textom
+                    // Tlačidlo s ikonkou ceruzky
                     React.createElement(
                         'button',
                         {
@@ -255,12 +256,15 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     );
 };
 
+
 // Renderovanie aplikácie do DOM, ktoré počká na dáta
 window.addEventListener('globalDataUpdated', (event) => {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const userRole = event.detail?.role;
+        const roleColor = getRoleColor(userRole);
         const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: event.detail, roleColor: event.detail?.roleColor || '#10b981' }));
+        root.render(React.createElement(MyDataApp, { userProfileData: event.detail, roleColor: roleColor }));
         console.log("MyDataApp.js: Aplikácia vykreslená po načítaní dát.");
     } else {
         console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
@@ -271,9 +275,13 @@ window.addEventListener('globalDataUpdated', (event) => {
 if (window.globalUserProfileData) {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const userRole = window.globalUserProfileData.role;
+        const roleColor = getRoleColor(userRole);
         const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: window.globalUserProfileData, roleColor: window.globalUserProfileData?.roleColor || '#10b981' }));
-        console.log("MyDataApp.js: Aplikácia vykreslená s existujúcimi globálnymi dátami.");
+        root.render(React.createElement(MyDataApp, { userProfileData: window.globalUserProfileData, roleColor: roleColor }));
+        console.log("MyDataApp.js: Aplikácia vykreslená s existujúcimi dátami.");
+    } else {
+        console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
     }
 }
 
