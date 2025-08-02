@@ -5,7 +5,7 @@
 // sú už definované globálne v 'authentication.js'.
 
 const { useState, useEffect, useCallback } = React;
-import { EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
@@ -152,7 +152,6 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
     
     // Získanie inštancií z globálneho objektu
     const auth = window.auth;
-    const db = window.db;
 
     const showGlobalNotification = useCallback((message, type) => {
         if (window.showGlobalNotification) {
@@ -203,21 +202,13 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
             await reauthenticateWithCredential(user, credential);
             console.log('Používateľ úspešne reautentifikovaný.');
 
-            // 2. Odoslanie overovacieho e-mailu na novú adresu
-            // Používame sendEmailVerification, ktorá po kliknutí na link zmení e-mail
-            await sendEmailVerification(user, { url: window.location.origin + '/logged-in-my-data.html' });
-            console.log('Overovací e-mail bol odoslaný na novú adresu.');
+            // 2. Aktualizácia e-mailovej adresy pomocou Firebase Authentication
+            // Táto funkcia odošle overovací e-mail na novú adresu
+            await updateEmail(user, newEmail);
+            console.log('E-mailová adresa bola úspešne zmenená. Bol odoslaný overovací e-mail.');
 
-            // 3. Aktualizácia profilu vo Firestore (neoverená adresa)
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, {
-                email: newEmail,
-                emailVerified: false // Nastavíme na false, kým používateľ neoverí novú adresu
-            });
-            console.log('E-mailová adresa v databáze bola dočasne aktualizovaná.');
-
-            // 4. Zobrazenie notifikácie o úspešnom odoslaní
-            showGlobalNotification('Overovací e-mail bol odoslaný na novú adresu. Kliknite na odkaz v e-maile na dokončenie zmeny.', 'success');
+            // 3. Odošlite notifikáciu o úspechu. Zmena je dokončená až po kliknutí na odkaz.
+            showGlobalNotification('E-mailová adresa bola úspešne zmenená. Na novú e-mailovú adresu bol odoslaný overovací e-mail.', 'success');
             
             // Po odoslaní e-mailu zatvoríme modál
             onClose();
