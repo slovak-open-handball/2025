@@ -150,7 +150,8 @@ window.loadHeaderAndScripts = async () => {
         if (headerPlaceholder) {
              headerPlaceholder.classList.add('invisible');
         }
-        updateHeaderLinks(window.globalUserProfileData);
+        // ODSTRÁNENÉ: Predchádzajúce volanie updateHeaderLinks sa odstráni.
+        // Hlavička sa zobrazí až po prijatí udalosti 'globalDataUpdated'.
         
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
