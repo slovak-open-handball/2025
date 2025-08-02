@@ -209,7 +209,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 formData.firstName !== initialData.firstName ||
                 formData.lastName !== initialData.lastName ||
                 currentFullPhoneNumber !== initialFullPhoneNumber ||
-                formData.email !== initialData.email;
+                (formData.email !== initialData.email && password); // Zmena: zmena emailu sa považuje za zmenu iba vtedy, ak je zadané heslo
 
             setHasAnyChanges(changes);
 
@@ -220,7 +220,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 setIsReauthRequired(false);
             }
         }
-    }, [formData, initialData, selectedDialCode, show]);
+    }, [formData, initialData, selectedDialCode, show, password]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -395,7 +395,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             style: { 'focus-ring-color': roleColor }
                         })
                     ),
-                    isReauthRequired && React.createElement(PasswordInput, {
+                    React.createElement(PasswordInput, {
                         id: "password",
                         label: "Heslo pre potvrdenie",
                         value: password,
