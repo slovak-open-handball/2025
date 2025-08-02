@@ -6,21 +6,6 @@
 
 const { useState, useEffect, useCallback } = React;
 
-// Dôležité: Importy pre reautentifikáciu, aktualizáciu e-mailu a overenie
-// Predpokladáme, že tieto súbory sú správne načítané v HTML
-const {
-    EmailAuthProvider,
-    reauthenticateWithCredential,
-    updateEmail,
-    sendEmailVerification
-} = firebase.auth;
-
-const {
-    doc,
-    setDoc
-} = firebase.firestore;
-
-
 /**
  * Pomocný komponent pre načítavanie dát.
  */
@@ -193,6 +178,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
         setLoading(true);
         const db = window.db;
         const auth = window.auth;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         if (!db || !auth || !auth.currentUser) {
             console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
@@ -202,11 +188,11 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
 
         const userId = auth.currentUser.uid;
         // Pevne zadefinovaná cesta na základe štruktúry databázy v 'authentication.js'
-        const userDocRef = doc(db, 'users', userId);
+        const userDocRef = db.collection(`artifacts/${appId}/users`).doc(userId);
         
         try {
             // Použitie setDoc s merge: true, aby sa aktualizovali len zadané polia
-            await setDoc(userDocRef, {
+            await userDocRef.update({
                 billing: {
                     clubName: formData.clubName,
                     ico: formData.ico,
@@ -218,7 +204,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                 city: formData.city,
                 postalCode: formData.postalCode.replace(/\s/g, ''), // Uložíme PSČ bez medzery
                 country: formData.country,
-            }, { merge: true });
+            });
             console.log("Fakturačné údaje boli úspešne uložené!");
             onClose();
         } catch (error) {
@@ -236,7 +222,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50' },
         React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl m-4 max-w-md w-full' },
@@ -358,6 +344,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
         const db = window.db;
         const auth = window.auth;
         const currentUser = auth.currentUser;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         if (!db || !currentUser) {
             console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
@@ -366,24 +353,24 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
         }
 
         try {
-            const credential = EmailAuthProvider.credential(currentUser.email, password);
-            await reauthenticateWithCredential(currentUser, credential);
+            const credential = window.firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+            await currentUser.reauthenticateWithCredential(credential);
             
             const userId = currentUser.uid;
-            const userDocRef = doc(db, 'users', userId);
+            const userDocRef = db.collection(`artifacts/${appId}/users`).doc(userId);
             
             if (formData.email !== currentUser.email) {
-                await updateEmail(currentUser, formData.email);
-                await sendEmailVerification(currentUser, { url: window.location.href });
+                await currentUser.updateEmail(formData.email);
+                await currentUser.sendEmailVerification({ url: window.location.href });
                 setSuccessMessage('Bol Vám zaslaný verifikačný e-mail na novú adresu. Pre dokončenie zmeny kliknite na odkaz v e-maile.');
             }
 
-            await setDoc(userDocRef, {
+            await userDocRef.update({
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
                 contactPhoneNumber: formData.contactPhoneNumber,
-            }, { merge: true });
+            });
 
             console.log("Kontaktné údaje a/alebo e-mail boli úspešne uložené!");
 
@@ -416,7 +403,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
 
     return React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center' },
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50' },
         React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl m-4 max-w-md w-full' },
@@ -575,7 +562,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
  */
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(window.globalUserProfileData);
-    const [isLoading, setIsLoading] = useState(!window.globalUserProfileData);
+    const [isLoading, setIsLoading] = useState(!window.isGlobalAuthReady || !window.globalUserProfileData);
     const [error, setError] = useState(null);
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
     const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
