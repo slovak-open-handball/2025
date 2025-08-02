@@ -129,7 +129,6 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
-    const [confirmNewEmail, setConfirmNewEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -138,7 +137,6 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         if (!show) {
             setCurrentPassword('');
             setNewEmail('');
-            setConfirmNewEmail('');
             setShowPassword(false);
             setLoading(false);
         }
@@ -147,12 +145,6 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
     const handleEmailChange = async (e) => {
         e.preventDefault();
         setLoading(true);
-
-        if (newEmail !== confirmNewEmail) {
-            window.showGlobalNotification('Nové e-mailové adresy sa nezhodujú.', 'error');
-            setLoading(false);
-            return;
-        }
 
         if (!currentPassword) {
             window.showGlobalNotification('Zadajte svoje aktuálne heslo.', 'error');
@@ -228,16 +220,6 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
             React.createElement(
                 'form',
                 { onSubmit: handleEmailChange, className: 'space-y-6' },
-                React.createElement(PasswordInput, {
-                    id: 'current-password',
-                    label: 'Aktuálne heslo',
-                    value: currentPassword,
-                    onChange: (e) => setCurrentPassword(e.target.value),
-                    placeholder: 'Zadajte svoje aktuálne heslo pre potvrdenie',
-                    showPassword: showPassword,
-                    toggleShowPassword: togglePasswordVisibility,
-                    disabled: loading
-                }),
                 React.createElement(
                     'div',
                     null,
@@ -263,31 +245,16 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                         })
                     )
                 ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement(
-                        'label',
-                        { htmlFor: 'confirm-new-email', className: 'block text-sm font-medium text-gray-700' },
-                        'Potvrďte novú e-mailovú adresu'
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'mt-1' },
-                        React.createElement('input', {
-                            id: 'confirm-new-email',
-                            name: 'confirm-new-email',
-                            type: 'email',
-                            autoComplete: 'new-email',
-                            required: true,
-                            value: confirmNewEmail,
-                            onChange: (e) => setConfirmNewEmail(e.target.value),
-                            placeholder: 'Znova zadajte novú e-mailovú adresu',
-                            disabled: loading,
-                            className: 'block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
-                        })
-                    )
-                ),
+                React.createElement(PasswordInput, {
+                    id: 'current-password',
+                    label: 'Aktuálne heslo',
+                    value: currentPassword,
+                    onChange: (e) => setCurrentPassword(e.target.value),
+                    placeholder: 'Zadajte svoje aktuálne heslo pre potvrdenie',
+                    showPassword: showPassword,
+                    toggleShowPassword: togglePasswordVisibility,
+                    disabled: loading
+                }),
                 React.createElement(
                     'div',
                     { className: 'flex justify-end space-x-3' },
@@ -381,13 +348,25 @@ const MyDataApp = () => {
             React.createElement(
                 'div',
                 {
-                    className: 'w-full p-4 text-white',
+                    className: 'w-full p-4 text-white flex justify-between items-center',
                     style: { backgroundColor: headerColor, borderBottomLeftRadius: '0', borderBottomRightRadius: '0' }
                 },
                 React.createElement(
                     'h1',
                     { className: 'text-2xl font-bold' },
                     'Kontaktná osoba'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setShowModal(true),
+                        className: 'p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors duration-200'
+                    },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6 text-white', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    )
                 )
             ),
             React.createElement(
@@ -425,14 +404,6 @@ const MyDataApp = () => {
                         { className: 'text-gray-800 text-lg mt-1' },
                         `${userProfileData.email}`
                     )
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: () => setShowModal(true),
-                        className: 'w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50'
-                    },
-                    'Zmeniť e-mailovú adresu'
                 )
             )
         ),
