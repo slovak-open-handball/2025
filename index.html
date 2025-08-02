@@ -30,29 +30,24 @@
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
-    <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia alebo hlavný obsah -->
-    <div id="root" class="flex-grow flex items-center justify-center">
-        <!-- Biely zaoblený obdĺžnik, ktorý obalí celý obsah -->
-        <div class="bg-white p-8 rounded-xl shadow-xl max-w-lg w-full text-center">
-            <!-- Nadpis H1 s textom "Slovak Open Handball 2025" -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div id="root" class="bg-white p-8 rounded-lg shadow-xl text-center max-w-lg w-full">
             <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
-
-            <!-- Element pre dynamické zobrazenie správ o registrácii a odpočet. -->
-            <!-- Jeho obsah a viditeľnosť sú plne riadené súborom index.js. -->
-            <div id="registration-status-message" class="text-lg text-gray-600 mb-6">
-                <!-- Obsah sa bude generovať dynamicky pomocou JavaScriptu -->
+            
+            <!-- Správa o stave registrácie -->
+            <div id="registration-status-message" class="text-gray-600 text-lg mb-6">
+                <!-- Obsah sa dynamicky doplní cez JavaScript -->
             </div>
 
-            <!-- Element pre správu o prihlásenom používateľovi. -->
-            <!-- Jeho viditeľnosť je tiež plne riadená súborom index.js. -->
-            <div id="logged-in-message" class="text-lg text-green-600 font-semibold mb-6" style="display: none;">
+            <!-- Správa, že je používateľ prihlásený -->
+            <div id="logged-in-message" class="text-green-600 font-semibold text-lg mb-6 hidden">
                 Vitajte, ste prihlásený!
             </div>
 
-            <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4">
-                <!-- Wrapper pre tlačidlo prihlásenia/mojej zóny -->
+            <div class="space-x-4 flex justify-center flex-wrap">
+                <!-- Wrapper pre tlačidlo prihlásenia -->
                 <a id="login-button-wrapper" href="login.html" class="inline-block" style="display: none;">
-                    <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
+                    <button id="login-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Prihlásenie
                     </button>
                 </a>
@@ -64,8 +59,8 @@
                 </a>
             </div>
         </div>
-    </div>
-
+    </main>
+    
     <!-- Globálny element pre notifikácie -->
     <div id="global-notification"></div>
 
