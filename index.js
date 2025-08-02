@@ -133,6 +133,9 @@ const updateLoginButton = (isLoggedIn) => {
     const loginButton = document.getElementById('login-button');
 
     if (loginLink && loginButton) {
+        // Skryjeme tlačidlo na začiatku, aby sa predišlo blikaniu
+        loginLink.style.display = 'none';
+        
         if (isLoggedIn) {
             // Používateľ je prihlásený, zobrazíme "Moja zóna"
             loginLink.href = 'logged-in-my-data.html';
