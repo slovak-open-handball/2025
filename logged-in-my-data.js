@@ -5,6 +5,8 @@
 // pričom využíva globálne inštancie Firebase z 'authentication.js'.
 
 const { useState, useEffect } = React;
+// Dôležité: Opravená chyba pridaním importov pre funkcie Firestore
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Pomocný komponent pre načítavanie dát.
