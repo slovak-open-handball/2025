@@ -335,7 +335,7 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.billing.street || ''} ${data.billing.houseNumber || ''}, ${data.billing.postalCode || ''} ${data.billing.city || ''}, ${data.billing.country || ''}`.trim()
+                        ` ${data.street || ''} ${data.houseNumber || ''}, ${data.postalCode || ''} ${data.city || ''}, ${data.country || ''}`.trim()
                     )
                 ) :
                 React.createElement(
