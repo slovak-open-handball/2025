@@ -1,17 +1,21 @@
 // logged-in-my-data.js
 // Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
 // profilové a registračné dáta prihláseného používateľa.
-// Bol upravený tak, aby reagoval na zmeny v dátach v reálnom čase pomocou onSnapshot.
+// Bol upravený tak, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
+// a zobrazoval dáta až po ich úplnom načítaní.
+// Boli pridané zmeny pre dynamickú farbu hlavičiek na základe role používateľa,
+// vylepšená logika pre zobrazenie fakturačných údajov,
+// pridané tlačidlo na úpravu údajov a modálne okno.
+// Tieto zmeny rešpektujú pôvodnú architektúru a opravujú chybu oprávnení.
 
-const { useState, useEffect, useCallback } = React;
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+const { useState, useEffect } = React;
 
 /**
  * Pomocný komponent pre načítavanie dát.
  */
 const Loader = () => {
     return React.createElement(
+        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
@@ -28,6 +32,7 @@ const Loader = () => {
  */
 const ErrorMessage = ({ message }) => {
     return React.createElement(
+        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
@@ -99,7 +104,6 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
  * skutočná implementácia by bola zložitejšia. Slúži na demonštráciu.
  */
 const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin, showNotification }) => {
-    // Prázdny komponent, len aby sa kód skompiloval.
     if (!isOpen) return null;
     return React.createElement(
         'div',
@@ -125,7 +129,6 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin, showN
  * Komponent na úpravu fakturačných údajov. Tiež placeholder.
  */
 const EditBillingModal = ({ userProfileData, isOpen, onClose, showNotification }) => {
-    // Prázdny komponent, len aby sa kód skompiloval.
     if (!isOpen) return null;
     return React.createElement(
         'div',
@@ -151,16 +154,12 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose, showNotification }
  * Hlavný React komponent MyDataApp, ktorý zobrazuje profilové dáta.
  */
 function MyDataApp() {
-    const [userProfileData, setUserProfileData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [userProfileData, setUserProfileData] = useState(window.globalUserProfileData);
+    const [loading, setLoading] = useState(!window.isGlobalAuthReady);
     const [error, setError] = useState(null);
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
     const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
     const [notification, setNotification] = useState({ message: '', type: '' });
-
-    // Získame inštancie Firebase. Predpokladáme, že sú už inicializované globálne.
-    const auth = getAuth();
-    const db = getFirestore();
 
     // Funkcia na zobrazenie notifikácie, odovzdávaná modálom
     const showNotification = (message, type = 'success') => {
@@ -169,46 +168,33 @@ function MyDataApp() {
     };
     
     useEffect(() => {
-        if (!auth || !db) {
-            setError('Chyba: Firebase nie je inicializované.');
-            setLoading(false);
-            return;
-        }
-
-        const user = auth.currentUser;
-        if (!user) {
-            // Ak nie je používateľ prihlásený, zobrazíme chybu.
-            setError('Nie ste prihlásený. Prosím, prihláste sa.');
-            setLoading(false);
-            return;
-        }
-
-        // Nastavenie listenera na zmeny v profile používateľa
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setUserProfileData({ id: docSnap.id, ...data });
+        const handleGlobalDataUpdate = (event) => {
+            const data = event.detail;
+            if (data) {
+                setUserProfileData(data);
                 setLoading(false);
                 setError(null);
-                console.log('Dáta profilu boli aktualizované:', data);
             } else {
-                setError('Profil používateľa nebol nájdený.');
                 setUserProfileData(null);
                 setLoading(false);
+                setError('Profil používateľa nebol nájdený alebo nie ste prihlásený.');
             }
-        }, (err) => {
-            console.error('Chyba pri načítaní profilu:', err);
-            setError('Nepodarilo sa načítať profil používateľa.');
-            setLoading(false);
-        });
+        };
 
-        // Cleanup funkcia pre odhlásenie listenera pri opustení komponentu
-        return () => unsubscribe();
+        // Pridáme listener, ktorý bude počúvať zmeny globálnych dát.
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+        // Pre prípad, že udalosť už prebehla pred pripojením listenera.
+        if (window.isGlobalAuthReady) {
+            handleGlobalDataUpdate({ detail: window.globalUserProfileData });
+        } else {
+            setLoading(true);
+        }
+
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        };
     }, []);
-
-    const headerColor = userProfileData?.isUserAdmin ? 'bg-red-600' : 'bg-blue-600';
 
     if (loading) {
         return React.createElement(Loader, null);
@@ -218,9 +204,8 @@ function MyDataApp() {
         return React.createElement(ErrorMessage, { message: error });
     }
 
-    if (!userProfileData) {
-        return React.createElement(ErrorMessage, { message: 'Profil používateľa nebol nájdený. Skúste sa prihlásiť znova.' });
-    }
+    const isUserAdmin = userProfileData?.isUserAdmin;
+    const headerColor = isUserAdmin ? 'bg-red-600' : 'bg-blue-600';
 
     return React.createElement(
         'div',
@@ -265,7 +250,7 @@ function MyDataApp() {
                     React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                     ` ${userProfileData.email}`
                 ),
-                !userProfileData.isUserAdmin && React.createElement(
+                !isUserAdmin && React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
@@ -278,7 +263,7 @@ function MyDataApp() {
             userProfileData: userProfileData,
             isOpen: isEditContactModalOpen,
             onClose: () => setIsEditContactModalOpen(false),
-            isUserAdmin: userProfileData.isUserAdmin,
+            isUserAdmin: isUserAdmin,
             showNotification: showNotification,
         }),
         React.createElement(EditBillingModal, {
