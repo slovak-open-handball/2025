@@ -165,6 +165,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     React.createElement(
                         'dl',
                         { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
+                        // Meno a Priezvisko (nový element)
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Meno a Priezvisko'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Nezadané'
+                            )
+                        ),
                         // E-mailová adresa (presunutá sem)
                         React.createElement(
                             'div',
