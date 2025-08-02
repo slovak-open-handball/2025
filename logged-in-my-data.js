@@ -44,7 +44,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 // Komponent, ktorý zabezpečí, že sa zobrazí len ak sú dáta pripravené
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
-    const [headerColor, setHeaderColor] = useState('bg-blue-600');
+    const [roleColor, setRoleColor] = useState('#b06835'); // Predvolená farba pre halu
     const [showModal, setShowModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -53,11 +53,24 @@ const MyDataApp = () => {
             const data = event.detail;
             setUserProfileData(data);
             setIsLoading(false);
-            if (data && data.role === 'admin') {
-                setHeaderColor('bg-red-600');
-            } else {
-                setHeaderColor('bg-blue-600');
+            
+            // Nastavenie farby na základe roly používateľa
+            let newColor;
+            switch (data?.role) {
+                case 'admin':
+                    newColor = '#47b3ff'; // Tvoja farba pre admina
+                    break;
+                case 'hall':
+                    newColor = '#b06835'; // Tvoja farba pre halu
+                    break;
+                case 'user':
+                    newColor = '#9333EA'; // Tvoja farba pre bežného používateľa
+                    break;
+                default:
+                    newColor = '#b06835'; // Predvolená farba, ak rola nie je definovaná
+                    break;
             }
+            setRoleColor(newColor);
         };
 
         // Pridanie poslucháča udalostí
@@ -76,7 +89,7 @@ const MyDataApp = () => {
             { className: 'flex justify-center pt-16' },
             React.createElement(
                 'div',
-                { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
+                { className: 'animate-spin rounded-full h-32 w-32 border-b-4', style: { borderColor: roleColor } }
             )
         );
     }
@@ -99,11 +112,11 @@ const MyDataApp = () => {
         { className: 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 bg-gray-50' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-lg border-t-8 ${headerColor} transition-all duration-300 overflow-hidden` },
+            { className: `w-full max-w-2xl bg-white rounded-xl shadow-lg border-t-8 transition-all duration-300 overflow-hidden`, style: { borderTopColor: roleColor } },
             // Hlavička s informáciami o profile a tlačidlom na úpravu
             React.createElement(
                 'div',
-                { className: 'p-6 sm:p-8 flex items-center justify-between' },
+                { className: 'p-6 sm:p-8 flex items-center justify-between', style: { backgroundColor: roleColor } },
                 React.createElement(
                     'div',
                     { className: 'flex items-center' },
@@ -208,7 +221,7 @@ const MyDataApp = () => {
                 window.showGlobalNotification('Profilové údaje boli úspešne zmenené', 'success');
             },
             userProfileData: userProfileData,
-            roleColor: headerColor
+            roleColor: roleColor
         })
     );
 };
