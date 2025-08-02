@@ -72,13 +72,6 @@ const MyDataApp = () => {
         if (window.globalUserProfileData) {
             handleGlobalDataUpdate();
         }
-
-        // Zavoláme funkciu na načítanie hlavičky.
-        // Hoci je vloženie hlavičky obsluhované v header.js,
-        // ak je už DOM načítaný, musíme ju načítať explicitne.
-        if (window.loadHeaderAndScripts) {
-            window.loadHeaderAndScripts();
-        }
         
         // Cleanup funkcia pre odhlásenie listenera
         return () => {
