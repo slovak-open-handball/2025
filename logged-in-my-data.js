@@ -5,7 +5,7 @@
 // sú už definované globálne v 'authentication.js'.
 
 const { useState, useEffect, useCallback } = React;
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
@@ -23,7 +23,7 @@ const getRoleColor = (roles) => {
     if (roles.includes('hall')) {
         return '#b06835'; // Farba pre halu
     }
-    // Ak nie je admin alebo hala, predpokladáme bežného používateľa
+    // Ak nie je admin alebo hala, predpokladame bežného používateľa
     return '#9333EA'; // Farba pre bežného používateľa
 };
 
@@ -139,9 +139,8 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
             await reauthenticateWithCredential(user, credential);
 
             await updateEmail(user, newEmail);
-            await sendEmailVerification(user);
 
-            showGlobalNotification('Na novú e-mailovú adresu bol odoslaný overovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maile.', 'success');
+            showGlobalNotification('E-mailová adresa bola úspešne zmenená. Nezabudnite si overiť novú e-mailovú adresu.', 'success');
             onClose();
         } catch (error) {
             console.error('Chyba pri zmene e-mailovej adresy:', error);
@@ -153,7 +152,7 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
             } else if (error.code === 'auth/requires-recent-login') {
                 showGlobalNotification('Pre vykonanie tejto akcie sa musíte znova prihlásiť. Skúste to prosím znova.', 'error');
             } else if (error.code === 'auth/operation-not-allowed') {
-                showGlobalNotification('Táto operácia nie je povolená. Pre dokončenie zmeny e-mailu je potrebné overenie e-mailu. Ak ste už overovací e-mail dostali, kliknite na odkaz v ňom. ', 'error');
+                showGlobalNotification('Táto operácia nie je povolená.', 'error');
             } else {
                 showGlobalNotification(`Chyba: ${error.message}`, 'error');
             }
@@ -265,7 +264,7 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
                             style: { backgroundColor: isFormValid ? roleColor : 'rgb(156 163 175)' },
                             disabled: loading || !isFormValid,
                         },
-                        loading ? 'Ukladám...' : 'Odoslať overovací e-mail'
+                        loading ? 'Ukladám...' : 'Uložiť zmeny'
                     )
                 )
             )
