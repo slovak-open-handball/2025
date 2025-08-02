@@ -5,7 +5,7 @@
 // sú už definované globálne v 'authentication.js'.
 
 const { useState, useEffect, useCallback } = React;
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
@@ -152,6 +152,7 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
     
     // Získanie inštancií z globálneho objektu
     const auth = window.auth;
+    const db = window.db;
 
     const showGlobalNotification = useCallback((message, type) => {
         if (window.showGlobalNotification) {
@@ -194,15 +195,33 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
             return;
         }
 
+        const user = auth.currentUser;
+
         try {
-            const user = auth.currentUser;
+            // 1. Reautentifikácia používateľa s aktuálnym heslom
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
+            console.log('Používateľ úspešne reautentifikovaný.');
 
-            await updateEmail(user, newEmail);
+            // 2. Odoslanie overovacieho e-mailu na novú adresu
+            // Používame sendEmailVerification, ktorá po kliknutí na link zmení e-mail
+            await sendEmailVerification(user, { url: window.location.origin + '/logged-in-my-data.html' });
+            console.log('Overovací e-mail bol odoslaný na novú adresu.');
 
-            showGlobalNotification('E-mailová adresa bola úspešne zmenená. Nezabudnite si overiť novú e-mailovú adresu.', 'success');
+            // 3. Aktualizácia profilu vo Firestore (neoverená adresa)
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, {
+                email: newEmail,
+                emailVerified: false // Nastavíme na false, kým používateľ neoverí novú adresu
+            });
+            console.log('E-mailová adresa v databáze bola dočasne aktualizovaná.');
+
+            // 4. Zobrazenie notifikácie o úspešnom odoslaní
+            showGlobalNotification('Overovací e-mail bol odoslaný na novú adresu. Kliknite na odkaz v e-maile na dokončenie zmeny.', 'success');
+            
+            // Po odoslaní e-mailu zatvoríme modál
             onClose();
+
         } catch (error) {
             console.error('Chyba pri zmene e-mailovej adresy:', error);
 
@@ -212,8 +231,8 @@ const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
                 setEmailError('Táto e-mailová adresa už je používaná iným účtom.');
             } else if (error.code === 'auth/requires-recent-login') {
                 showGlobalNotification('Pre vykonanie tejto akcie sa musíte znova prihlásiť. Skúste to prosím znova.', 'error');
-            } else if (error.code === 'auth/operation-not-allowed') {
-                showGlobalNotification('Táto operácia nie je povolená.', 'error');
+            } else if (error.code === 'auth/invalid-email') {
+                setEmailError('Zadaná e-mailová adresa nie je platná.');
             } else {
                 showGlobalNotification(`Chyba: ${error.message}`, 'error');
             }
