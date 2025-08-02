@@ -17,33 +17,54 @@
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box;
+            box-sizing: border-box; /* Zabezpečí, že padding a border sa započítavajú do celkovej šírky/výšky */
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
+        /* Štýly pre modálne okná */
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .modal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
     </style>
 </head>
-<body>
-    <div id="header-placeholder"></div>
-    <main id="main-content-area" class="flex-grow">
-        <div id="root" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Obsah aplikácie bude vykreslený tu -->
-        </div>
-    </main>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- Načítanie súborov pre autentifikáciu a hlavičku -->
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
+    <div id="header-placeholder"></div>
+
+    <!-- Hlavný obsah stránky, vykreslený Reactom -->
+    <div id="root" class="flex-grow flex items-center justify-center p-4"></div>
+
+    <!-- Globálny element pre notifikácie -->
+    <div id="global-notification"></div>
+
+    <!-- Načítanie hlavných JavaScript súborov ako modulov -->
+    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <!-- Načítanie hlavnej aplikácie -->
-    <script type="text/javascript" src="logged-in-my-data.js"></script>
-    
-    <script type="text/javascript">
-        // Počkáme, kým sa DOM úplne načíta.
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('logged-in-my-data.html: DOM plne načítaný.');
+    <script type="module" src="loader.js"></script>
+    <script type="module" src="countryDialCodes.js"></script>
+    <!-- Načítanie hlavného skriptu pre túto stránku -->
+    <script type="module" src="logged-in-my-data.js"></script>
 
-            // Kontrola, či sú React a ReactDOM načítané
+    <script>
+        // Spustenie hlavnej logiky po načítaní celého DOM
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
+            if (typeof window.loadHeaderAndScripts !== 'undefined') {
+                await window.loadHeaderAndScripts();
+            }
+
+            // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
