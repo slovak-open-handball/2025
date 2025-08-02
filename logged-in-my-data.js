@@ -195,6 +195,51 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 data.billing?.clubName || 'Nezadané'
                             )
                         ),
+                        // IČO
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'IČO'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.ico || 'Nezadané'
+                            )
+                        ),
+                        // DIČ
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'DIČ'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.dic || 'Nezadané'
+                            )
+                        ),
+                        // IČ DPH
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'IČ DPH'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.icDph || 'Nezadané'
+                            )
+                        ),
                         // E-mailová adresa (presunutá sem)
                         React.createElement(
                             'div',
