@@ -272,8 +272,9 @@ const getRoleColor = (role) => {
 window.getRoleColor = getRoleColor;
 
 // Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
-// Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
 const handleDataUpdateAndRender = (event) => {
+    console.log("MyDataApp.js: Spúšťa sa obslužná funkcia pre 'globalDataUpdated'.");
+
     // Okamžite skryjeme loader, akonáhle spracujeme udalosť.
     if (typeof window.hideGlobalLoader === 'function') {
         window.hideGlobalLoader();
@@ -296,12 +297,13 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
+console.log("MyDataApp.js: Skontrolujem, či dáta nie sú už načítané.");
 if (window.globalUserProfileData) {
+    console.log("MyDataApp.js: Dáta sú už k dispozícii, spúšťam vykreslenie.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
