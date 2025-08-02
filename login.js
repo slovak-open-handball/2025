@@ -5,6 +5,7 @@
 // a namiesto neho sa zobrazil formulár na obnovenie hesla, bez použitia modálneho okna s tmavým pozadím.
 // Taktiež bola pridaná validácia e-mailu a štýlovanie tlačidla "Odoslať" aj do formulára na obnovenie hesla.
 // Teraz sa zobrazí červená chyba, ak sa účet s daným e-mailom nenájde.
+// V tejto verzii bol zmenený štýl zablokovaných tlačidiel podľa požiadavky používateľa.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -160,7 +161,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                         type: 'submit',
                         className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline w-full
                           ${isSendButtonDisabled
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ? 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
                             : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
                           }`,
                         disabled: isSendButtonDisabled,
@@ -335,7 +336,7 @@ const App = () => {
                                 type: 'submit',
                                 className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline w-full
                                           ${isButtonDisabled
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
                                 }`,
                                 disabled: isButtonDisabled,
