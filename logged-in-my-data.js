@@ -105,19 +105,22 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         addressParts.push(streetAndNumber);
     }
 
-    // Mesto a formátované PSČ
-    let cityAndPostalCode = '';
-    if (userProfileData.city) {
-        cityAndPostalCode += userProfileData.city;
-    }
+    // PSČ a Mesto - upravené poradie a čiarka za mestom
+    let postalCodeAndCity = '';
     if (userProfileData.postalCode) {
         const formattedPostalCode = userProfileData.postalCode.length === 5 ?
             `${userProfileData.postalCode.substring(0, 3)} ${userProfileData.postalCode.substring(3, 5)}` :
             userProfileData.postalCode;
-        cityAndPostalCode += ` ${formattedPostalCode}`;
+        postalCodeAndCity += formattedPostalCode;
     }
-    if (cityAndPostalCode.trim() !== '') {
-        addressParts.push(cityAndPostalCode);
+    if (userProfileData.city) {
+        if (postalCodeAndCity) {
+             postalCodeAndCity += ' ';
+        }
+        postalCodeAndCity += userProfileData.city;
+    }
+    if (postalCodeAndCity.trim() !== '') {
+        addressParts.push(postalCodeAndCity);
     }
 
     // Krajina
