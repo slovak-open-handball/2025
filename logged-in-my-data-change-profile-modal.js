@@ -47,7 +47,8 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                     onChange: onChange,
                     placeholder: placeholder,
                     disabled: disabled,
-                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out ${
+                    // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
+                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2 ${
                         disabled ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`,
                     style: disabled ? {} : { borderColor: roleColor, borderWidth: '1px' }
@@ -274,7 +275,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: firstName,
                         onChange: (e) => setFirstName(e.target.value),
                         placeholder: userProfileData?.firstName || 'Zadajte meno',
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out`,
+                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px' }
                     })
                 ),
@@ -288,7 +290,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: lastName,
                         onChange: (e) => setLastName(e.target.value),
                         placeholder: userProfileData?.lastName || 'Zadajte priezvisko',
-                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out`,
+                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px' }
                     })
                 )
@@ -303,7 +306,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                     value: email,
                     onChange: (e) => setEmail(e.target.value),
                     placeholder: userProfileData?.email || 'Zadajte e-mail',
-                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out`,
+                    // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
+                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                     style: { borderColor: roleColor, borderWidth: '1px' }
                 })
             ),
@@ -324,7 +328,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: phoneNumber,
                         onChange: (e) => setPhoneNumber(e.target.value),
                         placeholder: userProfileData?.phoneNumber?.split(' ').length > 1 ? userProfileData?.phoneNumber.substring(userProfileData?.phoneNumber?.indexOf(' ') + 1) : 'Zadajte telefónne číslo',
-                        className: `flex-1 block w-full rounded-none rounded-r-md sm:text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-150 ease-in-out`,
+                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
+                        className: `flex-1 block w-full rounded-none rounded-r-md sm:text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px', borderLeftWidth: '0px' }
                     })
                 )
