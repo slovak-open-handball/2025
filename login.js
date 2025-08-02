@@ -118,7 +118,7 @@ function ResetPasswordModal({ show, onClose, onReset }) {
       }
       // Opravená verzia: Používame importovanú funkciu sendPasswordResetEmail
       await sendPasswordResetEmail(auth, email);
-      setMessage('E-mail na reset hesla bol odoslaný. Skontrolujte si schránku.');
+      setMessage('E-mail na reset hesla bol odoslaný. Skontrolujte si schránku vrátane spamu.');
       setMessageType('success');
       setTimeout(() => {
         onClose(); // Zatvorí modal
