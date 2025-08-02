@@ -156,7 +156,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'p-8 md:p-12' }, // Tu sa odstránila čiara a posunul sa obsah
+                    { className: 'p-8 md:p-12' },
                     React.createElement(
                         'h3',
                         { className: `text-xl font-semibold text-gray-800 mb-4` },
@@ -192,7 +192,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
+                                data.contactPhoneNumber || 'Nezadané'
                             )
                         ),
                         // Adresa
@@ -207,7 +207,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.address || 'Nezadaná'
+                                `${data.street || ''} ${data.houseNumber || ''}`.trim() || 'Nezadaná'
                             )
                         ),
                         // Mesto
@@ -237,7 +237,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.zipCode || 'Nezadané'
+                                data.postalCode || 'Nezadané'
                             )
                         ),
                         // Krajina
@@ -255,7 +255,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 data.country || 'Nezadaná'
                             )
                         )
-                        // Pôvodná Rola používateľa bola odstránená
                     )
                 )
             ),
