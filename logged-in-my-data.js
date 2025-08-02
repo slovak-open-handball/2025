@@ -60,7 +60,6 @@ const DataField = ({ label, value }) => {
  */
 const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => {
     // Implementácia modálneho okna pre kontaktné údaje, ponechané bez zmien.
-    // ... existujúca implementácia ...
     return null;
 };
 
@@ -69,7 +68,6 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
  */
 const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
     // Implementácia modálneho okna pre fakturačné údaje, ponechané bez zmien.
-    // ... existujúca implementácia ...
     return null;
 };
 
@@ -121,8 +119,8 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
         setEmailError('');
         setPasswordError('');
 
-        if (!auth || !auth.currentUser) {
-            showGlobalNotification('Používateľ nie je prihlásený.', 'error');
+        if (!auth || !auth.currentUser || !auth.currentUser.email) {
+            showGlobalNotification('Používateľ nie je prihlásený alebo jeho e-mail nie je dostupný.', 'error');
             setLoading(false);
             return;
         }
@@ -334,7 +332,7 @@ const MyDataApp = () => {
                     React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                     ` ${userProfileData.email}`
                 ),
-                !isUserAdmin && React.createElement('p', { className: 'text-gray-800 text-lg' },
+                (!isUserAdmin && userProfileData.contactPhoneNumber) && React.createElement('p', { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                     ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
                 ),
@@ -354,6 +352,11 @@ const MyDataApp = () => {
     const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         if (!userProfileData) return null;
         
+        // Zabezpečíme, že existuje billingAddress
+        if (!userProfileData.billingAddress) return null;
+        
+        const { street, city, zipCode, country } = userProfileData.billingAddress;
+
         return React.createElement(
             'div',
             { className: 'bg-white rounded-lg shadow-xl p-6 mt-4' },
@@ -371,11 +374,11 @@ const MyDataApp = () => {
                 { className: 'mt-4 space-y-2' },
                 React.createElement('p', { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                    ` ${userProfileData.billingAddress.street}, ${userProfileData.billingAddress.city}, ${userProfileData.billingAddress.zipCode}`
+                    ` ${street}, ${city}, ${zipCode}`
                 ),
                 React.createElement('p', { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Štát:'),
-                    ` ${userProfileData.billingAddress.country}`
+                    ` ${country}`
                 ),
             )
         );
@@ -438,7 +441,7 @@ const MyDataApp = () => {
                             React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                             ` ${userProfileData.email}`
                         ),
-                        !isUserAdmin && React.createElement('p', { className: 'text-gray-800 text-lg' },
+                        !isUserAdmin && (userProfileData.contactPhoneNumber) && React.createElement('p', { className: 'text-gray-800 text-lg' },
                             React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                             ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
                         ),
