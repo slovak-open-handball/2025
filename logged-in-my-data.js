@@ -320,10 +320,13 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
     if (!isOpen) return null;
 
     const isFormValid = formData.firstName && formData.lastName && formData.email && password;
-
+    
+    // Dynamické triedy pre tlačidlo
     const buttonClasses = `
-        bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline
-        ${loading || !isFormValid ? 'opacity-50 cursor-not-allowed' : ''}
+        font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline
+        ${isFormValid ? 
+            'bg-blue-500 hover:bg-blue-700 text-white' : 
+            'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'}
     `;
 
     return React.createElement(
