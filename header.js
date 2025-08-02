@@ -64,6 +64,8 @@ const updateHeaderLinks = (userProfileData) => {
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
+    const headerPlaceholder = document.getElementById('header-placeholder');
+
 
     // Predvolená farba hlavičky, ak používateľ nie je prihlásený
     const defaultColor = '#1d4ed8';
@@ -109,11 +111,22 @@ const updateHeaderLinks = (userProfileData) => {
             header.style.backgroundColor = defaultColor;
         }
     }
+
+    // Zobrazíme celú hlavičku po tom, ako je všetko nastavené
+    if (headerPlaceholder) {
+        headerPlaceholder.classList.remove('invisible');
+    }
 };
 
 // Funkcia na načítanie a inicializáciu hlavičky
 window.loadHeaderAndScripts = async () => {
     try {
+        const headerPlaceholder = document.getElementById('header-placeholder');
+        if (headerPlaceholder) {
+            // Pred načítaním obsahu skryjeme zástupný kontajner
+            headerPlaceholder.classList.add('invisible');
+        }
+
         const response = await fetch('header.html');
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
