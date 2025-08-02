@@ -136,10 +136,15 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         },
                         data.role || 'Používateľ'
                     ),
+                    // Zmena nadpisu na základe roly
                     React.createElement(
                         'h1',
                         { className: 'mt-2 text-3xl font-bold text-gray-800' },
-                        `${data.firstName || ''} ${data.lastName || ''}`
+                        data.role === 'user'
+                            ? 'Údaje kontaktnej osoby'
+                            : data.role === 'hall' || data.role === 'admin'
+                                ? 'Moje údaje'
+                                : `${data.firstName || ''} ${data.lastName || ''}`
                     ),
                     React.createElement(
                         'p',
