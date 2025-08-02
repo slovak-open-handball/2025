@@ -95,8 +95,8 @@ const MyDataApp = () => {
     }, []); // Prázdne pole závislostí zaručuje, že sa vykoná len raz
 
     // Vytvorenie farby role
-    const roleColor = userProfileData?.role === 'admin' ? '#ef4444' : '#3b82f6';
-    const roleBgColor = userProfileData?.role === 'admin' ? 'bg-red-500' : 'bg-blue-500';
+    const roleColor = userProfileData?.role === 'admin' ? '#ef4444' : '#6366f1';
+    const roleBgColor = userProfileData?.role === 'admin' ? 'bg-red-500' : 'bg-indigo-500';
 
     // Stav načítavania
     if (loading) {
@@ -131,54 +131,56 @@ const MyDataApp = () => {
     // Hlavné používateľské rozhranie
     return (
         React.createElement('div', { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16' },
-            // Nadpis a tlačidlo
-            React.createElement('div', { className: 'flex justify-between items-center mb-8' },
-                React.createElement('h1', { className: 'text-4xl font-bold text-gray-800' }, 'Moje údaje'),
-                userProfileData?.role !== 'admin' &&
-                React.createElement('button', {
-                    onClick: () => setShowModal(true),
-                    className: `flex items-center px-6 py-3 rounded-full text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-opacity-50 ${roleBgColor}`,
-                    style: { backgroundColor: roleColor }
-                },
-                    React.createElement('svg', {
-                        className: 'w-5 h-5 mr-2',
-                        fill: 'none',
-                        stroke: 'currentColor',
-                        viewBox: '0 0 24 24',
-                        xmlns: 'http://www.w3.org/2000/svg'
-                    },
-                        React.createElement('path', {
-                            strokeLinecap: 'round',
-                            strokeLinejoin: 'round',
-                            strokeWidth: '2',
-                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z'
-                        })
-                    ),
-                    'Upraviť'
-                )
-            ),
-
-            // Informačná karta
-            React.createElement('div', { className: 'bg-white rounded-xl shadow-lg p-6 md:p-8' },
-                // Rozloženie s dvoma stĺpcami pre telefón a meno
-                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-4 md:gap-y-0 md:gap-x-12 pb-4 border-b border-gray-200' },
-                    // Riadok s menom a priezviskom
-                    React.createElement('div', { className: 'flex-1' },
-                        React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a Priezvisko:'),
-                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim())
-                    ),
-                    // Riadok s telefónnym číslom (iba pre bežných používateľov)
+            // Informačná karta s fialovým pozadím pre titulok
+            React.createElement('div', { className: 'bg-white rounded-xl shadow-lg' },
+                // Nadpis a tlačidlo v samostatnom bloku s farbou role
+                React.createElement('div', { className: `flex justify-between items-center p-6 md:p-8 rounded-t-xl text-white ${roleBgColor}`, style: { backgroundColor: roleColor } },
+                    React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold' }, 'Moje údaje'),
                     userProfileData?.role !== 'admin' &&
-                    React.createElement('div', { className: 'flex-1' },
-                        React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo:'),
-                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formatPhoneNumber(userProfileData.phoneNumber))
+                    React.createElement('button', {
+                        onClick: () => setShowModal(true),
+                        className: 'flex items-center bg-white text-gray-800 px-4 py-2 rounded-full font-semibold shadow hover:bg-gray-100 transition-colors duration-300 transform hover:scale-105 focus:outline-none'
+                    },
+                        React.createElement('svg', {
+                            className: 'w-4 h-4 mr-2',
+                            fill: 'none',
+                            stroke: 'currentColor',
+                            viewBox: '0 0 24 24',
+                            xmlns: 'http://www.w3.org/2000/svg'
+                        },
+                            React.createElement('path', {
+                                strokeLinecap: 'round',
+                                strokeLinejoin: 'round',
+                                strokeWidth: '2',
+                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z'
+                            })
+                        ),
+                        'Upraviť'
                     )
                 ),
 
-                // Samostatný riadok pre e-mail
-                React.createElement('div', { className: 'mt-4 md:mt-6' },
-                    React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'E-mailová adresa kontaktnej osoby:'),
-                    React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, userProfileData.email || 'Nezadané')
+                // Obsah informačnej karty
+                React.createElement('div', { className: 'p-6 md:p-8' },
+                    // Rozloženie s dvoma stĺpcami pre telefón a meno
+                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-4 md:gap-y-0 md:gap-x-12 pb-4 border-b border-gray-200' },
+                        // Riadok s menom a priezviskom
+                        React.createElement('div', { className: 'flex-1' },
+                            React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a Priezvisko:'),
+                            React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim())
+                        ),
+                        // Riadok s telefónnym číslom (iba pre bežných používateľov)
+                        userProfileData?.role !== 'admin' &&
+                        React.createElement('div', { className: 'flex-1' },
+                            React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo:'),
+                            React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formatPhoneNumber(userProfileData.phoneNumber))
+                        )
+                    ),
+
+                    // Samostatný riadok pre e-mail
+                    React.createElement('div', { className: 'mt-4 md:mt-6' },
+                        React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'E-mailová adresa kontaktnej osoby:'),
+                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, userProfileData.email || 'Nezadané')
+                    )
                 )
             ),
 
