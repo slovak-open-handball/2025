@@ -168,13 +168,19 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
 
     useEffect(() => {
         if (show && userProfileData) {
-            // Inicializácia formulára s existujúcimi dátami
+            // Inicializácia formulára s prázdnymi reťazcami
+            setFormData({
+                firstName: '',
+                lastName: '',
+                contactPhoneNumber: '',
+                email: ''
+            });
+
+            // Uložíme pôvodné dáta pre porovnanie zmien
             const initialPhoneNumber = userProfileData.contactPhoneNumber || '';
-            let dialCode = '+421'; // Predvolená predvoľba
+            let dialCode = '+421';
             let phoneNumber = initialPhoneNumber;
 
-            // Nájdeme predvoľbu v zozname
-            // Najprv zoradíme predvoľby od najdlhšej, aby sme správne identifikovali napr. +421 a nie len +4
             const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
             const foundDialCode = sortedDialCodes.find(c => initialPhoneNumber.startsWith(c.dialCode));
 
@@ -183,14 +189,12 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 phoneNumber = initialPhoneNumber.substring(dialCode.length);
             }
 
-            const initialFormData = {
+            setInitialData({
                 firstName: userProfileData.firstName || '',
                 lastName: userProfileData.lastName || '',
                 contactPhoneNumber: phoneNumber,
                 email: userProfileData.email || ''
-            };
-            setFormData(initialFormData);
-            setInitialData(initialFormData);
+            });
             setSelectedDialCode(dialCode);
             setHasAnyChanges(false);
             setIsReauthRequired(false);
@@ -202,25 +206,23 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     // Kontrola zmien vo formulári
     useEffect(() => {
         if (show) {
-            const currentFullPhoneNumber = selectedDialCode + formData.contactPhoneNumber;
-            const initialFullPhoneNumber = initialData.contactPhoneNumber ? initialData.contactPhoneNumber : (initialData.dialCode + initialData.contactPhoneNumber);
+            const hasFirstNameChanged = formData.firstName !== '' && formData.firstName !== initialData.firstName;
+            const hasLastNameChanged = formData.lastName !== '' && formData.lastName !== initialData.lastName;
+            const hasPhoneNumberChanged = formData.contactPhoneNumber !== '' && (selectedDialCode + formData.contactPhoneNumber) !== (selectedDialCode + initialData.contactPhoneNumber);
+            const hasEmailChanged = formData.email !== '' && formData.email !== initialData.email;
+            const hasPasswordChanged = password.length > 0;
 
-            const changes =
-                formData.firstName !== initialData.firstName ||
-                formData.lastName !== initialData.lastName ||
-                currentFullPhoneNumber !== initialFullPhoneNumber ||
-                (formData.email !== initialData.email && password); // Zmena: zmena emailu sa považuje za zmenu iba vtedy, ak je zadané heslo
-
+            const changes = hasFirstNameChanged || hasLastNameChanged || hasPhoneNumberChanged || hasEmailChanged || hasPasswordChanged;
             setHasAnyChanges(changes);
 
-            // Kontrola, či sa zmenil e-mail pre potrebu re-autentifikácie
-            if (formData.email !== initialData.email) {
+            if (hasEmailChanged) {
                 setIsReauthRequired(true);
             } else {
                 setIsReauthRequired(false);
             }
         }
     }, [formData, initialData, selectedDialCode, show, password]);
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -242,22 +244,25 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         }
 
         try {
-            // Re-autentifikácia, ak je potrebná zmena e-mailu
-            if (isReauthRequired) {
+            // Re-autentifikácia, ak je zadané heslo
+            if (password) {
                 const credential = EmailAuthProvider.credential(user.email, password);
                 await reauthenticateWithCredential(user, credential);
             }
 
-            // Aktualizácia profilu vo Firestore
+            // Aktualizácia profilu vo Firestore, len ak sa zmenili dáta
             const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                contactPhoneNumber: selectedDialCode + formData.contactPhoneNumber,
-            });
+            const updateData = {};
+            if (formData.firstName !== '') updateData.firstName = formData.firstName;
+            if (formData.lastName !== '') updateData.lastName = formData.lastName;
+            if (formData.contactPhoneNumber !== '') updateData.contactPhoneNumber = selectedDialCode + formData.contactPhoneNumber;
 
-            // Aktualizácia e-mailu vo Firebase Auth, ak sa zmenil
-            if (isReauthRequired) {
+            if (Object.keys(updateData).length > 0) {
+                await updateDoc(userDocRef, updateData);
+            }
+            
+            // Aktualizácia e-mailu vo Firebase Auth, ak sa zmenil a je zadané heslo
+            if (formData.email !== '' && formData.email !== initialData.email && password) {
                 await verifyBeforeUpdateEmail(user, formData.email);
                 setEmailChangeStatus('overenie_odoslané');
             }
@@ -279,7 +284,20 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     };
 
     if (!show) return null;
+    
+    // Extrahovanie telefónneho čísla pre placeholder
+    const initialPhoneNumber = userProfileData.contactPhoneNumber || '';
+    let dialCodeForPlaceholder = '+421';
+    let phoneNumberForPlaceholder = initialPhoneNumber;
 
+    const sortedDialCodesForPlaceholder = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+    const foundDialCodeForPlaceholder = sortedDialCodesForPlaceholder.find(c => initialPhoneNumber.startsWith(c.dialCode));
+
+    if (foundDialCodeForPlaceholder) {
+        dialCodeForPlaceholder = foundDialCodeForPlaceholder.dialCode;
+        phoneNumberForPlaceholder = initialPhoneNumber.substring(dialCodeForPlaceholder.length);
+    }
+    
     const modal = React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4 sm:p-0' },
@@ -320,6 +338,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             name: 'firstName',
                             value: formData.firstName,
                             onChange: handleChange,
+                            placeholder: userProfileData.firstName || '', // Placeholder
                             className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
                             style: { 'focus-ring-color': roleColor }
                         })
@@ -338,6 +357,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             name: 'lastName',
                             value: formData.lastName,
                             onChange: handleChange,
+                            placeholder: userProfileData.lastName || '', // Placeholder
                             className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
                             style: { 'focus-ring-color': roleColor }
                         })
@@ -372,6 +392,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                                 name: 'contactPhoneNumber',
                                 value: formData.contactPhoneNumber,
                                 onChange: handleChange,
+                                placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
                                 className: 'flex-1 block w-full rounded-none rounded-r-md px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 sm:text-sm',
                                 style: { 'focus-ring-color': roleColor }
                             })
@@ -391,6 +412,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             name: 'email',
                             value: formData.email,
                             onChange: handleChange,
+                            placeholder: userProfileData.email || '', // Placeholder
                             className: 'mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:border-transparent sm:text-sm',
                             style: { 'focus-ring-color': roleColor }
                         })
