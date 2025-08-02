@@ -59,8 +59,21 @@ const MyDataApp = () => {
     const [showModal, setShowModal] = useState(false);
     const [isLoading, setIsLoading] = useState(!window.globalUserProfileData);
 
-    // Získanie farby role
-    const roleColor = userProfileData?.role === 'admin' ? '#ef4444' : '#3b82f6';
+    // Funkcia na určenie farby na základe roly
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff'; // Farba pre admina
+            case 'hall':
+                return '#b06835'; // Farba pre halu
+            case 'user':
+                return '#9333EA'; // Farba pre bežného používateľa
+            default:
+                return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+        }
+    };
+    
+    const roleColor = getRoleColor(userProfileData?.role);
 
     // Efekt na načítanie dát a nastavenie poslucháča
     useEffect(() => {
@@ -171,7 +184,7 @@ const MyDataApp = () => {
                 React.createElement(
                     'p',
                     { className: `text-lg mt-1 font-semibold`, style: { color: roleColor } },
-                    userProfileData.role === 'admin' ? 'Organizátor' : 'Účastník'
+                    userProfileData.role === 'admin' ? 'Organizátor' : (userProfileData.role === 'hall' ? 'Hala' : 'Účastník')
                 )
             ),
             // Telefónne číslo
