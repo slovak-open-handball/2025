@@ -93,13 +93,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
         console.log("MyDataApp.js: Zobrazujem obsah aplikácie.");
         // Zobrazenie obsahu
+        
+        // Získame farbu textu na základe farby pozadia
+        const textColor = getContrastTextColor(roleColor);
+        const headingColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
+        const subTextColor = textColor === 'white' ? 'text-gray-200' : 'text-gray-600';
+        const contactLabelColor = textColor === 'white' ? 'text-gray-300' : 'text-gray-500';
+        const contactValueColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
+
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
             // Profilový box
             React.createElement(
                 'div',
-                { className: `bg-white rounded-xl shadow-xl p-8 md:p-12 mb-8` },
+                { className: `rounded-xl shadow-xl p-8 md:p-12 mb-8`, style: { backgroundColor: roleColor } },
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-start flex-wrap gap-4 mb-6' },
@@ -109,7 +117,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         { className: 'flex-1 min-w-0' },
                         React.createElement(
                             'h1',
-                            { className: 'text-3xl md:text-4xl font-bold text-gray-900 truncate' },
+                            { className: `text-3xl md:text-4xl font-bold ${headingColor} truncate` },
                             data.role === 'user'
                                 ? 'Údaje kontaktnej osoby'
                                 : data.role === 'hall' || data.role === 'admin'
@@ -118,14 +126,14 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         ),
                         React.createElement(
                             'p',
-                            { className: 'text-lg text-gray-600 mt-1' },
+                            { className: `text-lg ${subTextColor} mt-1` },
                             data.email || 'E-mail neznámy'
                         ),
                         React.createElement(
                             'span',
                             {
                                 className: 'mt-3 inline-block px-4 py-1 text-sm font-semibold text-white rounded-full shadow-md',
-                                style: { backgroundColor: roleColor }
+                                style: { backgroundColor: getRoleColor(data.role) }
                             },
                             data.role || 'Používateľ'
                         )
@@ -137,7 +145,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             onClick: () => setShowModal(true),
                             className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
                             style: {
-                                backgroundColor: roleColor,
+                                backgroundColor: getRoleColor(data.role),
                                 color: 'white'
                             }
                         },
@@ -158,10 +166,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'mt-8 border-t border-gray-200 pt-8' },
+                    { className: `mt-8 border-t ${textColor === 'white' ? 'border-gray-500' : 'border-gray-200'} pt-8` },
                     React.createElement(
                         'h3',
-                        { className: 'text-xl font-semibold text-gray-800 mb-4' },
+                        { className: `text-xl font-semibold ${headingColor} mb-4` },
                         'Kontaktné údaje'
                     ),
                     React.createElement(
@@ -173,12 +181,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             null,
                             React.createElement(
                                 'dt',
-                                { className: 'text-sm font-medium text-gray-500' },
+                                { className: `text-sm font-medium ${contactLabelColor}` },
                                 'Telefón'
                             ),
                             React.createElement(
                                 'dd',
-                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
                             )
                         ),
@@ -188,12 +196,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             null,
                             React.createElement(
                                 'dt',
-                                { className: 'text-sm font-medium text-gray-500' },
+                                { className: `text-sm font-medium ${contactLabelColor}` },
                                 'Adresa'
                             ),
                             React.createElement(
                                 'dd',
-                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.address || 'Nezadaná'
                             )
                         ),
@@ -203,12 +211,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             null,
                             React.createElement(
                                 'dt',
-                                { className: 'text-sm font-medium text-gray-500' },
+                                { className: `text-sm font-medium ${contactLabelColor}` },
                                 'Mesto'
                             ),
                             React.createElement(
                                 'dd',
-                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.city || 'Nezadané'
                             )
                         ),
@@ -218,12 +226,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             null,
                             React.createElement(
                                 'dt',
-                                { className: 'text-sm font-medium text-gray-500' },
+                                { className: `text-sm font-medium ${contactLabelColor}` },
                                 'PSČ'
                             ),
                             React.createElement(
                                 'dd',
-                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.zipCode || 'Nezadané'
                             )
                         ),
@@ -233,12 +241,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             null,
                             React.createElement(
                                 'dt',
-                                { className: 'text-sm font-medium text-gray-500' },
+                                { className: `text-sm font-medium ${contactLabelColor}` },
                                 'Krajina'
                             ),
                             React.createElement(
                                 'dd',
-                                { className: 'mt-1 text-gray-900 font-semibold' },
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.country || 'Nezadaná'
                             )
                         )
@@ -250,7 +258,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 show: showModal,
                 onClose: () => setShowModal(false),
                 userProfileData: data,
-                roleColor: roleColor,
+                roleColor: getRoleColor(data.role),
                 onProfileUpdated: (newData) => {
                     setData(newData);
                     setShowModal(false);
@@ -275,10 +283,27 @@ const getRoleColor = (role) => {
             return '#CA8A04'; // Žltá
         case 'zdravotnik':
             return '#6D28D9'; // Fialová
+        case 'admin':
+            return '#47b3ff'; // Farba pre admina
+        case 'hall':
+            return '#b06835'; // Farba pre halu
+        case 'user':
+            return '#9333EA'; // Farba pre bežného používateľa
         default:
-            return '#4B5563'; // Šedá
+            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
     }
 };
+
+// Pomocná funkcia na určenie kontrastnej farby textu (čierna alebo biela)
+const getContrastTextColor = (hexcolor) => {
+    // Ak je farba v šesťhrannom formáte, vypočítame jas
+    const r = parseInt(hexcolor.slice(1, 3), 16);
+    const g = parseInt(hexcolor.slice(3, 5), 16);
+    const b = parseInt(hexcolor.slice(5, 7), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? 'black' : 'white';
+};
+
 
 window.getRoleColor = getRoleColor;
 
