@@ -47,8 +47,8 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
           placeholder: placeholder,
           disabled: disabled,
           required: true,
-          // Pridané moderné štýly inputu
-          className: 'block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out'
+          // Upravené štýly inputu pre rovnakú výšku ako tlačidlo
+          className: 'block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3'
         }
       ),
       React.createElement(
@@ -364,8 +364,8 @@ const MyDataApp = () => {
                                 id: 'current-email',
                                 value: currentAuthEmail,
                                 disabled: true,
-                                // Moderné štýly s efektom zablokovania
-                                className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 cursor-not-allowed sm:text-sm'
+                                // Moderné štýly s rovnakou výškou ako tlačidlo
+                                className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 cursor-not-allowed sm:text-sm py-2 px-3'
                             }
                         )
                     ),
@@ -384,8 +384,8 @@ const MyDataApp = () => {
                                 id: 'new-email',
                                 value: newEmail,
                                 onChange: handleNewEmailChange,
-                                // Pridané moderné štýly inputu
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`,
+                                // Pridané moderné štýly inputu s rovnakou výškou
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3 ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`,
                                 placeholder: 'Zadajte novú e-mailovú adresu',
                                 disabled: loading,
                             }
