@@ -240,10 +240,10 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    
-    // Ukladanie pôvodnej predvoľby pre detekciu zmeny
+
+    // Ukladanie pôvodnej predvolby pre detekciu zmeny
     const [originalDialCode, setOriginalDialCode] = useState('');
-    
+
     // Ukladanie pôvodného telefónneho čísla bez predvoľby pre kontrolu zmien a ako fallback
     const [originalPhoneNumberWithoutDialCode, setOriginalPhoneNumberWithoutDialCode] = useState('');
 
@@ -271,12 +271,12 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             setNewEmail(''); // E-mail sa vždy vynuluje
             setCurrentPassword(''); // Heslo sa vždy vynuluje
             setNewPhoneNumber(''); // Pole pre telefónne číslo sa vynuluje pre zobrazenie placeholdera
-            
+
             // Logika na parsovanie telefónneho čísla
             if (userProfileData?.contactPhoneNumber) {
                 const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
                 const foundDialCode = sortedDialCodes.find(c => userProfileData.contactPhoneNumber.startsWith(c.dialCode));
-                
+
                 if (foundDialCode) {
                     const numberWithoutCode = userProfileData.contactPhoneNumber.replace(foundDialCode.dialCode, '').trim();
                     setSelectedDialCode(foundDialCode.dialCode);
@@ -312,10 +312,26 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Kontrola, či nastali nejaké zmeny.
     const hasNameChanged = (newFirstName !== userProfileData.firstName) || (newLastName !== userProfileData.lastName);
     const hasEmailChanged = newEmail !== '';
-    const hasPhoneNumberChanged = newPhoneNumber !== ''; // Zmena nastala, ak používateľ niečo napísal do poľa
+    // Ak sa mení iba formátovanie čísla, nepočítame to ako zmenu, pokiaľ nezadá používateľ nové číslo.
+    const hasPhoneNumberChanged = newPhoneNumber.replace(/\s/g, '') !== originalPhoneNumberWithoutDialCode.replace(/\s/g, '');
     const hasDialCodeChanged = selectedDialCode !== originalDialCode;
-    
+
     const isFormValid = hasNameChanged || hasEmailChanged || hasPhoneNumberChanged || hasDialCodeChanged;
+
+    const handlePhoneNumberChange = (e) => {
+        let value = e.target.value.replace(/\s/g, ''); // Odstránime existujúce medzery pre jednoduchšie spracovanie
+        const cleanedValue = value.replace(/\D/g, ''); // Odstránime všetky nečíselné znaky
+        let formattedValue = '';
+
+        for (let i = 0; i < cleanedValue.length; i++) {
+            if (i > 0 && i % 3 === 0) {
+                formattedValue += ' ';
+            }
+            formattedValue += cleanedValue[i];
+        }
+        setNewPhoneNumber(formattedValue);
+    };
+
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
@@ -393,7 +409,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             onClose();
         }
     };
-    
+
     if (!show) {
         return null;
     }
@@ -401,7 +417,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const firstNamePlaceholder = userProfileData?.firstName || 'Meno';
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
-    
+
     // Formátovanie pôvodného telefónneho čísla pre placeholder
     const phoneNumberWithoutCode = originalPhoneNumberWithoutDialCode ? originalPhoneNumberWithoutDialCode.replace(/(\d{3})(?=\d)/g, '$1 ') : 'Zadajte telefónne číslo';
     const phoneNumberPlaceholder = newPhoneNumber || phoneNumberWithoutCode;
@@ -533,7 +549,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                                 name: 'new-phone-number',
                                 type: 'tel',
                                 value: newPhoneNumber,
-                                onChange: (e) => setNewPhoneNumber(e.target.value),
+                                onChange: handlePhoneNumberChange,
                                 onFocus: () => setIsPhoneNumberFocused(true),
                                 onBlur: () => setIsPhoneNumberFocused(false),
                                 placeholder: phoneNumberPlaceholder,
