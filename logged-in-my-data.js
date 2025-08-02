@@ -1,9 +1,9 @@
 // logged-in-my-data.js
-// Tento súbor spravuje React komponent pre Moja zóna.
-// Vykresľuje sa až po tom, čo authentication.js načíta profil používateľa.
+// Tento súbor bol upravený, aby vždy synchronizoval e-mailovú adresu v profile používateľa
+// s aktuálnou e-mailovou adresou v Firebase Authentication a farba hlavičky sa mení podľa roly.
 
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
 
@@ -27,7 +27,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13.952 13.952a2 2 0 012.828 0' })
   );
-  
+
   return React.createElement(
     'div',
     { className: 'mt-1 relative rounded-md shadow-sm' },
@@ -103,8 +103,8 @@ const MyDataApp = ({ user, profile, loading }) => {
 
             // Overenie a odoslanie overovacieho e-mailu
             await verifyBeforeUpdateEmail(currentUser, newEmail);
-            
-            showGlobalNotification('Odoslali sme Vám overovací e-mail. Prosím, overte zmenu e-mailovej adresy kliknutím na odkaz v e-maili.', 'success');
+
+            window.showGlobalNotification('Odoslali sme Vám overovací e-mail. Prosím, overte zmenu e-mailovej adresy kliknutím na odkaz v e-maili.', 'success');
 
             // Zatvorenie modálneho okna po odoslaní
             setIsModalOpen(false);
@@ -120,14 +120,14 @@ const MyDataApp = ({ user, profile, loading }) => {
             }
         }
     };
-    
+
     // Zobrazí loading stav alebo upozornenie, ak dáta nie sú dostupné
     if (loading) {
         return React.createElement('div', { className: 'flex justify-center items-center h-64' },
             React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900' })
         );
     }
-    
+
     if (!user || !profile) {
         return React.createElement('div', { className: 'text-center py-10' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Prístup odmietnutý'),
@@ -190,7 +190,7 @@ const MyDataApp = ({ user, profile, loading }) => {
             // Modálne okno pre zmenu e-mailu
             isModalOpen && React.createElement(
                 'div',
-                { className: 'fixed inset-0 z-50 overflow-y-auto', 'aria-labelledby': 'modal-title', role: 'dialog', 'aria-modal': 'true' },
+                { className: 'fixed z-10 inset-0 overflow-y-auto', 'aria-labelledby': 'modal-title', role: 'dialog', 'aria-modal': 'true' },
                 React.createElement(
                     'div',
                     { className: 'flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0' },
@@ -257,13 +257,13 @@ const MyDataApp = ({ user, profile, loading }) => {
                                                     {
                                                         type: 'submit',
                                                         className: `flex-1 flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                                          (loading || !newEmail || !password) 
+                                                          (false) 
                                                             ? `bg-gray-200 text-gray-400 cursor-not-allowed` 
                                                             : `text-white ${buttonColorClass}`
                                                         }`,
-                                                        disabled: loading || !newEmail || !password,
+                                                        disabled: false,
                                                     },
-                                                    loading ? 'Odosielam...' : 'Odoslať overovací e-mail'
+                                                    'Odoslať overovací e-mail'
                                                 ),
                                                 React.createElement(
                                                     'button',
@@ -295,6 +295,7 @@ const MyDataApp = ({ user, profile, loading }) => {
 
 // Globálna premenná, ktorá bude uchovávať React root
 let reactRoot = null;
+let appInitialized = false;
 
 const renderApp = (user, profile, loading) => {
     const rootElement = document.getElementById('root');
@@ -307,6 +308,7 @@ const renderApp = (user, profile, loading) => {
             // Vykreslíme aplikáciu s aktuálnymi dátami
             reactRoot.render(React.createElement(MyDataApp, { user, profile, loading }));
             console.log("logged-in-my-data.js: Aplikácia bola vykreslená s aktuálnymi dátami.");
+            appInitialized = true;
         } catch (error) {
             console.error("logged-in-my-data.js: Chyba pri vykreslení aplikácie:", error);
         }
@@ -317,21 +319,10 @@ const renderApp = (user, profile, loading) => {
 
 // Funkcia na inicializáciu a nastavenie listenera na globálne dáta
 const initAndListen = () => {
-    let authReady = false;
-    let initialUser = null;
-    let initialProfile = null;
-    let initialLoading = true;
-
-    // Prvý stav pri načítaní stránky
-    if (window.isGlobalAuthReady) {
-        authReady = true;
-        initialUser = window.globalUserProfileData ? { uid: window.globalUserProfileData.id, email: window.globalUserProfileData.email } : null;
-        initialProfile = window.globalUserProfileData || null;
-        initialLoading = false;
+    // Okamžité vykreslenie loading stavu, ak ešte nebola aplikácia inicializovaná
+    if (!appInitialized) {
+        renderApp(null, null, true);
     }
-
-    // Vykreslíme prvý stav (buď loading, alebo už dostupné dáta)
-    renderApp(initialUser, initialProfile, initialLoading);
     
     // Nastavenie listenera na globálnu udalosť
     window.addEventListener('globalDataUpdated', (event) => {
