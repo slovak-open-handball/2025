@@ -92,6 +92,7 @@ const getHeaderColorByRole = (role) => {
 
 /**
  * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
+ * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
  * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateHeaderLinks = (userProfileData) => {
@@ -122,10 +123,12 @@ const updateHeaderLinks = (userProfileData) => {
     }
 
     // Aktualizujeme viditeľnosť odkazu na registráciu
-    updateRegistrationLinkVisibility(window.globalUserProfileData);
+    updateRegistrationLinkVisibility(userProfileData);
 
-    // Až po nastavení všetkých prvkov nastavíme hlavičku ako viditeľnú
-    headerElement.classList.remove('invisible');
+    // Dôležitá zmena: Hlavička sa stane viditeľnou LEN ak sú všetky dáta načítané
+    if (window.isGlobalAuthReady && window.registrationDates && window.hasCategories !== null) {
+         headerElement.classList.remove('invisible');
+    }
 };
 
 /**
@@ -173,7 +176,7 @@ const setupFirestoreListeners = () => {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
-            updateRegistrationLinkVisibility(window.globalUserProfileData);
+            updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
         });
@@ -189,7 +192,7 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
-            updateRegistrationLinkVisibility(window.globalUserProfileData);
+            updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
         });
