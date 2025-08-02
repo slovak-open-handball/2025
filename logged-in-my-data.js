@@ -78,28 +78,6 @@ const Loader = () => {
 };
 
 /**
- * Pomocný komponent pre zobrazenie celostránkovej chybovej/úspešnej správy (teraz už nepoužívaný).
- * @param {object} props - Vlastnosti komponentu.
- * @param {string} props.message - Správa na zobrazenie.
- * @param {boolean} [props.isSuccess=false] - Ak je true, zobrazí úspešnú správu.
- */
-const ErrorMessage = ({ message, isSuccess = false }) => {
-    const colorClasses = isSuccess ? 'bg-green-100 border-l-4 border-green-500 text-green-700' : 'bg-red-100 border-l-4 border-red-500 text-red-700';
-    const titleText = isSuccess ? 'Úspech' : 'Chyba';
-
-    return React.createElement(
-        'div',
-        { className: 'flex justify-center pt-16' },
-        React.createElement(
-            'div',
-            { className: `p-8 ${colorClasses} rounded-lg shadow-md` },
-            React.createElement('p', { className: 'font-bold' }, titleText),
-            React.createElement('p', null, message)
-        )
-    );
-};
-
-/**
  * Nový komponent pre pop-up notifikácie.
  * @param {object} props - Vlastnosti komponentu.
  * @param {string} props.message - Správa na zobrazenie.
@@ -285,6 +263,7 @@ const MyDataApp = () => {
         setPassword('');
         setEmailError('');
         setPasswordError('');
+        setNotification({ message: '', type: '', visible: false });
     };
 
     const handleNewEmailChange = (event) => {
@@ -371,14 +350,6 @@ const MyDataApp = () => {
         return React.createElement(Loader, null);
     }
     
-    // Odstránené celostránkové chybové/úspešné správy. Teraz používame pop-up notifikáciu.
-    // if (successMessage) {
-    //     return React.createElement(ErrorMessage, { message: successMessage, isSuccess: true });
-    // }
-    // if (error) {
-    //     return React.createElement(ErrorMessage, { message: error });
-    // }
-
     const role = userProfileData?.role || 'default';
     const headerColor = getHeaderColor(role);
     const buttonColorClass = getButtonColor(role);
@@ -440,7 +411,7 @@ const MyDataApp = () => {
         ),
         isModalOpen && React.createElement(
             'div',
-            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' },
+            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-40 transition-opacity duration-300' },
             React.createElement(
                 'div',
                 { className: 'relative p-8 bg-white w-full max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
