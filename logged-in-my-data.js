@@ -1,7 +1,6 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený tak, aby používal globálne premenné 'React', 'ReactDOM', 'getAuth' a 'getFirestore',
-// ktoré sú načítané cez `<script>` tagy v `logged-in-my-data.html` a `authentication.js`.
-// Tým sa rieši chyba "Failed to resolve module specifier".
+// Tento súbor bol upravený tak, aby sa spúšťal až po udalosti `globalDataUpdated`,
+// čím sa zabezpečí, že Firebase a profilové dáta sú dostupné.
 
 const { useState, useEffect } = React;
 
@@ -57,7 +56,6 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
   );
 };
 
-
 /**
  * Pomocný komponent pre načítavanie dát.
  */
@@ -106,49 +104,35 @@ const MyDataApp = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        const handleGlobalDataUpdate = () => {
-            console.log('MyDataApp: Prijatá udalosť "globalDataUpdated". Firebase je inicializovaný.');
-            const auth = window.auth;
-            const user = auth ? auth.currentUser : null;
-            const db = window.db;
-            const appId = window.__app_id;
-            
-            // Získavame funkcie doc a onSnapshot z globálneho objektu window
-            const doc = window.doc;
-            const onSnapshot = window.onSnapshot;
+        const auth = window.auth;
+        const user = auth ? auth.currentUser : null;
+        const db = window.db;
+        const appId = window.__app_id;
+        
+        // Získavame funkcie doc a onSnapshot z globálneho objektu window
+        const doc = window.doc;
+        const onSnapshot = window.onSnapshot;
 
-            if (user && db && doc && onSnapshot) {
-                const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
-                const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setUserProfileData(docSnap.data());
-                    } else {
-                        // Ak dokument neexistuje, nastavíme email z auth objektu
-                        setUserProfileData({ email: user.email });
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Chyba pri načítaní profilu:", error);
-                    setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
-                    setLoading(false);
-                });
-                return () => unsubscribeFirestore();
-            } else {
+        if (user && db && doc && onSnapshot) {
+            const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
+            const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setUserProfileData(docSnap.data());
+                } else {
+                    // Ak dokument neexistuje, nastavíme email z auth objektu
+                    setUserProfileData({ email: user.email });
+                }
                 setLoading(false);
-                setError("Používateľ nie je prihlásený alebo Firebase nie je inicializovaný.");
-            }
-        };
-
-        // Kontrola, či už je auth hotové
-        if (window.isGlobalAuthReady) {
-            handleGlobalDataUpdate();
+            }, (error) => {
+                console.error("Chyba pri načítaní profilu:", error);
+                setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
+                setLoading(false);
+            });
+            return () => unsubscribeFirestore();
         } else {
-            window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+            setLoading(false);
+            setError("Používateľ nie je prihlásený alebo Firebase nie je inicializovaný.");
         }
-
-        return () => {
-            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-        };
     }, []);
 
     const handleOpenModal = () => {
