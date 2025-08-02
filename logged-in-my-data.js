@@ -80,124 +80,138 @@ const getRoleColor = (role) => {
  * Komponent pre modálne okno na úpravu údajov.
  */
 const EditContactModal = ({ userProfileData, isOpen, onClose }) => {
-  const [formData, setFormData] = useState({
-    firstName: userProfileData.firstName || '',
-    lastName: userProfileData.lastName || '',
-    contactPhoneNumber: userProfileData.contactPhoneNumber || '',
-  });
+    const [formData, setFormData] = useState({
+        firstName: userProfileData.firstName || '',
+        lastName: userProfileData.lastName || '',
+        contactPhoneNumber: userProfileData.contactPhoneNumber || '',
+    });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({ ...prevData, [name]: value }));
-  };
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prevData => ({ ...prevData, [name]: value }));
+    };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Tu by sa odoslali aktualizované údaje do Firestore
-    console.log("Saving data:", formData);
-    onClose();
-  };
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        // Tu by sa odoslali aktualizované údaje do Firestore
+        console.log("Saving data:", formData);
+        onClose();
+    };
 
-  if (!isOpen) return null;
+    // Zabezpečíme, že sa modálne okno nevykreslí, ak nie je otvorené
+    if (!isOpen) return null;
 
-  return React.createElement(
-    'div',
-    { className: 'modal' },
-    React.createElement(
-      'div',
-      { className: 'modal-content modal-content-sm' },
-      React.createElement(
-        'form',
-        { onSubmit: handleSubmit },
+    // Pridáme overlay a správne triedy na zobrazenie modálneho okna
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center' },
         React.createElement(
-          'h3',
-          { className: 'text-2xl font-bold mb-4' },
-          'Upraviť kontaktné údaje'
-        ),
-        React.createElement(
-          'div',
-          { className: 'mb-4' },
-          React.createElement(
-            'label',
-            { htmlFor: 'firstName', className: 'block text-gray-700 text-sm font-bold mb-2' },
-            'Meno'
-          ),
-          React.createElement('input', {
-            type: 'text',
-            id: 'firstName',
-            name: 'firstName',
-            value: formData.firstName,
-            onChange: handleChange,
-            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-          })
-        ),
-        React.createElement(
-          'div',
-          { className: 'mb-4' },
-          React.createElement(
-            'label',
-            { htmlFor: 'lastName', className: 'block text-gray-700 text-sm font-bold mb-2' },
-            'Priezvisko'
-          ),
-          React.createElement('input', {
-            type: 'text',
-            id: 'lastName',
-            name: 'lastName',
-            value: formData.lastName,
-            onChange: handleChange,
-            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-          })
-        ),
-        React.createElement(
-          'div',
-          { className: 'mb-6' },
-          React.createElement(
-            'label',
-            { htmlFor: 'contactPhoneNumber', className: 'block text-gray-700 text-sm font-bold mb-2' },
-            'Telefónne číslo'
-          ),
-          React.createElement('input', {
-            type: 'text',
-            id: 'contactPhoneNumber',
-            name: 'contactPhoneNumber',
-            value: formData.contactPhoneNumber,
-            onChange: handleChange,
-            className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-          })
-        ),
-        React.createElement(
-          'div',
-          { className: 'flex items-center justify-between' },
-          React.createElement(
-            'button',
-            {
-              type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline',
-            },
-            'Uložiť zmeny'
-          ),
-          React.createElement(
-            'button',
-            {
-              type: 'button',
-              onClick: onClose,
-              className: 'inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800',
-            },
-            'Zrušiť'
-          )
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl m-4 max-w-md w-full' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+                    )
+                )
+            ),
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit },
+                React.createElement(
+                    'h3',
+                    { className: 'text-2xl font-bold mb-4 text-gray-800' },
+                    'Upraviť kontaktné údaje'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'firstName', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                        'Meno'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'firstName',
+                        name: 'firstName',
+                        value: formData.firstName,
+                        onChange: handleChange,
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'lastName', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                        'Priezvisko'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'lastName',
+                        name: 'lastName',
+                        value: formData.lastName,
+                        onChange: handleChange,
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'contactPhoneNumber', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                        'Telefónne číslo'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'contactPhoneNumber',
+                        name: 'contactPhoneNumber',
+                        value: formData.contactPhoneNumber,
+                        onChange: handleChange,
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline',
+                        },
+                        'Uložiť zmeny'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: onClose,
+                            className: 'inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800',
+                        },
+                        'Zrušiť'
+                    )
+                )
+            )
         )
-      )
-    )
-  );
+    );
 };
-
 
 /**
  * Komponent pre zobrazenie informácií o prihlásenom používateľovi.
  */
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, useStateLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -219,10 +233,10 @@ const MyDataApp = () => {
     const handleGlobalData = () => {
         if (window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
-            setIsLoading(false);
+            useStateLoading(false);
         } else {
             setError('Nie ste prihlásený. Prosím, prihláste sa, aby ste videli svoje údaje.');
-            setIsLoading(false);
+            useStateLoading(false);
         }
     };
     
