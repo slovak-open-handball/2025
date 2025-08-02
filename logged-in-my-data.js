@@ -81,10 +81,13 @@ const MyDataApp = () => {
                         let color = 'blue';
                         switch (profileData.role) {
                             case 'admin':
-                                color = '#d22026';
+                                color = '#47b3ff';
                                 break;
-                            case 'coach':
-                                color = '#2072d2';
+                            case 'hall':
+                                color = '#b06835';
+                                break;
+                            case 'user':
+                                color = '#9333EA';
                                 break;
                             default:
                                 color = '#20d287';
