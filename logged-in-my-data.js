@@ -619,6 +619,33 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     );
 };
 
+/**
+ * Pomocná funkcia na formátovanie telefónneho čísla.
+ * Oddeľuje predvoľbu a formátuje zvyšok čísla do skupín po troch čísliciach.
+ */
+const formatPhoneNumber = (fullNumber) => {
+    if (!fullNumber) {
+        return '';
+    }
+
+    // Odstránime všetky medzery pre jednoduchšie spracovanie
+    const sanitizedNumber = fullNumber.replace(/\s/g, '');
+
+    // Nájdeme predvoľbu z nášho zoznamu
+    const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+    const foundDialCode = sortedDialCodes.find(c => sanitizedNumber.startsWith(c.dialCode));
+
+    if (foundDialCode) {
+        const numberWithoutCode = sanitizedNumber.substring(foundDialCode.dialCode.length);
+        // Formátujeme zvyšné číslice do skupín po 3
+        const formattedRest = numberWithoutCode.replace(/(\d{3})(?=\d)/g, '$1 ');
+        return `${foundDialCode.dialCode} ${formattedRest}`;
+    }
+
+    // Ak sa predvoľba nenájde, vrátime pôvodné číslo
+    return fullNumber;
+};
+
 
 /**
  * Komponenta pre zobrazenie profilových dát
@@ -671,6 +698,7 @@ const MyDataApp = () => {
 
     const { role, firstName, lastName, email, contactPhoneNumber } = userProfileData;
     const headerColor = getRoleColor(role);
+    const formattedPhoneNumber = formatPhoneNumber(contactPhoneNumber);
 
     return React.createElement(
         'div',
@@ -734,7 +762,7 @@ const MyDataApp = () => {
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg mt-1' },
-                        `${userProfileData.contactPhoneNumber}`
+                        formattedPhoneNumber // Používame formátované číslo
                     )
                 ),
                 React.createElement(
