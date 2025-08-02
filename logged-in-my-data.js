@@ -8,7 +8,7 @@
 // Text v hlavičke bol upravený z "Môj profil" na "Kontaktná osoba".
 // Meno a priezvisko sú zobrazené v jednom riadku a boli zmenené popisy pred údajmi.
 // Rozloženie profilových údajov bolo zmenené tak, aby bol popis a hodnota na samostatných riadkoch s rôznou veľkosťou medzier.
-// Modálne okno pre zmenu e-mailu bolo upravené tak, aby jeho šírka zodpovedala hlavnému profilovému boxu.
+// Modálne okno pre zmenu e-mailu bolo upravené tak, aby jeho šírka zodpovedala hlavnému profilovému boxu a bolo trochu širšie.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -215,7 +215,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         { className: 'fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900 bg-opacity-50 backdrop-blur-sm' },
         React.createElement(
             'div',
-            { className: 'relative w-auto my-6 mx-auto max-w-lg' }, // Zmenené max-w-2xl na max-w-lg pre menšiu šírku
+            { className: 'relative w-auto my-6 mx-auto max-w-xl' }, // Zmenené max-w-lg na max-w-xl
             React.createElement(
                 'div',
                 { className: 'relative flex flex-col w-full bg-white border-0 rounded-lg shadow-lg outline-none focus:outline-none' },
