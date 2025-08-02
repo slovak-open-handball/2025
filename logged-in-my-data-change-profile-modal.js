@@ -390,7 +390,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 if (error.code === 'auth/wrong-password') {
                     setReauthError('Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.');
                 } else {
-                    setReauthError(`Chyba: ${error.message}`);
+                    setReauthError(`Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.`);
                 }
                 return;
             }
