@@ -97,7 +97,121 @@ const getRoleColor = (role) => {
 };
 
 /**
- * Komponent pre modálne okno na úpravu údajov.
+ * Komponent pre modálne okno na úpravu fakturačných údajov.
+ */
+const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
+    const [formData, setFormData] = useState({
+        clubName: userProfileData.billing?.clubName || '',
+        ico: userProfileData.billing?.ico || '',
+        dic: userProfileData.billing?.dic || '',
+        icDph: userProfileData.billing?.icDph || '',
+        street: userProfileData.street || '',
+        houseNumber: userProfileData.houseNumber || '',
+        city: userProfileData.city || '',
+        postalCode: userProfileData.postalCode || '',
+        country: userProfileData.country || '',
+    });
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prevData => ({ ...prevData, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        console.log("Saving billing data:", formData);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center' },
+        React.createElement(
+            'div',
+            { className: 'bg-white p-8 rounded-lg shadow-xl m-4 max-w-md w-full' },
+            React.createElement(
+                'div',
+                { className: 'flex justify-end' },
+                React.createElement(
+                    'button',
+                    { onClick: onClose, className: 'text-gray-400 hover:text-gray-600' },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+                    )
+                )
+            ),
+            React.createElement(
+                'form',
+                { onSubmit: handleSubmit },
+                React.createElement(
+                    'h3',
+                    { className: 'text-2xl font-bold mb-4 text-gray-800' },
+                    'Upraviť fakturačné údaje'
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'clubName', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Názov klubu'),
+                    React.createElement('input', { type: 'text', id: 'clubName', name: 'clubName', value: formData.clubName, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
+                    React.createElement('input', { type: 'text', id: 'ico', name: 'ico', value: formData.ico, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
+                    React.createElement('input', { type: 'text', id: 'dic', name: 'dic', value: formData.dic, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
+                    React.createElement('input', { type: 'text', id: 'icDph', name: 'icDph', value: formData.icDph, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'street', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Ulica'),
+                    React.createElement('input', { type: 'text', id: 'street', name: 'street', value: formData.street, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'houseNumber', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Číslo domu'),
+                    React.createElement('input', { type: 'text', id: 'houseNumber', name: 'houseNumber', value: formData.houseNumber, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'postalCode', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'PSČ'),
+                    React.createElement('input', { type: 'text', id: 'postalCode', name: 'postalCode', value: formData.postalCode, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-6' },
+                    React.createElement('label', { htmlFor: 'city', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Mesto'),
+                    React.createElement('input', { type: 'text', id: 'city', name: 'city', value: formData.city, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between' },
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'submit',
+                            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline',
+                        },
+                        'Uložiť zmeny'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            onClick: onClose,
+                            className: 'inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800',
+                        },
+                        'Zrušiť'
+                    )
+                )
+            )
+        )
+    );
+};
+
+/**
+ * Komponent pre modálne okno na úpravu kontaktných údajov.
  * @param {object} props - Vlastnosti komponentu.
  * @param {object} props.userProfileData - Dáta profilu používateľa.
  * @param {boolean} props.isOpen - Určuje, či je modálne okno otvorené.
@@ -239,7 +353,8 @@ const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
     const [isLoading, useStateLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
+    const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
 
     useEffect(() => {
         // Kontroluje, či sú globálne dáta už pripravené z 'authentication.js'
@@ -296,11 +411,20 @@ const MyDataApp = () => {
             { className: 'bg-white rounded-lg shadow-xl overflow-hidden mb-8' },
             React.createElement(
                 'div',
-                { className: 'p-4 text-white font-bold text-xl', style: { backgroundColor: color } },
+                { className: 'p-4 text-white font-bold text-xl flex justify-between items-center', style: { backgroundColor: color } },
                 React.createElement(
                     'h3',
                     null,
                     'Fakturačné údaje'
+                ),
+                React.createElement(
+                    'button',
+                    { onClick: () => setIsEditBillingModalOpen(true), className: 'text-white hover:text-gray-200 transition-colors duration-200' },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z' })
+                    )
                 )
             ),
             React.createElement(
@@ -315,6 +439,12 @@ const MyDataApp = () => {
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
                         ` ${data.billing.clubName}`
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                        ` ${data.street || ''} ${data.houseNumber || ''}, ${formattedPostalCode} ${data.city || ''}, ${data.country || ''}`.trim()
                     ),
                     React.createElement(
                         'p',
@@ -334,12 +464,6 @@ const MyDataApp = () => {
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
                         ` ${data.billing.icDph || '-'}`
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.street || ''} ${data.houseNumber || ''}, ${formattedPostalCode} ${data.city || ''}, ${data.country || ''}`.trim()
                     )
                 ) :
                 React.createElement(
@@ -371,7 +495,7 @@ const MyDataApp = () => {
                     ),
                     React.createElement(
                         'button',
-                        { onClick: () => setIsEditModalOpen(true), className: 'text-white hover:text-gray-200 transition-colors duration-200' },
+                        { onClick: () => setIsEditContactModalOpen(true), className: 'text-white hover:text-gray-200 transition-colors duration-200' },
                         React.createElement(
                             'svg',
                             { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -407,9 +531,14 @@ const MyDataApp = () => {
         ),
         React.createElement(EditContactModal, {
             userProfileData: userProfileData,
-            isOpen: isEditModalOpen,
-            onClose: () => setIsEditModalOpen(false),
+            isOpen: isEditContactModalOpen,
+            onClose: () => setIsEditContactModalOpen(false),
             isUserAdmin: isUserAdmin
+        }),
+        React.createElement(EditBillingModal, {
+            userProfileData: userProfileData,
+            isOpen: isEditBillingModalOpen,
+            onClose: () => setIsEditBillingModalOpen(false),
         })
     );
 };
