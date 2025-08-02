@@ -393,7 +393,10 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const firstNamePlaceholder = userProfileData?.firstName || 'Meno';
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
-    const phoneNumberPlaceholder = originalPhoneNumberWithoutDialCode || 'Zadajte telefónne číslo';
+    
+    // Formátovanie pôvodného telefónneho čísla pre placeholder
+    const phoneNumberWithoutCode = originalPhoneNumberWithoutDialCode ? originalPhoneNumberWithoutDialCode.replace(/(\d{3})(?=\d)/g, '$1 ') : 'Zadajte telefónne číslo';
+    const phoneNumberPlaceholder = newPhoneNumber || phoneNumberWithoutCode;
 
     return ReactDOM.createPortal(
         React.createElement(
