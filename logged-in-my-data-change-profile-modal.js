@@ -170,6 +170,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     const [reauthError, setReauthError] = useState(null); // Nový stav pre chybu overenia hesla
     const [passwordError, setPasswordError] = useState(null); // Nový stav pre chybu hesla
 
+    const isUserAdmin = userProfileData.role === 'admin';
+
     useEffect(() => {
         if (show && userProfileData) {
             // Inicializácia formulára s pôvodnými dátami, aby boli predvyplnené
@@ -222,7 +224,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
 
             const hasFirstNameChanged = formData.firstName !== initialData.firstName;
             const hasLastNameChanged = formData.lastName !== initialData.lastName;
-            const hasPhoneNumberChanged = cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421');
+            const hasPhoneNumberChanged = isUserAdmin ? false : (cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421'));
             const hasEmailChanged = formData.email !== initialData.email;
 
             const changes = hasFirstNameChanged || hasLastNameChanged || hasPhoneNumberChanged || hasEmailChanged;
@@ -244,7 +246,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 setPasswordError(null);
             }
         }
-    }, [formData, initialData, selectedDialCode, show, password]);
+    }, [formData, initialData, selectedDialCode, show, password, isUserAdmin]);
 
     /**
      * Funkcia na formátovanie telefónneho čísla.
@@ -366,11 +368,14 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 if (formData.firstName !== initialData.firstName) updatedFields.firstName = formData.firstName;
                 if (formData.lastName !== initialData.lastName) updatedFields.lastName = formData.lastName;
                 
-                const cleanedCurrentPhone = formData.contactPhoneNumber.replace(/\s/g, '');
-                const cleanedInitialPhone = initialData.contactPhoneNumber;
+                // Aktualizujeme telefónne číslo iba ak používateľ nie je admin
+                if (!isUserAdmin) {
+                    const cleanedCurrentPhone = formData.contactPhoneNumber.replace(/\s/g, '');
+                    const cleanedInitialPhone = initialData.contactPhoneNumber;
 
-                if (cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421')) {
-                    updatedFields.contactPhoneNumber = `${selectedDialCode}${cleanedCurrentPhone}`;
+                    if (cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421')) {
+                        updatedFields.contactPhoneNumber = `${selectedDialCode}${cleanedCurrentPhone}`;
+                    }
                 }
 
                 if (Object.keys(updatedFields).length > 0) {
@@ -398,11 +403,14 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 if (formData.firstName !== initialData.firstName) updatedFields.firstName = formData.firstName;
                 if (formData.lastName !== initialData.lastName) updatedFields.lastName = formData.lastName;
                 
-                const cleanedCurrentPhone = formData.contactPhoneNumber.replace(/\s/g, '');
-                const cleanedInitialPhone = initialData.contactPhoneNumber;
+                // Aktualizujeme telefónne číslo iba ak používateľ nie je admin
+                if (!isUserAdmin) {
+                    const cleanedCurrentPhone = formData.contactPhoneNumber.replace(/\s/g, '');
+                    const cleanedInitialPhone = initialData.contactPhoneNumber;
 
-                if (cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421')) {
-                    updatedFields.contactPhoneNumber = `${selectedDialCode}${cleanedCurrentPhone}`;
+                    if (cleanedCurrentPhone !== cleanedInitialPhone || selectedDialCode !== (initialData.contactPhoneNumber.startsWith(selectedDialCode) ? selectedDialCode : '+421')) {
+                        updatedFields.contactPhoneNumber = `${selectedDialCode}${cleanedCurrentPhone}`;
+                    }
                 }
 
                 if (Object.keys(updatedFields).length > 0) {
@@ -545,8 +553,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 passwordError
             )
         ),
-        // Telefónne číslo
-        React.createElement(
+        // Telefónne číslo - zobrazí sa len ak používateľ nie je admin
+        !isUserAdmin && React.createElement(
             'div',
             { className: 'mb-6' },
             React.createElement(
@@ -632,5 +640,17 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             roleColor: roleColor
         })
     );
+
+    const modal = React.createElement(
+        'div',
+        { className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]' },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden' },
+            ModalHeader,
+            ModalContent
+        )
+    );
+
     return ReactDOM.createPortal(modal, document.body);
 };
