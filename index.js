@@ -276,10 +276,9 @@ window.addEventListener('globalDataUpdated', () => {
     setupRegistrationDataListener();
 });
 
-// Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
-// skôr, ako sa stihne spustiť listener.
+// ZMENA: Táto časť bola odstránená, aby sa inicializácia nespúšťala duplicitne.
 // Ak už existujú globálne dáta, spustíme listener hneď.
-if (window.globalUserProfileData !== undefined) {
-    console.log("Globálne dáta existujú už pri štarte, spúšťam listener.");
-    setupRegistrationDataListener();
-}
+// if (window.globalUserProfileData !== undefined) {
+//     console.log("Globálne dáta existujú už pri štarte, spúšťam listener.");
+//     setupRegistrationDataListener();
+// }
