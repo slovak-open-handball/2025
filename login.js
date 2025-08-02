@@ -6,6 +6,7 @@
 // globálne dáta sú pripravené.
 // Taktiež boli aktualizované SVG ikony pre zobrazenie/skrytie hesla na základe požiadavky používateľa.
 // Bola pridaná logika na validáciu e-mailu a hesla a zablokovanie prihlasovacieho tlačidla.
+// Táto verzia tiež zabezpečuje, že zablokované tlačidlo nereaguje na hover efekt zväčšenia.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -321,8 +322,11 @@ const App = () => {
             'button',
             {
               type: 'submit',
-              className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:shadow-outline w-full 
-                          ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`,
+              className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline w-full 
+                          ${isButtonDisabled 
+                            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' 
+                            : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
+                          }`,
               disabled: isButtonDisabled,
               tabIndex: 3
             },
