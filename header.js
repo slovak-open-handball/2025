@@ -1,12 +1,16 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase
-// namiesto periodickej kontroly pomocou časovača, čím je kód efektívnejší a rýchlejší.
+// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
+// a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
+// presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
+let registrationCheckIntervalId = null;
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -94,10 +98,9 @@ const updateHeaderLinks = (userProfileData) => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
-    const registerLink = document.getElementById('register-link');
     const headerElement = document.querySelector('header');
     
-    if (!authLink || !profileLink || !logoutButton || !registerLink || !headerElement) {
+    if (!authLink || !profileLink || !logoutButton || !headerElement) {
         console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
         return;
     }
@@ -165,7 +168,7 @@ const setupFirestoreListeners = () => {
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
-                console.log("header.js: Dáta o registrácii aktualizované.", window.registrationDates);
+                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
             } else {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
@@ -181,7 +184,7 @@ const setupFirestoreListeners = () => {
             if (docSnap.exists()) {
                 const categories = docSnap.data();
                 window.hasCategories = Object.keys(categories).length > 0;
-                console.log(`header.js: Dáta kategórií aktualizované. Počet kategórií: ${Object.keys(categories).length}`);
+                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
             } else {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
@@ -189,6 +192,26 @@ const setupFirestoreListeners = () => {
             updateRegistrationLinkVisibility(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+        });
+
+        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
+        if (registrationCheckIntervalId) {
+            clearInterval(registrationCheckIntervalId);
+        }
+        registrationCheckIntervalId = setInterval(() => {
+            // Kontrola beží každú sekundu, ale len ak máme potrebné dáta
+            if (window.registrationDates) {
+                updateRegistrationLinkVisibility(window.globalUserProfileData);
+            }
+        }, 1000); // 1000 ms = 1 sekunda
+        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
+        
+        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
+        window.addEventListener('beforeunload', () => {
+            if (registrationCheckIntervalId) {
+                clearInterval(registrationCheckIntervalId);
+                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
+            }
         });
 
     } catch (error) {
