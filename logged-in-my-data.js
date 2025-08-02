@@ -288,32 +288,36 @@ const renderApp = (data) => {
     }
 };
 
-// Prihlásenie používateľa
-document.addEventListener('globalDataUpdated', (event) => {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const userRole = event.detail?.role;
-        const roleColor = getRoleColor(userRole);
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: event.detail, roleColor: roleColor }));
-        console.log("MyDataApp.js: Aplikácia vykreslená po načítaní dát.");
+// Vytvoríme funkciu na spracovanie udalosti, aby sa predišlo duplicitnému kódu.
+const handleDataUpdateAndRender = (event) => {
+    const data = event.detail || window.globalUserProfileData;
+    if (data) {
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const userRole = data.role;
+            const roleColor = getRoleColor(userRole);
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(MyDataApp, { userProfileData: data, roleColor: roleColor }));
+            console.log("MyDataApp.js: Aplikácia vykreslená po načítaní dát.");
+        } else {
+            console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        }
     } else {
-        console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        // Ak sa dáta nenačítali, skryjeme loader, aby neblokoval stránku
+        if (typeof window.hideGlobalLoader === 'function') {
+             window.hideGlobalLoader();
+        }
+        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné.");
     }
-});
+};
+
+
+// Prihlásenie používateľa
+document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Zabezpečenie, že ak sú dáta už načítané, aplikácia sa vykreslí
 if (window.globalUserProfileData) {
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const userRole = window.globalUserProfileData.role;
-        const roleColor = getRoleColor(userRole);
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: window.globalUserProfileData, roleColor: roleColor }));
-        console.log("MyDataApp.js: Aplikácia vykreslená s existujúcimi dátami.");
-    } else {
-        console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
-    }
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
 
 // Explicitne sprístupníme render funkciu pre externé použitie
