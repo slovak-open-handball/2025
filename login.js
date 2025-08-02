@@ -4,6 +4,7 @@
 // Bol upravený tak, aby sa pri kliknutí na "Zabudli ste heslo?" skryl prihlasovací formulár
 // a namiesto neho sa zobrazil formulár na obnovenie hesla, bez použitia modálneho okna s tmavým pozadím.
 // Taktiež bola pridaná validácia e-mailu a štýlovanie tlačidla "Odoslať" aj do formulára na obnovenie hesla.
+// Teraz sa zobrazí červená chyba, ak sa účet s daným e-mailom nenájde.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -86,14 +87,16 @@ const ResetPasswordForm = ({ onCancel }) => {
     const [email, setEmail] = React.useState('');
     const [message, setMessage] = React.useState('');
     const [loading, setLoading] = React.useState(false);
+    const [error, setError] = React.useState('');
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
         setLoading(true);
         setMessage('');
+        setError('');
 
         if (!isEmailValid(email)) {
-            setMessage('Prosím, zadajte platnú e-mailovú adresu.');
+            setError('Prosím, zadajte platnú e-mailovú adresu.');
             setLoading(false);
             return;
         }
@@ -105,9 +108,13 @@ const ResetPasswordForm = ({ onCancel }) => {
             }
             await sendPasswordResetEmail(window.auth, email);
             setMessage('Odkaz na obnovenie hesla bol odoslaný na váš e-mail.');
-        } catch (error) {
-            console.error("Chyba pri odosielaní e-mailu na obnovenie hesla:", error);
-            setMessage('Chyba: E-mail na obnovenie hesla sa nepodarilo odoslať. Skúste to znova.');
+        } catch (err) {
+            console.error("Chyba pri odosielaní e-mailu na obnovenie hesla:", err);
+            if (err.code === 'auth/user-not-found') {
+                setError('Nepodarilo sa nájsť účet s touto e-mailovou adresou.');
+            } else {
+                setError('Chyba: E-mail na obnovenie hesla sa nepodarilo odoslať. Skúste to znova.');
+            }
         } finally {
             setLoading(false);
         }
@@ -153,7 +160,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                         type: 'submit',
                         className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline w-full
                           ${isSendButtonDisabled
-                            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
                           }`,
                         disabled: isSendButtonDisabled,
@@ -174,8 +181,13 @@ const ResetPasswordForm = ({ onCancel }) => {
             ),
             message && React.createElement(
                 'p',
-                { className: 'text-sm mt-4 text-center', style: { color: message.startsWith('Chyba') ? 'red' : 'green' } },
+                { className: 'text-sm mt-4 text-center text-green-600' },
                 message
+            ),
+            error && React.createElement(
+                'p',
+                { className: 'text-sm mt-4 text-center text-red-600' },
+                error
             )
         )
     );
@@ -323,7 +335,7 @@ const App = () => {
                                 type: 'submit',
                                 className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out focus:outline-none focus:shadow-outline w-full
                                           ${isButtonDisabled
-                                    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105'
                                 }`,
                                 disabled: isButtonDisabled,
