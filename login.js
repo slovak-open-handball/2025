@@ -233,7 +233,7 @@ const App = () => {
             } else if (err.code === 'auth/invalid-email') {
                 setError('Neplatný formát e-mailu.');
             } else {
-                setError('Pri prihlásení došlo k chybe. Skúste to znova.');
+                setError('Zadali ste nesprávne používateľské meno alebo heslo. Skúste to znova.');
             }
         } finally {
             setLoading(false);
