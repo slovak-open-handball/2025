@@ -285,7 +285,7 @@ const MyDataApp = () => {
     // Komponent na zobrazenie fakturačných údajov
     const renderBillingAndAddressInfo = (data, color) => {
         // Vylepšená kontrola, či existujú platné dáta, a ak nie, zobrazí správu.
-        const hasBillingInfo = data.billingInfo && Object.keys(data.billingInfo).length > 0;
+        const hasBillingInfo = data.billing && Object.keys(data.billing).length > 0;
         
         return React.createElement(
             'div',
@@ -310,25 +310,25 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Názov firmy:'),
-                        ` ${data.billingInfo.companyName}`
+                        ` ${data.billing.clubName}` // Oprava: Zmena na data.billing.clubName
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                        ` ${data.billingInfo.ico}`
+                        ` ${data.billing.ico}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                        ` ${data.billingInfo.dic}`
+                        ` ${data.billing.dic}`
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.billingInfo.address}, ${data.billingInfo.city}, ${data.billingInfo.zipCode}`
+                        ` ${data.billing.address}, ${data.billing.city}, ${data.billing.zipCode}`
                     )
                 ) :
                 React.createElement(
