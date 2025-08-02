@@ -31,138 +31,193 @@ window.showGlobalNotification = (message, type = 'success') => {
         bgColorClass = 'bg-red-100';
         textColorClass = 'text-red-800';
     } else {
-        bgColorClass = 'bg-blue-100';
-        textColorClass = 'text-blue-800';
+        bgColorClass = 'bg-gray-100';
+        textColorClass = 'text-gray-800';
     }
 
-    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-100 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
-    notificationElement.innerText = message;
+    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
+    notificationElement.textContent = message;
 
+    // Zobrazenie notifikácie
     setTimeout(() => {
-        notificationElement.className = notificationElement.className.replace('opacity-100', 'opacity-0');
+        notificationElement.classList.add('opacity-100');
+    }, 10);
+
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-100');
     }, 5000);
 };
 
-// Nová funkcia na určenie farby na základe roly
+/**
+ * Funkcia na získanie farby na základe roly
+ * @param {string} role - Rola používateľa
+ * @returns {string} Hex kód farby
+ */
 const getRoleColor = (role) => {
     switch (role) {
-        case 'admin':
-            return '#47b3ff'; // Farba pre admina
-        case 'hall':
-            return '#b06835'; // Farba pre halu
-        case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
+        case 'organizator':
+            return '#ef4444'; // červená
+        case 'trener':
+            return '#f97316'; // oranžová
+        case 'rozhodca':
+            return '#eab308'; // žltá
+        case 'delegat':
+            return '#22c55e'; // zelená
+        case 'zdravotnik':
+            return '#3b82f6'; // modrá
         default:
-            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+            return '#10b981'; // smaragdová (predvolená)
     }
 };
 
 
+/**
+ * Komponent pre zobrazenie hlavnej stránky s profilom používateľa
+ * @param {object} props - Vlastnosti komponentu
+ * @param {object} props.userProfileData - Dáta profilu používateľa
+ * @param {string} props.roleColor - Farba priradená k role používateľa
+ */
 const MyDataApp = ({ userProfileData, roleColor }) => {
     const [showModal, setShowModal] = useState(false);
 
     if (!userProfileData) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+        return (
+            React.createElement('div', { className: 'flex justify-center pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
+            )
         );
     }
-    
-    const userEmail = userProfileData.email || 'Nezadané';
-    const fullName = (userProfileData.firstName || '' || userProfileData.lastName || '')
-        ? `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
-        : 'Nezadané';
 
+    const {
+        meno,
+        priezvisko,
+        rodneCislo,
+        statnaPrislusnost,
+        adresaUlica,
+        adresaMesto,
+        adresaPsc,
+        telefonneCislo,
+        email,
+        role
+    } = userProfileData;
 
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-white flex flex-col items-center justify-start py-10 px-4 sm:px-6 lg:px-8' },
+        { className: 'min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8' },
         React.createElement(
             'div',
-            { className: 'max-w-4xl w-full shadow-xl rounded-2xl relative bg-white' }, // Zmenený hlavný kontajner na relative, odstránené bg-white a p-8
-            // Pridaný zaoblený farebný obdĺžnik za nadpis
+            { className: 'max-w-4xl mx-auto' },
             React.createElement(
                 'div',
-                {
-                    className: 'absolute inset-x-0 top-0 rounded-2xl -z-10',
-                    style: { backgroundColor: roleColor, height: '140px' } // Výška upravená tak, aby nepokrývala popisy
-                }
+                { className: 'flex flex-col md:flex-row md:items-center md:justify-between mb-8' },
+                // ZMENENÝ TEXT NADPISU
+                React.createElement(
+                    'h1',
+                    { className: 'text-3xl font-bold text-gray-900 leading-tight' },
+                    'Moje údaje'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setShowModal(true),
+                        className: 'mt-4 md:mt-0 px-6 py-2 text-sm font-semibold text-white rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2',
+                        style: { backgroundColor: roleColor }
+                    },
+                    'Upraviť profil'
+                )
             ),
             React.createElement(
                 'div',
-                { className: 'p-8' }, // Pridané p-8 pre vnútorný obsah, aby mal odsadenie
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-between items-center mb-6' },
-                    React.createElement(
-                        'h2',
-                        { className: 'text-3xl font-bold text-white z-10' }, // Farba textu zmenená na bielu pre lepší kontrast
-                        fullName
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setShowModal(true),
-                            className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
-                            style: { 
-                                backgroundColor: 'white', 
-                                color: roleColor, 
-                                border: `2px solid ${roleColor}` 
-                            }
-                        },
-                        // SVG ikona ceruzky pridaná do tlačidla
-                        React.createElement(
-                            'svg',
-                            { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: roleColor },
-                            React.createElement('path', {
-                                strokeLinecap: 'round',
-                                strokeLinejoin: 'round',
-                                strokeWidth: '2',
-                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                            })
-                        ),
-                        'Upraviť'
-                    )
-                ),
-                // Zmena rozloženia na jeden stĺpec a odstránenie obdĺžnikov
-                React.createElement(
-                    'div',
-                    { className: 'space-y-6' },
-                    // Sekcia s menom a priezviskom v jednom riadku
+                { className: 'bg-white shadow-xl rounded-2xl p-6 sm:p-8' },
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12' },
                     React.createElement(
                         'div',
-                        { className: 'mb-4' },
+                        { className: 'flex flex-col' },
                         React.createElement(
                             'p',
-                            { className: 'font-bold text-gray-800' },
+                            { className: 'font-bold text-gray-800 flex items-center' },
                             'Meno a priezvisko:'
                         ),
                         React.createElement(
                             'p',
                             { className: 'text-gray-800 text-lg mt-1' },
-                            fullName
+                            `${meno || 'Nezadané'} ${priezvisko || ''}`
                         )
                     ),
-                    // Podmienečné zobrazenie telefónneho čísla len ak používateľ nie je admin
-                    userProfileData.role !== 'admin' && React.createElement(
+                    React.createElement(
                         'div',
-                        { className: 'mb-4' },
+                        { className: 'flex flex-col' },
                         React.createElement(
                             'p',
-                            { className: 'font-bold text-gray-800' },
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Rola:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            role || 'Nezadané'
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Rodné číslo:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            rodneCislo || 'Nezadané'
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Štátna príslušnosť:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            statnaPrislusnost || 'Nezadané'
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Adresa:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            `${adresaUlica || 'Nezadané'}, ${adresaMesto || 'Nezadané'}, ${adresaPsc || 'Nezadané'}`
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
                             'Telefónne číslo:'
                         ),
                         React.createElement(
                             'p',
                             { className: 'text-gray-800 text-lg mt-1' },
-                            userProfileData.phoneNumber || 'Nezadané'
+                            telefonneCislo || 'Nezadané'
                         )
                     ),
-                    // Sekcia s kontaktnými údajmi
                     React.createElement(
                         'div',
-                        { className: 'mb-4' },
+                        { className: 'flex flex-col md:col-span-2' },
                         React.createElement(
                             'p',
                             { className: 'font-bold text-gray-800 flex items-center' },
@@ -171,7 +226,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         React.createElement(
                             'p',
                             { className: 'text-gray-800 text-lg mt-1' },
-                            userEmail
+                            email || 'Nezadané'
                         )
                     )
                 )
