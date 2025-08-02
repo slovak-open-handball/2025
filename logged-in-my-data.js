@@ -85,7 +85,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
         ),
         React.createElement(
             'div',
-            { className: 'mt-1 relative rounded-md shadow-sm' },
+            { className: 'mt-1 relative rounded-lg shadow-sm' },
             React.createElement('input', {
                 type: showPassword ? 'text' : 'password',
                 id: id,
@@ -94,7 +94,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: 'block w-full rounded-md border-gray-300 pr-10 focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
+                className: 'block w-full px-4 py-2 rounded-lg border-gray-200 pr-10 focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
             }),
             React.createElement(
                 'button',
@@ -228,7 +228,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                             onChange: (e) => setNewEmail(e.target.value),
                             placeholder: 'Zadajte novú e-mailovú adresu',
                             disabled: loading,
-                            className: 'block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
+                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
                         })
                     )
                 ),
