@@ -3,7 +3,8 @@
 // profilové a registračné dáta prihláseného používateľa.
 // Bol upravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
 // a zobrazoval dáta až po ich úplnom načítaní.
-// Boli pridané zmeny pre dynamickú farbu hlavičiek na základe role používateľa.
+// Boli pridané zmeny pre dynamickú farbu hlavičiek na základe role používateľa
+// a vylepšená logika pre zobrazenie fakturačných údajov.
 
 const { useState, useEffect } = React;
 
@@ -126,9 +127,30 @@ const MyDataApp = () => {
 
     // Komponent na zobrazenie fakturačných údajov
     const renderBillingAndAddressInfo = (data, color) => {
-        // Kontrola, či existujú platné dáta
-        if (!data.billingInfo) {
-            return null; // Nič nezobrazí, ak údaje chýbajú
+        // Vylepšená kontrola, či existujú platné dáta, a ak nie, zobrazí správu.
+        if (!data.billingInfo || Object.keys(data.billingInfo).length === 0) {
+            return React.createElement(
+                'div',
+                { className: 'bg-white rounded-lg shadow-xl overflow-hidden' },
+                React.createElement(
+                    'div',
+                    { className: 'p-4 text-white font-bold text-xl', style: { backgroundColor: color } },
+                    React.createElement(
+                        'h3',
+                        null,
+                        'Fakturačné údaje'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'p-6 text-gray-600' },
+                    React.createElement(
+                        'p',
+                        null,
+                        'Fakturačné údaje nie sú k dispozícii.'
+                    )
+                )
+            );
         }
 
         return React.createElement(
