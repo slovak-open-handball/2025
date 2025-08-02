@@ -9,6 +9,7 @@
 // Meno a priezvisko sú zobrazené v jednom riadku a boli zmenené popisy pred údajmi.
 // Rozloženie profilových údajov bolo zmenené tak, aby bol popis a hodnota na samostatných riadkoch s rôznou veľkosťou medzier.
 // Modálne okno pre zmenu e-mailu bolo upravené tak, aby jeho šírka zodpovedala hlavnému profilovému boxu a bolo trochu širšie.
+// Biely obdĺžnik a modrý obdĺžnik v profile majú teraz rovnakú šírku, a modrý obdĺžnik má ostré spodné rohy.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -215,7 +216,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         { className: 'fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900 bg-opacity-50 backdrop-blur-sm' },
         React.createElement(
             'div',
-            { className: 'relative w-auto my-6 mx-auto max-w-xl' }, // Zmenené max-w-lg na max-w-xl
+            { className: 'relative w-auto my-6 mx-auto max-w-xl' },
             React.createElement(
                 'div',
                 { className: 'relative flex flex-col w-full bg-white border-0 rounded-lg shadow-lg outline-none focus:outline-none' },
@@ -414,10 +415,10 @@ const MyDataApp = () => {
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8' },
         React.createElement(
             'div',
-            { className: `bg-white p-8 rounded-xl shadow-lg mt-8` },
+            { className: `bg-white p-0 rounded-xl shadow-lg mt-8` },
             React.createElement(
                 'div',
-                { className: `p-6 rounded-lg shadow-lg ${headerColorClass} mb-8 flex items-center` },
+                { className: `p-6 rounded-t-xl rounded-b-none shadow-lg ${headerColorClass} mb-8 flex items-center` },
                 React.createElement(
                     'h2',
                     { className: 'text-2xl font-bold text-white flex-grow' },
@@ -427,7 +428,7 @@ const MyDataApp = () => {
             ),
             React.createElement(
                 'div',
-                { className: 'space-y-6' }, // Väčšia medzera medzi riadkami údajov
+                { className: 'p-8 space-y-6' },
                 React.createElement(
                     'div',
                     { className: 'flex flex-col' },
@@ -438,7 +439,7 @@ const MyDataApp = () => {
                     ),
                     React.createElement(
                         'p',
-                        { className: 'text-gray-800 text-lg mt-1' }, // Menšia medzera medzi popisom a hodnotou
+                        { className: 'text-gray-800 text-lg mt-1' },
                         `${userProfileData.firstName} ${userProfileData.lastName}`
                     )
                 ),
@@ -452,7 +453,7 @@ const MyDataApp = () => {
                     ),
                     React.createElement(
                         'p',
-                        { className: 'text-gray-800 text-lg mt-1' }, // Menšia medzera medzi popisom a hodnotou
+                        { className: 'text-gray-800 text-lg mt-1' },
                         `${userProfileData.email}`
                     )
                 )
