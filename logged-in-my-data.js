@@ -101,14 +101,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const invertedButtonColor = getRoleColor(data.role);
 
         // Vytvorenie reťazca pre fakturačnú adresu
-        const billingAddress = `${data.billing?.street || ''} ${data.billing?.houseNumber || ''}`.trim();
-        const billingAddress2 = `${data.billing?.postalCode || ''} ${data.billing?.city || ''}`.trim();
-        const billingAddress3 = `${data.billing?.country || ''}`;
+        // Upravené, aby sa adresa brala priamo z hlavného objektu 'data'
+        const billingAddress = `${data.street || ''} ${data.houseNumber || ''}`.trim();
+        const billingAddress2 = `${data.postalCode || ''} ${data.city || ''}`.trim();
+        const billingAddress3 = `${data.country || ''}`;
         const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
         
-        // Vytvorenie reťazca pre kontaktnú adresu - už sa nezobrazuje, ale pre poriadok nechám komentár.
-        // const contactAddress = `${data.contact?.street || ''} ${data.contact?.houseNumber || ''}`.trim();
-
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
