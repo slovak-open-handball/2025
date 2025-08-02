@@ -1,6 +1,6 @@
-// account.js
+// z-account.js
 // Tento súbor predpokladá, že Firebase SDK je už načítané a inicializované
-// v account.html a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
+// v z-account.html a authentication.js spravuje globálnu autentifikáciu a stav používateľa.
 
 // Pomocná funkcia na získanie URL parametrov
 function getUrlParams() {
@@ -158,7 +158,7 @@ function ResetPasswordApp() {
             // const dbInstance = window.db; // Firestore už nie je potrebný v tomto komponente
 
             if (!authInstance) { // Kontrola, či je authInstance dostupná
-                setError("Firebase Authentication nie je inicializované. Skontrolujte account.html.");
+                setError("Firebase Authentication nie je inicializované. Skontrolujte z-account.html.");
                 setLoading(false);
                 return;
             }
@@ -184,12 +184,12 @@ function ResetPasswordApp() {
                             setLoading(false);
                         });
                 } else if (currentMode === 'verifyAndChangeEmail') { // ZMENA: Názov režimu
-                    console.log("account.js: Režim 'verifyAndChangeEmail' detekovaný.");
+                    console.log("z-account.js: Režim 'verifyAndChangeEmail' detekovaný.");
                     
                     // NOVINKA: Najprv skontrolujeme akčný kód
                     authInstance.checkActionCode(currentOobCode)
                         .then(actionCodeInfo => {
-                            console.log("account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
+                            console.log("z-account.js: DEBUG - actionCodeInfo z checkActionCode:", actionCodeInfo);
                             // E-mail a UID sú tu dostupné, ale už ich nebudeme priamo používať pre Firestore zápis
                             // targetUserEmail = actionCodeInfo.data.email;
                             // targetUserUid = actionCodeInfo.data.uid;
@@ -198,7 +198,7 @@ function ResetPasswordApp() {
                             return authInstance.applyActionCode(currentOobCode);
                         })
                         .then(async () => { // Zmena na async funkciu
-                            console.log("account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
+                            console.log("z-account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
                             
                             // NOVINKA: Zobrazenie novej správy o úspechu
                             setSuccessMessage("Vaša e-mailová adresa bola úspešne overená. Pre jej úspešnú aktualizáciu sa prosím prihláste. Budete presmerovaní na prihlasovaciu stránku.");
@@ -210,15 +210,15 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
-                            console.error("account.js: Chyba pri overovaní e-mailu (checkActionCode alebo applyActionCode zlyhalo):", e);
+                            console.error("z-account.js: Chyba pri overovaní e-mailu (checkActionCode alebo applyActionCode zlyhalo):", e);
                             setError("Neplatný alebo expirovaný odkaz na overenie e-mailu.");
                             setLoading(false);
                         });
                 } else if (currentMode === 'recoverEmail') { // NOVINKA: Režim pre obnovenie pôvodného e-mailu
-                    console.log("account.js: Režim 'recoverEmail' detekovaný.");
+                    console.log("z-account.js: Režim 'recoverEmail' detekovaný.");
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
-                            console.log("account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
+                            console.log("z-account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
                             setSuccessMessage("Vaša pôvodná e-mailová adresa bola úspešne obnovená. Budete presmerovaní na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
@@ -226,7 +226,7 @@ function ResetPasswordApp() {
                             }, 3000);
                         })
                         .catch(e => {
-                            console.error("account.js: Chyba pri obnovovaní e-mailu (recoverEmail zlyhalo):", e);
+                            console.error("z-account.js: Chyba pri obnovovaní e-mailu (recoverEmail zlyhalo):", e);
                             setError("Neplatný alebo expirovaný odkaz na obnovenie e-mailu.");
                             setLoading(false);
                         });
