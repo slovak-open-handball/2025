@@ -54,8 +54,7 @@
     <div id="global-notification"></div>
 
     <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
-    <!-- Opravil som poradie načítania a pridal chýbajúce skripty, ktoré sa používajú v celom projekte -->
+    <!-- Dôležité: authentication.js sa musí načítať ako prvý, pretože ho header.js používa! -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="loader.js"></script>
@@ -63,8 +62,8 @@
     <!-- Načítanie React a ReactDOM z CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-
-    <!-- Načítanie hlavného skriptu pre túto stránku ako modul -->
+    <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="login.js"></script>
+
 </body>
 </html>
