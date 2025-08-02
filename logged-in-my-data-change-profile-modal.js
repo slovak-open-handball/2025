@@ -201,15 +201,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             formData.lastName !== originalData.lastName ||
             (formData.email !== originalData.email && formData.email !== '') ||
             (selectedDialCode + contactPhoneNumber) !== originalData.contactPhoneNumber ||
-            formData.billing.clubName !== originalData.billing.clubName ||
-            formData.billing.street !== originalData.billing.street ||
-            formData.billing.houseNumber !== originalData.billing.houseNumber ||
-            formData.billing.city !== originalData.billing.city ||
-            formData.billing.postalCode !== originalData.billing.postalCode ||
-            formData.billing.country !== originalData.billing.country ||
-            formData.billing.ico !== originalData.billing.ico ||
-            formData.billing.dic !== originalData.billing.dic ||
-            formData.billing.icDph !== originalData.billing.icDph
+            (formData.billing?.clubName !== originalData.billing?.clubName) ||
+            (formData.billing?.street !== originalData.billing?.street) ||
+            (formData.billing?.houseNumber !== originalData.billing?.houseNumber) ||
+            (formData.billing?.city !== originalData.billing?.city) ||
+            (formData.billing?.postalCode !== originalData.billing?.postalCode) ||
+            (formData.billing?.country !== originalData.billing?.country) ||
+            (formData.billing?.ico !== originalData.billing?.ico) ||
+            (formData.billing?.dic !== originalData.billing?.dic) ||
+            (formData.billing?.icDph !== originalData.billing?.icDph)
         );
     };
 
@@ -273,15 +273,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                 lastName: formData.lastName || null,
                 contactPhoneNumber: (selectedDialCode + contactPhoneNumber) || null,
                 billing: {
-                    clubName: formData.billing.clubName || null,
-                    street: formData.billing.street || null,
-                    houseNumber: formData.billing.houseNumber || null,
-                    city: formData.billing.city || null,
-                    postalCode: formData.billing.postalCode || null,
-                    country: formData.billing.country || null,
-                    ico: formData.billing.ico || null,
-                    dic: formData.billing.dic || null,
-                    icDph: formData.billing.icDph || null,
+                    clubName: formData.billing?.clubName || null,
+                    street: formData.billing?.street || null,
+                    houseNumber: formData.billing?.houseNumber || null,
+                    city: formData.billing?.city || null,
+                    postalCode: formData.billing?.postalCode || null,
+                    country: formData.billing?.country || null,
+                    ico: formData.billing?.ico || null,
+                    dic: formData.billing?.dic || null,
+                    icDph: formData.billing?.icDph || null,
                 }
             };
             
@@ -289,9 +289,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             Object.keys(updatedData).forEach(key => {
                 if (updatedData[key] === '') updatedData[key] = null;
             });
-            Object.keys(updatedData.billing).forEach(key => {
-                if (updatedData.billing[key] === '') updatedData.billing[key] = null;
-            });
+            if(updatedData.billing) {
+                Object.keys(updatedData.billing).forEach(key => {
+                    if (updatedData.billing[key] === '') updatedData.billing[key] = null;
+                });
+            }
+
 
             await updateDoc(profileRef, updatedData);
 
@@ -414,7 +417,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.clubName',
                                 id: 'billing.clubName',
-                                value: formData.billing.clubName,
+                                value: formData.billing?.clubName || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.clubName || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -426,7 +429,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.street',
                                 id: 'billing.street',
-                                value: formData.billing.street,
+                                value: formData.billing?.street || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.street || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -438,7 +441,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.houseNumber',
                                 id: 'billing.houseNumber',
-                                value: formData.billing.houseNumber,
+                                value: formData.billing?.houseNumber || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.houseNumber || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -450,7 +453,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.city',
                                 id: 'billing.city',
-                                value: formData.billing.city,
+                                value: formData.billing?.city || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.city || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -462,7 +465,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.postalCode',
                                 id: 'billing.postalCode',
-                                value: formData.billing.postalCode,
+                                value: formData.billing?.postalCode || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.postalCode || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -474,7 +477,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.country',
                                 id: 'billing.country',
-                                value: formData.billing.country,
+                                value: formData.billing?.country || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.country || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -486,7 +489,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.ico',
                                 id: 'billing.ico',
-                                value: formData.billing.ico,
+                                value: formData.billing?.ico || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.ico || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -498,7 +501,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.dic',
                                 id: 'billing.dic',
-                                value: formData.billing.dic,
+                                value: formData.billing?.dic || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.dic || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
@@ -510,7 +513,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                                 type: 'text',
                                 name: 'billing.icDph',
                                 id: 'billing.icDph',
-                                value: formData.billing.icDph,
+                                value: formData.billing?.icDph || '',
                                 onChange: handleChange,
                                 placeholder: userProfileData.billing?.icDph || '',
                                 className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm px-4 py-2`
