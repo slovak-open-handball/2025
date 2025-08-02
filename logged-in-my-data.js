@@ -321,7 +321,8 @@ const MyDataApp = () => {
             { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' },
             React.createElement(
                 'div',
-                { className: 'relative p-8 bg-white w-96 max-w-sm m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
+                // Šírka modálneho okna je teraz širšia
+                { className: 'relative p-8 bg-white w-1/2 max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-center pb-4 border-b border-gray-200' },
