@@ -316,21 +316,21 @@ const MyDataApp = () => {
         ),
         isModalOpen && React.createElement(
             'div',
-            { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50' },
+            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' }, // Zmenená opacita a pridaný prechod
             React.createElement(
                 'div',
-                { className: 'relative p-8 bg-white w-96 max-w-sm m-auto flex-col flex rounded-lg shadow-xl' },
+                { className: 'relative p-8 bg-white w-96 max-w-sm m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' }, // Vylepšené zaoblenie, tieň a prechod
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center pb-3' },
+                    { className: 'flex justify-between items-center pb-4 border-b border-gray-200' }, // Pridaná linka pre oddelenie hlavičky
                     React.createElement(
                         'h3',
-                        { className: 'text-lg font-bold text-gray-900' },
+                        { className: 'text-2xl font-bold text-gray-900' }, // Zväčšené písmo
                         'Zmeniť e-mailovú adresu'
                     ),
                     React.createElement(
                         'button',
-                        { onClick: handleCloseModal, className: 'text-gray-400 hover:text-gray-500' },
+                        { onClick: handleCloseModal, className: 'text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors' },
                         React.createElement(
                             'span',
                             { className: 'sr-only' },
@@ -345,7 +345,7 @@ const MyDataApp = () => {
                 ),
                 React.createElement(
                     'form',
-                    { onSubmit: handleSubmit, className: 'space-y-4' },
+                    { onSubmit: handleSubmit, className: 'mt-6 space-y-4' }, // Pridaný horný okraj
                     React.createElement(
                         'div',
                         null,
@@ -392,7 +392,7 @@ const MyDataApp = () => {
                         'button',
                         {
                             type: 'submit',
-                            className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed`,
+                            className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors duration-200`, // Vylepšené štýly tlačidla
                             disabled: loading || !newEmail || !password,
                         },
                         loading ? 'Odosielam...' : 'Odoslať overovací e-mail'
