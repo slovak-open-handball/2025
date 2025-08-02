@@ -130,7 +130,7 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
                 'p',
                 { className: 'text-gray-800' },
                 React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                ` ${userProfileData.street} ${userProfileData.houseNumber}, ${formatPostalCode(userProfileData.postalCode)} ${userProfileData.city}, ${userProfileData.country}`
+                ` ${userProfileData.street} ${userProfileData.houseNumber}, ${formatPostalCode(userProfileData.postalCode)} ${userProfileData.country}`
             ),
 
             // Zobrazí ďalšie fakturačné údaje
@@ -206,6 +206,7 @@ function MyDataApp() {
     }
 
     const headerColor = getHeaderColor(userProfileData.role);
+    const isUserAdmin = userProfileData.role === 'admin';
 
     return React.createElement(
         'div',
@@ -237,7 +238,8 @@ function MyDataApp() {
                     React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                     ` ${userProfileData.email}`
                 ),
-                React.createElement(
+                // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
+                !isUserAdmin && React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
