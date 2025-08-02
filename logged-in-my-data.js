@@ -1,6 +1,6 @@
 // Importy pre Firebase funkcie
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
@@ -26,160 +26,180 @@ window.showGlobalNotification = (message, type = 'success') => {
     let bgColorClass, textColorClass;
     if (type === 'success') {
         bgColorClass = 'bg-green-100';
-        textColorClass = 'text-green-800';
+        textColorClass = 'text-green-700';
     } else {
         bgColorClass = 'bg-red-100';
-        textColorClass = 'text-red-800';
+        textColorClass = 'text-red-700';
     }
-    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
-    notificationElement.innerHTML = message;
 
-    // Animácia fade-in
-    setTimeout(() => {
-        notificationElement.classList.add('opacity-100');
-    }, 10);
+    notificationElement.className = `${bgColorClass} ${textColorClass} fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] transition-all duration-300 transform opacity-100 scale-100`;
+    notificationElement.textContent = message;
 
-    // Animácia fade-out po 5 sekundách
+    // Po 5 sekundách notifikáciu skryjeme
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100');
+        notificationElement.className = `${bgColorClass} ${textColorClass} fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] transition-all duration-300 transform opacity-0 scale-95`;
     }, 5000);
 };
 
-/**
- * Hlavný React komponent pre zobrazenie údajov prihláseného používateľa.
- */
+// Komponent, ktorý zabezpečí, že sa zobrazí len ak sú dáta pripravené
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [headerColor, setHeaderColor] = useState('bg-blue-600');
     const [showModal, setShowModal] = useState(false);
-    const [headerColor, setHeaderColor] = useState('#1e40af'); // Predvolená farba pre hlavičku
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = window.onAuthStateChanged(window.auth, async (user) => {
-            if (user) {
-                const db = window.db;
-                if (db) {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    try {
-                        const docSnap = await getDoc(userDocRef);
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            setUserProfileData({ id: docSnap.id, ...data });
-
-                            // Nastavenie farby hlavičky na základe roly
-                            if (data.role === 'admin') {
-                                setHeaderColor('#ef4444');
-                            } else if (data.role === 'trainer') {
-                                setHeaderColor('#f97316');
-                            } else {
-                                setHeaderColor('#1e40af');
-                            }
-
-                        } else {
-                            console.error("logged-in-my-data.js: Profil používateľa nebol nájdený!");
-                            setUserProfileData(null);
-                        }
-                    } catch (error) {
-                        console.error("logged-in-my-data.js: Chyba pri načítaní profilu:", error);
-                        setUserProfileData(null);
-                    }
-                } else {
-                    console.error("logged-in-my-data.js: Firestore databáza nie je inicializovaná.");
-                }
+        const handleGlobalDataUpdate = (event) => {
+            const data = event.detail;
+            setUserProfileData(data);
+            setIsLoading(false);
+            if (data && data.role === 'admin') {
+                setHeaderColor('bg-red-600');
             } else {
-                setUserProfileData(null);
+                setHeaderColor('bg-blue-600');
             }
-            setLoading(false);
-        });
+        };
 
-        // Cleanup funkcia pri odpojení komponentu
-        return () => unsubscribe();
+        // Pridanie poslucháča udalostí
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+        // Pri odmontovaní komponentu poslucháč odstránime
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        };
     }, []);
 
-    // Loader počas načítavania dát
-    if (loading) {
+    // Loader
+    if (isLoading || !userProfileData) {
         return React.createElement(
             'div',
-            { className: 'flex justify-center items-center pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500' })
-        );
-    }
-
-    if (!userProfileData) {
-        return React.createElement(
-            'div',
-            { className: 'container mx-auto px-4 py-8 text-center text-gray-500' },
-            React.createElement('p', null, 'Dáta neboli nájdené. Skúste sa prosím prihlásiť znova.')
+            { className: 'flex justify-center pt-16' },
+            React.createElement(
+                'div',
+                { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
+            )
         );
     }
 
     // Funkcia na formátovanie telefónneho čísla
     const formatPhoneNumber = (phoneNumber) => {
         if (!phoneNumber) return 'Nezadané';
-        const cleaned = phoneNumber.replace(/\s/g, ''); // Odstránenie medzier
-        const dialCodeRegex = new RegExp(`^(\\${countryDialCodes.map(c => c.dialCode).sort((a,b) => b.length - a.length).join('|\\')})`);
-        const match = cleaned.match(dialCodeRegex);
-
-        let numberWithoutDialCode = cleaned;
-        if (match) {
-            numberWithoutDialCode = cleaned.substring(match[0].length);
+        const dialCode = countryDialCodes.find(c => phoneNumber.startsWith(c.dialCode));
+        if (dialCode) {
+            const numberPart = phoneNumber.substring(dialCode.dialCode.length);
+            return `${dialCode.dialCode} ${numberPart.replace(/(\d{3})(?=\d)/g, '$1 ')}`;
         }
-
-        // Zoskupí číslice po troch a oddelí ich medzerou
-        const formattedNumber = numberWithoutDialCode.match(/.{1,3}/g)?.join(' ') || '';
-        return match ? `${match[0]} ${formattedNumber}` : formattedNumber;
+        return phoneNumber;
     };
 
     const formattedPhoneNumber = formatPhoneNumber(userProfileData.contactPhoneNumber);
 
     return React.createElement(
         'div',
-        { className: 'relative max-w-2xl mx-auto my-8 p-6 bg-white rounded-xl shadow-lg border border-gray-200' },
-        // Hlavička a tlačidlo úpravy
+        { className: 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 bg-gray-50' },
         React.createElement(
             'div',
-            { className: 'flex justify-between items-center mb-6' },
-            React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Môj profil'),
+            { className: `w-full max-w-2xl bg-white rounded-xl shadow-lg border-t-8 ${headerColor} transition-all duration-300 overflow-hidden` },
+            // Hlavička s informáciami o profile a tlačidlom na úpravu
             React.createElement(
-                'button',
-                {
-                    onClick: () => setShowModal(true),
-                    className: `flex items-center px-4 py-2 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200`,
-                    style: { backgroundColor: headerColor }
-                },
+                'div',
+                { className: 'p-6 sm:p-8 flex items-center justify-between' },
                 React.createElement(
-                    'svg',
-                    { className: 'h-5 w-5 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    'div',
+                    { className: 'flex items-center' },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-12 w-12 text-white', fill: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                        React.createElement('path', { d: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' })
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'ml-4' },
+                        React.createElement('h2', { className: 'text-2xl font-bold text-white' }, `${userProfileData.firstName || 'Nezadané'} ${userProfileData.lastName || 'Nezadané'}`),
+                        React.createElement('p', { className: 'text-sm font-medium text-white text-opacity-80' }, userProfileData.role === 'admin' ? 'Administrátor' : 'Používateľ')
+                    )
                 ),
-                'Upraviť'
-            )
-        ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setShowModal(true),
+                        className: 'px-4 py-2 bg-white text-gray-800 rounded-lg shadow font-medium hover:bg-gray-100 transition-colors duration-200'
+                    },
+                    'Upraviť'
+                )
+            ),
 
-        // Detailné informácie o používateľovi
-        React.createElement(
-            'div',
-            { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12' },
+            // Telo s detailami profilu
             React.createElement(
                 'div',
-                { className: 'flex flex-col' },
-                React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'Meno:'),
-                React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || 'Nezadané'} ${userProfileData.lastName || 'Nezadané'}`)
-            ),
-            // Podmienene zobrazenie telefónneho čísla
-            userProfileData.role !== 'admin' && React.createElement(
-                'div',
-                { className: 'flex flex-col' },
-                React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'Telefónne číslo kontaktnej osoby:'),
-                React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formattedPhoneNumber)
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex flex-col' },
-                React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'E-mailová adresa kontaktnej osoby:'),
-                React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.email || 'Nezadané'}`)
+                { className: 'p-6 sm:p-8 bg-white' },
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12' },
+                    // Meno
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Meno:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            userProfileData.firstName || 'Nezadané'
+                        )
+                    ),
+                    // Priezvisko
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Priezvisko:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            userProfileData.lastName || 'Nezadané'
+                        )
+                    ),
+                    // Telefónne číslo
+                    userProfileData.role !== 'admin' && React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'Telefónne číslo:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            formattedPhoneNumber
+                        )
+                    ),
+                    // Email
+                    React.createElement(
+                        'div',
+                        { className: 'flex flex-col' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'E-mailová adresa kontaktnej osoby:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            userProfileData.email || 'Nezadané'
+                        )
+                    )
+                )
             )
         ),
+        // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
         React.createElement(ChangeProfileModal, {
             show: showModal,
             onClose: () => setShowModal(false),
