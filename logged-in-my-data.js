@@ -1,17 +1,15 @@
 // logged-in-my-data.js
-// Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
-// profilové a registračné dáta prihláseného používateľa.
-// Bol upravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
-// a zobrazoval dáta až po ich úplnom načítaní.
+// Tento súbor bol upravený tak, aby umožňoval úpravu profilových a fakturačných údajov
+// priamo na stránke prostredníctvom modálnych okien.
 
 const { useState, useEffect } = React;
+import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
  * Pomocný komponent pre načítavanie dát.
  */
 const Loader = () => {
     return React.createElement(
-        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
@@ -28,255 +26,436 @@ const Loader = () => {
  */
 const ErrorMessage = ({ message }) => {
     return React.createElement(
-        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
             'div',
-            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
-            React.createElement('p', { className: 'text-xl font-bold' }, 'Chyba'),
-            React.createElement('p', { className: 'mt-2' }, message)
+            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md' },
+            React.createElement('p', null, message)
         )
     );
 };
 
 /**
- * Pomocná funkcia na formátovanie telefónneho čísla.
- * @param {string} phoneNumber - Telefónne číslo na formátovanie.
- * @returns {string} Formátované číslo.
+ * Pomocný komponent pre zobrazenie modálneho okna.
+ * @param {object} props - Vlastnosti komponentu.
+ * @param {string} props.title - Nadpis modálneho okna.
+ * @param {function} props.onClose - Funkcia, ktorá sa zavolá pri zatvorení okna.
+ * @param {React.ReactNode} props.children - Obsah modálneho okna.
  */
-const formatPhoneNumber = (phoneNumber) => {
-    // Vráti prázdny reťazec, ak číslo nie je platné.
-    if (!phoneNumber || typeof phoneNumber !== 'string') return '';
-    
-    // Zistíme, či je telefónne číslo vo formáte s predvoľbou.
-    const digits = phoneNumber.replace(/\D/g, '');
+const Modal = ({ title, onClose, children }) => {
+    // Vytvoríme referenciu na modálne okno, aby sme mohli zavrieť ho aj kliknutím mimo neho
+    const modalRef = React.useRef(null);
 
-    // Použijeme databázu predvolieb z countryDialCodes.js
-    if (window.countryDialCodes) {
-        const countryDialCodes = window.countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
-        for (const country of countryDialCodes) {
-            if (phoneNumber.startsWith(country.dialCode)) {
-                const numberWithoutPrefix = phoneNumber.substring(country.dialCode.length).trim().replace(/\D/g, '');
-                
-                if (numberWithoutPrefix.length === 9) {
-                    const part1 = numberWithoutPrefix.substring(0, 3);
-                    const part2 = numberWithoutPrefix.substring(3, 6);
-                    const part3 = numberWithoutPrefix.substring(6, 9);
-                    return `${country.dialCode} ${part1} ${part2} ${part3}`;
-                }
+    // Pridáme event listener pre zatvorenie modálneho okna kliknutím mimo neho
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
             }
-        }
-    }
-
-    // Ak nemá predvoľbu alebo sa nenašla v databáze, ale má 9 číslic, formátujeme ho ako lokálne číslo.
-    if (digits.length === 9) {
-        const part1 = digits.substring(0, 3);
-        const part2 = digits.substring(3, 6);
-        const part3 = digits.substring(6, 9);
-        return `${part1} ${part2} ${part3}`;
-    }
-
-    // Vrátime pôvodné číslo, ak formát nevyhovuje.
-    return phoneNumber;
-};
-
-/**
- * Pomocný komponent na vykreslenie informácií o fakturačnej adrese.
- * @param {object} userProfileData - Dáta profilu používateľa.
- * @param {string} headerColor - Farba hlavičky pre vizuálnu konzistenciu.
- */
-const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-    // Skontrolujeme, či existujú fakturačné údaje alebo údaje o adrese.
-    const hasBillingData = userProfileData.billing && (userProfileData.billing.clubName || userProfileData.billing.ico || userProfileData.billing.dic || userProfileData.billing.icdph);
-    const hasAddressData = userProfileData.street;
-
-    // Zobrazíme sekciu iba ak máme nejaké dáta na zobrazenie.
-    if (!hasBillingData && !hasAddressData) {
-        return null;
-    }
-    
-    let addressParts = [];
-
-    // Ulica a číslo domu
-    const streetAndNumber = [userProfileData.street, userProfileData.houseNumber].filter(Boolean).join(' ');
-    if (streetAndNumber) {
-        addressParts.push(streetAndNumber);
-    }
-
-    // PSČ a Mesto - upravené poradie a čiarka za mestom
-    let postalCodeAndCity = '';
-    if (userProfileData.postalCode) {
-        const formattedPostalCode = userProfileData.postalCode.length === 5 ?
-            `${userProfileData.postalCode.substring(0, 3)} ${userProfileData.postalCode.substring(3, 5)}` :
-            userProfileData.postalCode;
-        postalCodeAndCity += formattedPostalCode;
-    }
-    if (userProfileData.city) {
-        if (postalCodeAndCity) {
-             postalCodeAndCity += ' ';
-        }
-        postalCodeAndCity += userProfileData.city;
-    }
-    if (postalCodeAndCity.trim() !== '') {
-        addressParts.push(postalCodeAndCity);
-    }
-
-    // Krajina
-    if (userProfileData.country) {
-        addressParts.push(userProfileData.country);
-    }
-
-    const formattedAddress = addressParts.filter(Boolean).join(', ');
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onClose]);
 
     return React.createElement(
         'div',
-        { className: 'mt-8 bg-white rounded-lg shadow-md overflow-hidden' },
+        {
+            className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50'
+        },
         React.createElement(
             'div',
-            { className: 'p-4 text-white font-bold', style: { backgroundColor: headerColor } },
+            {
+                ref: modalRef,
+                className: 'relative p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white'
+            },
             React.createElement(
-                'h2',
-                { className: 'text-2xl' },
-                'Fakturačné údaje'
+                'div',
+                { className: 'flex justify-between items-center pb-3' },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold' },
+                    title
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-400 hover:text-gray-600 transition-colors'
+                    },
+                    React.createElement(
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M6 18L18 6M6 6l12 12' })
+                    )
+                )
+            ),
+            children
+        )
+    );
+};
+
+/**
+ * Komponent pre úpravu kontaktných údajov.
+ */
+const EditContactForm = ({ userProfileData, onSave, onCancel }) => {
+    const [firstName, setFirstName] = useState(userProfileData.firstName || '');
+    const [lastName, setLastName] = useState(userProfileData.lastName || '');
+    const [email, setEmail] = useState(userProfileData.email || '');
+    const [contactPhoneNumber, setContactPhoneNumber] = useState(userProfileData.contactPhoneNumber || '');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({ firstName, lastName, email, contactPhoneNumber });
+    };
+
+    return React.createElement(
+        'form',
+        { onSubmit: handleSubmit, className: 'space-y-4' },
+        React.createElement(
+            'div',
+            { className: 'space-y-2' },
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Meno'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: firstName,
+                    onChange: (e) => setFirstName(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md',
+                    required: true
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Priezvisko'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: lastName,
+                    onChange: (e) => setLastName(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md',
+                    required: true
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'E-mail'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'email',
+                    value: email,
+                    onChange: (e) => setEmail(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md',
+                    required: true
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Telefónne číslo'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'tel',
+                    value: contactPhoneNumber,
+                    onChange: (e) => setContactPhoneNumber(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
             )
         ),
         React.createElement(
             'div',
-            { className: 'p-6' },
-            // Podmienene vykreslíme údaje o fakturácii, ak existujú.
-            hasBillingData && React.createElement(
-                'div',
-                null,
-                // Upravený text na "Oficiálny názov klubu"
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Oficiálny názov klubu:'),
-                    ` ${userProfileData.billing.clubName || '-'}`
-                ),
-                // Presunutý riadok s adresou pod "Oficiálny názov klubu"
-                hasAddressData && React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                    ` ${formattedAddress}`
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                    ` ${userProfileData.billing.ico || '-'}`
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                    ` ${userProfileData.billing.dic || '-'}`
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                    ` ${userProfileData.billing.icdph || '-'}`
-                )
+            { className: 'flex justify-end space-x-2' },
+            React.createElement(
+                'button',
+                {
+                    type: 'button',
+                    onClick: onCancel,
+                    className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md'
+                },
+                'Zrušiť'
+            ),
+            React.createElement(
+                'button',
+                {
+                    type: 'submit',
+                    className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md'
+                },
+                'Uložiť zmeny'
             )
         )
     );
 };
 
 /**
- * Pomocná funkcia, ktorá vráti farbu na základe roly používateľa.
- * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
- * @returns {string} - Hex kód farby.
+ * Komponent pre úpravu fakturačných údajov.
  */
-const getRoleColor = (role) => {
-    const defaultColor = '#4299E1'; // Modrá pre bežného používateľa
+const EditBillingForm = ({ userProfileData, onSave, onCancel }) => {
+    const [companyName, setCompanyName] = useState(userProfileData.billingAddress?.companyName || '');
+    const [street, setStreet] = useState(userProfileData.billingAddress?.street || '');
+    const [city, setCity] = useState(userProfileData.billingAddress?.city || '');
+    const [zipCode, setZipCode] = useState(userProfileData.billingAddress?.zipCode || '');
+    const [country, setCountry] = useState(userProfileData.billingAddress?.country || '');
+    const [ico, setIco] = useState(userProfileData.billingAddress?.ico || '');
+    const [dic, setDic] = useState(userProfileData.billingAddress?.dic || '');
 
-    switch (role) {
-        case 'admin':
-            return '#47b3ff'; // Farba pre admina
-        case 'hall':
-            return '#b06835'; // Farba pre halu
-        case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
-        default:
-            return defaultColor; // Predvolená farba, ak rola nie je definovaná
-    }
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({
+            billingAddress: {
+                companyName,
+                street,
+                city,
+                zipCode,
+                country,
+                ico,
+                dic
+            }
+        });
+    };
+
+    return React.createElement(
+        'form',
+        { onSubmit: handleSubmit, className: 'space-y-4' },
+        React.createElement(
+            'div',
+            { className: 'space-y-2' },
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Názov firmy'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: companyName,
+                    onChange: (e) => setCompanyName(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Ulica'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: street,
+                    onChange: (e) => setStreet(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Mesto'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: city,
+                    onChange: (e) => setCity(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'PSČ'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: zipCode,
+                    onChange: (e) => setZipCode(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'Štát'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: country,
+                    onChange: (e) => setCountry(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'IČO'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: ico,
+                    onChange: (e) => setIco(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            ),
+            React.createElement(
+                'label',
+                { className: 'block text-gray-700' },
+                'DIČ'
+            ),
+            React.createElement(
+                'input',
+                {
+                    type: 'text',
+                    value: dic,
+                    onChange: (e) => setDic(e.target.value),
+                    className: 'w-full p-2 border border-gray-300 rounded-md'
+                }
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex justify-end space-x-2' },
+            React.createElement(
+                'button',
+                {
+                    type: 'button',
+                    onClick: onCancel,
+                    className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md'
+                },
+                'Zrušiť'
+            ),
+            React.createElement(
+                'button',
+                {
+                    type: 'submit',
+                    className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md'
+                },
+                'Uložiť zmeny'
+            )
+        )
+    );
 };
 
+
 /**
- * Hlavný React komponent pre zobrazenie používateľských dát.
+ * Hlavný komponent MyDataApp, ktorý zobrazuje údaje a spravuje modálne okná.
  */
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(window.globalUserProfileData);
-    const [isLoading, setIsLoading] = useState(!window.globalUserProfileData);
-    const [error, setError] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [editingSection, setEditingSection] = useState(null); // 'contact' alebo 'billing'
 
-    useEffect(() => {
-        const handleDataUpdate = (event) => {
-            const data = event.detail;
-            if (data) {
-                setUserProfileData(data);
-                setIsLoading(false);
-            } else {
-                setError("Chyba: Dáta používateľa nie sú dostupné. Ste prihlásený?");
-                setIsLoading(false);
-            }
-        };
-
-        // Ak už dáta máme, nemusíme čakať.
-        if (window.globalUserProfileData) {
-             setIsLoading(false);
+    // Formátovanie telefónneho čísla
+    const formatPhoneNumber = (number) => {
+        if (!number) return 'Nezadané';
+        const cleaned = ('' + number).replace(/\D/g, '');
+        const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
+        if (match) {
+            return `+${match[1]} ${match[2]} ${match[3]}`;
         }
+        return number;
+    };
+    
+    // Farba hlavičky na základe roly
+    const headerColor = userProfileData && userProfileData.role === 'admin' ? 'bg-red-600' : 'bg-blue-600';
 
-        window.addEventListener('globalDataUpdated', handleDataUpdate);
+    // Handler pre otvorenie modálneho okna na úpravu
+    const handleEditClick = (section) => {
+        setEditingSection(section);
+        setShowModal(true);
+    };
 
-        // Odstránime listener pri unmountovaní komponentu
+    // Handler pre zatvorenie modálneho okna
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setEditingSection(null);
+    };
+
+    // Handler pre uloženie zmien do Firestore
+    const handleSave = async (updatedData) => {
+        try {
+            const userDocRef = doc(window.db, "users", userProfileData.id);
+            await updateDoc(userDocRef, updatedData);
+            window.showGlobalNotification('Údaje boli úspešne aktualizované!', 'success');
+            handleCloseModal();
+        } catch (error) {
+            console.error('Chyba pri aktualizácii dokumentu:', error);
+            window.showGlobalNotification('Chyba pri ukladaní údajov. Skúste to prosím neskôr.', 'error');
+        }
+    };
+    
+    // useEffect pre sledovanie globálnych dát
+    useEffect(() => {
+        const handleGlobalDataUpdate = (event) => {
+            setUserProfileData(event.detail);
+        };
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
         return () => {
-            window.removeEventListener('globalDataUpdated', handleDataUpdate);
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
         };
     }, []);
 
-    // Ak ešte čakáme na dáta, zobrazíme loader
-    if (isLoading) {
-        return React.createElement(Loader, null);
+
+    // Zobrazenie načítavača, ak dáta ešte nie sú dostupné
+    if (!userProfileData) {
+        return React.createElement(Loader);
     }
     
-    // Ak nastala chyba, presmerujeme na prihlasovaciu stránku
-    if (error) {
-        window.location.href = 'login.html';
-        return React.createElement(Loader, null); // Zobrazíme loader, kým prebieha presmerovanie
-    }
-
-    // Ak nie sú dáta, ale nie je ani chyba, presmerujeme
-    if (!userProfileData) {
-        window.location.href = 'login.html';
-        return React.createElement(Loader, null); // Zobrazíme loader kým prebieha presmerovanie
-    }
-
-    // Podmienené zobrazenie na základe roly
+    // Overenie, či je používateľ admin
     const isUserAdmin = userProfileData.role === 'admin';
-    const headerColor = getRoleColor(userProfileData.role);
 
     return React.createElement(
-        // Obalíme hlavný obsah do kontajnera, aby bol vycentrovaný a odsadili sme ho od vrchu
         'div',
-        { className: 'flex flex-col items-center mt-8 mb-8' },
+        { className: 'p-4 md:p-8 lg:p-12 max-w-4xl mx-auto' },
         React.createElement(
             'div',
-            { className: 'w-full max-w-4xl p-8 bg-white rounded-xl shadow-2xl space-y-8' },
+            { className: 'bg-white rounded-lg shadow-xl overflow-hidden' },
+            
+            // Sekcia "Kontaktná osoba"
             React.createElement(
                 'div',
-                // Odstránené sivé pozadie a tieň
-                { className: 'bg-white rounded-lg overflow-hidden shadow-md' },
+                { className: 'border-b border-gray-200' },
                 React.createElement(
                     'div',
-                    { className: 'p-4 text-white font-bold', style: { backgroundColor: headerColor } },
+                    { className: `flex justify-between items-center ${headerColor} text-white p-4` },
                     React.createElement(
                         'h2',
-                        { className: 'text-2xl' },
+                        { className: 'text-2xl font-bold' },
                         'Kontaktná osoba'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => handleEditClick('contact'),
+                            className: 'p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors duration-200'
+                        },
+                        React.createElement(
+                            'svg',
+                            { className: 'h-5 w-5', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                        )
                     )
                 ),
                 React.createElement(
@@ -294,7 +473,6 @@ const MyDataApp = () => {
                         React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                         ` ${userProfileData.email}`
                     ),
-                    // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
                     !isUserAdmin && React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
@@ -303,10 +481,82 @@ const MyDataApp = () => {
                     ),
                 )
             ),
-            renderBillingAndAddressInfo(userProfileData, headerColor)
+
+            // Sekcia "Fakturačné údaje"
+            React.createElement(
+                'div',
+                { className: 'border-t border-gray-200' },
+                React.createElement(
+                    'div',
+                    { className: `flex justify-between items-center ${headerColor} text-white p-4` },
+                    React.createElement(
+                        'h2',
+                        { className: 'text-2xl font-bold' },
+                        'Fakturačné údaje'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => handleEditClick('billing'),
+                            className: 'p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors duration-200'
+                        },
+                        React.createElement(
+                            'svg',
+                            { className: 'h-5 w-5', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'p-6' },
+                    userProfileData.billingAddress && userProfileData.billingAddress.companyName && React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'Názov firmy:'),
+                        ` ${userProfileData.billingAddress.companyName}`
+                    ),
+                    userProfileData.billingAddress && userProfileData.billingAddress.street && React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                        ` ${userProfileData.billingAddress.street}, ${userProfileData.billingAddress.city}, ${userProfileData.billingAddress.zipCode}, ${userProfileData.billingAddress.country}`
+                    ),
+                    userProfileData.billingAddress && userProfileData.billingAddress.ico && React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'IČO:'),
+                        ` ${userProfileData.billingAddress.ico}`
+                    ),
+                    userProfileData.billingAddress && userProfileData.billingAddress.dic && React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
+                        ` ${userProfileData.billingAddress.dic}`
+                    ),
+                    !userProfileData.billingAddress && React.createElement(
+                        'p',
+                        { className: 'text-gray-500 italic' },
+                        'Fakturačné údaje neboli zadané.'
+                    )
+                )
+            ),
+
+            // Modálne okno na úpravu
+            showModal && React.createElement(
+                Modal,
+                {
+                    title: editingSection === 'contact' ? 'Upraviť kontaktné údaje' : 'Upraviť fakturačné údaje',
+                    onClose: handleCloseModal
+                },
+                editingSection === 'contact' ?
+                    React.createElement(EditContactForm, { userProfileData, onSave: handleSave, onCancel: handleCloseModal }) :
+                    React.createElement(EditBillingForm, { userProfileData, onSave: handleSave, onCancel: handleCloseModal })
+            )
         )
     );
 };
+
 
 // Export pre možnosť načítania v HTML
 window.MyDataApp = MyDataApp;
