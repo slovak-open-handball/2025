@@ -8,11 +8,28 @@ window.globalUserProfileData = null; // Obsahuje dáta profilu prihláseného po
 window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
+window.reauthenticateWithCredential = null; // Funkcia pre re-autentifikáciu
+window.updateEmail = null; // Funkcia na zmenu emailu
+window.EmailAuthProvider = null; // Poskytovateľ autentifikácie pre email
 
 // Import necessary Firebase functions
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { 
+    initializeApp 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signOut, 
+    signInWithEmailAndPassword,
+    reauthenticateWithCredential, // Dôležité: pridaný import
+    updateEmail, // Dôležité: pridaný import
+    EmailAuthProvider // Dôležité: pridaný import
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    onSnapshot 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Pevne definovaná konfigurácia Firebase
 const firebaseConfig = {
@@ -20,54 +37,48 @@ const firebaseConfig = {
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
     projectId: "soh2025-2s0o2h5",
     storageBucket: "soh2025-2s0o2h5.appspot.com",
-    messagingSenderId: "337775986422",
-    appId: "1:337775986422:web:15f7f9175466c1b3c545e8"
+    messagingSenderId: "367316414164",
+    appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
-// Funkcia na inicializáciu Firebase
 const setupFirebase = () => {
     try {
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
-        console.log("AuthManager: Firebase inicializované.");
+        
+        // Sprístupníme potrebné funkcie globálne
+        window.reauthenticateWithCredential = reauthenticateWithCredential;
+        window.updateEmail = updateEmail;
+        window.EmailAuthProvider = EmailAuthProvider;
+
+        console.log("AuthManager: Firebase inicializovaný.");
     } catch (error) {
         console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
-    }
-};
-
-// Funkcia pre odhlásenie používateľa
-const handleLogout = async () => {
-    try {
-        await signOut(window.auth);
-        console.log("AuthManager: Používateľ bol úspešne odhlásený.");
-        window.showGlobalNotification('Boli ste úspešne odhlásený.', 'success');
-    } catch (error) {
-        console.error("AuthManager: Chyba pri odhlasovaní:", error);
-        window.showGlobalNotification('Chyba pri odhlasovaní. Skúste to prosím znova.', 'error');
-    }
-};
-window.handleLogout = handleLogout; // Sprístupníme funkciu globálne
-
-// Hlavná funkcia na spracovanie stavu autentifikácie
-const handleAuthState = () => {
-    let unsubscribeUserDoc = null;
-
-    onAuthStateChanged(window.auth, async (user) => {
-        if (!window.isGlobalAuthReady) {
-            window.isGlobalAuthReady = true;
-            console.log("AuthManager: Initial auth state checked.");
+        // Zobrazí globálnu notifikáciu, ak je dostupná
+        if (window.showGlobalNotification) {
+            window.showGlobalNotification("Chyba pri inicializácii aplikácie. Skúste to prosím neskôr.", 'error');
         }
+    }
+};
 
-        if (unsubscribeUserDoc) {
-            unsubscribeUserDoc();
+const handleAuthState = () => {
+    // Nastavenie listenera, ktorý sa spustí pri každej zmene stavu prihlásenia
+    onAuthStateChanged(window.auth, (user) => {
+        window.isGlobalAuthReady = true;
+        console.log("AuthManager: Zmena stavu autentifikácie, používateľ:", user);
+
+        // Zrušíme predchádzajúci listener, ak existuje
+        if (window.unsubscribeUserDoc) {
+            window.unsubscribeUserDoc();
+            window.unsubscribeUserDoc = null;
         }
 
         if (user) {
-            console.log("AuthManager: Používateľ prihlásený, UID:", user.uid);
+            // Používateľ je prihlásený, načítame a sledujeme jeho profilové dáta
             const userDocRef = doc(window.db, 'users', user.uid);
             
-            unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+            window.unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const userProfileData = { id: docSnap.id, ...docSnap.data() };
                     window.globalUserProfileData = userProfileData;
@@ -90,8 +101,8 @@ const handleAuthState = () => {
         }
 
         window.addEventListener('beforeunload', () => {
-            if (unsubscribeUserDoc) {
-                unsubscribeUserDoc();
+            if (window.unsubscribeUserDoc) {
+                window.unsubscribeUserDoc();
             }
         });
     });
