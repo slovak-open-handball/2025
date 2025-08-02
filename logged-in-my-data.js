@@ -266,8 +266,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Efekt pre resetovanie stavov pri otvorení/zatvorení modálu
     useEffect(() => {
         if (show) {
-            setNewFirstName(userProfileData.firstName || '');
-            setNewLastName(userProfileData.lastName || '');
+            setNewFirstName(''); // Reset na prázdnu hodnotu, aby sa zobrazoval placeholder
+            setNewLastName(''); // Reset na prázdnu hodnotu, aby sa zobrazoval placeholder
             setNewEmail(''); // E-mail sa vždy vynuluje
             setCurrentPassword(''); // Heslo sa vždy vynuluje
             setNewPhoneNumber(''); // Pole pre telefónne číslo sa vynuluje pre zobrazenie placeholdera
@@ -310,13 +310,13 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     };
 
     // Kontrola, či nastali nejaké zmeny.
-    const hasNameChanged = (newFirstName !== userProfileData.firstName) || (newLastName !== userProfileData.lastName);
+    const hasNameChanged = (newFirstName !== '') || (newLastName !== '');
     const hasEmailChanged = newEmail !== '';
     // Ak sa mení iba formátovanie čísla, nepočítame to ako zmenu, pokiaľ nezadá používateľ nové číslo.
     const hasPhoneNumberChanged = newPhoneNumber.replace(/\s/g, '') !== originalPhoneNumberWithoutDialCode.replace(/\s/g, '');
     const hasDialCodeChanged = selectedDialCode !== originalDialCode;
 
-    const isFormValid = hasNameChanged || hasEmailChanged || hasPhoneNumberChanged || hasDialCodeChanged;
+    const isFormValid = (newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || hasPhoneNumberChanged || hasDialCodeChanged;
 
     const handlePhoneNumberChange = (e) => {
         // Tento regulárny výraz odfiltruje všetky znaky, ktoré nie sú číslice
@@ -338,7 +338,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         e.preventDefault();
         setLoading(true);
 
-        if (!isFormValid) {
+        // Namiesto kontroly `isFormValid` použijeme priamo stavy, ktoré sa menia
+        if (!((newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || (newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged)) {
             window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
             setLoading(false);
             onClose();
@@ -347,11 +348,13 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
 
         try {
             const updates = {};
-            if (hasNameChanged) {
-                updates.firstName = newFirstName || userProfileData.firstName;
-                updates.lastName = newLastName || userProfileData.lastName;
+            if (newFirstName !== '' && newFirstName !== userProfileData.firstName) {
+                updates.firstName = newFirstName;
             }
-            if (hasPhoneNumberChanged || hasDialCodeChanged) {
+            if (newLastName !== '' && newLastName !== userProfileData.lastName) {
+                updates.lastName = newLastName;
+            }
+            if ((newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged) {
                  // Ak bolo pole s telefónnym číslom zmenené, použijeme nové číslo.
                  // Ak bolo prázdne (iba zmena predvoľby), použijeme pôvodné číslo bez predvoľby.
                  const phonePart = newPhoneNumber || originalPhoneNumberWithoutDialCode;
