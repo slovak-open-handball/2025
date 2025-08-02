@@ -3,12 +3,63 @@
 // umožňoval aj zmenu e-mailovej adresy prihláseného používateľa prostredníctvom modálneho okna.
 // Logika zmeny e-mailu bola prenesená z z-logged-in-change-email.js.
 // Kód bol aktualizovaný, aby bol odolnejší voči chybám s "undefined" premennými.
+// Bola pridaná aktualizovaná funkcia pre zobrazenie farebných notifikácií.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
+
+/**
+ * Globálna funkcia pre zobrazenie notifikácií
+ * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
+ */
+window.showGlobalNotification = (message, type = 'success') => {
+    let notificationElement = document.getElementById('global-notification');
+    
+    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        // Používame Tailwind CSS triedy pre štýlovanie a animácie
+        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300';
+        document.body.appendChild(notificationElement);
+    }
+    
+    // Určíme farby na základe typu správy
+    let bgColorClass, textColorClass;
+    if (type === 'success') {
+        bgColorClass = 'bg-green-100';
+        textColorClass = 'text-green-800';
+    } else if (type === 'error') {
+        bgColorClass = 'bg-red-100';
+        textColorClass = 'text-red-800';
+    } else {
+        // Predvolené farby pre iné typy
+        bgColorClass = 'bg-blue-100';
+        textColorClass = 'text-blue-800';
+    }
+
+    // Aktualizujeme obsah a triedy
+    notificationElement.innerHTML = `<p class="font-semibold">${message}</p>`;
+    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
+    
+    // Zobrazíme notifikáciu (fade-in)
+    setTimeout(() => {
+        notificationElement.style.opacity = '1';
+    }, 10);
+
+    // Skryjeme notifikáciu po 5 sekundách (fade-out)
+    setTimeout(() => {
+        notificationElement.style.opacity = '0';
+        setTimeout(() => {
+            if (notificationElement.parentNode) {
+                notificationElement.parentNode.removeChild(notificationElement);
+            }
+        }, 300); // Po dokončení animácie odstránime element z DOM
+    }, 5000);
+};
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -95,8 +146,6 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         const auth = getAuth();
         const user = auth.currentUser;
 
-        // **Dôležitá oprava:** Pridanie kontroly, či existuje používateľ a jeho e-mail.
-        // Tým sa zabráni chybe, ak by premenná user.email bola undefined.
         if (!user || !user.email) {
             window.showGlobalNotification('Používateľ nie je prihlásený alebo jeho e-mail nie je dostupný.', 'error');
             setLoading(false);
