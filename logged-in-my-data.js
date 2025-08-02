@@ -9,6 +9,25 @@ import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, sendEmail
 import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
+ * Pomocná funkcia na určenie farby podľa role používateľa.
+ * @param {string[]} roles - Pole rolí používateľa.
+ * @returns {string} Hexadecimálny kód farby.
+ */
+const getRoleColor = (roles) => {
+    if (!roles || roles.length === 0) {
+        return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+    }
+    if (roles.includes('admin')) {
+        return '#47b3ff'; // Farba pre admina
+    }
+    if (roles.includes('hall')) {
+        return '#b06835'; // Farba pre halu
+    }
+    // Ak nie je admin alebo hala, predpokladáme bežného používateľa
+    return '#9333EA'; // Farba pre bežného používateľa
+};
+
+/**
  * Pomocný komponent pre načítavanie dát.
  */
 const Loader = () => {
@@ -41,48 +60,37 @@ const ErrorMessage = ({ message }) => {
 };
 
 /**
- * Komponent pre zobrazenie poľa s dátami.
- * @param {object} props - Vlastnosti komponentu.
- * @param {string} props.label - Popisok poľa.
- * @param {string} props.value - Hodnota poľa.
- */
-const DataField = ({ label, value }) => {
-    return React.createElement(
-        'div',
-        { className: 'flex items-center text-gray-800' },
-        React.createElement('span', { className: 'font-semibold w-1/3' }, label),
-        React.createElement('span', { className: 'w-2/3' }, value || '-')
-    );
-};
-
-/**
  * Komponent pre editáciu kontaktných údajov (Modal).
+ * Ponechané bez zmien, len pre štruktúru
  */
 const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => {
-    // Implementácia modálneho okna pre kontaktné údaje, ponechané bez zmien.
     return null;
 };
 
 /**
  * Komponent pre editáciu fakturačných údajov (Modal).
+ * Ponechané bez zmien, len pre štruktúru
  */
 const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
-    // Implementácia modálneho okna pre fakturačné údaje, ponechané bez zmien.
     return null;
 };
 
 /**
  * NOVÝ Komponent pre zmenu e-mailovej adresy.
+ * @param {object} props - Vlastnosti komponentu.
+ * @param {boolean} props.isOpen - Či je modál otvorený.
+ * @param {function} props.onClose - Funkcia na zatvorenie modálu.
+ * @param {string[]} props.userRoles - Role prihláseného používateľa pre farebnú schému tlačidla.
  */
-const ChangeEmailModal = ({ isOpen, onClose }) => {
+const ChangeEmailModal = ({ isOpen, onClose, userRoles }) => {
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [loading, setLoading] = useState(false);
-
+    
+    // Získanie inštancií z globálneho objektu
     const auth = window.auth;
-    const db = window.db;
 
     const showGlobalNotification = useCallback((message, type) => {
         if (window.showGlobalNotification) {
@@ -130,7 +138,6 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
 
-            // Odoslať overovací e-mail na novú adresu
             await updateEmail(user, newEmail);
             await sendEmailVerification(user);
 
@@ -159,8 +166,6 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
 
     // Komponent pre pole hesla je použitý aj tu
     const PasswordInput = ({ id, label, value, onChange, placeholder, disabled }) => {
-      const [showPassword, setShowPassword] = useState(false);
-      const inputType = showPassword ? 'text' : 'password';
       return React.createElement(
         'div',
         { className: 'relative mb-4' },
@@ -170,7 +175,7 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
           label
         ),
         React.createElement('input', {
-          type: inputType,
+          type: 'password', // Nastavíme typ na password
           id: id,
           name: id,
           value: value,
@@ -181,6 +186,9 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
         })
       );
     };
+    
+    // Získanie farby podľa role pre tlačidlo
+    const roleColor = getRoleColor(userRoles);
 
     return React.createElement(
         'div',
@@ -253,7 +261,8 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
                         'button',
                         {
                             type: 'submit',
-                            className: `px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out ${!isFormValid || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`,
+                            className: `px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm transition duration-150 ease-in-out ${!isFormValid || loading ? 'bg-gray-400 cursor-not-allowed' : ''}`,
+                            style: { backgroundColor: isFormValid ? roleColor : 'rgb(156 163 175)' },
                             disabled: loading || !isFormValid,
                         },
                         loading ? 'Ukladám...' : 'Odoslať overovací e-mail'
@@ -270,8 +279,7 @@ const MyDataApp = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
-    const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
-    // NOVÝ stav pre modál zmeny e-mailu
+    const [isEditBillingModalOpen, setIsEditBillingModal] = useState(false);
     const [isChangeEmailModalOpen, setIsChangeEmailModalOpen] = useState(false);
     const [isUserAdmin, setIsUserAdmin] = useState(false);
 
@@ -286,23 +294,19 @@ const MyDataApp = () => {
         return number;
     };
 
+    /**
+     * Vykreslí hlavičku s dynamickou farbou podľa role.
+     * @param {string} headerColor - Hex kód farby.
+     */
     const renderHeader = (headerColor) => {
         return React.createElement(
             'div',
-            { className: `${headerColor} text-white p-4 rounded-t-lg flex justify-between items-center` },
+            { className: `text-white p-4 rounded-t-lg flex justify-between items-center`, style: { backgroundColor: headerColor } },
             React.createElement(
                 'h2',
                 { className: 'text-2xl font-bold' },
                 'Moje údaje'
             )
-        );
-    };
-
-    const renderSectionHeader = (title) => {
-        return React.createElement(
-            'h3',
-            { className: 'text-xl font-bold text-gray-800 mt-6 mb-4 border-b-2 pb-2' },
-            title
         );
     };
 
@@ -336,7 +340,6 @@ const MyDataApp = () => {
                     React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
                     ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
                 ),
-                // NOVÉ tlačidlo pre zmenu e-mailu
                 React.createElement(
                     'button',
                     {
@@ -349,12 +352,9 @@ const MyDataApp = () => {
         );
     };
 
-    const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-        if (!userProfileData) return null;
-        
-        // Zabezpečíme, že existuje billingAddress
-        if (!userProfileData.billingAddress) return null;
-        
+    const renderBillingAndAddressInfo = (userProfileData) => {
+        if (!userProfileData || !userProfileData.billingAddress) return null;
+
         const { street, city, zipCode, country } = userProfileData.billingAddress;
 
         return React.createElement(
@@ -365,7 +365,7 @@ const MyDataApp = () => {
                 { className: 'flex justify-between items-center' },
                 React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Fakturačné údaje'),
                 React.createElement('button', {
-                    onClick: () => setIsEditBillingModalOpen(true),
+                    onClick: () => setIsEditBillingModal(true),
                     className: 'text-blue-600 hover:text-blue-800 font-medium'
                 }, 'Upraviť')
             ),
@@ -420,9 +420,7 @@ const MyDataApp = () => {
         return React.createElement(ErrorMessage, { message: error });
     }
 
-    const headerColor = userProfileData && userProfileData.roles && userProfileData.roles.includes('admin')
-        ? 'bg-red-600'
-        : 'bg-blue-600';
+    const headerColor = getRoleColor(userProfileData?.roles);
 
     return React.createElement(
         'div',
@@ -449,7 +447,7 @@ const MyDataApp = () => {
                 )
             ),
             renderContactInfo(userProfileData, headerColor),
-            renderBillingAndAddressInfo(userProfileData, headerColor)
+            renderBillingAndAddressInfo(userProfileData)
         ),
         React.createElement(EditContactModal, {
             userProfileData: userProfileData,
@@ -460,12 +458,12 @@ const MyDataApp = () => {
         React.createElement(EditBillingModal, {
             userProfileData: userProfileData,
             isOpen: isEditBillingModalOpen,
-            onClose: () => setIsEditBillingModalOpen(false)
+            onClose: () => setIsEditBillingModal(false)
         }),
-        // NOVÝ modálny komponent
         React.createElement(ChangeEmailModal, {
             isOpen: isChangeEmailModalOpen,
             onClose: () => setIsChangeEmailModalOpen(false),
+            userRoles: userProfileData?.roles
         })
     );
 };
