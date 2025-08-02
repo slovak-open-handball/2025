@@ -63,7 +63,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je spustená
         messageElement.innerHTML = `
             <p class="text-green-600 font-semibold">Registrácia je spustená!</p>
-            <p>Končí ${formatDate(dates.registrationEndDate)}.</p>
+            <p>Končí ${formatDate(dates.registrationEndDate)}</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationEnd);
