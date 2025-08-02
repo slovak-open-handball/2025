@@ -361,7 +361,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                                     {
                                         type: 'button',
                                         onClick: () => setShowDialCodeModal(true),
-                                        className: 'inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm hover:bg-gray-100 transition-colors duration-200'
+                                        className: 'inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm hover:bg-gray-100 transition-colors duration-200'
                                     },
                                     selectedDialCode
                                 )
