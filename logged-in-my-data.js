@@ -121,27 +121,38 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 };
 
 /**
- * Komponent ChangeEmailModal - modálne okno pre zmenu e-mailovej adresy
+ * Komponent ChangeProfileModal - modálne okno pre zmenu e-mailovej adresy, mena a priezviska
  */
-const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
+const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
+    const [newFirstName, setNewFirstName] = useState(userProfileData?.firstName || '');
+    const [newLastName, setNewLastName] = useState(userProfileData?.lastName || '');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     
-    // Stav pre sledovanie fokusu pre email input
+    // Stav pre sledovanie fokusu pre email, meno a priezvisko
     const [isEmailFocused, setIsEmailFocused] = useState(false);
+    const [isFirstNameFocused, setIsFirstNameFocused] = useState(false);
+    const [isLastNameFocused, setIsLastNameFocused] = useState(false);
 
     useEffect(() => {
         // Reset stavu pri zatvorení modálu
         if (!show) {
             setCurrentPassword('');
             setNewEmail('');
-            setShowPassword(false);
             setLoading(false);
+            setShowPassword(false);
             setIsEmailFocused(false);
+            setIsFirstNameFocused(false);
+            setIsLastNameFocused(false);
+        } else {
+            // Predvyplnenie polí aktuálnymi dátami
+            setNewFirstName(userProfileData?.firstName || '');
+            setNewLastName(userProfileData?.lastName || '');
+            setNewEmail(userProfileData?.email || '');
         }
-    }, [show]);
+    }, [show, userProfileData]);
 
     // Validácia e-mailu: musí obsahovať @, aspoň jeden znak za ním, a . s aspoň dvoma znakmi za ním
     const isEmailValid = (email) => {
@@ -153,48 +164,73 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
     const isPasswordValid = (password) => {
         return password.length >= 10;
     };
+    
+    // Zistíme, či sa zmenilo meno, priezvisko alebo e-mail
+    const hasNameChanged = newFirstName !== (userProfileData?.firstName || '') || newLastName !== (userProfileData?.lastName || '');
+    const hasEmailChanged = newEmail !== (userProfileData?.email || '');
 
     // Celková validácia formulára
-    const isFormValid = isEmailValid(newEmail) && isPasswordValid(currentPassword);
+    const isFormValid = (hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword)));
 
-    const handleEmailChange = async (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
-        if (!isFormValid) {
-            window.showGlobalNotification('Prosím, vyplňte formulár správne.', 'error');
+        // Ak sa nič nezmenilo, neposielame požiadavku
+        if (!hasNameChanged && !hasEmailChanged) {
+            window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
             setLoading(false);
             return;
         }
 
         try {
-            const auth = window.auth;
-            const user = auth.currentUser;
-            const credential = window.EmailAuthProvider.credential(user.email, currentPassword);
+            // Zmena mena a priezviska (nevyžaduje re-autentifikáciu)
+            if (hasNameChanged) {
+                const db = window.db;
+                const userDocRef = doc(db, 'users', userProfileData.id);
+                await updateDoc(userDocRef, {
+                    firstName: newFirstName,
+                    lastName: newLastName
+                });
+                window.showGlobalNotification('Meno a priezvisko boli úspešne zmenené.', 'success');
+            }
 
-            await window.reauthenticateWithCredential(user, credential);
-            console.log("Používateľ úspešne re-autentifikovaný.");
+            // Zmena e-mailu (vyžaduje re-autentifikáciu a heslo)
+            if (hasEmailChanged) {
+                if (!isEmailValid(newEmail) || !isPasswordValid(currentPassword)) {
+                    window.showGlobalNotification('Prosím, vyplňte formulár správne.', 'error');
+                    setLoading(false);
+                    return;
+                }
 
-            // Použitie verifyBeforeUpdateEmail, ktoré odošle verifikačný e-mail
-            await window.verifyBeforeUpdateEmail(user, newEmail);
+                const auth = window.auth;
+                const user = auth.currentUser;
+                const credential = window.EmailAuthProvider.credential(user.email, currentPassword);
 
-            // Požiadavka na aktualizáciu e-mailu bola úspešne odoslaná.
-            window.showGlobalNotification('Potvrďte zmenu e-mailovej adresy kliknutím na odkaz vo vašej novej e-mailovej schránke.', 'success');
+                await window.reauthenticateWithCredential(user, credential);
+                console.log("Používateľ úspešne re-autentifikovaný pre zmenu e-mailu.");
+
+                // Použitie verifyBeforeUpdateEmail, ktoré odošle verifikačný e-mail
+                await window.verifyBeforeUpdateEmail(user, newEmail);
+                window.showGlobalNotification('Potvrďte zmenu e-mailovej adresy kliknutím na odkaz vo vašej novej e-mailovej schránke.', 'success');
+            }
+
+            // Zavrieme modálne okno po úspešnej zmene
             onClose();
 
         } catch (error) {
-            let errorMessage = "Nastala chyba pri zmene e-mailovej adresy.";
+            let errorMessage = "Nastala chyba pri ukladaní zmien.";
             if (error.code === 'auth/wrong-password') {
                 errorMessage = "Nesprávne heslo. Skúste to znova.";
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = "Neplatný formát e-mailu.";
             } else if (error.code === 'auth/requires-recent-login') {
-                errorMessage = "Pre túto akciu sa musíte znova prihlásiť.";
+                errorMessage = "Pre zmenu e-mailu sa musíte znova prihlásiť.";
             } else if (error.code === 'auth/email-already-in-use') {
                 errorMessage = "Táto e-mailová adresa sa už používa.";
             }
             window.showGlobalNotification(errorMessage, 'error');
-            console.error("Chyba pri zmene e-mailu:", error);
+            console.error("Chyba pri zmene profilu:", error);
         } finally {
             setLoading(false);
         }
@@ -231,7 +267,7 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
                 React.createElement(
                     'h3',
                     { className: 'text-2xl font-semibold text-gray-900' },
-                    'Zmeniť e-mailovú adresu'
+                    'Upraviť profil'
                 ),
                 React.createElement(
                     'button',
@@ -245,7 +281,76 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
             ),
             React.createElement(
                 'form',
-                { onSubmit: handleEmailChange, className: 'space-y-6' },
+                { onSubmit: handleFormSubmit, className: 'space-y-6' },
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                    // Pole pre meno
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'new-first-name', className: 'block text-sm font-medium text-gray-700' },
+                            'Meno'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'mt-1' },
+                            React.createElement('input', {
+                                id: 'new-first-name',
+                                name: 'new-first-name',
+                                type: 'text',
+                                required: true,
+                                value: newFirstName,
+                                onChange: (e) => setNewFirstName(e.target.value),
+                                onFocus: () => setIsFirstNameFocused(true),
+                                onBlur: () => setIsFirstNameFocused(false),
+                                placeholder: 'Zadajte nové meno',
+                                disabled: loading,
+                                className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
+                                style: {
+                                    borderColor: isFirstNameFocused ? roleColor : '',
+                                    outlineColor: isFirstNameFocused ? roleColor : '',
+                                    boxShadow: isFirstNameFocused ? `0 0 0 2px ${roleColor}25` : ''
+                                }
+                            })
+                        )
+                    ),
+                    // Pole pre priezvisko
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'new-last-name', className: 'block text-sm font-medium text-gray-700' },
+                            'Priezvisko'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'mt-1' },
+                            React.createElement('input', {
+                                id: 'new-last-name',
+                                name: 'new-last-name',
+                                type: 'text',
+                                required: true,
+                                value: newLastName,
+                                onChange: (e) => setNewLastName(e.target.value),
+                                onFocus: () => setIsLastNameFocused(true),
+                                onBlur: () => setIsLastNameFocused(false),
+                                placeholder: 'Zadajte nové priezvisko',
+                                disabled: loading,
+                                className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
+                                style: {
+                                    borderColor: isLastNameFocused ? roleColor : '',
+                                    outlineColor: isLastNameFocused ? roleColor : '',
+                                    boxShadow: isLastNameFocused ? `0 0 0 2px ${roleColor}25` : ''
+                                }
+                            })
+                        )
+                    ),
+                ),
+                // Pole pre e-mail
                 React.createElement(
                     'div',
                     null,
@@ -278,12 +383,13 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
                         })
                     )
                 ),
-                React.createElement(PasswordInput, {
+                // Pole pre aktuálne heslo (vyžadované len pri zmene e-mailu)
+                (hasEmailChanged) && React.createElement(PasswordInput, {
                     id: 'current-password',
-                    label: 'Aktuálne heslo',
+                    label: 'Aktuálne heslo (pre potvrdenie zmeny e-mailu)',
                     value: currentPassword,
                     onChange: (e) => setCurrentPassword(e.target.value),
-                    placeholder: 'Zadajte svoje aktuálne heslo pre potvrdenie',
+                    placeholder: 'Zadajte svoje aktuálne heslo',
                     showPassword: showPassword,
                     toggleShowPassword: togglePasswordVisibility,
                     disabled: loading,
@@ -306,8 +412,8 @@ const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
                         'button',
                         {
                             type: 'submit',
-                            disabled: loading || !isFormValid,
-                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200 ${(!isFormValid || loading) ? 'cursor-not-allowed' : ''}`,
+                            disabled: loading || (!hasNameChanged && !hasEmailChanged) || (hasEmailChanged && !isEmailValid(newEmail)) || (hasEmailChanged && !isPasswordValid(currentPassword)),
+                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200 ${(!hasNameChanged && !hasEmailChanged) || (hasEmailChanged && !isEmailValid(newEmail)) || (hasEmailChanged && !isPasswordValid(currentPassword)) || loading ? 'cursor-not-allowed' : ''}`,
                             style: {
                                 backgroundColor: isFormValid ? roleColor : 'white',
                                 color: isFormValid ? 'white' : roleColor,
@@ -442,7 +548,7 @@ const MyDataApp = () => {
                 )
             )
         ),
-        React.createElement(ChangeEmailModal, {
+        React.createElement(ChangeProfileModal, {
             show: showModal,
             onClose: () => setShowModal(false),
             userProfileData: userProfileData,
