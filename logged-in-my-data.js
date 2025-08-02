@@ -46,8 +46,9 @@ const ErrorMessage = ({ message }) => {
  */
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     const isTeamRegistration = userProfileData.registrationType === 'team';
+    const hasBillingAddress = userProfileData.billingAddress && Object.keys(userProfileData.billingAddress).length > 0;
 
-    // Obsah sekcie pre registračné a fakturačné dáta
+    // Obsah sekcie pre registračné dáta
     const registrationSectionContent = isTeamRegistration
         ? React.createElement(
             'div',
@@ -64,14 +65,21 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
             React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Štát:'), ` ${userProfileData.country}`)
         );
 
-    const addressSectionContent = React.createElement(
-        'div',
-        null,
-        React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo:'), ` ${userProfileData.billingAddress.street}`),
-        React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Mesto:'), ` ${userProfileData.billingAddress.city}`),
-        React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'PSČ:'), ` ${userProfileData.billingAddress.postalCode}`),
-        React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Štát:'), ` ${userProfileData.billingAddress.country}`)
-    );
+    // Obsah sekcie pre fakturačné dáta
+    const addressSectionContent = hasBillingAddress
+        ? React.createElement(
+            'div',
+            null,
+            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Ulica a číslo:'), ` ${userProfileData.billingAddress.street}`),
+            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Mesto:'), ` ${userProfileData.billingAddress.city}`),
+            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'PSČ:'), ` ${userProfileData.billingAddress.postalCode}`),
+            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Štát:'), ` ${userProfileData.billingAddress.country}`)
+        )
+        : React.createElement(
+            'div',
+            null,
+            React.createElement('p', { className: 'text-gray-800 text-lg italic' }, 'Fakturačné údaje neboli zadané.')
+        );
 
     return React.createElement(
         'div',
@@ -156,7 +164,7 @@ const ChangeEmailApp = ({ isOpen, onClose, userProfileData }) => {
             setPasswordError('');
         }
     };
-    
+
     // Funkcia na re-autentifikáciu používateľa
     const reauthenticateUser = async (user, currentPassword) => {
         try {
@@ -169,39 +177,39 @@ const ChangeEmailApp = ({ isOpen, onClose, userProfileData }) => {
             return false;
         }
     };
-    
+
     // Funkcia na zmenu e-mailovej adresy
     const handleEmailChange = async (e) => {
         e.preventDefault();
         setLoading(true);
         setEmailError('');
         setPasswordError('');
-    
+
         if (!auth.currentUser) {
             showGlobalNotification('Používateľ nie je prihlásený.', 'error');
             setLoading(false);
             return;
         }
-    
+
         try {
             // Re-autentifikácia
             const user = auth.currentUser;
             const reauthenticated = await reauthenticateUser(user, password);
-    
+
             if (!reauthenticated) {
                 setLoading(false);
                 return;
             }
-    
+
             // Aktualizácia e-mailu v Authentication
             await window.updateEmail(user, newEmail);
-    
+
             // Aktualizácia e-mailu v Firestore
             const userDocRef = window.doc(db, 'users', user.uid);
             await window.updateDoc(userDocRef, {
                 email: newEmail
             });
-    
+
             showGlobalNotification('E-mailová adresa bola úspešne zmenená.', 'success');
             onClose(); // Zatvorenie modálneho okna
         } catch (error) {
@@ -346,7 +354,7 @@ const MyDataApp = () => {
         };
 
         window.addEventListener('globalDataUpdated', handleDataUpdate);
-        
+
         // Ak sa dáta načítajú po prvom renderovaní, použijeme existujúce globálne dáta
         if (window.isGlobalAuthReady && window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
@@ -355,7 +363,6 @@ const MyDataApp = () => {
             setError('Nepodarilo sa načítať profilové dáta. Uistite sa, že ste prihlásený.');
             setIsLoading(false);
         }
-
 
         // Čistenie pri odmontovaní komponentu
         return () => {
@@ -384,16 +391,16 @@ const MyDataApp = () => {
         );
     }
     const formatPhoneNumber = (phoneNumber) => {
-      // Funkcia na formátovanie telefónneho čísla
-      if (!phoneNumber) return '';
-      const cleaned = ('' + phoneNumber).replace(/\D/g, '');
-      const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
-      if (match) {
-        return `+${match[1]} ${match[2]} ${match[3]}`;
-      }
-      return phoneNumber;
+        // Funkcia na formátovanie telefónneho čísla
+        if (!phoneNumber) return '';
+        const cleaned = ('' + phoneNumber).replace(/\D/g, '');
+        const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
+        if (match) {
+            return `+${match[1]} ${match[2]} ${match[3]}`;
+        }
+        return phoneNumber;
     };
-    
+
     const headerColor = userProfileData.registrationType === 'team' ? 'yellow' : 'blue';
 
     return React.createElement(
