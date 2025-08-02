@@ -1,35 +1,9 @@
 // logged-in-my-data.js
 // Tento súbor bol upravený, aby zobrazoval e-mailovú adresu prihláseného používateľa
-// a umožňoval jej zmenu prostredníctvom modálneho okna, rovnako ako v z-logged-in-change-email.js.
+// a umožňoval jej zmenu prostredníctvom modálneho okna.
+// Kód teraz čaká na globálnu udalosť od `authentication.js`, aby zabezpečil správne načítanie.
 
 const { useState, useEffect } = React;
-// Importujeme potrebné funkcie z Firebase
-const { getAuth, updateEmail, EmailAuthProvider, reauthenticateWithCredential } = window.firebase.auth;
-const { getFirestore, doc, onSnapshot } = window.firebase.firestore;
-const { initializeApp } = window.firebase.app;
-
-// Globálne premenné z HTML
-const firebaseConfig = JSON.parse(window.__firebase_config);
-const initialAuthToken = window.__initial_auth_token;
-const appId = window.__app_id;
-
-// Inicializácia Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-// Pomocné funkcie pre autentifikáciu
-const signIn = async () => {
-  try {
-    if (initialAuthToken) {
-      await signInWithCustomToken(auth, initialAuthToken);
-    } else {
-      await signInAnonymously(auth);
-    }
-  } catch (error) {
-    console.error("Chyba pri prihlasovaní:", error);
-  }
-};
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -132,10 +106,15 @@ const MyDataApp = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        const handleGlobalDataUpdate = () => {
+            console.log('MyDataApp: Prijatá udalosť "globalDataUpdated". Firebase je inicializovaný.');
+            const user = window.auth.currentUser;
+            const db = window.db;
+            const appId = window.__app_id;
+            
             if (user) {
-                const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
-                const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                const userDocRef = window.firebase.firestore.doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
+                const unsubscribeFirestore = window.firebase.firestore.onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserProfileData(docSnap.data());
                     } else {
@@ -150,10 +129,22 @@ const MyDataApp = () => {
                 });
                 return () => unsubscribeFirestore();
             } else {
-                signIn(); // Ak nie je prihlásený, prihlásime ho anonymne/s tokenom
+                setLoading(false);
+                setError("Používateľ nie je prihlásený.");
             }
-        });
-        return () => unsubscribeAuth();
+        };
+
+        if (window.globalUserProfileData) {
+            // Ak už sú dáta k dispozícii, spracujeme ich okamžite
+            setUserProfileData(window.globalUserProfileData);
+            setLoading(false);
+        }
+
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
+
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
+        };
     }, []);
 
     const handleOpenModal = () => {
@@ -206,8 +197,8 @@ const MyDataApp = () => {
         if (hasError) {
             return;
         }
-
-        const user = auth.currentUser;
+        
+        const user = window.auth.currentUser;
         if (!user) {
             setError("Používateľ nie je prihlásený.");
             return;
@@ -221,11 +212,16 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
-            const credential = EmailAuthProvider.credential(user.email, password);
-            await reauthenticateWithCredential(user, credential);
-            await updateEmail(user, newEmail);
+            const credential = window.firebase.auth.EmailAuthProvider.credential(user.email, password);
+            await window.firebase.auth.reauthenticateWithCredential(user, credential);
+            await window.firebase.auth.updateEmail(user, newEmail);
             console.log("E-mailová adresa bola úspešne zmenená.");
-            alert("E-mailová adresa bola úspešne zmenená."); // Pôvodná požiadavka použila alert, zachovávam
+            // Namiesto alertu použijeme globálnu notifikáciu, ak je definovaná.
+            if (window.showGlobalNotification) {
+                window.showGlobalNotification("E-mailová adresa bola úspešne zmenená.", 'success');
+            } else {
+                alert("E-mailová adresa bola úspešne zmenená."); 
+            }
             handleCloseModal();
         } catch (error) {
             setLoading(false);
@@ -235,7 +231,11 @@ const MyDataApp = () => {
             } else if (error.code === 'auth/email-already-in-use') {
                 setEmailError("Táto e-mailová adresa sa už používa.");
             } else {
-                setError(`Chyba: ${error.message}`);
+                if (window.showGlobalNotification) {
+                    window.showGlobalNotification(`Chyba pri zmene e-mailu: ${error.message}`, 'error');
+                } else {
+                    setError(`Chyba: ${error.message}`);
+                }
             }
         } finally {
             setLoading(false);
