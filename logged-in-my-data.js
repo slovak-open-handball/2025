@@ -310,7 +310,7 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Názov firmy:'),
-                        ` ${data.billing.clubName}` // Oprava: Zmena na data.billing.clubName
+                        ` ${data.billing.clubName}`
                     ),
                     React.createElement(
                         'p',
@@ -328,7 +328,7 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.billing.address}, ${data.billing.city}, ${data.billing.zipCode}`
+                        ` ${data.billing.address}, ${data.billing.zipCode} ${data.billing.city}, ${data.billing.country}` // Oprava: Zmena formátu adresy
                     )
                 ) :
                 React.createElement(
