@@ -4,6 +4,7 @@
 // Bol upravený tak, aby sa zachovalo pôvodné rozloženie s textom "Zabudli ste heslo?" pod tlačidlom "Prihlásiť"
 // a aby sa React aplikácia vykreslila až po prijatí udalosti z authentication.js, ktorá signalizuje, že
 // globálne dáta sú pripravené.
+// Taktiež boli aktualizované SVG ikony pre zobrazenie/skrytie hesla na základe požiadavky používateľa.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -11,23 +12,24 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/fireb
 
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
 
+// SVG ikony pre zobrazenie/skrytie hesla
+const EyeIcon = React.createElement(
+  'svg',
+  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+);
+
+const EyeOffIcon = React.createElement(
+  'svg',
+  { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+  React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+  React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+  React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+);
+
 // PasswordInput Component for password fields with visibility toggle (converted to React.createElement)
 function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, description, tabIndex }) {
-  const EyeIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
-  );
-
-  const EyeOffIcon = React.createElement(
-    'svg',
-    { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-    React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-    React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
-    React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
-  );
-
     return React.createElement(
         'div',
         { className: 'mb-6' },
@@ -62,7 +64,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
                     className: 'absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer',
                     onClick: toggleShowPassword
                 },
-                showPassword ? EyeIcon : EyeSlashIcon
+                showPassword ? EyeIcon : EyeOffIcon
             )
         ),
         description && React.createElement(
