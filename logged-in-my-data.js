@@ -95,8 +95,20 @@ const MyDataApp = () => {
     }, []); // Prázdne pole závislostí zaručuje, že sa vykoná len raz
 
     // Vytvorenie farby role
-    const roleColor = userProfileData?.role === 'admin' ? '#ef4444' : '#6366f1';
-    const roleBgColor = userProfileData?.role === 'admin' ? 'bg-red-500' : 'bg-indigo-500';
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff'; // Farba pre admina
+            case 'hall':
+                return '#b06835'; // Farba pre halu
+            case 'user':
+                return '#9333EA'; // Farba pre bežného používateľa
+            default:
+                return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+        }
+    };
+
+    const roleColor = getRoleColor(userProfileData?.role);
 
     // Stav načítavania
     if (loading) {
@@ -134,7 +146,7 @@ const MyDataApp = () => {
             // Informačná karta s fialovým pozadím pre titulok
             React.createElement('div', { className: 'bg-white rounded-xl shadow-lg' },
                 // Nadpis a tlačidlo v samostatnom bloku s farbou role
-                React.createElement('div', { className: `flex justify-between items-center p-6 md:p-8 rounded-t-xl text-white ${roleBgColor}`, style: { backgroundColor: roleColor } },
+                React.createElement('div', { className: `flex justify-between items-center p-6 md:p-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
                     React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold' }, 'Moje údaje'),
                     React.createElement('button', {
                         onClick: () => setShowModal(true),
