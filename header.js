@@ -65,8 +65,7 @@ const updateHeaderLinks = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
     const headerPlaceholder = document.getElementById('header-placeholder');
-
-
+    
     // Predvolená farba hlavičky, ak používateľ nie je prihlásený
     const defaultColor = '#1d4ed8';
 
@@ -112,7 +111,7 @@ const updateHeaderLinks = (userProfileData) => {
         }
     }
 
-    // Zobrazíme celú hlavičku po tom, ako je všetko nastavené
+    // Až teraz, po nastavení farieb a odkazov, zobrazíme hlavičku.
     if (headerPlaceholder) {
         headerPlaceholder.classList.remove('invisible');
     }
@@ -122,6 +121,10 @@ const updateHeaderLinks = (userProfileData) => {
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
+        // Skryjeme zástupný element hlavičky na začiatku, aby sa zabránilo blikaniu
+        if (headerPlaceholder) {
+            headerPlaceholder.classList.add('invisible');
+        }
 
         const response = await fetch('header.html');
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
@@ -144,15 +147,12 @@ window.loadHeaderAndScripts = async () => {
             updateHeaderLinks(window.globalUserProfileData);
         });
 
-        // Zavoláme funkciu hneď po načítaní, pre prípad, že dáta boli načítané
-        // pred pripojením listenera. Ak nie, listener to zachytí neskôr.
-        // Hlavička bude skrytá, kým funkcia updateHeaderLinks nebeží
-        if (headerPlaceholder) {
-             headerPlaceholder.classList.add('invisible');
-        }
-        // ODSTRÁNENÉ: Predchádzajúce volanie updateHeaderLinks sa odstráni.
-        // Hlavička sa zobrazí až po prijatí udalosti 'globalDataUpdated'.
-        
+        // POZOR: Pôvodné volanie updateHeaderLinks bolo odstránené, aby sa hlavička
+        // nezobrazovala predčasne. Udalosť 'globalDataUpdated' sa postará o to,
+        // aby sa hlavička zobrazila až po správnom načítaní a nastavení dát.
+        // Ak je už v čase načítania skriptu 'authentication.js' hotová,
+        // jej listener zavolá updateHeaderLinks hneď.
+
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
