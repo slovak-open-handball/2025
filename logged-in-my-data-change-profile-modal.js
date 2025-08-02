@@ -68,8 +68,9 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
     // Logika je podobná ako pri ChangeProfileModal, ale s menším zoznamom
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Oprava: Pridaná kontrola, či c.name existuje, aby sa predišlo chybe TypeError.
     const filteredCodes = countryDialCodes.filter(c =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.dial_code.includes(searchQuery)
+        (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) || (c.dial_code && c.dial_code.includes(searchQuery))
     );
 
     const ModalHeader = React.createElement(
