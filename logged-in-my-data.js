@@ -462,7 +462,7 @@ const MyDataApp = () => {
             } else {
                 setUserProfileData(null);
                 setLoading(false);
-                setError('Používateľské dáta neboli nájdené. Skúste sa prihlásiť.');
+                setError('Stránka je sprístupnená len pre používateľov registrovaných na turnaj. Pre prístup sa, prosím, prihláste.');
             }
         };
 
