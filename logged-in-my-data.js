@@ -164,8 +164,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     };
     
     // Kontrola, či nastali nejaké zmeny
-    const hasNameChanged = newFirstName !== '' && (newFirstName !== (userProfileData?.firstName || '') || newLastName !== (userProfileData?.lastName || ''));
-    const hasEmailChanged = newEmail !== '' && newEmail !== (userProfileData?.email || '');
+    const hasNameChanged = (newFirstName !== '' && newFirstName !== userProfileData?.firstName) || (newLastName !== '' && newLastName !== userProfileData?.lastName);
+    const hasEmailChanged = newEmail !== '' && newEmail !== userProfileData?.email;
 
     // Celková validácia formulára pre tlačidlo "Uložiť"
     const isFormValid = hasNameChanged || (hasEmailChanged && isEmailValid(newEmail) && isPasswordValid(currentPassword));
@@ -183,6 +183,25 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         }
 
         try {
+            // Inicializujeme objekt pre aktualizácie mena a priezviska
+            const updates = {};
+            // Skontrolujeme, či bolo zmenené meno
+            if (newFirstName !== '' && newFirstName !== userProfileData.firstName) {
+                updates.firstName = newFirstName;
+            }
+            // Skontrolujeme, či bolo zmenené priezvisko
+            if (newLastName !== '' && newLastName !== userProfileData.lastName) {
+                updates.lastName = newLastName;
+            }
+
+            // Ak existujú nejaké zmeny v mene alebo priezvisku, uložíme ich
+            if (Object.keys(updates).length > 0) {
+                const db = window.db;
+                const userDocRef = doc(db, 'users', userProfileData.id);
+                await updateDoc(userDocRef, updates);
+                window.showGlobalNotification('Meno a priezvisko boli úspešne zmenené.', 'success');
+            }
+
             // Zmena e-mailu (vyžaduje re-autentifikáciu a heslo)
             if (hasEmailChanged) {
                  if (!isPasswordValid(currentPassword)) {
@@ -198,23 +217,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                 await window.verifyBeforeUpdateEmail(user, newEmail);
                 window.showGlobalNotification('Potvrďte zmenu e-mailovej adresy kliknutím na odkaz vo vašej novej e-mailovej schránke.', 'success');
             }
-
-            // Zmena mena a priezviska (nevyžaduje re-autentifikáciu)
-            if (hasNameChanged) {
-                const db = window.db;
-                const userDocRef = doc(db, 'users', userProfileData.id);
-                const updates = {};
-                if (newFirstName !== (userProfileData?.firstName || '')) {
-                    updates.firstName = newFirstName;
-                }
-                if (newLastName !== (userProfileData?.lastName || '')) {
-                    updates.lastName = newLastName;
-                }
-                await updateDoc(userDocRef, updates);
-                window.showGlobalNotification('Meno a priezvisko boli úspešne zmenené.', 'success');
-            }
-
-            // Zavrieme modálne okno po úspešnej zmene
+            
+            // Zavrieme modálne okno po úspešnej zmene, alebo ak sa nič nezmenilo
             onClose();
 
         } catch (error) {
