@@ -223,6 +223,14 @@ const App = () => {
       }
     });
 
+    // Po vykreslení sa uistíme, že hlavička je viditeľná
+    const header = document.querySelector('header');
+    if (header) {
+      header.classList.remove('invisible');
+      header.classList.add('bg-blue-800');
+      console.log("login.js: Hlavička nastavená ako viditeľná.");
+    }
+    
     return () => authListener();
   }, []);
 
