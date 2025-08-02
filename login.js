@@ -1,7 +1,8 @@
 // login.js
 // Tento súbor predpokladá, že firebaseConfig, initialAuthToken a appId
 // sú globálne definované v <head> login.html.
-// Bol upravený, aby sa React aplikácia vykreslila až po načítaní všetkých globálnych závislostí.
+// Bol upravený tak, aby sa zachovalo pôvodné rozloženie s textom "Zabudli ste heslo?" pod tlačidlom "Prihlásiť"
+// a aby sa React aplikácia vykreslila až po načítaní všetkých globálnych závislostí.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -25,7 +26,7 @@ function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, 
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 14L2 6' })
   );
-  
+
   // Zabezpečíme, aby input nebol autocomplete pri prihlasovaní
   return React.createElement(
     'div',
@@ -172,7 +173,7 @@ function App() {
         window.showGlobalNotification('Zadajte prosím e-mailovú adresu pre obnovenie hesla.', 'error');
         return;
     }
-    
+
     try {
       await sendPasswordResetEmail(auth, resetEmail);
       window.showGlobalNotification('E-mail na obnovenie hesla bol odoslaný. Skontrolujte si schránku.', 'success');
@@ -276,7 +277,7 @@ function App() {
         ),
         React.createElement(
           'div',
-          { className: 'flex items-center justify-between' },
+          { className: 'flex flex-col items-center justify-center' },
           React.createElement(
             'button',
             {
@@ -287,17 +288,13 @@ function App() {
             loading ? 'Prihlasujem...' : 'Prihlásiť'
           ),
           React.createElement(
-            'div',
-            { className: 'flex items-center justify-between mt-4' },
-            React.createElement(
-              'a',
-              {
-                href: '#',
-                onClick: (e) => { e.preventDefault(); setShowResetPasswordModal(true); },
-                className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200',
-              },
-              'Zabudli ste heslo?'
-            )
+            'a',
+            {
+              href: '#',
+              onClick: (e) => { e.preventDefault(); setShowResetPasswordModal(true); },
+              className: 'inline-block align-baseline font-bold text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200 mt-4',
+            },
+            'Zabudli ste heslo?'
           )
         )
       )
