@@ -54,7 +54,7 @@ const updateRegistrationStatusText = (dates) => {
     if (now < registrationStart) {
         // Registrácia sa ešte nezačala
         messageElement.innerHTML = `
-            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}.</p>
+            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationStart);
@@ -72,7 +72,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je už ukončená
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Registrácia na turnaj je už ukončená.</p>
-            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}.</p>
+            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}</p>
         `;
         toggleRegistrationButton(false, 'end');
     }
