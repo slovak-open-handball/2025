@@ -28,23 +28,29 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- Zástupný element, kam header.js načíta obsah header.html -->
-    <!-- Predvolene je skrytý a zobrazí sa až po načítaní obsahu -->
-    <div id="header-placeholder" class="invisible"></div>
+    <div id="header-placeholder"></div>
 
-    <div class="flex-grow container mx-auto p-4 md:p-8 flex flex-col items-center justify-center text-center">
-        <!-- Hlavný titulok -->
-        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
-        <p class="text-xl text-gray-600 mb-8 max-w-2xl">
-            Vitajte na oficiálnej stránke turnaja. Registrácia sa začína čoskoro.
-        </p>
+    <!-- Hlavný kontajner, do ktorého sa vykreslí React aplikácia alebo hlavný obsah -->
+    <div id="root" class="flex-grow flex items-center justify-center">
+        <!-- Biely zaoblený obdĺžnik, ktorý obalí celý obsah -->
+        <div class="bg-white p-8 rounded-xl shadow-xl max-w-lg w-full text-center">
+            <!-- Nadpis H1 s textom "Slovak Open Handball 2025" -->
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Slovak Open Handball 2025</h1>
 
-        <!-- Sekcia s odpočtom a tlačidlami -->
-        <div id="registration-status-section" class="bg-white p-6 md:p-8 rounded-lg shadow-xl max-w-xl w-full">
-            <div id="registration-status-message">
-                <!-- Tu sa dynamicky vloží správa o registrácii a odpočet -->
+            <!-- Element pre dynamické zobrazenie správ o registrácii a odpočet. -->
+            <!-- Jeho obsah a viditeľnosť sú plne riadené súborom index.js. -->
+            <div id="registration-status-message" class="text-lg text-gray-600 mb-6">
+                <!-- Obsah sa bude generovať dynamicky pomocou JavaScriptu -->
             </div>
-            <div id="registration-buttons" class="mt-6 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <!-- Wrapper pre tlačidlo prihlásenia -->
+
+            <!-- Element pre správu o prihlásenom používateľovi. -->
+            <!-- Jeho viditeľnosť je tiež plne riadená súborom index.js. -->
+            <div id="logged-in-message" class="text-lg text-green-600 font-semibold mb-6" style="display: none;">
+                Vitajte, ste prihlásený!
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4">
+                <!-- Wrapper pre tlačidlo prihlásenia/mojej zóny -->
                 <a id="login-button-wrapper" href="login.html" class="inline-block" style="display: none;">
                     <button class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105">
                         Prihlásenie
@@ -74,6 +80,5 @@
     <!-- Načítanie React a ReactDOM z CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-
 </body>
 </html>
