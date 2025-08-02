@@ -8,7 +8,7 @@ const { useState, useEffect } = React;
 // Dôležité: Opravená chyba pridaním importov pre funkcie Firestore
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Dôležité: Importy pre reautentifikáciu, aktualizáciu e-mailu a overenie
-import { EmailAuthProvider, reauthenticateWithCredential, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
 /**
@@ -55,7 +55,7 @@ const formatPhoneNumber = (phoneNumber) => {
 
     const foundDialCode = window.countryDialCodes.find(item => {
         const dialCodeWithoutPlus = item.dialCode.replace('+', '');
-        return cleaned.startsWith(dialCodeWithoutPlus);
+        return cleaned.startsWith(dialCodeWithoutDialCode);
     });
 
     if (foundDialCode) {
@@ -117,7 +117,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
 
         // Validácia PSČ
         const postalCodeClean = formData.postalCode.replace(/\s/g, '');
-        if (!/^\d{5}$/.test(postalCodeClean)) {
+        if (postalCodeClean && !/^\d{5}$/.test(postalCodeClean)) {
             newErrors.postalCode = 'PSČ musí obsahovať presne 5 číslic.';
             isValid = false;
         }
@@ -221,7 +221,7 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
 
     if (!isOpen) return null;
 
-    const isFormValid = validateForm();
+    const isFormValid = Object.keys(errors).length === 0 && (formData.postalCode.replace(/\s/g, '').length === 5 || formData.postalCode.replace(/\s/g, '').length === 0);
     const buttonClasses = `bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${!isFormValid || loading ? 'opacity-50 cursor-not-allowed' : ''}`;
 
     return React.createElement(
@@ -363,10 +363,13 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
             // Reautentifikácia bola úspešná, pokračujeme s aktualizáciou
             const userId = currentUser.uid;
             const userDocRef = doc(db, 'users', userId);
-
-            // Skontrolujeme, či sa zmenil e-mail a ak áno, pošleme verifikačný e-mail
+            
+            // Skontrolujeme, či sa zmenil e-mail
             if (formData.email !== currentUser.email) {
-                // Posielame verifikačný e-mail na novú adresu.
+                // Najprv aktualizujeme e-mail vo Firebase Auth
+                await updateEmail(currentUser, formData.email);
+                
+                // Následne pošleme verifikačný e-mail
                 await sendEmailVerification(currentUser, { url: window.location.href });
                 setSuccessMessage('Bol Vám zaslaný verifikačný e-mail na novú adresu. Pre dokončenie zmeny kliknite na odkaz v e-maile.');
             }
