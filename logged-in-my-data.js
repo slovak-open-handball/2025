@@ -1,7 +1,7 @@
 // logged-in-my-data.js
 // Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
 // profilové a registračné dáta prihláseného používateľa.
-// Bol opravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
+// Bol upravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
 // a zobrazoval dáta až po ich úplnom načítaní.
 
 const { useState, useEffect } = React;
@@ -82,25 +82,26 @@ const formatPhoneNumber = (phoneNumber) => {
  * @param {string} headerColor - Farba hlavičky pre vizuálnu konzistenciu.
  */
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-    const isUserAdmin = userProfileData && userProfileData.role === 'admin';
-    const isUserTeamLeader = userProfileData && userProfileData.isTeamLeader === true;
+    // Zobrazíme sekciu iba ak je používateľ admin alebo vedúci tímu
+    const isUserAdmin = userProfileData?.role === 'admin';
+    const isUserTeamLeader = userProfileData?.isTeamLeader === true;
 
-    // Zobrazíme sekciu iba pre administrátorov alebo vedúcich tímov
     if (!isUserAdmin && !isUserTeamLeader) {
         return null;
     }
     
-    // Skontrolujeme, či existujú fakturačné údaje
-    if (!userProfileData.billingInfo || !userProfileData.billingAddress) {
+    // Skontrolujeme, či existujú fakturačné údaje.
+    // Na základe konzoly sa údaje o firme nachádzajú v objekte 'billing' a adresa je priamo v hlavnom objekte.
+    if (!userProfileData.billing || !userProfileData.billing.clubName) {
         return null;
     }
 
     // Spojíme informácie o adrese pre prehľadnejšie zobrazenie
     const formattedAddress = [
-        userProfileData.billingInfo.street,
-        userProfileData.billingInfo.city,
-        userProfileData.billingInfo.zip,
-        userProfileData.billingInfo.country
+        userProfileData.street,
+        userProfileData.city,
+        userProfileData.postalCode,
+        userProfileData.country
     ].filter(Boolean).join(', ');
 
     return React.createElement(
@@ -122,19 +123,19 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                ` ${userProfileData.billingInfo.companyName}`
+                ` ${userProfileData.billing.clubName || ''}`
             ),
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                ` ${userProfileData.billingInfo.companyId}`
+                ` ${userProfileData.billing.ico || ''}`
             ),
             React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                ` ${userProfileData.billingInfo.companyTaxId}`
+                ` ${userProfileData.billing.dic || ''}`
             ),
             React.createElement(
                 'p',
