@@ -23,48 +23,69 @@
             min-height: 100vh;
         }
         /* Štýly pre modálne okná */
-        .modal {
-            transition: opacity 0.3s ease-in-out;
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        .modal.hidden {
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        /* Pevná hlavička pre hlavné zobrazenie, pôvodne skrytá */
+        header.invisible {
+            visibility: hidden;
             opacity: 0;
-            pointer-events: none;
-        }
-        .modal.visible {
-            opacity: 1;
-            pointer-events: auto;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100">
+    <!-- Dynamicky načítaná hlavička -->
+    <header class="invisible fixed top-0 left-0 w-full bg-white shadow-lg z-50">
+        <!-- Obsah hlavičky bude vložený tu -->
+    </header>
 
-    <!-- Zástupný element, kam header.js načíta obsah header.html -->
-    <div id="header-placeholder"></div>
+    <div id="root" class="flex-grow">
+        <!-- React komponent MyDataApp sa vykreslí tu -->
+    </div>
 
-    <!-- Hlavný obsah stránky, vykreslený Reactom -->
-    <div id="root" class="flex-grow flex items-center justify-center p-4"></div>
-
-    <!-- Globálny element pre notifikácie -->
-    <div id="global-notification"></div>
-
-    <!-- Načítanie hlavných JavaScript súborov ako modulov -->
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
+    <!-- Zahrnutie skriptov -->
     <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <script type="module" src="loader.js"></script>
-    <script type="module" src="countryDialCodes.js"></script>
-    <!-- Načítanie hlavného skriptu pre túto stránku -->
-    <script type="module" src="logged-in-my-data.js"></script>
-
+    <script src="countryDialCodes.js"></script>
+    <script src="logged-in-my-data.js"></script>
     <script>
-        // Spustenie hlavnej logiky po načítaní celého DOM
-        window.addEventListener('DOMContentLoaded', async () => {
-            // Počkáme, kým sa načíta 'header.js' (ktorý volá loadHeader)
-            if (typeof window.loadHeaderAndScripts !== 'undefined') {
-                await window.loadHeaderAndScripts();
+        // Funkcia na dynamické načítanie obsahu hlavičky
+        async function loadHeader() {
+            try {
+                const response = await fetch('header.html');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const headerHtml = await response.text();
+                const headerElement = document.querySelector('header');
+                if (headerElement) {
+                    headerElement.innerHTML = headerHtml;
+                }
+            } catch (error) {
+                console.error("Chyba pri načítaní hlavičky:", error);
             }
+        }
 
-            // Až po načítaní všetkých skriptov a DOM spustíme vykresľovanie Reactu.
+        // Spustíme načítanie hlavičky po načítaní DOM
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadHeader();
+
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
