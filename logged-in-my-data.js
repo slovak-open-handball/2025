@@ -60,12 +60,20 @@ const MyDataApp = () => {
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    /**
+     * Vráti hexadecimálnu farbu na základe roly používateľa.
+     * Táto funkcia bola upravená, aby používala nové hexadecimálne hodnoty.
+     */
     const getRoleColor = (role) => {
         switch (role) {
-            case 'admin': return 'bg-red-500';
-            case 'hall': return 'bg-orange-500';
-            case 'user': return 'bg-blue-500';
-            default: return 'bg-gray-500';
+            case 'admin':
+                return '#47b3ff'; // Farba pre admina
+            case 'hall':
+                return '#b06835'; // Farba pre halu
+            case 'user':
+                return '#9333EA'; // Farba pre bežného používateľa
+            default:
+                return '#1D4ED8'; // Predvolená farba (bg-blue-800)
         }
     };
 
@@ -120,7 +128,8 @@ const MyDataApp = () => {
             { className: 'bg-white shadow-lg rounded-xl w-full max-w-2xl overflow-hidden' },
             React.createElement(
                 'div',
-                { className: `${headerColor} text-white px-6 py-4 flex justify-between items-center` },
+                // Inline štýl pre farbu pozadia
+                { style: { backgroundColor: headerColor }, className: `text-white px-6 py-4 flex justify-between items-center` },
                 React.createElement('h1', { className: 'text-2xl font-bold' }, 'Moje údaje'),
                 React.createElement(
                     'button',
