@@ -329,7 +329,7 @@ const MyDataApp = () => {
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
-                        ` ${data.billing.icdph || '-'}`
+                        ` ${data.billing.icDph || '-'}`
                     ),
                     React.createElement(
                         'p',
