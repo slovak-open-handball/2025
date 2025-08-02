@@ -80,102 +80,99 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         { className: 'min-h-screen bg-white flex flex-col items-center justify-start py-10 px-4 sm:px-6 lg:px-8' },
         React.createElement(
             'div',
-            { className: 'max-w-4xl w-full bg-white shadow-xl rounded-2xl p-8' },
+            { className: 'max-w-4xl w-full shadow-xl rounded-2xl relative bg-white' }, // Zmenený hlavný kontajner na relative, odstránené bg-white a p-8
+            // Pridaný zaoblený farebný obdĺžnik za nadpis
             React.createElement(
                 'div',
-                { className: 'flex justify-between items-start mb-6' },
+                {
+                    className: 'absolute inset-x-0 top-0 rounded-2xl -z-10',
+                    style: { backgroundColor: roleColor, height: '140px' } // Výška upravená tak, aby nepokrývala popisy
+                }
+            ),
+            React.createElement(
+                'div',
+                { className: 'p-8' }, // Pridané p-8 pre vnútorný obsah, aby mal odsadenie
                 React.createElement(
                     'div',
-                    { className: 'flex flex-col' },
+                    { className: 'flex justify-between items-center mb-6' },
                     React.createElement(
                         'h2',
-                        { className: 'text-3xl font-bold text-gray-900' },
+                        { className: 'text-3xl font-bold text-white z-10' }, // Farba textu zmenená na bielu pre lepší kontrast
                         fullName
                     ),
-                    // Nový zaoblený obdĺžnik s rolou používateľa
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowModal(true),
+                            className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
+                            style: { 
+                                backgroundColor: 'white', 
+                                color: roleColor, 
+                                border: `2px solid ${roleColor}` 
+                            }
+                        },
+                        // SVG ikona ceruzky pridaná do tlačidla
+                        React.createElement(
+                            'svg',
+                            { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: roleColor },
+                            React.createElement('path', {
+                                strokeLinecap: 'round',
+                                strokeLinejoin: 'round',
+                                strokeWidth: '2',
+                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                            })
+                        ),
+                        'Upraviť'
+                    )
+                ),
+                // Zmena rozloženia na jeden stĺpec a odstránenie obdĺžnikov
+                React.createElement(
+                    'div',
+                    { className: 'space-y-6' },
+                    // Sekcia s menom a priezviskom v jednom riadku
                     React.createElement(
                         'div',
-                        {
-                            className: 'px-3 py-1 text-sm font-semibold rounded-full mt-2',
-                            style: { backgroundColor: roleColor, color: 'white' }
-                        },
-                        userProfileData.role
-                    )
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: () => setShowModal(true),
-                        className: `flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2`,
-                        // Invertovanie farieb podľa požiadavky
-                        style: {
-                            backgroundColor: 'white',
-                            color: roleColor,
-                            border: `2px solid ${roleColor}`,
-                            '--tw-ring-color': roleColor
-                        }
-                    },
-                    // SVG ikona ceruzky pridaná do tlačidla
-                    React.createElement(
-                        'svg',
-                        { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', style: { color: roleColor } },
-                        React.createElement('path', {
-                            strokeLinecap: 'round',
-                            strokeLinejoin: 'round',
-                            strokeWidth: '2',
-                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                        })
+                        { className: 'mb-4' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800' },
+                            'Meno a priezvisko:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            fullName
+                        )
                     ),
-                    'Upraviť'
-                )
-            ),
-            // Zmena rozloženia na jeden stĺpec a odstránenie obdĺžnikov
-            React.createElement(
-                'div',
-                { className: 'space-y-6' },
-                // Sekcia s menom a priezviskom v jednom riadku
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800' },
-                        'Meno a priezvisko:'
+                    // Podmienečné zobrazenie telefónneho čísla len ak používateľ nie je admin
+                    userProfileData.role !== 'admin' && React.createElement(
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800' },
+                            'Telefónne číslo:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            userProfileData.phoneNumber || 'Nezadané'
+                        )
                     ),
+                    // Sekcia s kontaktnými údajmi
                     React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        fullName
-                    )
-                ),
-                // Podmienečné zobrazenie telefónneho čísla len ak používateľ nie je admin
-                userProfileData.role !== 'admin' && React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800' },
-                        'Telefónne číslo:'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        userProfileData.phoneNumber || 'Nezadané'
-                    )
-                ),
-                // Sekcia s kontaktnými údajmi
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800 flex items-center' },
-                        'E-mailová adresa kontaktnej osoby:'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        userEmail
+                        'div',
+                        { className: 'mb-4' },
+                        React.createElement(
+                            'p',
+                            { className: 'font-bold text-gray-800 flex items-center' },
+                            'E-mailová adresa kontaktnej osoby:'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-800 text-lg mt-1' },
+                            userEmail
+                        )
                     )
                 )
             )
