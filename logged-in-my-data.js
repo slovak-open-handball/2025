@@ -58,6 +58,7 @@ window.showGlobalNotification = (message, type = 'success') => {
  * @param {string} props.roleColor - Farba priradená role používateľa.
  */
 const MyDataApp = ({ userProfileData, roleColor }) => {
+    console.log("MyDataApp.js: Komponent MyDataApp sa vykresľuje s dátami:", userProfileData);
     // Inicializujeme stav s počiatočnými dátami.
     const [data, setData] = useState(userProfileData);
     const [isMyDataLoaded, setIsMyDataLoaded] = useState(!!userProfileData && Object.keys(userProfileData).length > 0);
@@ -65,15 +66,20 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     // Načítanie a spracovanie globálnych dát
     useEffect(() => {
+        console.log("MyDataApp.js: useEffect spustený, kontrola dát.");
         if (userProfileData && Object.keys(userProfileData).length > 0) {
+            console.log("MyDataApp.js: Dáta používateľa nájdené, aktualizujem stav.");
             setData(userProfileData);
             setIsMyDataLoaded(true);
+        } else {
+             console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
         }
     }, [userProfileData]);
 
     // Funkcia na overenie a zobrazenie dát
     const renderContent = () => {
         if (!isMyDataLoaded) {
+            console.log("MyDataApp.js: Zobrazujem načítavaciu animáciu.");
             // Animácia načítania, ak dáta nie sú dostupné
             return React.createElement(
                 'div',
@@ -85,6 +91,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             );
         }
 
+        console.log("MyDataApp.js: Zobrazujem obsah aplikácie.");
         // Zobrazenie obsahu
         return React.createElement(
             'div',
@@ -274,32 +281,41 @@ window.getRoleColor = getRoleColor;
 // Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
 // Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
 const handleDataUpdateAndRender = (event) => {
+    console.log("MyDataApp.js: Spracúvam udalosť 'globalDataUpdated'.");
     // Okamžite skryjeme loader, akonáhle spracujeme udalosť.
     if (typeof window.hideGlobalLoader === 'function') {
         window.hideGlobalLoader();
+        console.log("MyDataApp.js: Skrývam načítavaciu animáciu.");
     }
     
     const data = event.detail;
     if (data && Object.keys(data).length > 0) {
+        console.log("MyDataApp.js: Dáta prijaté, vykresľujem aplikáciu.");
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const userRole = data.role;
             const roleColor = getRoleColor(userRole);
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData: data, roleColor: roleColor }));
+            console.log("MyDataApp.js: Aplikácia úspešne vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné.");
+        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
     }
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
+console.log("MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
+console.log("MyDataApp.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
+    console.log("MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+} else {
+    console.log("MyDataApp.js: Globálne dáta ešte neexistujú. Čakám na udalosť 'globalDataUpdated'.");
 }
