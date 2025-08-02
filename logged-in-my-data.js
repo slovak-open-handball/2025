@@ -189,9 +189,14 @@ const MyDataApp = () => {
                 )
             )
         ),
+        // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
         React.createElement(ChangeProfileModal, {
             show: showModal,
             onClose: () => setShowModal(false),
+            onSaveSuccess: () => {
+                setShowModal(false);
+                window.showGlobalNotification('Profilové údaje boli úspešne zmenené', 'success');
+            },
             userProfileData: userProfileData,
             roleColor: headerColor
         })
