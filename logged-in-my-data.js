@@ -1,20 +1,19 @@
 // logged-in-my-data.js
 // Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
 // profilové a registračné dáta prihláseného používateľa.
-// Bol upravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
-// a zobrazoval dáta až po ich úplnom načítaní.
-// Boli pridané zmeny pre dynamickú farbu hlavičiek na základe role používateľa,
-// vylepšená logika pre zobrazenie fakturačných údajov,
-// pridané tlačidlo na úpravu údajov a modálne okno.
+// Bol upravený tak, aby ukladal zmeny do Cloud Firestore a reagoval na zmeny v reálnom čase.
 
 const { useState, useEffect } = React;
+// Importy pre Firebase
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 /**
  * Pomocný komponent pre načítavanie dát.
  */
 const Loader = () => {
     return React.createElement(
-        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
@@ -31,7 +30,6 @@ const Loader = () => {
  */
 const ErrorMessage = ({ message }) => {
     return React.createElement(
-        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
@@ -53,7 +51,6 @@ const formatPhoneNumber = (phoneNumber) => {
 
     const cleaned = phoneNumber.replace(/\D/g, '');
 
-    // Skúsi nájsť zhodu s predvoľbou zo zoznamu
     const foundDialCode = window.countryDialCodes.find(item => {
         const dialCodeWithoutPlus = item.dialCode.replace('+', '');
         return cleaned.startsWith(dialCodeWithoutPlus);
@@ -62,14 +59,11 @@ const formatPhoneNumber = (phoneNumber) => {
     if (foundDialCode) {
         const dialCodeWithoutPlus = foundDialCode.dialCode.replace('+', '');
         const numberWithoutDialCode = cleaned.substring(dialCodeWithoutPlus.length);
-
-        // Rozdelenie zvyšku čísla na skupiny po troch
         const formattedNumber = numberWithoutDialCode.replace(/(\d{3})(?=\d)/g, '$1 ');
         
         return `${foundDialCode.dialCode} ${formattedNumber}`;
     }
 
-    // Pôvodné formátovanie, ak sa nenájde žiadna predvoľba
     const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
     if (match) {
         return `+${match[1]} ${match[2]} ${match[3]}`;
@@ -86,20 +80,20 @@ const formatPhoneNumber = (phoneNumber) => {
 const getRoleColor = (role) => {
     switch (role) {
         case 'admin':
-            return '#47b3ff'; // Farba pre admina
+            return '#47b3ff';
         case 'hall':
-            return '#b06835'; // Farba pre halu
+            return '#b06835';
         case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
+            return '#9333EA';
         default:
-            return '#374151'; // Predvolená tmavosivá
+            return '#374151';
     }
 };
 
 /**
  * Komponent pre modálne okno na úpravu fakturačných údajov.
  */
-const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
+const EditBillingModal = ({ userProfileData, isOpen, onClose, db, userId, appId }) => {
     const [formData, setFormData] = useState({
         clubName: userProfileData.billing?.clubName || '',
         ico: userProfileData.billing?.ico || '',
@@ -117,10 +111,35 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
         setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Saving billing data:", formData);
-        onClose();
+        if (!db || !userId) {
+            console.error("Firestore nie je inicializovaný alebo userId nie je k dispozícii.");
+            return;
+        }
+
+        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/userProfile`, userId);
+        
+        try {
+            await setDoc(userDocRef, {
+                billing: {
+                    clubName: formData.clubName,
+                    ico: formData.ico,
+                    dic: formData.dic,
+                    icDph: formData.icDph,
+                },
+                street: formData.street,
+                houseNumber: formData.houseNumber,
+                city: formData.city,
+                postalCode: formData.postalCode,
+                country: formData.country,
+            }, { merge: true }); // Použitie merge: true, aby sa aktualizovali len zmenené polia
+            console.log("Fakturačné údaje boli úspešne uložené!");
+            onClose();
+        } catch (error) {
+            console.error("Chyba pri ukladaní fakturačných údajov: ", error);
+            // Tu by sa mohla zobraziť chybová správa používateľovi
+        }
     };
 
     if (!isOpen) return null;
@@ -157,18 +176,6 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                     React.createElement('input', { type: 'text', id: 'clubName', name: 'clubName', value: formData.clubName, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
                 ),
                 React.createElement('div', { className: 'mb-4' },
-                    React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
-                    React.createElement('input', { type: 'text', id: 'ico', name: 'ico', value: formData.ico, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
-                ),
-                React.createElement('div', { className: 'mb-4' },
-                    React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
-                    React.createElement('input', { type: 'text', id: 'dic', name: 'dic', value: formData.dic, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
-                ),
-                React.createElement('div', { className: 'mb-4' },
-                    React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
-                    React.createElement('input', { type: 'text', id: 'icDph', name: 'icDph', value: formData.icDph, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
-                ),
-                React.createElement('div', { className: 'mb-4' },
                     React.createElement('label', { htmlFor: 'street', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Ulica'),
                     React.createElement('input', { type: 'text', id: 'street', name: 'street', value: formData.street, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
                 ),
@@ -177,12 +184,24 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
                     React.createElement('input', { type: 'text', id: 'houseNumber', name: 'houseNumber', value: formData.houseNumber, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
                 ),
                 React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'city', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Mesto'),
+                    React.createElement('input', { type: 'text', id: 'city', name: 'city', value: formData.city, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
                     React.createElement('label', { htmlFor: 'postalCode', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'PSČ'),
                     React.createElement('input', { type: 'text', id: 'postalCode', name: 'postalCode', value: formData.postalCode, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
                 ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'ico', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČO'),
+                    React.createElement('input', { type: 'text', id: 'ico', name: 'ico', value: formData.ico, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
+                React.createElement('div', { className: 'mb-4' },
+                    React.createElement('label', { htmlFor: 'dic', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'DIČ'),
+                    React.createElement('input', { type: 'text', id: 'dic', name: 'dic', value: formData.dic, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                ),
                 React.createElement('div', { className: 'mb-6' },
-                    React.createElement('label', { htmlFor: 'city', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Mesto'),
-                    React.createElement('input', { type: 'text', id: 'city', name: 'city', value: formData.city, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
+                    React.createElement('label', { htmlFor: 'icDph', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'IČ DPH'),
+                    React.createElement('input', { type: 'text', id: 'icDph', name: 'icDph', value: formData.icDph, onChange: handleChange, className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700' })
                 ),
                 React.createElement(
                     'div',
@@ -212,13 +231,8 @@ const EditBillingModal = ({ userProfileData, isOpen, onClose }) => {
 
 /**
  * Komponent pre modálne okno na úpravu kontaktných údajov.
- * @param {object} props - Vlastnosti komponentu.
- * @param {object} props.userProfileData - Dáta profilu používateľa.
- * @param {boolean} props.isOpen - Určuje, či je modálne okno otvorené.
- * @param {function} props.onClose - Funkcia na zatvorenie modálneho okna.
- * @param {boolean} props.isUserAdmin - Určuje, či je používateľ admin.
  */
-const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => {
+const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin, db, userId, appId }) => {
     const [formData, setFormData] = useState({
         firstName: userProfileData.firstName || '',
         lastName: userProfileData.lastName || '',
@@ -230,17 +244,30 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
         setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Tu by sa odoslali aktualizované údaje do Firestore
-        console.log("Saving data:", formData);
-        onClose();
+        if (!db || !userId) {
+            console.error("Firestore nie je inicializovaný alebo userId nie je k dispozícii.");
+            return;
+        }
+        
+        const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/userProfile`, userId);
+
+        try {
+            await setDoc(userDocRef, {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                contactPhoneNumber: formData.contactPhoneNumber,
+            }, { merge: true });
+            console.log("Kontaktné údaje boli úspešne uložené!");
+            onClose();
+        } catch (error) {
+            console.error("Chyba pri ukladaní kontaktných údajov: ", error);
+        }
     };
 
-    // Zabezpečíme, že sa modálne okno nevykreslí, ak nie je otvorené
     if (!isOpen) return null;
 
-    // Pridáme overlay a správne triedy na zobrazenie modálneho okna
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center' },
@@ -302,7 +329,6 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                     })
                 ),
-                // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
                 !isUserAdmin && React.createElement(
                     'div',
                     { className: 'mb-6' },
@@ -351,37 +377,84 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
  */
 const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
-    const [isLoading, useStateLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
     const [isEditBillingModalOpen, setIsEditBillingModalOpen] = useState(false);
 
-    useEffect(() => {
-        // Kontroluje, či sú globálne dáta už pripravené z 'authentication.js'
-        if (window.isGlobalAuthReady) {
-            handleGlobalData();
-        } else {
-            // Ak nie, počúva na udalosť, ktorá signalizuje ich pripravenosť
-            window.addEventListener('globalDataUpdated', handleGlobalData);
-        }
+    const [db, setDb] = useState(null);
+    const [auth, setAuth] = useState(null);
+    const [userId, setUserId] = useState(null);
 
-        // Cleanup funkcia pre event listener
-        return () => {
-            window.removeEventListener('globalDataUpdated', handleGlobalData);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    useEffect(() => {
+        const initializeFirebase = async () => {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                const firestoreDb = getFirestore(app);
+                const firestoreAuth = getAuth(app);
+                
+                setDb(firestoreDb);
+                setAuth(firestoreAuth);
+
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(firestoreAuth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(firestoreAuth);
+                }
+            } catch (err) {
+                console.error("Chyba pri inicializácii Firebase:", err);
+                setError("Chyba pri načítaní aplikácie. Skúste to prosím neskôr.");
+                setIsLoading(false);
+            }
         };
+
+        initializeFirebase();
     }, []);
 
-    const handleGlobalData = () => {
-        if (window.globalUserProfileData) {
-            setUserProfileData(window.globalUserProfileData);
-            useStateLoading(false);
-        } else {
-            setError('Nie ste prihlásený. Prosím, prihláste sa, aby ste videli svoje údaje.');
-            useStateLoading(false);
-        }
-    };
+    useEffect(() => {
+        if (!auth || !db) return;
+
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const currentUserId = user.uid;
+                setUserId(currentUserId);
+                
+                const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/userProfile`, currentUserId);
+                
+                const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setUserProfileData(docSnap.data());
+                        setIsLoading(false);
+                    } else {
+                        // Ak dokument neexistuje, môžete vytvoriť základný dokument s ID používateľa
+                        setDoc(userDocRef, {
+                            email: user.email || 'neznámy@email.sk',
+                            firstName: '',
+                            lastName: '',
+                            role: 'user',
+                            billing: {},
+                        });
+                        console.log("Nový dokument pre užívateľa vytvorený.");
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítavaní dát z Firestore:", error);
+                    setError("Chyba pri načítavaní dát. Skúste to prosím neskôr.");
+                    setIsLoading(false);
+                });
+
+                return () => unsubscribeSnapshot();
+            } else {
+                setError('Nie ste prihlásený. Prosím, prihláste sa, aby ste videli svoje údaje.');
+                setIsLoading(false);
+            }
+        });
+
+        return () => unsubscribeAuth();
+    }, [auth, db, appId]);
     
-    // Podmienene renderuje komponent na základe stavu načítania a chyby
     if (isLoading) {
         return React.createElement(Loader);
     }
@@ -399,10 +472,8 @@ const MyDataApp = () => {
 
     // Komponent na zobrazenie fakturačných údajov
     const renderBillingAndAddressInfo = (data, color) => {
-        // Vylepšená kontrola, či existujú platné dáta, a ak nie, zobrazí správu.
         const hasBillingInfo = data.billing && Object.keys(data.billing).length > 0;
         
-        // Formátovanie PSČ
         const postalCode = data.postalCode || '';
         const formattedPostalCode = postalCode.length === 5 ? `${postalCode.substring(0, 3)} ${postalCode.substring(3)}` : postalCode;
 
@@ -443,7 +514,7 @@ const MyDataApp = () => {
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'Adresa: '),
+                        React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
                         ` ${data.street || ''} ${data.houseNumber || ''}, ${formattedPostalCode} ${data.city || ''}, ${data.country || ''}`.trim()
                     ),
                     React.createElement(
@@ -458,7 +529,6 @@ const MyDataApp = () => {
                         React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                         ` ${data.billing.dic}`
                     ),
-                    // Nový riadok pre IČ DPH. Ak hodnota neexistuje, zobrazí sa "-"
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
@@ -481,7 +551,6 @@ const MyDataApp = () => {
         React.createElement(
             'div',
             { className: 'space-y-8' },
-            // Blok s kontaktnými údajmi
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-lg shadow-xl overflow-hidden' },
@@ -518,7 +587,6 @@ const MyDataApp = () => {
                         React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
                         ` ${userProfileData.email}`
                     ),
-                    // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
                     !isUserAdmin && React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
@@ -533,15 +601,20 @@ const MyDataApp = () => {
             userProfileData: userProfileData,
             isOpen: isEditContactModalOpen,
             onClose: () => setIsEditContactModalOpen(false),
-            isUserAdmin: isUserAdmin
+            isUserAdmin: isUserAdmin,
+            db: db,
+            userId: userId,
+            appId: appId
         }),
         React.createElement(EditBillingModal, {
             userProfileData: userProfileData,
             isOpen: isEditBillingModalOpen,
             onClose: () => setIsEditBillingModalOpen(false),
+            db: db,
+            userId: userId,
+            appId: appId
         })
     );
 };
 
-// Export pre možnosť načítania v HTML
 window.MyDataApp = MyDataApp;
