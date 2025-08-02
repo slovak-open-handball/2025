@@ -96,83 +96,66 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     'Upraviť profil'
                 )
             ),
+            // Zmena rozloženia na jeden stĺpec a odstránenie obdĺžnikov
             React.createElement(
                 'div',
-                { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                { className: 'space-y-6' },
                 // Sekcia s osobnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'bg-gray-50 rounded-lg p-6 border' },
+                    { className: 'mb-4' },
                     React.createElement(
-                        'h3',
-                        { className: 'text-xl font-bold mb-4 text-gray-800' },
-                        'Osobné údaje'
+                        'p',
+                        { className: 'font-bold text-gray-800' },
+                        'Meno:'
                     ),
                     React.createElement(
-                        'div',
-                        { className: 'mb-4' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-bold text-gray-800' },
-                            'Meno:'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg mt-1' },
-                            userProfileData.firstName || 'Nezadané'
-                        )
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        userProfileData.firstName || 'Nezadané'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800' },
+                        'Priezvisko:'
                     ),
                     React.createElement(
-                        'div',
-                        { className: 'mb-4' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-bold text-gray-800' },
-                            'Priezvisko:'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg mt-1' },
-                            userProfileData.lastName || 'Nezadané'
-                        )
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        userProfileData.lastName || 'Nezadané'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800' },
+                        'Telefónne číslo:'
                     ),
                     React.createElement(
-                        'div',
-                        { className: 'mb-4' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-bold text-gray-800' },
-                            'Telefónne číslo:'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg mt-1' },
-                            userProfileData.phoneNumber || 'Nezadané'
-                        )
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        userProfileData.phoneNumber || 'Nezadané'
                     )
                 ),
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'bg-gray-50 rounded-lg p-6 border' },
+                    { className: 'mb-4' },
                     React.createElement(
-                        'h3',
-                        { className: 'text-xl font-bold mb-4 text-gray-800' },
-                        'Kontaktné údaje'
+                        'p',
+                        { className: 'font-bold text-gray-800 flex items-center' },
+                        'E-mailová adresa kontaktnej osoby:'
                     ),
                     React.createElement(
-                        'div',
-                        { className: 'mb-4' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-bold text-gray-800 flex items-center' },
-                            'E-mailová adresa kontaktnej osoby:'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-gray-800 text-lg mt-1' },
-                            userEmail
-                        )
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' },
+                        userEmail
                     )
                 )
             )
