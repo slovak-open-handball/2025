@@ -265,7 +265,8 @@ const MyDataApp = () => {
             { className: 'w-full max-w-4xl p-8 bg-white rounded-xl shadow-2xl space-y-8' },
             React.createElement(
                 'div',
-                { className: 'bg-gray-100 rounded-lg shadow-inner overflow-hidden' },
+                // Odstránené sivé pozadie a tieň
+                { className: 'bg-white rounded-lg overflow-hidden shadow-md' },
                 React.createElement(
                     'div',
                     { className: 'p-4 text-white font-bold', style: { backgroundColor: headerColor } },
