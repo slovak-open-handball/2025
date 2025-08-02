@@ -68,10 +68,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         if (userProfileData && Object.keys(userProfileData).length > 0) {
             setData(userProfileData);
             setIsMyDataLoaded(true);
-            // Skrytie globálneho loadera po načítaní dát
-            if (typeof window.hideGlobalLoader === 'function') {
-                window.hideGlobalLoader();
-            }
         }
     }, [userProfileData]);
 
@@ -278,7 +274,12 @@ window.getRoleColor = getRoleColor;
 // Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
 // Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
 const handleDataUpdateAndRender = (event) => {
-    const data = event.detail; // Použijeme priamo event.detail
+    // Okamžite skryjeme loader, akonáhle spracujeme udalosť.
+    if (typeof window.hideGlobalLoader === 'function') {
+        window.hideGlobalLoader();
+    }
+    
+    const data = event.detail;
     if (data && Object.keys(data).length > 0) {
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -291,10 +292,6 @@ const handleDataUpdateAndRender = (event) => {
             console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        // Ak sa dáta nenačítali, skryjeme loader, aby neblokoval stránku
-        if (typeof window.hideGlobalLoader === 'function') {
-             window.hideGlobalLoader();
-        }
         console.error("MyDataApp.js: Dáta používateľa nie sú dostupné.");
     }
 };
@@ -302,6 +299,3 @@ const handleDataUpdateAndRender = (event) => {
 
 // Prihlásenie používateľa
 document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-// Odstránili sme predchádzajúcu logiku pre priame spustenie po načítaní skriptu,
-// aby aplikácia vždy čakala na udalosť 'globalDataUpdated'.
