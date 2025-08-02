@@ -225,22 +225,26 @@ const setupRegistrationDataListener = () => {
                     mainHeader.classList.remove('invisible');
                     console.log("Hlavička bola zobrazená po načítaní dát.");
                 }
+                const isLoggedIn = !!window.globalUserProfileData;
 
                 // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
-                if (window.globalUserProfileData) {
+                if (isLoggedIn) {
                     toggleLoggedInMessage(true);
                     toggleRegistrationButton(false);
-                    // Ostatná logika stavu registrácie je pre prihláseného používateľa skrytá
                 } else {
                     // Ak nie je prihlásený, zobrazíme mu stav registrácie
                     toggleLoggedInMessage(false);
                     updateRegistrationStatusText(window.registrationDates);
                 }
+
+                // Po nastavení celého UI aktualizujeme aj tlačidlo prihlásenia
+                updateLoginButton(isLoggedIn);
             } else {
                 console.log("Dokument 'settings/registration' nebol nájdený!");
                 window.registrationDates = null;
-                // Skryjeme tlačidlo, ak dáta nie sú k dispozícii
+                const isLoggedIn = !!window.globalUserProfileData;
                 toggleRegistrationButton(false);
+                updateLoginButton(isLoggedIn);
             }
         }, (error) => {
             console.error("Chyba pri počúvaní dát o registrácii:", error);
@@ -269,16 +273,10 @@ const setupRegistrationDataListener = () => {
     }
 };
 
-// Predvolene skryjeme tlačidlá na začiatku, tento kód je pre istotu.
-toggleRegistrationButton(false);
-updateLoginButton(false);
-
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    const isLoggedIn = !!window.globalUserProfileData;
-    updateLoginButton(isLoggedIn);
     // Spustíme listener pre registračné dáta, ktorý sa postará o celú logiku zobrazenia
     // registračného UI.
     setupRegistrationDataListener();
