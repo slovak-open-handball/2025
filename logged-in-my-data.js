@@ -8,6 +8,7 @@
 // Text v hlavičke bol upravený z "Môj profil" na "Kontaktná osoba".
 // Meno a priezvisko sú zobrazené v jednom riadku a boli zmenené popisy pred údajmi.
 // Modálne okno pre zmenu e-mailu bolo upravené pre lepšie zobrazenie.
+// Rozloženie profilových údajov bolo zmenené tak, aby bol popis a hodnota na samostatných riadkoch s rôznou veľkosťou medzier.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -426,18 +427,34 @@ const MyDataApp = () => {
             ),
             React.createElement(
                 'div',
-                { className: 'space-y-4' },
+                { className: 'space-y-6' }, // Väčšia medzera medzi riadkami údajov
                 React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
-                    ` ${userProfileData.firstName} ${userProfileData.lastName}`
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800' },
+                        'Meno a priezvisko kontaktnej osoby:'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' }, // Menšia medzera medzi popisom a hodnotou
+                        `${userProfileData.firstName} ${userProfileData.lastName}`
+                    )
                 ),
                 React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg flex items-center' },
-                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
-                    ` ${userProfileData.email}`
+                    'div',
+                    { className: 'flex flex-col' },
+                    React.createElement(
+                        'p',
+                        { className: 'font-bold text-gray-800 flex items-center' },
+                        'E-mailová adresa kontaktnej osoby:'
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg mt-1' }, // Menšia medzera medzi popisom a hodnotou
+                        `${userProfileData.email}`
+                    )
                 )
             )
         ),
