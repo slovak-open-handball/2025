@@ -74,18 +74,22 @@ const Loader = () => {
 };
 
 /**
- * Pomocný komponent pre zobrazenie chybovej správy.
+ * Pomocný komponent pre zobrazenie chybovej/úspešnej správy.
  * @param {object} props - Vlastnosti komponentu.
- * @param {string} props.message - Chybová správa na zobrazenie.
+ * @param {string} props.message - Správa na zobrazenie.
+ * @param {boolean} [props.isSuccess=false] - Ak je true, zobrazí úspešnú správu.
  */
-const ErrorMessage = ({ message }) => {
+const ErrorMessage = ({ message, isSuccess = false }) => {
+    const colorClasses = isSuccess ? 'bg-green-100 border-l-4 border-green-500 text-green-700' : 'bg-red-100 border-l-4 border-red-500 text-red-700';
+    const titleText = isSuccess ? 'Úspech' : 'Chyba';
+
     return React.createElement(
         'div',
         { className: 'flex justify-center pt-16' },
         React.createElement(
             'div',
-            { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md' },
-            React.createElement('p', { className: 'font-bold' }, 'Chyba'),
+            { className: `p-8 ${colorClasses} rounded-lg shadow-md` },
+            React.createElement('p', { className: 'font-bold' }, titleText),
             React.createElement('p', null, message)
         )
     );
@@ -107,7 +111,6 @@ const MyDataApp = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
-        // Priamo inicializujeme Firebase auth a db
         const auth = getAuth();
         const db = window.db;
         const appId = window.__app_id;
@@ -123,6 +126,13 @@ const MyDataApp = () => {
             if (user) {
                 const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
                 
+                // Prihlásený používateľ
+                // Dôležité: Ak sa vyskytne chyba s povoleniami (Missing or insufficient permissions),
+                // skontrolujte svoje Firebase Security Rules pre danú cestu.
+                // Pravidlá by mali vyzerať podobne ako:
+                // match /artifacts/{appId}/users/{userId}/private/user-profile {
+                //   allow read, write: if request.auth.uid == userId;
+                // }
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserProfileData(docSnap.data());
@@ -136,7 +146,6 @@ const MyDataApp = () => {
                     setError("Chyba pri načítaní dát profilu. Skúste to prosím neskôr.");
                     setLoading(false);
                 });
-                // Vrátime funkciu na odhlásenie z odberu, ak sa komponent odpojí
                 return unsubscribeFirestore;
             } else {
                 console.log("Používateľ odhlásený.");
@@ -145,7 +154,6 @@ const MyDataApp = () => {
             }
         });
         
-        // Vrátime funkciu na odhlásenie z odberu stavu autentifikácie
         return () => unsubscribeAuth();
     }, []);
 
