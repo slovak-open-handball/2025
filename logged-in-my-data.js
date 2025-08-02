@@ -5,6 +5,9 @@
 // Kód bol aktualizovaný, aby bol odolnejší voči chybám s "undefined" premennými.
 // Bola pridaná aktualizovaná funkcia pre zobrazenie farebných notifikácií.
 // Farba hlavičky sa teraz mení dynamicky na základe roly používateľa.
+// Text v hlavičke bol upravený z "Môj profil" na "Kontaktná osoba".
+// Meno a priezvisko sú zobrazené v jednom riadku a boli zmenené popisy pred údajmi.
+// Modálne okno pre zmenu e-mailu bolo upravené pre lepšie zobrazenie.
 
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -211,14 +214,14 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
         { className: 'fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900 bg-opacity-50 backdrop-blur-sm' },
         React.createElement(
             'div',
-            { className: 'relative w-auto my-6 mx-auto max-w-lg' },
+            { className: 'relative w-auto my-6 mx-auto max-w-2xl' }, // Zmenená max-w-lg na max-w-2xl pre väčšiu šírku
             React.createElement(
                 'div',
                 { className: 'relative flex flex-col w-full bg-white border-0 rounded-lg shadow-lg outline-none focus:outline-none' },
                 // Hlavička modalu
                 React.createElement(
                     'div',
-                    { className: 'flex items-start justify-between p-5 border-b border-solid border-gray-300 rounded-t' },
+                    { className: 'flex items-center justify-between p-5 border-b border-solid border-gray-300 rounded-t' }, // Zmenené items-start na items-center pre vertikálne zarovnanie
                     React.createElement(
                         'h3',
                         { className: 'text-2xl font-semibold text-gray-900' },
@@ -226,8 +229,8 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                     ),
                     React.createElement(
                         'button',
-                        { className: 'p-1 ml-auto bg-transparent border-0 text-gray-600 float-right text-3xl leading-none font-semibold outline-none focus:outline-none', onClick: onClose },
-                        React.createElement('span', { className: 'text-gray-600 h-6 w-6 text-2xl block outline-none focus:outline-none' }, '×')
+                        { className: 'p-1 ml-auto bg-transparent border-0 text-gray-600 leading-none outline-none focus:outline-none text-2xl font-semibold', onClick: onClose }, // Upravené triedy pre lepšie zarovnanie a zväčšenie "X"
+                        '×'
                     )
                 ),
                 // Telo modalu
@@ -417,7 +420,7 @@ const MyDataApp = () => {
                 React.createElement(
                     'h2',
                     { className: 'text-2xl font-bold text-white flex-grow' },
-                    'Môj profil'
+                    'Kontaktná osoba'
                 ),
                 PencilIcon
             ),
@@ -427,19 +430,13 @@ const MyDataApp = () => {
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Meno:'),
-                    ` ${userProfileData.firstName}`
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko kontaktnej osoby:'),
+                    ` ${userProfileData.firstName} ${userProfileData.lastName}`
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Priezvisko:'),
-                    ` ${userProfileData.lastName}`
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Aktuálna e-mailová adresa:'),
+                    { className: 'text-gray-800 text-lg flex items-center' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa kontaktnej osoby:'),
                     ` ${userProfileData.email}`
                 )
             )
