@@ -100,6 +100,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const contactValueColor = 'text-gray-900';
         const invertedButtonColor = getRoleColor(data.role);
 
+        const billingAddress = `${data.billing?.street || ''} ${data.billing?.houseNumber || ''}`.trim();
+        const billingAddress2 = `${data.billing?.postalCode || ''} ${data.billing?.city || ''}`.trim();
+        const billingAddress3 = `${data.billing?.country || ''}`;
+
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
@@ -178,66 +182,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Nezadané'
-                            )
-                        ),
-                        // Oficiálny názov klubu (nový element)
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Oficiálny názov klubu'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.clubName || 'Nezadané'
-                            )
-                        ),
-                        // IČO
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'IČO'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.ico || 'Nezadané'
-                            )
-                        ),
-                        // DIČ
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'DIČ'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.dic || 'Nezadané'
-                            )
-                        ),
-                        // IČ DPH
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'IČ DPH'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.icDph || 'Nezadané'
                             )
                         ),
                         // E-mailová adresa (presunutá sem)
@@ -328,6 +272,116 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.country || 'Nezadaná'
+                            )
+                        )
+                    )
+                )
+            ),
+            // Fakturačný box
+            React.createElement(
+                'div',
+                { className: `bg-white rounded-xl shadow-xl mb-8` },
+                React.createElement(
+                    'div',
+                    { className: `rounded-t-xl px-8 py-6 md:px-12 md:py-8`, style: { backgroundColor: mainBoxColor } },
+                    React.createElement(
+                        'div',
+                        { className: 'flex justify-between items-center flex-wrap gap-4' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1 min-w-0' },
+                            React.createElement(
+                                'h1',
+                                { className: `text-3xl md:text-4xl font-bold text-white truncate` },
+                                'Fakturačné údaje'
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'p-8 md:p-12' },
+                    React.createElement(
+                        'h3',
+                        { className: `text-xl font-semibold text-gray-800 mb-4` },
+                        'Fakturačné údaje'
+                    ),
+                    React.createElement(
+                        'dl',
+                        { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
+                        // Oficiálny názov klubu
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Oficiálny názov klubu'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.clubName || 'Nezadané'
+                            )
+                        ),
+                        // Fakturačná adresa
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Fakturačná adresa'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim() || 'Nezadané'
+                            )
+                        ),
+                        // IČO
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'IČO'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.ico || 'Nezadané'
+                            )
+                        ),
+                        // DIČ
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'DIČ'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.dic || 'Nezadané'
+                            )
+                        ),
+                        // IČ DPH
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'IČ DPH'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.icDph || 'Nezadané'
                             )
                         )
                     )
