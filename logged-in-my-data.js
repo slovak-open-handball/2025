@@ -52,6 +52,54 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 /**
+ * Funkcia na overenie a vrátenie obsahu, alebo znaku '-' ak je hodnota prázdna
+ * @param {string} value - Hodnota, ktorá sa má zobraziť.
+ * @returns {string} - Pôvodná hodnota alebo znak '-'.
+ */
+const checkValue = (value) => {
+    return value && value.trim() !== '' ? value : '-';
+};
+
+/**
+ * Funkcia na formátovanie PSČ
+ * @param {string} postalCode - PSČ vo formáte xxxxx.
+ * @returns {string} - Formátované PSČ vo formáte xxx xx.
+ */
+const formatPostalCode = (postalCode) => {
+    if (postalCode && postalCode.length === 5) {
+        return `${postalCode.substring(0, 3)} ${postalCode.substring(3)}`;
+    }
+    return checkValue(postalCode);
+};
+
+/**
+ * Funkcia na formátovanie telefónneho čísla
+ * @param {string} phoneNumber - Telefónne číslo vrátane predvoľby (napr. +421901234567).
+ * @returns {string} - Formátované telefónne číslo alebo '-'.
+ */
+const formatPhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) {
+        return '-';
+    }
+
+    // Nájdenie najdlhšej predvoľby, ktorá zodpovedá začiatku čísla
+    const matchingDialCode = countryDialCodes
+        .sort((a, b) => b.dialCode.length - a.dialCode.length)
+        .find(country => phoneNumber.startsWith(country.dialCode));
+
+    if (matchingDialCode) {
+        const countryCode = matchingDialCode.dialCode;
+        const number = phoneNumber.substring(countryCode.length).replace(/\s/g, '');
+        // Rozdelenie zvyšku čísla do skupín po troch
+        const formattedNumber = number.match(/.{1,3}/g)?.join(' ');
+        return `${countryCode} ${formattedNumber}`;
+    }
+
+    // Ak sa predvoľba nenájde, vrátime pôvodné číslo
+    return phoneNumber;
+};
+
+/**
  * Hlavný React komponent pre zobrazenie a úpravu profilu prihláseného používateľa.
  * @param {object} props - Vlastnosti komponentu.
  * @param {object} props.userProfileData - Dáta používateľského profilu.
@@ -101,12 +149,11 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const invertedButtonColor = getRoleColor(data.role);
 
         // Vytvorenie reťazca pre fakturačnú adresu
-        // Upravené, aby sa adresa brala priamo z hlavného objektu 'data'
-        const billingAddress = `${data.street || ''} ${data.houseNumber || ''}`.trim();
-        const billingAddress2 = `${data.postalCode || ''} ${data.city || ''}`.trim();
-        const billingAddress3 = `${data.country || ''}`;
+        const billingAddress = `${checkValue(data.street)} ${checkValue(data.houseNumber)}`.trim().replace(/- -/, '-');
+        const billingAddress2 = `${formatPostalCode(data.postalCode)} ${checkValue(data.city)}`.trim().replace(/- -/, '-');
+        const billingAddress3 = `${checkValue(data.country)}`;
         const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
-        
+
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
@@ -131,7 +178,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                     ? 'Údaje kontaktnej osoby'
                                     : data.role === 'hall' || data.role === 'admin'
                                         ? 'Moje údaje'
-                                        : `${data.firstName || ''} ${data.lastName || ''}`
+                                        : `${checkValue(data.firstName)} ${checkValue(data.lastName)}`
                             )
                         ),
                         // Pravá strana: Tlačidlo Upraviť
@@ -174,12 +221,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dt',
                                 { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Meno a Priezvisko'
+                                'Meno a priezvisko'
                             ),
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Nezadané'
+                                checkValue(`${data.firstName || ''} ${data.lastName || ''}`.trim())
                             )
                         ),
                         // E-mailová adresa
@@ -189,12 +236,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dt',
                                 { className: `text-sm font-medium ${contactLabelColor}` },
-                                'E-mail'
+                                'E-mailová adresa'
                             ),
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.email || 'Nezadané'
+                                checkValue(data.email)
                             )
                         ),
                         // Telefónne číslo
@@ -204,12 +251,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dt',
                                 { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Telefón'
+                                'Telefónne číslo'
                             ),
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.contactPhoneNumber || 'Nezadané'
+                                formatPhoneNumber(data.contactPhoneNumber)
                             )
                         )
                     )
@@ -254,7 +301,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.clubName || 'Nezadané'
+                                checkValue(data.billing?.clubName)
                             )
                         ),
                         // Fakturačná adresa
@@ -269,7 +316,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                fullBillingAddress || 'Nezadané'
+                                checkValue(fullBillingAddress)
                             )
                         ),
                         // IČO
@@ -284,7 +331,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.ico || 'Nezadané'
+                                checkValue(data.billing?.ico)
                             )
                         ),
                         // DIČ
@@ -299,7 +346,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.dic || 'Nezadané'
+                                checkValue(data.billing?.dic)
                             )
                         ),
                         // IČ DPH
@@ -314,7 +361,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             React.createElement(
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.billing?.icDph || 'Nezadané'
+                                checkValue(data.billing?.icDph)
                             )
                         )
                     )
