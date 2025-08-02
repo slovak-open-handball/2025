@@ -113,7 +113,7 @@ const MyDataApp = () => {
 
     return React.createElement(
         'div',
-        { className: 'bg-white rounded-2xl shadow-2xl p-6 md:p-10 transition-all duration-300 transform hover:scale-[1.01]' },
+        { className: 'bg-white rounded-2xl shadow-2xl p-6 md:p-10 transition-all duration-300' },
         // Hlavička a tlačidlo úpravy
         React.createElement(
             'div',
