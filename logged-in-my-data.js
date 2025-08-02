@@ -60,7 +60,7 @@ const ErrorMessage = ({ message }) => {
 };
 
 /**
- * NOVÝ Komponent pre pole hesla s prepínaním viditeľnosti.
+ * Komponent pre pole hesla s prepínaním viditeľnosti.
  * Presunutý mimo hlavných komponentov, aby sa predišlo strate fokusu.
  * @param {object} props - Vlastnosti komponentu.
  * @param {string} props.id - ID poľa.
