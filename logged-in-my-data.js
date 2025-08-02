@@ -50,14 +50,12 @@ const MyDataApp = () => {
     const [userProfileData, setUserProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [headerColor, setHeaderColor] = useState('#1e90ff'); // Predvolená farba
+    const [headerColor, setHeaderColor] = useState('#1D4ED8'); // Predvolená farba
 
     const userRoles = {
-        'atlet': '#00BFFF', // DeepSkyBlue
-        'trener': '#32CD32', // LimeGreen
-        'rozhodca': '#FFA500', // Orange
-        'organizator': '#FF4500', // OrangeRed
-        'admin': '#8A2BE2' // BlueViolet
+        'admin': '#47b3ff',
+        'hall': '#b06835',
+        'user': '#9333EA',
     };
 
     useEffect(() => {
@@ -75,7 +73,7 @@ const MyDataApp = () => {
 
                     // Nastavenie farby hlavičky na základe roly
                     const role = data.role || 'default';
-                    setHeaderColor(userRoles[role] || '#1e90ff');
+                    setHeaderColor(userRoles[role] || '#1D4ED8'); // Predvolená farba, ak rola neexistuje
                 } else {
                     console.error("User profile data not found.");
                     setUserProfileData(null);
