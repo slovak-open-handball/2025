@@ -316,7 +316,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const hasPhoneNumberChanged = newPhoneNumber.replace(/\s/g, '') !== originalPhoneNumberWithoutDialCode.replace(/\s/g, '');
     const hasDialCodeChanged = selectedDialCode !== originalDialCode;
 
-    const isFormValid = (newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || hasPhoneNumberChanged || hasDialCodeChanged;
+    const isFormValid = (newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || (userProfileData.role !== 'admin' && (hasPhoneNumberChanged || hasDialCodeChanged));
 
     const handlePhoneNumberChange = (e) => {
         // Tento regulárny výraz odfiltruje všetky znaky, ktoré nie sú číslice
@@ -339,7 +339,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
         setLoading(true);
 
         // Namiesto kontroly `isFormValid` použijeme priamo stavy, ktoré sa menia
-        if (!((newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || (newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged)) {
+        if (!((newFirstName !== '' && newFirstName !== userProfileData.firstName) || (newLastName !== '' && newLastName !== userProfileData.lastName) || hasEmailChanged || (userProfileData.role !== 'admin' && ((newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged)))) {
             window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
             setLoading(false);
             onClose();
@@ -354,7 +354,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             if (newLastName !== '' && newLastName !== userProfileData.lastName) {
                 updates.lastName = newLastName;
             }
-            if ((newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged) {
+
+            if (userProfileData.role !== 'admin' && ((newPhoneNumber !== '' && newPhoneNumber !== originalPhoneNumberWithoutDialCode) || hasDialCodeChanged)) {
                  // Ak bolo pole s telefónnym číslom zmenené, použijeme nové číslo.
                  // Ak bolo prázdne (iba zmena predvoľby), použijeme pôvodné číslo bez predvoľby.
                  const phonePart = newPhoneNumber || originalPhoneNumberWithoutDialCode;
@@ -425,6 +426,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Formátovanie pôvodného telefónneho čísla pre placeholder
     const phoneNumberWithoutCode = originalPhoneNumberWithoutDialCode ? originalPhoneNumberWithoutDialCode.replace(/(\d{3})(?=\d)/g, '$1 ') : 'Zadajte telefónne číslo';
     const phoneNumberPlaceholder = newPhoneNumber || phoneNumberWithoutCode;
+
+    const isUserAdmin = userProfileData?.role === 'admin';
 
     return ReactDOM.createPortal(
         React.createElement(
@@ -521,7 +524,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                         )
                     ),
                     // Podmienečne zobrazenie poľa pre telefónne číslo
-                    React.createElement(
+                    !isUserAdmin && React.createElement(
                         'div',
                         null,
                         React.createElement(
@@ -641,7 +644,7 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                     )
                 )
             ),
-            React.createElement(DialCodeModal, {
+            !isUserAdmin && React.createElement(DialCodeModal, {
                 show: showDialCodeModal,
                 onClose: () => setShowDialCodeModal(false),
                 onSelect: (dialCode) => {
@@ -787,8 +790,8 @@ const MyDataApp = () => {
                         `${userProfileData.firstName} ${userProfileData.lastName}`
                     )
                 ),
-                // Zobrazíme telefónne číslo, iba ak existuje
-                userProfileData.contactPhoneNumber && React.createElement(
+                // Zobrazíme telefónne číslo, iba ak existuje a používateľ nie je admin
+                !isUserAdmin && userProfileData.contactPhoneNumber && React.createElement(
                     'div',
                     { className: 'flex flex-col' },
                     React.createElement(
