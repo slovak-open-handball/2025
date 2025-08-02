@@ -44,17 +44,37 @@ const ErrorMessage = ({ message }) => {
 };
 
 /**
- * Pomocná funkcia na formátovanie telefónneho čísla.
+ * Pomocná funkcia na formátovanie telefónneho čísla s použitím predvolieb.
  * @param {string} phoneNumber - Telefónne číslo na formátovanie.
  * @returns {string} Formátované telefónne číslo.
  */
 const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return '';
-    const cleaned = ('' + phoneNumber).replace(/\D/g, '');
+
+    const cleaned = phoneNumber.replace(/\D/g, '');
+
+    // Skúsi nájsť zhodu s predvoľbou zo zoznamu
+    const foundDialCode = window.countryDialCodes.find(item => {
+        const dialCodeWithoutPlus = item.dialCode.replace('+', '');
+        return cleaned.startsWith(dialCodeWithoutPlus);
+    });
+
+    if (foundDialCode) {
+        const dialCodeWithoutPlus = foundDialCode.dialCode.replace('+', '');
+        const numberWithoutDialCode = cleaned.substring(dialCodeWithoutPlus.length);
+
+        // Rozdelenie zvyšku čísla na skupiny po troch
+        const formattedNumber = numberWithoutDialCode.replace(/(\d{3})(?=\d)/g, '$1 ');
+        
+        return `${foundDialCode.dialCode} ${formattedNumber}`;
+    }
+
+    // Pôvodné formátovanie, ak sa nenájde žiadna predvoľba
     const match = cleaned.match(/^(\d{4})(\d{3})(\d{3})$/);
     if (match) {
         return `+${match[1]} ${match[2]} ${match[3]}`;
     }
+
     return phoneNumber;
 };
 
