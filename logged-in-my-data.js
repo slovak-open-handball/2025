@@ -1,7 +1,7 @@
 // Importy pre Firebase funkcie
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -40,49 +40,37 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const MyDataApp = () => {
-    const [userProfileData, setUserProfileData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [roleColor, setRoleColor] = useState('#10b981'); // Predvolená farba
+const MyDataApp = ({ userProfileData: initialData, roleColor: initialColor }) => {
+    const [userProfileData, setUserProfileData] = useState(initialData);
+    const [loading, setLoading] = useState(false);
+    const [roleColor, setRoleColor] = useState(initialColor);
     const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const firebaseApp = initializeApp(firebaseConfig);
-        const auth = getAuth(firebaseApp);
-        const db = getFirestore(firebaseApp);
-
-        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/private/profile/data/personal`);
-                const unsubscribeDoc = onSnapshot(userDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        setUserProfileData(data);
-                        console.log("Dáta profilu načítané:", data);
-                        if (data.roleColor) {
-                            setRoleColor(data.roleColor);
-                        }
-                    } else {
-                        console.log("Používateľský profil nebol nájdený!");
-                        setUserProfileData(null);
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Chyba pri načítaní profilu:", error);
-                    setLoading(false);
-                });
-
-                return () => unsubscribeDoc();
-            } else {
-                console.log("Používateľ odhlásený.");
-                setUserProfileData(null);
-                setLoading(false);
+        const handleGlobalDataUpdated = (event) => {
+            const data = event.detail;
+            setUserProfileData(data);
+            if (data && data.roleColor) {
+                setRoleColor(data.roleColor);
             }
-        });
+            setLoading(false);
+        };
+        
+        window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+        setLoading(window.globalUserProfileData === null);
 
-        return () => unsubscribeAuth();
+        // Ak uz su data dostupne pri starte, pouzivame ich
+        if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+            if (window.globalUserProfileData.roleColor) {
+                setRoleColor(window.globalUserProfileData.roleColor);
+            }
+            setLoading(false);
+        }
+        
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
+        };
     }, []);
 
     const handleEditClick = () => {
@@ -194,7 +182,7 @@ const MyDataApp = () => {
                 React.createElement(
                     'p',
                     { className: 'text-gray-800 text-lg mt-1' },
-                    userProfileData.address || 'Nezadaná' // Pridané nové pole
+                    userProfileData.address || 'Nezadaná'
                 )
             )
         ),
@@ -213,15 +201,24 @@ const MyDataApp = () => {
     );
 };
 
-// Renderovanie aplikácie do DOM
-const rootElement = document.getElementById('root');
-if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(MyDataApp, null));
-    console.log("MyDataApp.js: Aplikácia vykreslená.");
-} else {
-    console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
-}
+// Renderovanie aplikácie do DOM, ktoré počká na dáta
+window.addEventListener('globalDataUpdated', (event) => {
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(MyDataApp, { userProfileData: event.detail, roleColor: event.detail?.roleColor || '#10b981' }));
+        console.log("MyDataApp.js: Aplikácia vykreslená po načítaní dát.");
+    } else {
+        console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+    }
+});
 
-// Explicitne sprístupníme komponent pre ladenie alebo externé použitie
-window.MyDataApp = MyDataApp;
+// Zabezpečenie, že ak sú dáta už načítané, aplikácia sa vykreslí
+if (window.globalUserProfileData) {
+    const rootElement = document.getElementById('root');
+    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(MyDataApp, { userProfileData: window.globalUserProfileData, roleColor: window.globalUserProfileData?.roleColor || '#10b981' }));
+        console.log("MyDataApp.js: Aplikácia vykreslená pri štarte.");
+    }
+}
