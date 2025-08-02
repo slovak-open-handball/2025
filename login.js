@@ -5,6 +5,7 @@
 // a aby sa React aplikácia vykreslila až po prijatí udalosti z authentication.js, ktorá signalizuje, že
 // globálne dáta sú pripravené.
 // Taktiež boli aktualizované SVG ikony pre zobrazenie/skrytie hesla na základe požiadavky používateľa.
+// Bola pridaná logika na validáciu e-mailu a hesla a zablokovanie prihlasovacieho tlačidla.
 
 // Importy pre potrebné Firebase funkcie
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -114,7 +115,7 @@ const ResetPasswordModal = ({ show, onClose }) => {
     { className: 'modal' },
     React.createElement(
       'div',
-      { className: 'modal-content modal-content-sm' },
+      { className: 'modal-content w-full max-w-md bg-white shadow-md rounded-lg p-8' },
       React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, 'Obnovenie hesla'),
       React.createElement(
         'form',
@@ -190,6 +191,19 @@ const App = () => {
     setShowPassword(prevShowPassword => !prevShowPassword);
   };
 
+  // Validácia e-mailovej adresy
+  const isEmailValid = (email) => {
+    // Regex na kontrolu formátu 'a@b.cd'
+    const re = /\S+@\S+\.\S{2,}/;
+    return re.test(email);
+  };
+
+  // Validácia hesla
+  const isPasswordValid = (password) => {
+    // Heslo musí mať aspoň 10 znakov
+    return password.length >= 10;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -214,6 +228,9 @@ const App = () => {
       setLoading(false);
     }
   };
+
+  // Vypočítame, či je tlačidlo povolené
+  const isButtonDisabled = loading || !isEmailValid(email) || !isPasswordValid(password);
 
   React.useEffect(() => {
     const authListener = onAuthStateChanged(window.auth, (user) => {
@@ -304,8 +321,9 @@ const App = () => {
             'button',
             {
               type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:shadow-outline w-full',
-              disabled: loading,
+              className: `font-bold py-2 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:shadow-outline w-full 
+                          ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`,
+              disabled: isButtonDisabled,
               tabIndex: 3
             },
             loading ? 'Prihlasujem...' : 'Prihlásiť'
