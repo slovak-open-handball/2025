@@ -58,7 +58,7 @@ window.showGlobalNotification = (message, type = 'success') => {
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  * Používa sa pre pole aktuálneho hesla v modálnom okne.
  */
-const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled }) => {
+const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, roleColor }) => {
     // Použitie nových SVG ikon
     const EyeIcon = React.createElement(
         'svg',
@@ -74,6 +74,9 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
         React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
         React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
     );
+    
+    // Stav pre sledovanie fokusu
+    const [isFocused, setIsFocused] = useState(false);
 
     return React.createElement(
         'div',
@@ -92,9 +95,16 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
                 name: id,
                 value: value,
                 onChange: onChange,
+                onFocus: () => setIsFocused(true),
+                onBlur: () => setIsFocused(false),
                 placeholder: placeholder,
                 disabled: disabled,
-                className: 'block w-full px-4 py-2 rounded-lg border-gray-200 pr-10 focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
+                className: `block w-full px-4 py-2 rounded-lg border-gray-200 pr-10 shadow-sm disabled:bg-gray-100 disabled:text-gray-500`,
+                style: {
+                    borderColor: isFocused ? roleColor : '',
+                    outlineColor: isFocused ? roleColor : '',
+                    boxShadow: isFocused ? `0 0 0 2px ${roleColor}25` : '' // Jemný tieň na focus
+                }
             }),
             React.createElement(
                 'button',
@@ -113,11 +123,14 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 /**
  * Komponent ChangeEmailModal - modálne okno pre zmenu e-mailovej adresy
  */
-const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
+const ChangeEmailModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    
+    // Stav pre sledovanie fokusu pre email input
+    const [isEmailFocused, setIsEmailFocused] = useState(false);
 
     useEffect(() => {
         // Reset stavu pri zatvorení modálu
@@ -126,15 +139,30 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
             setNewEmail('');
             setShowPassword(false);
             setLoading(false);
+            setIsEmailFocused(false);
         }
     }, [show]);
+
+    // Validácia e-mailu: musí obsahovať @, aspoň jeden znak za ním, a . s aspoň dvoma znakmi za ním
+    const isEmailValid = (email) => {
+        const emailRegex = /^\S+@\S+\.\S{2,}$/;
+        return emailRegex.test(email);
+    };
+
+    // Validácia hesla: musí mať aspoň 10 znakov
+    const isPasswordValid = (password) => {
+        return password.length >= 10;
+    };
+
+    // Celková validácia formulára
+    const isFormValid = isEmailValid(newEmail) && isPasswordValid(currentPassword);
 
     const handleEmailChange = async (e) => {
         e.preventDefault();
         setLoading(true);
 
-        if (!currentPassword) {
-            window.showGlobalNotification('Zadajte svoje aktuálne heslo.', 'error');
+        if (!isFormValid) {
+            window.showGlobalNotification('Prosím, vyplňte formulár správne.', 'error');
             setLoading(false);
             return;
         }
@@ -226,9 +254,16 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                             required: true,
                             value: newEmail,
                             onChange: (e) => setNewEmail(e.target.value),
+                            onFocus: () => setIsEmailFocused(true),
+                            onBlur: () => setIsEmailFocused(false),
                             placeholder: 'Zadajte novú e-mailovú adresu',
                             disabled: loading,
-                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500'
+                            className: 'block w-full px-4 py-2 rounded-lg border-gray-200 shadow-sm disabled:bg-gray-100 disabled:text-gray-500',
+                            style: {
+                                borderColor: isEmailFocused ? roleColor : '',
+                                outlineColor: isEmailFocused ? roleColor : '',
+                                boxShadow: isEmailFocused ? `0 0 0 2px ${roleColor}25` : ''
+                            }
                         })
                     )
                 ),
@@ -240,7 +275,8 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                     placeholder: 'Zadajte svoje aktuálne heslo pre potvrdenie',
                     showPassword: showPassword,
                     toggleShowPassword: togglePasswordVisibility,
-                    disabled: loading
+                    disabled: loading,
+                    roleColor: roleColor
                 }),
                 React.createElement(
                     'div',
@@ -259,8 +295,14 @@ const ChangeEmailModal = ({ show, onClose, userProfileData }) => {
                         'button',
                         {
                             type: 'submit',
-                            disabled: loading,
-                            className: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50'
+                            disabled: loading || !isFormValid,
+                            className: `px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 transition-colors duration-200`,
+                            style: {
+                                backgroundColor: isFormValid ? roleColor : 'white',
+                                color: isFormValid ? 'white' : roleColor,
+                                borderColor: isFormValid ? 'transparent' : roleColor,
+                                borderWidth: isFormValid ? '0px' : '1px'
+                            }
                         },
                         loading ? 'Ukladám...' : 'Uložiť zmeny'
                     )
@@ -392,7 +434,8 @@ const MyDataApp = () => {
         React.createElement(ChangeEmailModal, {
             show: showModal,
             onClose: () => setShowModal(false),
-            userProfileData: userProfileData
+            userProfileData: userProfileData,
+            roleColor: headerColor
         })
     );
 };
