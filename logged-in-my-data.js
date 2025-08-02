@@ -11,7 +11,7 @@ const { useState, useEffect } = React;
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  * Používa sa pre pole aktuálneho hesla v modálnom okne.
  */
-const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled }) => {
+const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, focusColorClass }) => {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -51,7 +51,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
           required: true,
           autoComplete: "current-password", // Pridané pre lepšiu použiteľnosť
           // Upravené štýly inputu pre rovnakú výšku ako tlačidlo
-          className: 'block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3'
+          className: `block w-full rounded-md border-gray-300 pr-10 shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3 ${focusColorClass}`
         }
       ),
       React.createElement(
@@ -128,15 +128,6 @@ const NotificationPopup = ({ message, type, onClose }) => {
         { className: 'mt-1 text-sm' },
         message
       )
-    ),
-    React.createElement(
-      'div',
-      { className: 'flex-shrink-0 flex items-center justify-center' },
-      React.createElement(
-        'button',
-        { onClick: onClose, className: `p-1 rounded-full text-sm font-medium ${isSuccess ? 'text-green-500 hover:bg-green-200' : 'text-red-500 hover:bg-red-200'} focus:outline-none focus:ring-2 focus:ring-offset-2` },
-        React.createElement('span', null, 'X')
-      )
     )
   );
 };
@@ -174,6 +165,24 @@ const getButtonColor = (role) => {
             return 'bg-purple-600 hover:bg-purple-700 focus:ring-purple-500';
         default:
             return 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500';
+    }
+};
+
+/**
+ * Vráti Tailwind CSS triedy pre farbu focusu na základe roly používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
+ * @returns {string} Tailwind CSS triedy.
+ */
+const getFocusColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return 'focus:ring-blue-500 focus:border-blue-500';
+        case 'hall':
+            return 'focus:ring-amber-500 focus:border-amber-500';
+        case 'user':
+            return 'focus:ring-purple-500 focus:border-purple-500';
+        default:
+            return 'focus:ring-blue-500 focus:border-blue-500';
     }
 };
 
@@ -353,6 +362,7 @@ const MyDataApp = () => {
     const role = userProfileData?.role || 'default';
     const headerColor = getHeaderColor(role);
     const buttonColorClass = getButtonColor(role);
+    const focusColorClass = getFocusColor(role);
 
     return React.createElement(
         'div',
@@ -475,7 +485,7 @@ const MyDataApp = () => {
                                 id: 'new-email',
                                 value: newEmail,
                                 onChange: handleNewEmailChange,
-                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3 ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`,
+                                className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm transition-all duration-200 ease-in-out py-2 px-3 ${emailError ? 'border-red-500 focus:ring-red-500' : focusColorClass}`,
                                 placeholder: 'Zadajte novú e-mailovú adresu',
                                 disabled: loading,
                             }
@@ -496,6 +506,7 @@ const MyDataApp = () => {
                         disabled: loading,
                         showPassword: showPassword,
                         toggleShowPassword: () => setShowPassword(!showPassword),
+                        focusColorClass: passwordError ? 'border-red-500 focus:ring-red-500' : focusColorClass,
                     }),
                     passwordError && React.createElement(
                         'p',
