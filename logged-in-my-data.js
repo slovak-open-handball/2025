@@ -62,7 +62,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 /**
  * Pomocný komponent pre načítavanie dát.
  */
-const Loader = () => {
+const Loader = () -> {
     return React.createElement(
         'div',
         { className: 'flex justify-center pt-16' },
@@ -111,6 +111,7 @@ const MyDataApp = () => {
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [currentAuthEmail, setCurrentAuthEmail] = useState('');
 
     useEffect(() => {
         const auth = getAuth();
@@ -125,6 +126,7 @@ const MyDataApp = () => {
 
         const unsubscribeAuth = onAuthStateChanged(auth, user => {
             if (user) {
+                setCurrentAuthEmail(user.email);
                 // Správna cesta k profilovému dokumentu používateľa na základe vašich pravidiel a štruktúry databázy.
                 const userDocRef = doc(db, `users/${user.uid}`);
                 
@@ -168,9 +170,8 @@ const MyDataApp = () => {
 
     const handleOpenModal = () => {
         setIsModalOpen(true);
-        if (userProfileData && userProfileData.email) {
-            setNewEmail(userProfileData.email);
-        }
+        // Po otvorení modálneho okna nepredvyplňovať novú e-mailovú adresu
+        setNewEmail(''); 
     };
 
     const handleCloseModal = () => {
@@ -316,16 +317,16 @@ const MyDataApp = () => {
         ),
         isModalOpen && React.createElement(
             'div',
-            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' }, // Zmenená opacita a pridaný prechod
+            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-50 transition-opacity duration-300' },
             React.createElement(
                 'div',
-                { className: 'relative p-8 bg-white w-96 max-w-sm m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' }, // Vylepšené zaoblenie, tieň a prechod
+                { className: 'relative p-8 bg-white w-96 max-w-sm m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center pb-4 border-b border-gray-200' }, // Pridaná linka pre oddelenie hlavičky
+                    { className: 'flex justify-between items-center pb-4 border-b border-gray-200' },
                     React.createElement(
                         'h3',
-                        { className: 'text-2xl font-bold text-gray-900' }, // Zväčšené písmo
+                        { className: 'text-2xl font-bold text-gray-900' },
                         'Zmeniť e-mailovú adresu'
                     ),
                     React.createElement(
@@ -345,7 +346,27 @@ const MyDataApp = () => {
                 ),
                 React.createElement(
                     'form',
-                    { onSubmit: handleSubmit, className: 'mt-6 space-y-4' }, // Pridaný horný okraj
+                    { onSubmit: handleSubmit, className: 'mt-6 space-y-4' },
+                    // Nový zablokovaný input box pre aktuálnu e-mailovú adresu
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement(
+                            'label',
+                            { htmlFor: 'current-email', className: 'block text-sm font-medium text-gray-700' },
+                            'Aktuálna e-mailová adresa'
+                        ),
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'email',
+                                id: 'current-email',
+                                value: currentAuthEmail,
+                                disabled: true,
+                                className: 'mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 cursor-none sm:text-sm', // Pridaný "cursor-none" pre žiadnu ikonu myši
+                            }
+                        )
+                    ),
                     React.createElement(
                         'div',
                         null,
@@ -392,7 +413,7 @@ const MyDataApp = () => {
                         'button',
                         {
                             type: 'submit',
-                            className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors duration-200`, // Vylepšené štýly tlačidla
+                            className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors duration-200`,
                             disabled: loading || !newEmail || !password,
                         },
                         loading ? 'Odosielam...' : 'Odoslať overovací e-mail'
