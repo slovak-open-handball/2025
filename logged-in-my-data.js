@@ -1,9 +1,11 @@
 // logged-in-my-data.js
 // Tento súbor bol upravený, aby bol sám o sebe zodpovedný za načítanie dát,
 // čím sa eliminuje závislosť na časovaní udalosti DOMContentLoaded a globalDataUpdated.
+// Tiež bol upravený, aby používal overenie e-mailu pred jeho zmenou.
 
-import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, onSnapshot, getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 
 const { useState, useEffect } = React;
 
@@ -11,7 +13,7 @@ const { useState, useEffect } = React;
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  * Používa sa pre pole aktuálneho hesla v modálnom okne.
  */
-const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, validationStatus }) => {
+const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled }) => {
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -95,6 +97,7 @@ const ErrorMessage = ({ message, isSuccess = false }) => {
     );
 };
 
+
 /**
  * Hlavný React komponent MyDataApp, ktorý zobrazuje údaje profilu
  * a umožňuje ich zmenu.
@@ -109,10 +112,11 @@ const MyDataApp = () => {
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
         const auth = getAuth();
-        const db = window.db;
+        const db = getFirestore();
 
         if (!auth || !db) {
             console.error("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -164,6 +168,7 @@ const MyDataApp = () => {
         setPassword('');
         setEmailError('');
         setPasswordError('');
+        setSuccessMessage('');
     };
 
     const handleNewEmailChange = (event) => {
@@ -185,6 +190,7 @@ const MyDataApp = () => {
         event.preventDefault();
         setEmailError('');
         setPasswordError('');
+        setSuccessMessage('');
 
         let hasError = false;
 
@@ -219,13 +225,15 @@ const MyDataApp = () => {
         try {
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
-            await updateEmail(user, newEmail);
-            console.log("E-mailová adresa bola úspešne zmenená.");
-            if (window.showGlobalNotification) {
-                window.showGlobalNotification("E-mailová adresa bola úspešne zmenená.", 'success');
-            } else {
-                setError("E-mailová adresa bola úspešne zmenená.");
-            }
+            
+            // POUŽITIE verifyBeforeUpdateEmail NAMIETO updateEmail
+            // Toto odosiela overovací e-mail na novú adresu.
+            await verifyBeforeUpdateEmail(user, newEmail);
+            
+            console.log("Overovací e-mail bol úspešne odoslaný.");
+            
+            setSuccessMessage("Overovací e-mail bol odoslaný na novú adresu. Prosím, overte ho pre dokončenie zmeny.");
+            
             handleCloseModal();
         } catch (error) {
             setLoading(false);
@@ -235,11 +243,7 @@ const MyDataApp = () => {
             } else if (error.code === 'auth/email-already-in-use') {
                 setEmailError("Táto e-mailová adresa sa už používa.");
             } else {
-                if (window.showGlobalNotification) {
-                    window.showGlobalNotification(`Chyba pri zmene e-mailu: ${error.message}`, 'error');
-                } else {
-                    setError(`Chyba: ${error.message}`);
-                }
+                setError(`Chyba: ${error.message}`);
             }
         } finally {
             setLoading(false);
@@ -250,10 +254,13 @@ const MyDataApp = () => {
         return React.createElement(Loader, null);
     }
 
+    // Ak je k dispozícii správa o úspechu, zobrazíme ju. Inak zobrazíme chybu, ak existuje.
+    if (successMessage) {
+        return React.createElement(ErrorMessage, { message: successMessage, isSuccess: true });
+    }
+    
     if (error) {
-        // Zobrazí buď prechodnú chybu alebo potvrdenie zmeny emailu
-        const isSuccessMessage = error.includes("E-mailová adresa bola úspešne zmenená.");
-        return React.createElement(ErrorMessage, { message: error, isSuccess: isSuccessMessage });
+        return React.createElement(ErrorMessage, { message: error });
     }
 
     const headerColor = 'bg-blue-600';
@@ -378,7 +385,7 @@ const MyDataApp = () => {
                             className: `w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed`,
                             disabled: loading || !newEmail || !password,
                         },
-                        loading ? 'Ukladám...' : 'Uložiť zmeny'
+                        loading ? 'Odosielam...' : 'Odoslať overovací e-mail'
                     )
                 )
             )
