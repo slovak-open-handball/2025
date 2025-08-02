@@ -275,7 +275,8 @@ const getRoleColor = (role) => {
 
 window.getRoleColor = getRoleColor;
 
-// Vytvoríme funkciu na spracovanie udalosti, aby sa predišlo duplicitnému kódu.
+// Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
+// Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
 const handleDataUpdateAndRender = (event) => {
     const data = event.detail; // Použijeme priamo event.detail
     if (data && Object.keys(data).length > 0) {
@@ -302,10 +303,5 @@ const handleDataUpdateAndRender = (event) => {
 // Prihlásenie používateľa
 document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Zabezpečenie, že ak sú dáta už načítané, aplikácia sa vykreslí aj bez udalosti
-if (window.globalUserProfileData) {
-    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
-}
-
-// Odstránil som duplicitný kód na konci, pretože to môže spôsobovať preblikávanie alebo zlé stavy.
-// Teraz sa všetko riadi cez handleDataUpdateAndRender, ktorá sa volá buď po udalosti, alebo hneď po načítaní skriptu, ak sú dáta už dostupné.
+// Odstránili sme predchádzajúcu logiku pre priame spustenie po načítaní skriptu,
+// aby aplikácia vždy čakala na udalosť 'globalDataUpdated'.
