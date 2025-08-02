@@ -180,6 +180,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Nezadané'
                             )
                         ),
+                        // Oficiálny názov klubu (nový element)
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Oficiálny názov klubu'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.billing?.clubName || 'Nezadané'
+                            )
+                        ),
                         // E-mailová adresa (presunutá sem)
                         React.createElement(
                             'div',
@@ -366,5 +381,5 @@ if (window.globalUserProfileData) {
     console.log("MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    console.log("MyDataApp.js: Globálne dáta ešte neexistujú. Čakám na udalosť 'globalDataUpdated'.");
+    console.error("MyDataApp.js: Globálne dáta ešte neexistujú. Čakám na udalosť 'globalDataUpdated'.");
 }
