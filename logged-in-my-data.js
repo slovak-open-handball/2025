@@ -94,13 +94,14 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         console.log("MyDataApp.js: Zobrazujem obsah aplikácie.");
         // Zobrazenie obsahu
         
-        // Získame farbu textu na základe farby pozadia
+        // Získame farbu pozadia hlavného boxu a farbu textu na základe tejto farby
         const mainBoxColor = getRoleColor(data.role);
         const textColor = getContrastTextColor(mainBoxColor);
         const headingColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
         const subTextColor = textColor === 'white' ? 'text-gray-200' : 'text-gray-600';
         const contactLabelColor = 'text-gray-500';
         const contactValueColor = 'text-gray-900';
+        const invertedButtonColor = getRoleColor(data.role);
 
         return React.createElement(
             'div',
@@ -149,8 +150,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 onClick: () => setShowModal(true),
                                 className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
                                 style: {
-                                    backgroundColor: getRoleColor(data.role),
-                                    color: 'white'
+                                    backgroundColor: 'white', // Biela farba pozadia
+                                    color: invertedButtonColor // Farba textu a ikony podľa roly
                                 }
                             },
                             // Ikona ceruzky SVG
