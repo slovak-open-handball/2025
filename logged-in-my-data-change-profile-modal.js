@@ -47,7 +47,6 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                     onChange: onChange,
                     placeholder: placeholder,
                     disabled: disabled,
-                    // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2 ${
                         disabled ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`,
@@ -159,7 +158,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     // Initializácia a resetovanie stavov pri otvorení modálneho okna
     useEffect(() => {
         if (show) {
-            // Vstupné polia nebudú predvyplnené, namiesto toho použijeme zástupný text (placeholder)
             setFirstName('');
             setLastName('');
             setEmail('');
@@ -170,7 +168,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         }
     }, [show]);
 
-    // Uloží zmeny v profile
     const handleSave = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -186,40 +183,43 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             return;
         }
 
+        const updates = {};
+        const isEmailChange = email.trim() !== '' && email !== userProfileData.email;
+        const isPasswordRequired = isEmailChange;
+
+        // Pridanie zmien do objektu updates
+        if (firstName.trim() !== '' && firstName !== userProfileData.firstName) {
+            updates.firstName = firstName.trim();
+        }
+        if (lastName.trim() !== '' && lastName !== userProfileData.lastName) {
+            updates.lastName = lastName.trim();
+        }
+        if (phoneNumber.trim() !== '' && phoneNumber !== userProfileData.phoneNumber) {
+            updates.phoneNumber = `${selectedDialCode} ${phoneNumber.trim()}`;
+        }
+
         try {
-            // Overenie hesla pred akoukoľvek zmenou
-            const credential = EmailAuthProvider.credential(user.email, password);
-            await reauthenticateWithCredential(user, credential);
-
-            const updates = {};
-            const originalEmail = userProfileData?.email;
-            let emailUpdatePending = false;
-
-            // Kontrola, ktoré polia boli zmenené a pridanie do objektu updates
-            if (firstName.trim() !== '' && firstName !== userProfileData.firstName) {
-                updates.firstName = firstName.trim();
-            }
-            if (lastName.trim() !== '' && lastName !== userProfileData.lastName) {
-                updates.lastName = lastName.trim();
-            }
-            if (email.trim() !== '' && email !== userProfileData.email) {
+            if (isPasswordRequired) {
+                if (!password) {
+                    setModalError('Pre zmenu e-mailovej adresy musíte zadať svoje heslo.');
+                    setLoading(false);
+                    return;
+                }
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
                 await verifyBeforeUpdateEmail(user, email);
-                emailUpdatePending = true;
                 window.showGlobalNotification('Na zadanú e-mailovú adresu bol odoslaný overovací e-mail. Pre dokončenie zmeny prosím overte novú adresu.', 'info');
             }
-            if (phoneNumber.trim() !== '' && phoneNumber !== userProfileData.phoneNumber) {
-                updates.phoneNumber = `${selectedDialCode} ${phoneNumber.trim()}`;
-            }
 
-            // Aktualizácia profilu vo Firestore
+            // Aktualizácia profilu vo Firestore, ak existujú iné zmeny (meno, priezvisko, tel. číslo)
             if (Object.keys(updates).length > 0) {
                 const userDocRef = doc(db, "users", user.uid);
                 await updateDoc(userDocRef, updates);
                 onSaveSuccess();
-            } else if (emailUpdatePending) {
-                // Ak sa zmenil len email a už bol odoslaný overovací e-mail,
-                // stačí zavolať onSaveSuccess bez aktualizácie Firestore
-                 onSaveSuccess();
+            } else if (isEmailChange) {
+                // Ak bola zmenená iba e-mailová adresa, a už bol odoslaný overovací e-mail,
+                // stačí zavolať onSaveSuccess
+                onSaveSuccess();
             } else {
                 setModalError('Žiadne zmeny na uloženie.');
             }
@@ -275,7 +275,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: firstName,
                         onChange: (e) => setFirstName(e.target.value),
                         placeholder: userProfileData?.firstName || 'Zadajte meno',
-                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px' }
                     })
@@ -290,7 +289,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: lastName,
                         onChange: (e) => setLastName(e.target.value),
                         placeholder: userProfileData?.lastName || 'Zadajte priezvisko',
-                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
                         className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px' }
                     })
@@ -306,7 +304,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                     value: email,
                     onChange: (e) => setEmail(e.target.value),
                     placeholder: userProfileData?.email || 'Zadajte e-mail',
-                    // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
                     className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
                     style: { borderColor: roleColor, borderWidth: '1px' }
                 })
@@ -318,7 +315,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 React.createElement('div', { className: 'mt-1 flex rounded-md shadow-sm' },
                     React.createElement('span', {
                         onClick: () => setShowDialCodeModal(true),
-                        className: 'inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm cursor-pointer hover:bg-gray-100 transition-colors duration-200',
+                        className: 'inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm cursor-pointer hover:bg-gray-100 transition-colors duration-200',
                         style: { borderColor: roleColor }
                     }, selectedDialCode),
                     React.createElement('input', {
@@ -328,21 +325,20 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         value: phoneNumber,
                         onChange: (e) => setPhoneNumber(e.target.value),
                         placeholder: userProfileData?.phoneNumber?.split(' ').length > 1 ? userProfileData?.phoneNumber.substring(userProfileData?.phoneNumber?.indexOf(' ') + 1) : 'Zadajte telefónne číslo',
-                        // Pridaná trieda py-2 pre jednotnú výšku s tlačidlami
                         className: `flex-1 block w-full rounded-none rounded-r-md sm:text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-150 ease-in-out px-4 py-2`,
                         style: { borderColor: roleColor, borderWidth: '1px', borderLeftWidth: '0px' }
                     })
                 )
             ),
 
-            // Heslo pre overenie
+            // Heslo pre overenie (už len pre zmenu e-mailu)
             React.createElement('div', { className: 'mt-4' },
                 React.createElement(PasswordInput, {
                     id: 'password',
-                    label: 'Heslo pre overenie zmien',
+                    label: 'Heslo pre overenie zmeny e-mailu',
                     value: password,
                     onChange: (e) => setPassword(e.target.value),
-                    placeholder: 'Zadajte heslo',
+                    placeholder: 'Zadajte heslo (len ak meníte e-mail)',
                     showPassword: showPassword,
                     toggleShowPassword: () => setShowPassword(!showPassword),
                     roleColor: roleColor
@@ -378,7 +374,6 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             onClose: () => setShowDialCodeModal(false),
             onSelect: (code) => {
                 setSelectedDialCode(code);
-                // Pri výbere novej predvoľby resetujeme pole s telefónnym číslom
                 setPhoneNumber('');
             },
             selectedDialCode: selectedDialCode,
