@@ -96,14 +96,36 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         return null;
     }
     
-    // Spojíme informácie o adrese pre prehľadnejšie zobrazenie, vrátane čísla domu.
-    const formattedAddress = [
-        userProfileData.street,
-        userProfileData.houseNumber,
-        userProfileData.city,
-        userProfileData.postalCode,
-        userProfileData.country
-    ].filter(Boolean).join(', ');
+    // Nová logika pre formátovanie adresy bez čiarky za ulicou a mestom.
+    let addressParts = [];
+
+    // Ulica a číslo domu
+    const streetAndNumber = [userProfileData.street, userProfileData.houseNumber].filter(Boolean).join(' ');
+    if (streetAndNumber) {
+        addressParts.push(streetAndNumber);
+    }
+
+    // Mesto a formátované PSČ
+    let cityAndPostalCode = '';
+    if (userProfileData.city) {
+        cityAndPostalCode += userProfileData.city;
+    }
+    if (userProfileData.postalCode) {
+        const formattedPostalCode = userProfileData.postalCode.length === 5 ?
+            `${userProfileData.postalCode.substring(0, 3)} ${userProfileData.postalCode.substring(3, 5)}` :
+            userProfileData.postalCode;
+        cityAndPostalCode += ` ${formattedPostalCode}`;
+    }
+    if (cityAndPostalCode.trim() !== '') {
+        addressParts.push(cityAndPostalCode);
+    }
+
+    // Krajina
+    if (userProfileData.country) {
+        addressParts.push(userProfileData.country);
+    }
+
+    const formattedAddress = addressParts.filter(Boolean).join(', ');
 
     return React.createElement(
         'div',
