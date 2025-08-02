@@ -1,8 +1,7 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-// Používa rovnakú logiku pre načítavanie dát ako logged-in-my-data.js,
-// čím zabezpečuje konzistentnosť v celej aplikácii.
+// Je prispôsobený na spoluprácu s aktualizovaným authentication.js.
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -41,7 +40,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-
 // Funkcia na odhlásenie
 const handleLogout = async () => {
     try {
@@ -64,7 +62,6 @@ const updateHeaderLinks = (userProfileData) => {
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
     const header = document.querySelector('header');
-    const headerPlaceholder = document.getElementById('header-placeholder');
     
     // Predvolená farba hlavičky, ak používateľ nie je prihlásený
     const defaultColor = '#1d4ed8';
@@ -110,26 +107,22 @@ const updateHeaderLinks = (userProfileData) => {
             header.style.backgroundColor = defaultColor;
         }
     }
-
-    // Až teraz, po nastavení farieb a odkazov, zobrazíme hlavičku.
-    if (headerPlaceholder) {
-        headerPlaceholder.classList.remove('invisible');
-    }
 };
 
 // Funkcia na načítanie a inicializáciu hlavičky
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
-        // Skryjeme zástupný element hlavičky na začiatku, aby sa zabránilo blikaniu
-        if (headerPlaceholder) {
-            headerPlaceholder.classList.add('invisible');
-        }
-
         const response = await fetch('header.html');
+        
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
-        document.getElementById('header-placeholder').innerHTML = headerHtml;
+        
+        if (headerPlaceholder) {
+            headerPlaceholder.innerHTML = headerHtml;
+            // Zviditeľníme hlavičku až po jej načítaní
+            headerPlaceholder.classList.remove('invisible');
+        }
 
         // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
@@ -138,20 +131,15 @@ window.loadHeaderAndScripts = async () => {
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
-        // Kľúčová časť: Pridáme listener na udalosť, ktorú posiela 'authentication.js'
-        // Týmto sa zabezpečí, že hlavička sa aktualizuje, až keď sú dáta z databázy
-        // načítané a globálna premenná 'globalUserProfileData' je dostupná.
+        // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
-            // Dáta prevezmeme z globálnej premennej
             updateHeaderLinks(window.globalUserProfileData);
         });
 
-        // POZOR: Pôvodné volanie updateHeaderLinks bolo odstránené, aby sa hlavička
-        // nezobrazovala predčasne. Udalosť 'globalDataUpdated' sa postará o to,
-        // aby sa hlavička zobrazila až po správnom načítaní a nastavení dát.
-        // Ak je už v čase načítania skriptu 'authentication.js' hotová,
-        // jej listener zavolá updateHeaderLinks hneď.
+        // Pre prípad, že authentication.js už vyslalo udalosť pred pripojením listenera,
+        // zavoláme funkciu raz hneď po načítaní.
+        updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
