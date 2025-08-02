@@ -218,6 +218,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.contactPhoneNumber || 'Nezadané'
                             )
+                        ),
+                        // Adresa
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Adresa'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                fullContactAddress || 'Nezadané'
+                            )
                         )
                     )
                 )
