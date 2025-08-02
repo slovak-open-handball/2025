@@ -1,11 +1,9 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený, aby bol sám o sebe zodpovedný za načítanie dát,
-// čím sa eliminuje závislosť na časovaní udalosti DOMContentLoaded a globalDataUpdated.
-// Tiež bol upravený, aby používal overenie e-mailu pred jeho zmenou.
+// Tento súbor bol upravený, aby vždy synchronizoval e-mailovú adresu v profile používateľa
+// s aktuálnou e-mailovou adresou v Firebase Authentication.
 
-import { doc, onSnapshot, getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
+import { doc, onSnapshot, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
 
@@ -125,18 +123,31 @@ const MyDataApp = () => {
             return;
         }
 
-        const unsubscribeAuth = auth.onAuthStateChanged(user => {
+        const unsubscribeAuth = onAuthStateChanged(auth, user => {
             if (user) {
                 // Správna cesta k profilovému dokumentu používateľa na základe vašich pravidiel a štruktúry databázy.
-                // Načítanie dát z kolekcie 'users'
                 const userDocRef = doc(db, `users/${user.uid}`);
                 
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                    const latestAuthEmail = user.email;
+                    
                     if (docSnap.exists()) {
-                        setUserProfileData(docSnap.data());
+                        const firestoreData = docSnap.data();
+                        const latestFirestoreEmail = firestoreData.email;
+
+                        // Ak sa e-mail v Auth líši od e-mailu vo Firestore, aktualizujeme Firestore
+                        if (latestAuthEmail !== latestFirestoreEmail) {
+                            console.log("Synchronizujem e-mail: Auth a Firestore sa líšia.");
+                            // Použitie updateDoc na aktualizáciu len e-mailu
+                            updateDoc(userDocRef, { email: latestAuthEmail })
+                                .then(() => console.log("E-mail vo Firestore bol úspešne aktualizovaný."))
+                                .catch(e => console.error("Chyba pri aktualizácii e-mailu vo Firestore:", e));
+                        }
+
+                        setUserProfileData(firestoreData);
                     } else {
-                        // Ak dokument neexistuje, nastavíme email z auth objektu
-                        setUserProfileData({ email: user.email });
+                        // Ak dokument neexistuje, nastavíme e-mail z auth objektu
+                        setUserProfileData({ email: latestAuthEmail });
                     }
                     setLoading(false);
                 }, (error) => {
@@ -226,8 +237,7 @@ const MyDataApp = () => {
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
             
-            // POUŽITIE verifyBeforeUpdateEmail NAMIETO updateEmail
-            // Toto odosiela overovací e-mail na novú adresu.
+            // POUŽITIE verifyBeforeUpdateEmail pre overenie
             await verifyBeforeUpdateEmail(user, newEmail);
             
             console.log("Overovací e-mail bol úspešne odoslaný.");
