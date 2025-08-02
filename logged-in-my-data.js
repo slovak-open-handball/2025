@@ -284,21 +284,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 fullBillingAddress || 'Nezadané'
                             )
                         ),
-                        // Adresa kontaktnej osoby
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Fakturačná adresa' // Zmena textu na Fakturačná adresa
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                fullContactAddress || 'Nezadané'
-                            )
-                        ),
                         // IČO
                         React.createElement(
                             'div',
