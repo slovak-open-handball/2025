@@ -75,9 +75,17 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
-            
-            // Reagujeme na udalosti z authentication.js a zamedzíme blikaniu
+
+            // Pridáme listener, ktorý explicitne zviditeľní hlavičku po načítaní dát.
             window.addEventListener('globalDataUpdated', () => {
+                console.log('logged-in-my-data.html: Prijatá udalosť "globalDataUpdated".');
+                const headerElement = document.querySelector('header');
+                if (headerElement) {
+                    console.log('logged-in-my-data.html: Odstraňujem triedu "invisible" z hlavičky.');
+                    headerElement.classList.remove('invisible');
+                }
+
+                // Vykreslíme React app
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(MyDataApp, null));
                 console.log("logged-in-my-data.html: React App vykreslená na základe udalosti 'globalDataUpdated'.");
