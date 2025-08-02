@@ -33,9 +33,10 @@
     </main>
 
     <!-- Načítanie súborov pre autentifikáciu a hlavičku -->
-    <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script>
-    <!-- Načítanie hlavnej aplikácie, ktorá bude fungovať ako modul -->
-    <script type="module" src="logged-in-my-data.js"></script>
+    <!-- POZNÁMKA: Odstránili sme 'type="module"', aby sa skripty spustili v globálnom kontexte a sprístupnili premenné ako window.auth -->
+    <script src="authentication.js"></script>
+    <script src="header.js"></script>
+    <!-- Načítanie hlavnej aplikácie -->
+    <script src="logged-in-my-data.js"></script>
 </body>
 </html>
