@@ -98,8 +98,13 @@ const getRoleColor = (role) => {
 
 /**
  * Komponent pre modálne okno na úpravu údajov.
+ * @param {object} props - Vlastnosti komponentu.
+ * @param {object} props.userProfileData - Dáta profilu používateľa.
+ * @param {boolean} props.isOpen - Určuje, či je modálne okno otvorené.
+ * @param {function} props.onClose - Funkcia na zatvorenie modálneho okna.
+ * @param {boolean} props.isUserAdmin - Určuje, či je používateľ admin.
  */
-const EditContactModal = ({ userProfileData, isOpen, onClose }) => {
+const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => {
     const [formData, setFormData] = useState({
         firstName: userProfileData.firstName || '',
         lastName: userProfileData.lastName || '',
@@ -183,7 +188,8 @@ const EditContactModal = ({ userProfileData, isOpen, onClose }) => {
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
                     })
                 ),
-                React.createElement(
+                // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
+                !isUserAdmin && React.createElement(
                     'div',
                     { className: 'mb-6' },
                     React.createElement(
@@ -391,7 +397,8 @@ const MyDataApp = () => {
         React.createElement(EditContactModal, {
             userProfileData: userProfileData,
             isOpen: isEditModalOpen,
-            onClose: () => setIsEditModalOpen(false)
+            onClose: () => setIsEditModalOpen(false),
+            isUserAdmin: isUserAdmin
         })
     );
 };
