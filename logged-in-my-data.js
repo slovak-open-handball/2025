@@ -200,11 +200,6 @@ const MyDataApp = () => {
         'div',
         { className: 'container mx-auto p-4 md:p-8 lg:p-12 max-w-4xl' },
         React.createElement(
-            'h1',
-            { className: 'text-3xl font-bold text-gray-900 mb-6 text-center' },
-            'Moje Údaje'
-        ),
-        React.createElement(
             'div',
             { className: 'space-y-8' },
             // Blok s kontaktnými údajmi
