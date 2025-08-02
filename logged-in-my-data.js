@@ -44,15 +44,17 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const getRoleColor = (role) => {
-    switch (role) {
+    // Konvertuje rolu na malé písmená pre správne porovnanie
+    const normalizedRole = role?.toLowerCase();
+    switch (normalizedRole) {
         case 'organizator':
-            return '#F97316'; // Orange
+            return '#47b3ff'; // Farba pre organizátora
         case 'ucastnik':
-            return '#10B981'; // Green
+            return '#b06835'; // Farba pre účastníka
         case 'host':
-            return '#6366F1'; // Indigo
+            return '#9333EA'; // Farba pre hosťa
         default:
-            return '#6B7280'; // Gray
+            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
     }
 };
 
@@ -90,7 +92,9 @@ const MyDataApp = ({ initialData, roleColor }) => {
 
     // Pomocná funkcia pre získanie textu podľa roly
     const getRoleText = (role) => {
-        switch (role) {
+        // Konvertuje rolu na malé písmená pre správne porovnanie
+        const normalizedRole = role?.toLowerCase();
+        switch (normalizedRole) {
             case 'organizator':
                 return 'Organizátor';
             case 'ucastnik':
