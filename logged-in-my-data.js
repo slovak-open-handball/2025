@@ -319,11 +319,12 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const isFormValid = hasNameChanged || hasEmailChanged || hasPhoneNumberChanged || hasDialCodeChanged;
 
     const handlePhoneNumberChange = (e) => {
-        let value = e.target.value.replace(/\s/g, ''); // Odstránime existujúce medzery pre jednoduchšie spracovanie
-        const cleanedValue = value.replace(/\D/g, ''); // Odstránime všetky nečíselné znaky
+        // Tento regulárny výraz odfiltruje všetky znaky, ktoré nie sú číslice
+        const cleanedValue = e.target.value.replace(/\D/g, '');
         let formattedValue = '';
 
         for (let i = 0; i < cleanedValue.length; i++) {
+            // Pridáme medzeru po každých troch čísliciach (okrem prvej)
             if (i > 0 && i % 3 === 0) {
                 formattedValue += ' ';
             }
