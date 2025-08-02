@@ -118,7 +118,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         fullName
                     )
                 ),
-                React.createElement(
+                // Podmienečné zobrazenie telefónneho čísla len ak používateľ nie je admin
+                userProfileData.role !== 'admin' && React.createElement(
                     'div',
                     { className: 'mb-4' },
                     React.createElement(
