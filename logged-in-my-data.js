@@ -133,8 +133,12 @@ const MyDataApp = () => {
                 React.createElement('h1', { className: 'text-2xl font-bold' }, 'Moje údaje'),
                 React.createElement(
                     'button',
+                    // Pridanie onClick eventu na zobrazenie modálneho okna
                     { onClick: () => setShowModal(true), className: 'text-white hover:text-gray-200' },
-                    React.createElement('i', { className: 'fa-solid fa-edit text-xl' })
+                    // Použitie SVG ikony ceruzky namiesto triedy 'fa-solid fa-edit'
+                    React.createElement('svg', { xmlns: 'http://www.w3.org/2000/svg', className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                      React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z' })
+                    )
                 )
             ),
             React.createElement(
