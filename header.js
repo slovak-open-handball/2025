@@ -57,11 +57,11 @@ const handleLogout = async () => {
  * @param {object|null} userProfileData - Objekt s dátami profilu používateľa, alebo null.
  */
 const updateHeaderLinks = (userProfileData) => {
+    const header = document.querySelector('header');
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
-    const header = document.querySelector('header');
     
     // Predvolená farba hlavičky, ak používateľ nie je prihlásený
     const defaultColor = '#1d4ed8';
@@ -76,10 +76,6 @@ const updateHeaderLinks = (userProfileData) => {
     if (userProfileData) {
         if (profileLink) profileLink.style.display = 'block';
         if (logoutButton) logoutButton.style.display = 'block';
-        // Odkaz na registráciu na turnaj sa nebude zobrazovať pre žiadneho prihláseného používateľa
-        // if (registerLink && userProfileData.role === 'user') {
-        //     registerLink.style.display = 'block';
-        // }
 
         // Zmena farby hlavičky na základe roly
         let roleColor = defaultColor;
@@ -107,6 +103,11 @@ const updateHeaderLinks = (userProfileData) => {
             header.style.backgroundColor = defaultColor;
         }
     }
+    
+    // Po nastavení všetkých vlastností zviditeľníme hlavičku
+    if (header) {
+        header.classList.remove('invisible');
+    }
 };
 
 // Funkcia na načítanie a inicializáciu hlavičky
@@ -120,8 +121,6 @@ window.loadHeaderAndScripts = async () => {
         
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = headerHtml;
-            // Zviditeľníme hlavičku až po jej načítaní
-            headerPlaceholder.classList.remove('invisible');
         }
 
         // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
