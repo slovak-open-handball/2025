@@ -1,223 +1,421 @@
-// Importy pre Firebase funkcie
-// Tento súbor už nepotrebuje inicializovať Firebase, pretože sa spolieha na `authentication.js`
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Importy pre Firebase funkcie, aby sa dali použiť v modálnom okne
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
 
-// Import komponentu pre modálne okno, ktorý je teraz v samostatnom súbore
-import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
-
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
- * Globálna funkcia pre zobrazenie notifikácií
+ * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  */
-window.showGlobalNotification = (message, type = 'success') => {
-    let notificationElement = document.getElementById('global-notification');
-    if (!notificationElement) {
-        notificationElement = document.createElement('div');
-        notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300';
-        document.body.appendChild(notificationElement);
-    }
+export const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, roleColor }) => {
+    // Použitie SVG ikon pre zobrazenie/skrytie hesla
+    const EyeIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
+    );
 
-    let bgColorClass, textColorClass;
-    if (type === 'success') {
-        bgColorClass = 'bg-green-100';
-        textColorClass = 'text-green-800';
-    } else if (type === 'error') {
-        bgColorClass = 'bg-red-100';
-        textColorClass = 'text-red-800';
-    } else { // 'info' alebo iné
-        bgColorClass = 'bg-blue-100';
-        textColorClass = 'text-blue-800';
-    }
+    const EyeOffIcon = React.createElement(
+        'svg',
+        { className: 'h-5 w-5 text-gray-500', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+        React.createElement('path', { fill: 'currentColor', stroke: 'none', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+        React.createElement('path', { fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' }),
+        React.createElement('line', { x1: '21', y1: '3', x2: '3', y2: '21', stroke: 'currentColor', strokeWidth: '2' })
+    );
 
-    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
-    notificationElement.innerText = message;
-
-    // Zobrazenie notifikácie
-    setTimeout(() => {
-        notificationElement.classList.remove('opacity-0');
-        notificationElement.classList.add('opacity-100');
-    }, 100);
-
-    // Skrytie notifikácie po 3 sekundách
-    setTimeout(() => {
-        notificationElement.classList.remove('opacity-100');
-        notificationElement.classList.add('opacity-0');
-    }, 3000);
-};
-
-// Hlavný komponent aplikácie
-const MyDataApp = () => {
-    const [userProfileData, setUserProfileData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [showModal, setShowModal] = useState(false);
-
-    useEffect(() => {
-        // Funkcia na spracovanie globálnej udalosti
-        const handleGlobalDataUpdate = (event) => {
-            const data = event.detail;
-            if (data) {
-                console.log("MyDataApp.js: Globálne údaje používateľa aktualizované.", data);
-                setUserProfileData(data);
-                setLoading(false);
-            } else {
-                // Používateľ nie je prihlásený alebo dáta neboli nájdené
-                console.log("MyDataApp.js: Žiadne údaje používateľa k dispozícii.");
-                setUserProfileData(null);
-                setLoading(false);
-                setError(null);
-            }
-        };
-
-        // Pridanie listenera na globálnu udalosť
-        window.addEventListener('globalDataUpdated', handleGlobalDataUpdate);
-
-        // Kontrola, či už sú dáta dostupné pri prvom načítaní
-        if (window.globalUserProfileData) {
-            setUserProfileData(window.globalUserProfileData);
-            setLoading(false);
-        } else if (window.isGlobalAuthReady) {
-            // Ak je auth ready, ale dáta nie, znamená to, že používateľ nie je prihlásený alebo dáta chýbajú
-            setLoading(false);
-            setUserProfileData(null);
-        }
-
-        // Cleanup funkcia na odstránenie listenera
-        return () => {
-            window.removeEventListener('globalDataUpdated', handleGlobalDataUpdate);
-        };
-    }, []); // Prázdne pole závislostí zaručuje, že sa vykoná len raz
-
-    // Vytvorenie farby role
-    const getRoleColor = (role) => {
-        switch (role) {
-            case 'admin':
-                return '#47b3ff'; // Farba pre admina
-            case 'hall':
-                return '#b06835'; // Farba pre halu
-            case 'user':
-                return '#9333EA'; // Farba pre bežného používateľa
-            default:
-                return '#1D4ED8'; // Predvolená farba (bg-blue-800)
-        }
-    };
-
-    const roleColor = getRoleColor(userProfileData?.role);
-
-    // Stav načítavania
-    if (loading) {
-        return (
-            React.createElement('div', { className: 'flex justify-center pt-16' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
-            )
-        );
-    }
-
-    // Stav chyby alebo neprihláseného používateľa
-    if (error || !userProfileData) {
-        return React.createElement('div', { className: 'text-center text-gray-500 mt-16' },
-            React.createElement('p', null, error || 'Nie ste prihlásený, alebo vaše údaje nie sú dostupné.'),
-            React.createElement('p', null, 'Skúste sa prosím prihlásiť.')
-        );
-    }
-
-    // Helper funkcia pre formátovanie telefónneho čísla
-    const formatPhoneNumber = (fullPhoneNumber) => {
-        if (!fullPhoneNumber) {
-            return 'Nezadané';
-        }
-        const foundCode = countryDialCodes.find(c => fullPhoneNumber.startsWith(c.dialCode));
-        if (foundCode) {
-            const phoneNumberWithoutCode = fullPhoneNumber.substring(foundCode.dialCode.length);
-            return `${foundCode.dialCode} ${phoneNumberWithoutCode.trim()}`;
-        }
-        return fullPhoneNumber;
-    };
-
-    // Hlavné používateľské rozhranie
-    return (
-        React.createElement('div', { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16' },
-            // Informačná karta s fialovým pozadím pre titulok
-            React.createElement('div', { className: 'bg-white rounded-xl shadow-lg' },
-                // Nadpis a tlačidlo v samostatnom bloku s farbou role
-                React.createElement('div', { className: `flex justify-between items-center p-6 md:p-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
-                    React.createElement('h1', { className: 'text-2xl md:text-3xl font-bold' }, 'Moje údaje'),
-                    React.createElement('button', {
-                        onClick: () => setShowModal(true),
-                        className: 'flex items-center bg-white text-gray-800 px-4 py-2 rounded-full font-semibold shadow hover:bg-gray-100 transition-colors duration-300 transform hover:scale-105 focus:outline-none'
-                    },
-                        React.createElement('svg', {
-                            className: 'w-4 h-4 mr-2',
-                            fill: 'none',
-                            stroke: 'currentColor',
-                            viewBox: '0 0 24 24',
-                            xmlns: 'http://www.w3.org/2000/svg'
-                        },
-                            React.createElement('path', {
-                                strokeLinecap: 'round',
-                                strokeLinejoin: 'round',
-                                strokeWidth: '2',
-                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z'
-                            })
-                        ),
-                        'Upraviť'
-                    )
-                ),
-
-                // Obsah informačnej karty
-                React.createElement('div', { className: 'p-6 md:p-8' },
-                    // Rozloženie s dvoma stĺpcami pre telefón a meno
-                    React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-4 md:gap-y-0 md:gap-x-12 pb-4 border-b border-gray-200' },
-                        // Riadok s menom a priezviskom
-                        React.createElement('div', { className: 'flex-1' },
-                            React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a Priezvisko:'),
-                            React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim())
-                        ),
-                        // Riadok s telefónnym číslom
-                        React.createElement('div', { className: 'flex-1' },
-                            React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo:'),
-                            React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formatPhoneNumber(userProfileData.phoneNumber))
-                        )
-                    ),
-
-                    // Samostatný riadok pre e-mail
-                    React.createElement('div', { className: 'mt-4 md:mt-6' },
-                        React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'E-mailová adresa kontaktnej osoby:'),
-                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, userProfileData.email || 'Nezadané')
-                    )
-                )
+    return React.createElement(
+        'div',
+        { className: 'relative' },
+        React.createElement(
+            'label',
+            { htmlFor: id, className: 'block text-sm font-medium text-gray-700' },
+            label
+        ),
+        React.createElement(
+            'div',
+            { className: 'mt-1 relative rounded-md shadow-sm' },
+            React.createElement(
+                'input',
+                {
+                    id: id,
+                    type: showPassword ? 'text' : 'password',
+                    value: value,
+                    onChange: onChange,
+                    placeholder: placeholder,
+                    disabled: disabled,
+                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2 ${
+                        disabled ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`,
+                    style: disabled ? {} : { borderColor: roleColor, borderWidth: '1px' }
+                }
             ),
-
-            // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
-            React.createElement(ChangeProfileModal, {
-                show: showModal,
-                onClose: () => setShowModal(false),
-                onSaveSuccess: () => {
-                    setShowModal(false);
-                    window.showGlobalNotification('Profilové údaje boli úspešne zmenené', 'success');
-                },
-                userProfileData: userProfileData,
-                roleColor: roleColor
-            })
+            React.createElement(
+                'div',
+                { className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5' },
+                React.createElement(
+                    'button',
+                    {
+                        type: 'button',
+                        onClick: toggleShowPassword,
+                        className: 'text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                    },
+                    showPassword ? EyeOffIcon : EyeIcon
+                )
+            )
         )
     );
 };
 
-// Renderovanie aplikácie do DOM
-const rootElement = document.getElementById('root');
-if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(MyDataApp, null));
-    console.log("MyDataApp.js: Aplikácia vykreslená.");
-} else {
-    console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
-}
+/**
+ * Komponent DialCodeModal pre výber medzinárodnej predvoľby.
+ */
+const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
+    if (!show) return null;
 
-// Explicitne sprístupníme komponent pre ladenie alebo externé použitie
-window.MyDataApp = MyDataApp;
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter country codes based on search query
+    const filteredCodes = countryDialCodes.filter(c =>
+        (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.dialCode && c.dialCode.includes(searchQuery))
+    );
+
+    return ReactDOM.createPortal(
+        React.createElement('div', {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[11000]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+            React.createElement('div', { className: 'bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[80vh] mx-4 overflow-y-auto' },
+                React.createElement('div', { className: 'p-4 border-b border-gray-200 sticky top-0 bg-white z-10' },
+                    React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Vyberte predvoľbu'),
+                    React.createElement('button', {
+                        className: 'absolute top-2 right-2 text-gray-400 hover:text-gray-600',
+                        onClick: onClose
+                    },
+                        React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+                        )
+                    ),
+                    React.createElement('div', { className: 'mt-4' },
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'text',
+                                placeholder: 'Hľadať krajinu alebo predvoľbu...',
+                                value: searchQuery,
+                                onChange: (e) => setSearchQuery(e.target.value),
+                                className: `w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500`
+                            }
+                        )
+                    )
+                ),
+                React.createElement('div', { className: 'p-4' },
+                    filteredCodes.length > 0 ? (
+                        filteredCodes.map((country, index) =>
+                            React.createElement('div', {
+                                key: index,
+                                className: `flex justify-between items-center px-3 py-2 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors duration-200 ${selectedDialCode === country.dialCode ? 'bg-indigo-100 font-semibold' : ''}`,
+                                onClick: () => {
+                                    onSelect(country.dialCode);
+                                    onClose();
+                                }
+                            },
+                                React.createElement('span', { className: 'text-gray-800' }, `${country.name}`),
+                                React.createElement('span', { className: 'text-gray-600' }, country.dialCode)
+                            )
+                        )
+                    ) : (
+                        React.createElement('div', { className: 'text-center text-gray-500 py-4' }, 'Žiadne výsledky')
+                    )
+                )
+            )
+        ),
+        document.body
+    );
+};
+
+/**
+ * Komponenta modálneho okna na zmenu údajov profilu.
+ */
+export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileData, roleColor }) => {
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [selectedDialCode, setSelectedDialCode] = useState(userProfileData?.phoneNumber?.startsWith('+') ? userProfileData?.phoneNumber?.split(' ')[0] : '+421');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [modalError, setModalError] = useState('');
+    const [showDialCodeModal, setShowDialCodeModal] = useState(false);
+    
+    // Nový stav na sledovanie, či došlo k zmenám
+    const [hasChanges, setHasChanges] = useState(false);
+
+    // Initializácia a resetovanie stavov pri otvorení modálneho okna
+    useEffect(() => {
+        if (show) {
+            setFirstName('');
+            setLastName('');
+            setEmail('');
+            setPhoneNumber('');
+            setPassword('');
+            setModalError('');
+            setLoading(false);
+            setHasChanges(false);
+        }
+    }, [show]);
+
+    // Používanie useEffect na sledovanie zmien v poliach
+    useEffect(() => {
+        const checkChanges = () => {
+            const isFirstNameChanged = firstName.trim() !== '' && firstName.trim() !== userProfileData.firstName;
+            const isLastNameChanged = lastName.trim() !== '' && lastName.trim() !== userProfileData.lastName;
+            const isEmailChanged = email.trim() !== '' && email.trim() !== userProfileData.email;
+            const currentPhoneNumberFull = `${selectedDialCode} ${phoneNumber.trim()}`;
+            const isPhoneNumberChanged = phoneNumber.trim() !== '' && currentPhoneNumberFull !== userProfileData.phoneNumber;
+
+            return isFirstNameChanged || isLastNameChanged || isEmailChanged || isPhoneNumberChanged;
+        };
+
+        setHasChanges(checkChanges());
+    }, [firstName, lastName, email, phoneNumber, selectedDialCode, userProfileData]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setModalError('');
+
+        const auth = getAuth();
+        const user = auth.currentUser;
+        const db = getFirestore();
+
+        if (!user) {
+            setModalError('Používateľ nie je prihlásený.');
+            setLoading(false);
+            return;
+        }
+
+        const updates = {};
+        const isEmailChange = email.trim() !== '' && email !== userProfileData.email;
+
+        // Pridanie zmien do objektu updates
+        if (firstName.trim() !== '' && firstName !== userProfileData.firstName) {
+            updates.firstName = firstName.trim();
+        }
+        if (lastName.trim() !== '' && lastName !== userProfileData.lastName) {
+            updates.lastName = lastName.trim();
+        }
+        if (phoneNumber.trim() !== '' && `${selectedDialCode} ${phoneNumber.trim()}` !== userProfileData.phoneNumber) {
+            updates.phoneNumber = `${selectedDialCode} ${phoneNumber.trim()}`;
+        }
+
+        try {
+            if (isEmailChange) {
+                if (!password) {
+                    setModalError('Pre zmenu e-mailovej adresy musíte zadať svoje heslo.');
+                    setLoading(false);
+                    return;
+                }
+                const credential = EmailAuthProvider.credential(user.email, password);
+                await reauthenticateWithCredential(user, credential);
+                await verifyBeforeUpdateEmail(user, email);
+                window.showGlobalNotification('Na zadanú e-mailovú adresu bol odoslaný overovací e-mail. Pre dokončenie zmeny prosím overte novú adresu.', 'info');
+            }
+
+            // Aktualizácia profilu vo Firestore, ak existujú iné zmeny (meno, priezvisko, tel. číslo)
+            if (Object.keys(updates).length > 0) {
+                const userDocRef = doc(db, "users", user.uid);
+                await updateDoc(userDocRef, updates);
+                onSaveSuccess();
+            } else if (isEmailChange) {
+                // Ak bola zmenená iba e-mailová adresa, a už bol odoslaný overovací e-mail,
+                // stačí zavolať onSaveSuccess
+                onSaveSuccess();
+            } else {
+                setModalError('Žiadne zmeny na uloženie.');
+            }
+
+        } catch (error) {
+            console.error("Chyba pri aktualizácii profilu:", error);
+            if (error.code === 'auth/wrong-password') {
+                setModalError('Zadali ste nesprávne heslo.');
+            } else if (error.code === 'auth/requires-recent-login') {
+                setModalError('Pre zmenu údajov je potrebné sa znovu prihlásiť.');
+            } else if (error.code === 'auth/invalid-email') {
+                setModalError('Zadaný e-mail nie je platný.');
+            } else if (error.code === 'auth/email-already-in-use') {
+                setModalError('Zadaný e-mail je už používaný iným účtom.');
+            } else {
+                setModalError('Nepodarilo sa uložiť zmeny. Skúste to prosím neskôr.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const ModalHeader = React.createElement('div', {
+        className: `flex items-center justify-between p-4 md:p-6 rounded-t-xl text-white`,
+        style: { backgroundColor: roleColor }
+    },
+        React.createElement('h3', { className: 'text-xl md:text-2xl font-bold' }, 'Upraviť profil'),
+        React.createElement('button', {
+            onClick: onClose,
+            className: 'text-white hover:text-gray-200 transition-colors duration-200'
+        },
+            React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
+            )
+        )
+    );
+
+    const ModalContent = React.createElement('div', { className: 'p-4 md:p-6' },
+        React.createElement('form', { onSubmit: handleSave },
+            // Chybová správa
+            modalError && React.createElement('div', { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md', role: 'alert' },
+                React.createElement('p', null, modalError)
+            ),
+            // Meno a Priezvisko
+            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                // Meno
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'firstName', className: 'block text-sm font-medium text-gray-700' }, 'Meno'),
+                    React.createElement('input', {
+                        type: 'text',
+                        name: 'firstName',
+                        id: 'firstName',
+                        value: firstName,
+                        onChange: (e) => setFirstName(e.target.value),
+                        placeholder: userProfileData?.firstName || 'Zadajte meno',
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
+                        style: { borderColor: roleColor, borderWidth: '1px' }
+                    })
+                ),
+                // Priezvisko
+                React.createElement('div', null,
+                    React.createElement('label', { htmlFor: 'lastName', className: 'block text-sm font-medium text-gray-700' }, 'Priezvisko'),
+                    React.createElement('input', {
+                        type: 'text',
+                        name: 'lastName',
+                        id: 'lastName',
+                        value: lastName,
+                        onChange: (e) => setLastName(e.target.value),
+                        placeholder: userProfileData?.lastName || 'Zadajte priezvisko',
+                        className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
+                        style: { borderColor: roleColor, borderWidth: '1px' }
+                    })
+                )
+            ),
+            // E-mailová adresa
+            React.createElement('div', { className: 'mt-4' },
+                React.createElement('label', { htmlFor: 'email', className: 'block text-sm font-medium text-gray-700' }, 'E-mailová adresa'),
+                React.createElement('input', {
+                    type: 'email',
+                    name: 'email',
+                    id: 'email',
+                    value: email,
+                    onChange: (e) => setEmail(e.target.value),
+                    placeholder: userProfileData?.email || 'Zadajte e-mail',
+                    className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 sm:text-sm transition duration-150 ease-in-out px-4 py-2`,
+                    style: { borderColor: roleColor, borderWidth: '1px' }
+                })
+            ),
+            // Telefónne číslo
+            userProfileData?.role !== 'admin' &&
+            React.createElement('div', { className: 'mt-4' },
+                React.createElement('label', { htmlFor: 'phoneNumber', className: 'block text-sm font-medium text-gray-700' }, 'Telefónne číslo'),
+                React.createElement('div', { className: 'mt-1 flex rounded-md shadow-sm' },
+                    React.createElement('span', {
+                        onClick: () => setShowDialCodeModal(true),
+                        className: 'inline-flex items-center px-3 py-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm cursor-pointer hover:bg-gray-100 transition-colors duration-200',
+                        style: { borderColor: roleColor }
+                    }, selectedDialCode),
+                    React.createElement('input', {
+                        type: 'text',
+                        name: 'phoneNumber',
+                        id: 'phoneNumber',
+                        value: phoneNumber,
+                        onChange: (e) => setPhoneNumber(e.target.value),
+                        placeholder: userProfileData?.phoneNumber?.split(' ').length > 1 ? userProfileData?.phoneNumber.substring(userProfileData?.phoneNumber?.indexOf(' ') + 1) : 'Zadajte telefónne číslo',
+                        className: `flex-1 block w-full rounded-none rounded-r-md sm:text-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition duration-150 ease-in-out px-4 py-2`,
+                        style: { borderColor: roleColor, borderWidth: '1px', borderLeftWidth: '0px' }
+                    })
+                )
+            ),
+
+            // Heslo pre overenie (už len pre zmenu e-mailu)
+            React.createElement('div', { className: 'mt-4' },
+                React.createElement(PasswordInput, {
+                    id: 'password',
+                    label: 'Heslo pre overenie zmeny e-mailu',
+                    value: password,
+                    onChange: (e) => setPassword(e.target.value),
+                    placeholder: 'Zadajte heslo (len ak meníte e-mail)',
+                    showPassword: showPassword,
+                    toggleShowPassword: () => setShowPassword(!showPassword),
+                    roleColor: roleColor
+                })
+            ),
+
+            // Tlačidlá
+            React.createElement('div', { className: 'mt-6 flex justify-end gap-3' },
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: onClose,
+                    className: 'px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none',
+                    style: {
+                        backgroundColor: 'white',
+                        color: roleColor,
+                        border: `2px solid ${roleColor}`,
+                    }
+                }, 'Zrušiť'),
+                React.createElement('button', {
+                    type: 'submit',
+                    disabled: loading || !hasChanges,
+                    className: `px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none`,
+                    style: {
+                        backgroundColor: (loading || !hasChanges) ? 'white' : roleColor,
+                        color: (loading || !hasChanges) ? roleColor : 'white',
+                        border: (loading || !hasChanges) ? `2px solid ${roleColor}` : 'none',
+                        cursor: (loading || !hasChanges) ? 'not-allowed' : 'pointer'
+                    }
+                }, loading ? 'Ukladám...' : 'Uložiť zmeny')
+            )
+        ),
+        React.createElement(DialCodeModal, {
+            show: showDialCodeModal,
+            onClose: () => setShowDialCodeModal(false),
+            onSelect: (code) => {
+                setSelectedDialCode(code);
+                setPhoneNumber('');
+            },
+            selectedDialCode: selectedDialCode,
+            roleColor: roleColor
+        })
+    );
+    const modal = show ? React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden' },
+            ModalHeader,
+            ModalContent
+        )
+    ) : null;
+
+    return ReactDOM.createPortal(modal, document.body);
+};
