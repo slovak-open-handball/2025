@@ -112,10 +112,12 @@ const MyDataApp = () => {
             const user = auth ? auth.currentUser : null;
             const db = window.db;
             const appId = window.__app_id;
+            
+            // Získavame funkcie doc a onSnapshot z globálneho objektu window
+            const doc = window.doc;
+            const onSnapshot = window.onSnapshot;
 
-            if (user && db) {
-                const doc = window.doc;
-                const onSnapshot = window.onSnapshot;
+            if (user && db && doc && onSnapshot) {
                 const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
@@ -407,4 +409,4 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('globalDataUpdated', renderApp);
 });
 
-export default MyDataApp;
+window.MyDataApp = MyDataApp;
