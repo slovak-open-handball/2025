@@ -175,21 +175,6 @@ const MyDataApp = () => {
                         `${userProfileData.firstName || 'Nezadané'} ${userProfileData.lastName || 'Nezadané'}`
                     )
                 ),
-                // Rola
-                React.createElement(
-                    'div',
-                    { className: 'flex flex-col' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800' },
-                        'Rola:'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        userProfileData.role || 'Nezadané'
-                    )
-                ),
                 // Telefónne číslo - zobrazené len pre ne-admin roly
                 userProfileData.role !== 'admin' && React.createElement(
                     'div',
