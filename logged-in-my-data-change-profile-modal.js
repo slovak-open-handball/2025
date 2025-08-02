@@ -76,6 +76,14 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
 const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
     if (!show) return null;
 
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filter country codes based on search query
+    const filteredCodes = countryDialCodes.filter(c =>
+        (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.dialCode && c.dialCode.includes(searchQuery))
+    );
+
     return ReactDOM.createPortal(
         React.createElement('div', {
             className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[11000]',
@@ -93,21 +101,37 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
                         )
+                    ),
+                    React.createElement('div', { className: 'mt-4' },
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'text',
+                                placeholder: 'Hľadať krajinu alebo predvoľbu...',
+                                value: searchQuery,
+                                onChange: (e) => setSearchQuery(e.target.value),
+                                className: `w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500`
+                            }
+                        )
                     )
                 ),
                 React.createElement('div', { className: 'p-4' },
-                    countryDialCodes.map((country, index) =>
-                        React.createElement('div', {
-                            key: index,
-                            className: `flex justify-between items-center px-3 py-2 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors duration-200 ${selectedDialCode === country.dialCode ? 'bg-indigo-100 font-semibold' : ''}`,
-                            onClick: () => {
-                                onSelect(country.dialCode);
-                                onClose();
-                            }
-                        },
-                            React.createElement('span', { className: 'text-gray-800' }, `${country.name}`),
-                            React.createElement('span', { className: 'text-gray-600' }, country.dialCode)
+                    filteredCodes.length > 0 ? (
+                        filteredCodes.map((country, index) =>
+                            React.createElement('div', {
+                                key: index,
+                                className: `flex justify-between items-center px-3 py-2 cursor-pointer rounded-lg hover:bg-gray-100 transition-colors duration-200 ${selectedDialCode === country.dialCode ? 'bg-indigo-100 font-semibold' : ''}`,
+                                onClick: () => {
+                                    onSelect(country.dialCode);
+                                    onClose();
+                                }
+                            },
+                                React.createElement('span', { className: 'text-gray-800' }, `${country.name}`),
+                                React.createElement('span', { className: 'text-gray-600' }, country.dialCode)
+                            )
                         )
+                    ) : (
+                        React.createElement('div', { className: 'text-center text-gray-500 py-4' }, 'Žiadne výsledky')
                     )
                 )
             )
@@ -130,19 +154,17 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     const [loading, setLoading] = useState(false);
     const [modalError, setModalError] = useState('');
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
-    const [isReauthRequired, setIsReauthRequired] = useState(false);
 
     // Initializácia a resetovanie stavov pri otvorení modálneho okna
     useEffect(() => {
         if (show) {
-            // Používame prázdne hodnoty, aby polia neboli predvyplnené
+            // Vstupné polia nebudú predvyplnené, namiesto toho použijeme zástupný text (placeholder)
             setFirstName('');
             setLastName('');
             setEmail('');
             setPhoneNumber('');
             setPassword('');
             setModalError('');
-            setIsReauthRequired(false);
             setLoading(false);
         }
     }, [show]);
@@ -170,6 +192,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
 
             const updates = {};
             const originalEmail = userProfileData?.email;
+            let emailUpdatePending = false;
 
             // Kontrola, ktoré polia boli zmenené a pridanie do objektu updates
             if (firstName.trim() !== '' && firstName !== userProfileData.firstName) {
@@ -180,6 +203,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             }
             if (email.trim() !== '' && email !== userProfileData.email) {
                 await verifyBeforeUpdateEmail(user, email);
+                emailUpdatePending = true;
                 window.showGlobalNotification('Na zadanú e-mailovú adresu bol odoslaný overovací e-mail. Pre dokončenie zmeny prosím overte novú adresu.', 'info');
             }
             if (phoneNumber.trim() !== '' && phoneNumber !== userProfileData.phoneNumber) {
@@ -191,9 +215,9 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 const userDocRef = doc(db, "users", user.uid);
                 await updateDoc(userDocRef, updates);
                 onSaveSuccess();
-            } else if (email.trim() !== '' && email !== originalEmail) {
-                 // Ak sa zmenil len email a už bol odoslaný overovací e-mail,
-                 // stačí zavolať onSaveSuccess bez aktualizácie Firestore
+            } else if (emailUpdatePending) {
+                // Ak sa zmenil len email a už bol odoslaný overovací e-mail,
+                // stačí zavolať onSaveSuccess bez aktualizácie Firestore
                  onSaveSuccess();
             } else {
                 setModalError('Žiadne zmeny na uloženie.');
