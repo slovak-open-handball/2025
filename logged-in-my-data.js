@@ -11,8 +11,9 @@ const { useState, useEffect } = React;
  */
 const Loader = () => {
     return React.createElement(
+        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
-        { className: 'flex justify-center items-center h-screen' },
+        { className: 'flex justify-center pt-16' },
         React.createElement(
             'div',
             { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
@@ -27,8 +28,9 @@ const Loader = () => {
  */
 const ErrorMessage = ({ message }) => {
     return React.createElement(
+        // Zmenené na vycentrovanie obsahu na vrchu obrazovky
         'div',
-        { className: 'flex justify-center items-center h-screen' },
+        { className: 'flex justify-center pt-16' },
         React.createElement(
             'div',
             { className: 'p-8 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg shadow-md max-w-md' },
@@ -222,45 +224,50 @@ const MyDataApp = () => {
     const headerColor = getRoleColor(userProfileData.role);
 
     return React.createElement(
+        // Obalíme hlavný obsah do kontajnera, aby bol vycentrovaný a odsadili sme ho od vrchu
         'div',
-        { className: 'w-full max-w-4xl p-8 bg-white rounded-xl shadow-2xl space-y-8' },
+        { className: 'flex flex-col items-center mt-8 mb-8' },
         React.createElement(
             'div',
-            { className: 'bg-gray-100 rounded-lg shadow-inner overflow-hidden' },
+            { className: 'w-full max-w-4xl p-8 bg-white rounded-xl shadow-2xl space-y-8' },
             React.createElement(
                 'div',
-                { className: 'p-4 text-white font-bold', style: { backgroundColor: headerColor } },
+                { className: 'bg-gray-100 rounded-lg shadow-inner overflow-hidden' },
                 React.createElement(
-                    'h2',
-                    { className: 'text-2xl' },
-                    'Môj profil'
+                    'div',
+                    { className: 'p-4 text-white font-bold', style: { backgroundColor: headerColor } },
+                    React.createElement(
+                        'h2',
+                        { className: 'text-2xl' },
+                        'Kontaktné údaje'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'p-6' },
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko: '),
+                        ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                        ` ${userProfileData.email}`
+                    ),
+                    // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
+                    !isUserAdmin && React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
+                        ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
+                    ),
                 )
             ),
-            React.createElement(
-                'div',
-                { className: 'p-6' },
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko: '),
-                    ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
-                ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                    ` ${userProfileData.email}`
-                ),
-                // Podmienene vykreslí riadok s telefónnym číslom, ak používateľ nie je admin
-                !isUserAdmin && React.createElement(
-                    'p',
-                    { className: 'text-gray-800 text-lg' },
-                    React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
-                    ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
-                ),
-            )
-        ),
-        renderBillingAndAddressInfo(userProfileData, headerColor)
+            renderBillingAndAddressInfo(userProfileData, headerColor)
+        )
     );
 };
 
