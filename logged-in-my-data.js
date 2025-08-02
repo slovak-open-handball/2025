@@ -84,23 +84,19 @@ const formatPhoneNumber = (phoneNumber) => {
  * @param {string} headerColor - Farba hlavičky pre vizuálnu konzistenciu.
  */
 const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-    // Zobrazíme sekciu iba ak je používateľ admin alebo vedúci tímu
-    const isUserAdmin = userProfileData?.role === 'admin';
-    const isUserTeamLeader = userProfileData?.isTeamLeader === true;
+    // Skontrolujeme, či existujú fakturačné údaje alebo údaje o adrese.
+    const hasBillingData = userProfileData.billing && userProfileData.billing.clubName;
+    const hasAddressData = userProfileData.street;
 
-    if (!isUserAdmin && !isUserTeamLeader) {
+    // Zobrazíme sekciu iba ak máme nejaké dáta na zobrazenie.
+    if (!hasBillingData && !hasAddressData) {
         return null;
     }
     
-    // Skontrolujeme, či existujú fakturačné údaje.
-    // Na základe konzoly sa údaje o firme nachádzajú v objekte 'billing' a adresa je priamo v hlavnom objekte.
-    if (!userProfileData.billing || !userProfileData.billing.clubName) {
-        return null;
-    }
-
-    // Spojíme informácie o adrese pre prehľadnejšie zobrazenie
+    // Spojíme informácie o adrese pre prehľadnejšie zobrazenie, vrátane čísla domu.
     const formattedAddress = [
         userProfileData.street,
+        userProfileData.houseNumber,
         userProfileData.city,
         userProfileData.postalCode,
         userProfileData.country
@@ -121,25 +117,31 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
         React.createElement(
             'div',
             { className: 'p-6' },
-            React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
-                ` ${userProfileData.billing.clubName || ''}`
+            // Podmienene vykreslíme údaje o fakturácii, ak existujú.
+            hasBillingData && React.createElement(
+                'div',
+                null,
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Názov spoločnosti:'),
+                    ` ${userProfileData.billing.clubName || ''}`
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'IČO:'),
+                    ` ${userProfileData.billing.ico || ''}`
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
+                    ` ${userProfileData.billing.dic || ''}`
+                )
             ),
-            React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'IČO:'),
-                ` ${userProfileData.billing.ico || ''}`
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-gray-800 text-lg' },
-                React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
-                ` ${userProfileData.billing.dic || ''}`
-            ),
-            React.createElement(
+            // Podmienene vykreslíme údaje o adrese, ak existujú.
+            hasAddressData && React.createElement(
                 'p',
                 { className: 'text-gray-800 text-lg' },
                 React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
@@ -239,7 +241,7 @@ const MyDataApp = () => {
                     React.createElement(
                         'h2',
                         { className: 'text-2xl' },
-                        'Kontaktné údaje'
+                        'Môj profil'
                     )
                 ),
                 React.createElement(
