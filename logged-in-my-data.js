@@ -324,11 +324,18 @@ const MyDataApp = () => {
                         React.createElement('span', { className: 'font-bold' }, 'DIČ:'),
                         ` ${data.billing.dic}`
                     ),
+                    // Nový riadok pre IČ DPH. Ak hodnota neexistuje, zobrazí sa "-"
+                    React.createElement(
+                        'p',
+                        { className: 'text-gray-800 text-lg' },
+                        React.createElement('span', { className: 'font-bold' }, 'IČ DPH:'),
+                        ` ${data.billing.icdph || '-'}`
+                    ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
                         React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
-                        ` ${data.billing.address}, ${data.billing.zipCode} ${data.billing.city}, ${data.billing.country}`
+                        ` ${data.billing.address || ''}, ${data.billing.zipCode || ''} ${data.billing.city || ''}, ${data.billing.country || ''}`.trim()
                     )
                 ) :
                 React.createElement(
