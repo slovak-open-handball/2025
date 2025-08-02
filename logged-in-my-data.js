@@ -94,10 +94,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         console.log("MyDataApp.js: Zobrazujem obsah aplikácie.");
         // Zobrazenie obsahu
         
-        // Získame farbu pozadia hlavného boxu a farbu textu na základe tejto farby
+        // Získame farbu pozadia hlavného boxu
         const mainBoxColor = getRoleColor(data.role);
-        const textColor = getContrastTextColor(mainBoxColor);
-        const headingColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
         const contactLabelColor = 'text-gray-500';
         const contactValueColor = 'text-gray-900';
         const invertedButtonColor = getRoleColor(data.role);
@@ -121,7 +119,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             { className: 'flex-1 min-w-0' },
                             React.createElement(
                                 'h1',
-                                { className: `text-3xl md:text-4xl font-bold ${headingColor} truncate` },
+                                { className: `text-3xl md:text-4xl font-bold text-white truncate` }, // Farba nadpisu je vždy biela
                                 data.role === 'user'
                                     ? 'Údaje kontaktnej osoby'
                                     : data.role === 'hall' || data.role === 'admin'
@@ -158,122 +156,118 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: 'p-8 md:p-12' },
+                    { className: 'p-8 md:p-12' }, // Tu sa odstránila čiara a posunul sa obsah
                     React.createElement(
-                        'div',
-                        { className: `mt-2 border-t border-gray-200 pt-8` },
+                        'h3',
+                        { className: `text-xl font-semibold text-gray-800 mb-4` },
+                        'Kontaktné údaje'
+                    ),
+                    React.createElement(
+                        'dl',
+                        { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
+                        // E-mailová adresa (presunutá sem)
                         React.createElement(
-                            'h3',
-                            { className: `text-xl font-semibold text-gray-800 mb-4` },
-                            'Kontaktné údaje'
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'E-mail'
+                            ),
+                            React.createElement(
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.email || 'Nezadané'
+                            )
                         ),
+                        // Telefónne číslo
                         React.createElement(
-                            'dl',
-                            { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
-                            // E-mailová adresa (presunutá sem)
+                            'div',
+                            null,
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'E-mail'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.email || 'Nezadané'
-                                )
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Telefón'
                             ),
-                            // Telefónne číslo
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'Telefón'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
+                            )
+                        ),
+                        // Adresa
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Adresa'
                             ),
-                            // Adresa
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'Adresa'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.address || 'Nezadaná'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.address || 'Nezadaná'
+                            )
+                        ),
+                        // Mesto
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Mesto'
                             ),
-                            // Mesto
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'Mesto'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.city || 'Nezadané'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.city || 'Nezadané'
+                            )
+                        ),
+                        // PSČ
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'PSČ'
                             ),
-                            // PSČ
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'PSČ'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.zipCode || 'Nezadané'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.zipCode || 'Nezadané'
+                            )
+                        ),
+                        // Krajina
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Krajina'
                             ),
-                            // Krajina
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'Krajina'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold` },
-                                    data.country || 'Nezadaná'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold` },
+                                data.country || 'Nezadaná'
+                            )
+                        ),
+                        // Rola používateľa (presunutá sem)
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'dt',
+                                { className: `text-sm font-medium ${contactLabelColor}` },
+                                'Rola'
                             ),
-                            // Rola používateľa (presunutá sem)
                             React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'dt',
-                                    { className: `text-sm font-medium ${contactLabelColor}` },
-                                    'Rola'
-                                ),
-                                React.createElement(
-                                    'dd',
-                                    { className: `mt-1 ${contactValueColor} font-semibold capitalize` },
-                                    data.role || 'Nezadaná'
-                                )
+                                'dd',
+                                { className: `mt-1 ${contactValueColor} font-semibold capitalize` },
+                                data.role || 'Nezadaná'
                             )
                         )
                     )
