@@ -1,11 +1,12 @@
 // logged-in-my-data.js
 // Tento súbor bol upravený, aby vždy synchronizoval e-mailovú adresu v profile používateľa
 // s aktuálnou e-mailovou adresou v Firebase Authentication a farba hlavičky sa mení podľa roly.
+// Bola opravená chyba "NotFoundError: Failed to execute 'removeChild' on 'Node'".
 
 import { doc, onSnapshot, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
@@ -89,12 +90,22 @@ const NotificationPopup = ({ message, type, onClose }) => {
   const colorClasses = isSuccess ? 'bg-green-100 border-green-500 text-green-700' : 'bg-red-100 border-red-500 text-red-700';
   const titleText = isSuccess ? 'Úspech' : 'Chyba';
 
+  const isMounted = useRef(true);
+
   useEffect(() => {
     // Automaticky zavrieť pop-up po 5 sekundách
     const timer = setTimeout(() => {
-      onClose();
+      // Voláme onClose iba ak je komponent ešte namontovaný
+      if (isMounted.current) {
+        onClose();
+      }
     }, 5000);
-    return () => clearTimeout(timer);
+    
+    // Cleanup funkcia sa volá pri odpojení komponentu
+    return () => {
+      isMounted.current = false;
+      clearTimeout(timer);
+    };
   }, [onClose, message]);
 
   return React.createElement(
@@ -205,10 +216,15 @@ const MyDataApp = () => {
 
     // Stav pre dynamickú farbu ikony ceruzky
     const [pencilHover, setPencilHover] = useState(false);
+    
+    // Pridáme useRef pre sledovanie, či je komponent namontovaný
+    const isMounted = useRef(true);
 
     useEffect(() => {
         const auth = getAuth();
         const db = getFirestore();
+        let unsubscribeAuth = () => {};
+        let unsubscribeFirestore = () => {};
 
         if (!auth || !db) {
             console.error("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -217,12 +233,16 @@ const MyDataApp = () => {
             return;
         }
 
-        const unsubscribeAuth = onAuthStateChanged(auth, user => {
+        unsubscribeAuth = onAuthStateChanged(auth, user => {
+            if (!isMounted.current) return;
+            
             if (user) {
                 setCurrentAuthEmail(user.email);
                 const userDocRef = doc(db, `users/${user.uid}`);
                 
-                const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
+                    if (!isMounted.current) return;
+                    
                     const latestAuthEmail = user.email;
                     
                     if (docSnap.exists()) {
@@ -242,11 +262,12 @@ const MyDataApp = () => {
                     }
                     setLoading(false);
                 }, (error) => {
+                    if (!isMounted.current) return;
+                    
                     console.error("Chyba pri načítaní profilu:", error);
                     setNotification({ message: "Chyba pri načítaní dát profilu. Skúste to prosím neskôr.", type: "error", visible: true });
                     setLoading(false);
                 });
-                return unsubscribeFirestore;
             } else {
                 console.log("Používateľ odhlásený.");
                 setNotification({ message: "Používateľ nie je prihlásený.", type: "error", visible: true });
@@ -254,7 +275,11 @@ const MyDataApp = () => {
             }
         });
         
-        return () => unsubscribeAuth();
+        return () => {
+          isMounted.current = false;
+          unsubscribeAuth();
+          unsubscribeFirestore();
+        };
     }, []);
 
     const handleOpenModal = () => {
