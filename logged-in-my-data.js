@@ -122,7 +122,8 @@ const MyDataApp = () => {
 
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-gray-100 flex flex-col items-center py-8' },
+        // Zmena farby pozadia z bg-gray-100 na bg-white
+        { className: 'min-h-screen bg-white flex flex-col items-center py-8' },
         React.createElement(
             'div',
             { className: 'bg-white shadow-lg rounded-xl w-full max-w-2xl overflow-hidden' },
