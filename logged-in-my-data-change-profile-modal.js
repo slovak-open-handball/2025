@@ -166,6 +166,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     const [emailChangeStatus, setEmailChangeStatus] = useState(null);
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [selectedDialCode, setSelectedDialCode] = useState('+421'); // Predvolená predvoľba pre Slovensko
+    const [emailError, setEmailError] = useState(null); // Nový stav pre chybu e-mailu
 
     useEffect(() => {
         if (show && userProfileData) {
@@ -204,6 +205,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             setIsReauthRequired(false);
             setPassword('');
             setEmailChangeStatus(null);
+            setEmailError(null); // Reset chyby e-mailu pri otvorení modalu
         }
     }, [show, userProfileData]);
 
@@ -242,6 +244,19 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         return onlyNums.match(/.{1,3}/g)?.join(' ') || '';
     };
 
+    /**
+     * Funkcia na validáciu formátu e-mailu.
+     * Kontroluje:
+     * - prítomnosť "@" a "."
+     * - aspoň 1 znak po "@"
+     * - aspoň 2 znaky po "."
+     */
+    const validateEmail = (email) => {
+        // Regulačný výraz pre overenie formátu: "a@b.c" kde 'a', 'b' a 'c' majú aspoň určenú dĺžku.
+        const emailRegex = new RegExp(/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/);
+        return emailRegex.test(email);
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         
@@ -251,6 +266,15 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             // Ak je dĺžka väčšia ako 9 (max. dĺžka čísla), skrátime
             const formattedValue = onlyNums.length > 9 ? onlyNums.substring(0, 9) : onlyNums;
             setFormData(prevData => ({ ...prevData, [name]: formattedValue }));
+        } else if (name === 'email') {
+            setFormData(prevData => ({ ...prevData, [name]: value }));
+            if (value === '') {
+                setEmailError(null);
+            } else if (!validateEmail(value)) {
+                setEmailError('Neplatný formát e-mailovej adresy.');
+            } else {
+                setEmailError(null);
+            }
         } else {
             setFormData(prevData => ({ ...prevData, [name]: value }));
         }
@@ -258,6 +282,13 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Zastavíme odoslanie, ak je e-mail neplatný
+        if (emailError) {
+            window.showGlobalNotification("Opravte chyby vo formulári.", "error");
+            return;
+        }
+
         setLoading(true);
 
         const auth = getAuth();
@@ -439,7 +470,7 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         null,
                         React.createElement(
                             'label',
-                            { htmlFor: 'email', className: 'block text-sm font-medium text-gray-700' },
+                            { htmlFor: 'email', className: `block text-sm font-medium ${emailError ? 'text-red-600' : 'text-gray-700'}` },
                             'E-mailová adresa'
                         ),
                         React.createElement('input', {
@@ -449,9 +480,14 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                             value: formData.email,
                             onChange: handleChange,
                             placeholder: userProfileData.email || '', // Placeholder
-                            className: `${inputStyleClass}`,
-                            style: { 'borderColor': roleColor, 'ringColor': roleColor }
-                        })
+                            className: `${inputStyleClass} ${emailError ? 'border-red-500' : 'border-gray-300'}`,
+                            style: { 'borderColor': emailError ? 'red' : roleColor, 'ringColor': roleColor }
+                        }),
+                        emailError && React.createElement(
+                            'p',
+                            { className: 'mt-2 text-sm text-red-600' },
+                            emailError
+                        )
                     ),
                     React.createElement(PasswordInput, {
                         id: "password",
@@ -488,9 +524,9 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                         'button',
                         {
                             type: 'submit',
-                            disabled: loading || !hasAnyChanges,
-                            className: `px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${loading || !hasAnyChanges ? 'cursor-not-allowed' : ''}`,
-                            style: loading || !hasAnyChanges
+                            disabled: loading || !hasAnyChanges || emailError,
+                            className: `px-6 py-2 rounded-lg font-medium transition-colors duration-200 ${loading || !hasAnyChanges || emailError ? 'cursor-not-allowed' : ''}`,
+                            style: loading || !hasAnyChanges || emailError
                                 ? {
                                       backgroundColor: 'white',
                                       color: roleColor,
