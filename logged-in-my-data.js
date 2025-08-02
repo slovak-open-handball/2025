@@ -1,9 +1,9 @@
 // logged-in-my-data.js
-// Tento súbor bol upravený, aby vždy synchronizoval e-mailovú adresu v profile používateľa
-// s aktuálnou e-mailovou adresou v Firebase Authentication a farba hlavičky sa mení podľa roly.
+// Tento súbor spravuje React komponent pre Moja zóna.
+// Vykresľuje sa až po tom, čo authentication.js načíta profil používateľa.
 
-import { doc, onSnapshot, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
 
@@ -55,10 +55,7 @@ const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, 
 };
 
 
-const MyDataApp = () => {
-    const [user, setUser] = useState(null);
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
+const MyDataApp = ({ user, profile, loading }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -71,42 +68,6 @@ const MyDataApp = () => {
     };
 
     const focusColorClass = `focus:border-blue-500 focus:ring-blue-500`;
-
-    useEffect(() => {
-        // Inicializácia Firebase a nastavenie listenera
-        const auth = getAuth();
-        const db = getFirestore();
-        let unsubscribe = () => {};
-
-        const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                // Nastavenie onSnapshot listenera pre reálne dáta
-                unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        setProfile(docSnap.data());
-                    } else {
-                        console.log("No such document!");
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Error getting user profile:", error);
-                    setLoading(false);
-                });
-            } else {
-                setUser(null);
-                setProfile(null);
-                setLoading(false);
-            }
-        });
-
-        // Cleanup function pre odhlásenie listenerov pri unmountovaní komponentu
-        return () => {
-            authUnsubscribe();
-            unsubscribe();
-        };
-    }, []);
 
     useEffect(() => {
         if (profile) {
@@ -127,19 +88,21 @@ const MyDataApp = () => {
     const handleEmailUpdate = async (event) => {
         event.preventDefault();
         setPasswordError('');
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
 
-        if (!user || !password || !newEmail) {
+        if (!currentUser || !password || !newEmail) {
             setPasswordError('Prosím, zadajte heslo a novú e-mailovú adresu.');
             return;
         }
 
         try {
             // Re-autentifikácia
-            const credential = EmailAuthProvider.credential(user.email, password);
-            await reauthenticateWithCredential(user, credential);
+            const credential = EmailAuthProvider.credential(currentUser.email, password);
+            await reauthenticateWithCredential(currentUser, credential);
 
             // Overenie a odoslanie overovacieho e-mailu
-            await verifyBeforeUpdateEmail(user, newEmail);
+            await verifyBeforeUpdateEmail(currentUser, newEmail);
             
             showGlobalNotification('Odoslali sme Vám overovací e-mail. Prosím, overte zmenu e-mailovej adresy kliknutím na odkaz v e-maili.', 'success');
 
@@ -329,37 +292,63 @@ const MyDataApp = () => {
     );
 };
 
-// Funkcia na zabezpečenie, že aplikácia sa vykreslí iba raz a až po načítaní DOM-u
-let isRendered = false; // Nový príznak na zabránenie opakovanému vykresleniu
 
-const renderApp = () => {
-    // Ak už bolo vykreslené, nič nerobíme
-    if (isRendered) {
-        return;
-    }
+// Globálna premenná, ktorá bude uchovávať React root
+let reactRoot = null;
 
+const renderApp = (user, profile, loading) => {
     const rootElement = document.getElementById('root');
-    // Kontrola, či element existuje a je stále v dokumente
     if (rootElement && document.body.contains(rootElement) && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         try {
-            // Použitie ReactDOM.createRoot
-            const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(MyDataApp, null));
-            console.log("logged-in-my-data.js: Aplikácia vykreslená.");
-            isRendered = true; // Označíme ako vykreslené
+            // Ak root ešte nebol vytvorený, vytvoríme ho
+            if (!reactRoot) {
+                reactRoot = ReactDOM.createRoot(rootElement);
+            }
+            // Vykreslíme aplikáciu s aktuálnymi dátami
+            reactRoot.render(React.createElement(MyDataApp, { user, profile, loading }));
+            console.log("logged-in-my-data.js: Aplikácia bola vykreslená s aktuálnymi dátami.");
         } catch (error) {
             console.error("logged-in-my-data.js: Chyba pri vykreslení aplikácie:", error);
         }
     } else {
-        console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné, alebo element bol odstránený.");
+        console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
     }
 };
 
-// Spustenie vykreslenia po načítaní DOM
+// Funkcia na inicializáciu a nastavenie listenera na globálne dáta
+const initAndListen = () => {
+    let authReady = false;
+    let initialUser = null;
+    let initialProfile = null;
+    let initialLoading = true;
+
+    // Prvý stav pri načítaní stránky
+    if (window.isGlobalAuthReady) {
+        authReady = true;
+        initialUser = window.globalUserProfileData ? { uid: window.globalUserProfileData.id, email: window.globalUserProfileData.email } : null;
+        initialProfile = window.globalUserProfileData || null;
+        initialLoading = false;
+    }
+
+    // Vykreslíme prvý stav (buď loading, alebo už dostupné dáta)
+    renderApp(initialUser, initialProfile, initialLoading);
+    
+    // Nastavenie listenera na globálnu udalosť
+    window.addEventListener('globalDataUpdated', (event) => {
+        console.log('logged-in-my-data.js: Prijatá udalosť "globalDataUpdated". Aktualizujem zobrazenie.');
+        const profileData = event.detail;
+        
+        const currentUser = profileData ? { uid: profileData.id, email: profileData.email } : null;
+        
+        renderApp(currentUser, profileData, false);
+    });
+};
+
+// Spustenie inicializačnej funkcie po načítaní DOM
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderApp);
+    document.addEventListener('DOMContentLoaded', initAndListen);
 } else {
-    renderApp();
+    initAndListen();
 }
 
 // Export pre prípad, že by bol komponent potrebný inde
