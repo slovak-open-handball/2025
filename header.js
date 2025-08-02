@@ -78,9 +78,10 @@ const updateHeaderLinks = (userProfileData) => {
     if (userProfileData) {
         if (profileLink) profileLink.style.display = 'block';
         if (logoutButton) logoutButton.style.display = 'block';
-        if (registerLink && userProfileData.role === 'user') {
-            registerLink.style.display = 'block';
-        }
+        // Odkaz na registráciu na turnaj sa nebude zobrazovať pre žiadneho prihláseného používateľa
+        // if (registerLink && userProfileData.role === 'user') {
+        //     registerLink.style.display = 'block';
+        // }
 
         // Zmena farby hlavičky na základe roly
         let roleColor = defaultColor;
