@@ -74,7 +74,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4 sm:px-6 lg:px-8' },
+        { className: 'min-h-screen bg-white flex flex-col items-center justify-start py-10 px-4 sm:px-6 lg:px-8' },
         React.createElement(
             'div',
             { className: 'max-w-4xl w-full bg-white shadow-xl rounded-2xl p-8' },
