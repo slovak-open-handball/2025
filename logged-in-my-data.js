@@ -79,32 +79,7 @@ const MyDataApp = () => {
 
     const headerColor = getRoleColor(userProfileData?.role);
 
-    // Načítanie používateľských dát z globálnej premennej
-    useEffect(() => {
-        const handleDataUpdate = (e) => {
-            const data = e.detail;
-            if (data) {
-                setUserProfileData(data);
-            } else {
-                setUserProfileData(null);
-            }
-            setLoading(false);
-        };
-
-        // Kontrola, či sú dáta už načítané pri štarte
-        if (window.globalUserProfileData) {
-            setUserProfileData(window.globalUserProfileData);
-            setLoading(false);
-        }
-
-        window.addEventListener('globalDataUpdated', handleDataUpdate);
-
-        return () => {
-            window.removeEventListener('globalDataUpdated', handleDataUpdate);
-        };
-    }, []);
-
-    // Nová funkcia na opätovné načítanie dát používateľa
+    // Funkcia na načítanie dát používateľa
     const fetchUserProfile = async () => {
         setLoading(true);
         const auth = getAuth();
@@ -131,6 +106,44 @@ const MyDataApp = () => {
         }
     };
 
+    // Načítanie používateľských dát z globálnej premennej pri prvom načítaní
+    useEffect(() => {
+        const handleDataUpdate = (e) => {
+            const data = e.detail;
+            if (data) {
+                setUserProfileData(data);
+            } else {
+                setUserProfileData(null);
+            }
+            setLoading(false);
+        };
+
+        if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+            setLoading(false);
+        } else {
+            // Ak dáta ešte nie sú v globálnej premennej, počkáme na event
+            window.addEventListener('globalDataUpdated', handleDataUpdate);
+        }
+
+
+        // Pridanie listenera pre onAuthStateChanged
+        const auth = getAuth();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchUserProfile();
+            } else {
+                setUserProfileData(null);
+                setLoading(false);
+            }
+        });
+
+        return () => {
+            window.removeEventListener('globalDataUpdated', handleDataUpdate);
+            unsubscribe();
+        };
+    }, []);
+
     if (loading) {
         return React.createElement(
             'div',
@@ -149,21 +162,17 @@ const MyDataApp = () => {
 
     return React.createElement(
         'div',
-        // Zmena farby pozadia z bg-gray-100 na bg-white
         { className: 'min-h-screen bg-white flex flex-col items-center py-8' },
         React.createElement(
             'div',
             { className: 'bg-white shadow-lg rounded-xl w-full max-w-2xl overflow-hidden' },
             React.createElement(
                 'div',
-                // Inline štýl pre farbu pozadia
                 { style: { backgroundColor: headerColor }, className: `text-white px-6 py-4 flex justify-between items-center` },
                 React.createElement('h1', { className: 'text-2xl font-bold' }, 'Moje údaje'),
                 React.createElement(
                     'button',
-                    // Pridanie onClick eventu na zobrazenie modálneho okna
                     { onClick: () => setShowModal(true), className: 'text-white hover:text-gray-200' },
-                    // Použitie SVG ikony ceruzky namiesto triedy 'fa-solid fa-edit'
                     React.createElement('svg', { xmlns: 'http://www.w3.org/2000/svg', className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
                       React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z' })
                     )
@@ -216,7 +225,6 @@ const MyDataApp = () => {
                 )
             )
         ),
-        // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
         React.createElement(ChangeProfileModal, {
             show: showModal,
             onClose: () => setShowModal(false),
