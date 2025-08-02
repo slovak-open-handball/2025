@@ -640,17 +640,24 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             roleColor: roleColor
         })
     );
-
-    const modal = React.createElement(
+    // Pridanie `onClick` handlera pre zatvorenie pri kliknutí mimo okna
+    const modal = show ? React.createElement(
         'div',
-        { className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]' },
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) {
+                    onClose();
+                }
+            }
+        },
         React.createElement(
             'div',
             { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden' },
             ModalHeader,
             ModalContent
         )
-    );
+    ) : null;
 
     return ReactDOM.createPortal(modal, document.body);
 };
