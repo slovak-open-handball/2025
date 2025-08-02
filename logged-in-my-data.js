@@ -106,13 +106,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const billingAddress3 = `${data.billing?.country || ''}`;
         const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
 
-        // Vytvorenie reťazca pre kontaktnú adresu
-        const contactAddress = `${data.street || ''} ${data.houseNumber || ''}`.trim();
-        const contactAddress2 = `${data.postalCode || ''} ${data.city || ''}`.trim();
-        const contactAddress3 = `${data.country || ''}`;
-        const fullContactAddress = `${contactAddress}${contactAddress ? ', ' : ''}${contactAddress2}${contactAddress2 ? ', ' : ''}${contactAddress3}`.trim().replace(/^,|,$/g, '').trim();
-
-
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
@@ -126,7 +119,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     React.createElement(
                         'div',
                         { className: 'flex justify-between items-center flex-wrap gap-4' },
-                        // Left side: Name
+                        // Ľavá strana: Meno
                         React.createElement(
                             'div',
                             { className: 'flex-1 min-w-0' },
@@ -140,7 +133,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                         : `${data.firstName || ''} ${data.lastName || ''}`
                             )
                         ),
-                        // Right side: Edit button
+                        // Pravá strana: Tlačidlo Upraviť
                         React.createElement(
                             'button',
                             {
@@ -170,11 +163,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'div',
                     { className: 'p-8 md:p-12' },
-                    // Odstránený nadpis "Kontaktné údaje"
                     React.createElement(
                         'dl',
                         { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
-                        // Meno a Priezvisko (nový element)
+                        // Meno a Priezvisko
                         React.createElement(
                             'div',
                             null,
@@ -189,7 +181,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Nezadané'
                             )
                         ),
-                        // E-mailová adresa (presunutá sem)
+                        // E-mailová adresa
                         React.createElement(
                             'div',
                             null,
@@ -217,21 +209,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 'dd',
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.contactPhoneNumber || 'Nezadané'
-                            )
-                        ),
-                        // Adresa
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Adresa'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                fullContactAddress || 'Nezadané'
                             )
                         )
                     )
@@ -261,7 +238,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'div',
                     { className: 'p-8 md:p-12' },
-                    // Odstránená duplicitná sekcia <h3> Fakturačné údaje
                     React.createElement(
                         'dl',
                         { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
