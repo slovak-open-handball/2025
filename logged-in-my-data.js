@@ -443,7 +443,7 @@ const MyDataApp = () => {
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'Adresa:'),
+                        React.createElement('span', { className: 'font-bold' }, 'Adresa: '),
                         ` ${data.street || ''} ${data.houseNumber || ''}, ${formattedPostalCode} ${data.city || ''}, ${data.country || ''}`.trim()
                     ),
                     React.createElement(
