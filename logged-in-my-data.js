@@ -1,7 +1,7 @@
 // logged-in-my-data.js
 // Tento súbor spravuje React komponent MyDataApp, ktorý zobrazuje
 // profilové a registračné dáta prihláseného používateľa.
-// Bol upravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
+// Bol opravený, aby správne reagoval na globálnu udalosť 'globalDataUpdated'
 // a zobrazoval dáta až po ich úplnom načítaní.
 
 const { useState, useEffect } = React;
@@ -89,6 +89,11 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
     if (!isUserAdmin && !isUserTeamLeader) {
         return null;
     }
+    
+    // Skontrolujeme, či existujú fakturačné údaje
+    if (!userProfileData.billingInfo || !userProfileData.billingAddress) {
+        return null;
+    }
 
     // Spojíme informácie o adrese pre prehľadnejšie zobrazenie
     const formattedAddress = [
@@ -165,26 +170,41 @@ const getRoleColor = (role) => {
  * Hlavný React komponent pre zobrazenie používateľských dát.
  */
 const MyDataApp = () => {
-    const [userProfileData, setUserProfileData] = useState(window.globalUserProfileData);
+    const [userProfileData, setUserProfileData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Počkáme, kým budú dáta z authentication.js dostupné
-        const handleDataUpdate = (event) => {
-            const data = event.detail;
-            if (data) {
-                setUserProfileData(data);
+        const checkDataAndRender = () => {
+            if (window.globalUserProfileData) {
+                setUserProfileData(window.globalUserProfileData);
                 setIsLoading(false);
-            } else {
+            } else if (window.isGlobalAuthReady) {
+                 // Ak je autentifikácia hotová, ale nie sú dáta, znamená to odhláseného používateľa
                 setError("Chyba: Dáta používateľa nie sú dostupné. Ste prihlásený?");
                 setIsLoading(false);
             }
         };
 
+        // Skontrolujeme stav hneď po pripojení komponentu
+        checkDataAndRender();
+        
+        // Pridáme listener, ktorý zareaguje na akúkoľvek neskoršiu zmenu
+        const handleDataUpdate = (event) => {
+            const data = event.detail;
+            if (data) {
+                setUserProfileData(data);
+                setIsLoading(false);
+            } else if (window.isGlobalAuthReady) {
+                // Ak sa používateľ odhlási
+                setError("Chyba: Dáta používateľa nie sú dostupné. Ste prihlásený?");
+                setIsLoading(false);
+            }
+        };
+        
         window.addEventListener('globalDataUpdated', handleDataUpdate);
 
-        // Odstránime listener pri unmountovaní komponentu
+        // Vyčistíme listener pri unmountovaní komponentu
         return () => {
             window.removeEventListener('globalDataUpdated', handleDataUpdate);
         };
@@ -197,13 +217,13 @@ const MyDataApp = () => {
     
     // Ak nastala chyba, zobrazíme chybovú správu
     if (error) {
-        return React.createElement(ErrorMessage, { message: error });
+        // Presmerujeme na prihlasovaciu stránku po chybe
+        window.location.href = 'login.html';
+        return React.createElement(Loader, null); // Zobrazíme loader, kým prebieha presmerovanie
     }
 
     // Ak nie sú dáta, ale nie je ani chyba (napr. odhlásený používateľ), presmerujeme
     if (!userProfileData) {
-         // Použijeme window.location.href namiesto window.location.replace
-        // aby sa to správalo ako bežný odkaz
         window.location.href = 'login.html';
         return React.createElement(Loader, null); // Zobrazíme loader kým prebieha presmerovanie
     }
