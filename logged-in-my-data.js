@@ -95,11 +95,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         // Zobrazenie obsahu
         
         // Získame farbu textu na základe farby pozadia
-        const textColor = getContrastTextColor(roleColor);
+        const mainBoxColor = getRoleColor(data.role);
+        const textColor = getContrastTextColor(mainBoxColor);
         const headingColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
         const subTextColor = textColor === 'white' ? 'text-gray-200' : 'text-gray-600';
-        const contactLabelColor = textColor === 'white' ? 'text-gray-300' : 'text-gray-500';
-        const contactValueColor = textColor === 'white' ? 'text-white' : 'text-gray-900';
+        const contactLabelColor = 'text-gray-500';
+        const contactValueColor = 'text-gray-900';
 
         return React.createElement(
             'div',
@@ -107,147 +108,155 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Profilový box
             React.createElement(
                 'div',
-                { className: `rounded-xl shadow-xl p-8 md:p-12 mb-8`, style: { backgroundColor: roleColor } },
+                { className: `bg-white rounded-xl shadow-xl mb-8` },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-start flex-wrap gap-4 mb-6' },
-                    // Left side: Name, Role, Email
+                    { className: `rounded-t-xl p-8 md:p-12`, style: { backgroundColor: mainBoxColor } },
                     React.createElement(
                         'div',
-                        { className: 'flex-1 min-w-0' },
+                        { className: 'flex justify-between items-start flex-wrap gap-4 mb-6' },
+                        // Left side: Name, Role, Email
                         React.createElement(
-                            'h1',
-                            { className: `text-3xl md:text-4xl font-bold ${headingColor} truncate` },
-                            data.role === 'user'
-                                ? 'Údaje kontaktnej osoby'
-                                : data.role === 'hall' || data.role === 'admin'
-                                    ? 'Moje údaje'
-                                    : `${data.firstName || ''} ${data.lastName || ''}`
+                            'div',
+                            { className: 'flex-1 min-w-0' },
+                            React.createElement(
+                                'h1',
+                                { className: `text-3xl md:text-4xl font-bold ${headingColor} truncate` },
+                                data.role === 'user'
+                                    ? 'Údaje kontaktnej osoby'
+                                    : data.role === 'hall' || data.role === 'admin'
+                                        ? 'Moje údaje'
+                                        : `${data.firstName || ''} ${data.lastName || ''}`
+                            ),
+                            React.createElement(
+                                'p',
+                                { className: `text-lg ${subTextColor} mt-1` },
+                                data.email || 'E-mail neznámy'
+                            ),
+                            React.createElement(
+                                'span',
+                                {
+                                    className: 'mt-3 inline-block px-4 py-1 text-sm font-semibold text-white rounded-full shadow-md',
+                                    style: { backgroundColor: getRoleColor(data.role) }
+                                },
+                                data.role || 'Používateľ'
+                            )
                         ),
+                        // Right side: Edit button
                         React.createElement(
-                            'p',
-                            { className: `text-lg ${subTextColor} mt-1` },
-                            data.email || 'E-mail neznámy'
-                        ),
-                        React.createElement(
-                            'span',
+                            'button',
                             {
-                                className: 'mt-3 inline-block px-4 py-1 text-sm font-semibold text-white rounded-full shadow-md',
-                                style: { backgroundColor: getRoleColor(data.role) }
+                                onClick: () => setShowModal(true),
+                                className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
+                                style: {
+                                    backgroundColor: getRoleColor(data.role),
+                                    color: 'white'
+                                }
                             },
-                            data.role || 'Používateľ'
+                            // Ikona ceruzky SVG
+                            React.createElement(
+                                'svg',
+                                {
+                                    xmlns: "http://www.w3.org/2000/svg",
+                                    className: "h-5 w-5",
+                                    viewBox: "0 0 20 20",
+                                    fill: "currentColor",
+                                },
+                                React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
+                            ),
+                            'Upraviť profil'
                         )
                     ),
-                    // Right side: Edit button
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => setShowModal(true),
-                            className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
-                            style: {
-                                backgroundColor: getRoleColor(data.role),
-                                color: 'white'
-                            }
-                        },
-                        // Ikona ceruzky SVG
-                        React.createElement(
-                            'svg',
-                            {
-                                xmlns: "http://www.w3.org/2000/svg",
-                                className: "h-5 w-5",
-                                viewBox: "0 0 20 20",
-                                fill: "currentColor",
-                            },
-                            React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
-                        ),
-                        'Upraviť profil'
-                    )
                 ),
                 // Sekcia s kontaktnými údajmi
                 React.createElement(
                     'div',
-                    { className: `mt-8 border-t ${textColor === 'white' ? 'border-gray-500' : 'border-gray-200'} pt-8` },
+                    { className: 'p-8 md:p-12' },
                     React.createElement(
-                        'h3',
-                        { className: `text-xl font-semibold ${headingColor} mb-4` },
-                        'Kontaktné údaje'
-                    ),
-                    React.createElement(
-                        'dl',
-                        { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
-                        // Telefónne číslo
+                        'div',
+                        { className: `mt-2 border-t border-gray-200 pt-8` },
                         React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Telefón'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
-                            )
+                            'h3',
+                            { className: `text-xl font-semibold text-gray-800 mb-4` },
+                            'Kontaktné údaje'
                         ),
-                        // Adresa
                         React.createElement(
-                            'div',
-                            null,
+                            'dl',
+                            { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
+                            // Telefónne číslo
                             React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Adresa'
+                                'div',
+                                null,
+                                React.createElement(
+                                    'dt',
+                                    { className: `text-sm font-medium ${contactLabelColor}` },
+                                    'Telefón'
+                                ),
+                                React.createElement(
+                                    'dd',
+                                    { className: `mt-1 ${contactValueColor} font-semibold` },
+                                    data.phoneNumber ? `(${data.phoneDialCode}) ${data.phoneNumber}` : 'Nezadané'
+                                )
                             ),
+                            // Adresa
                             React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.address || 'Nezadaná'
-                            )
-                        ),
-                        // Mesto
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Mesto'
+                                'div',
+                                null,
+                                React.createElement(
+                                    'dt',
+                                    { className: `text-sm font-medium ${contactLabelColor}` },
+                                    'Adresa'
+                                ),
+                                React.createElement(
+                                    'dd',
+                                    { className: `mt-1 ${contactValueColor} font-semibold` },
+                                    data.address || 'Nezadaná'
+                                )
                             ),
+                            // Mesto
                             React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.city || 'Nezadané'
-                            )
-                        ),
-                        // PSČ
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'PSČ'
+                                'div',
+                                null,
+                                React.createElement(
+                                    'dt',
+                                    { className: `text-sm font-medium ${contactLabelColor}` },
+                                    'Mesto'
+                                ),
+                                React.createElement(
+                                    'dd',
+                                    { className: `mt-1 ${contactValueColor} font-semibold` },
+                                    data.city || 'Nezadané'
+                                )
                             ),
+                            // PSČ
                             React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.zipCode || 'Nezadané'
-                            )
-                        ),
-                        // Krajina
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Krajina'
+                                'div',
+                                null,
+                                React.createElement(
+                                    'dt',
+                                    { className: `text-sm font-medium ${contactLabelColor}` },
+                                    'PSČ'
+                                ),
+                                React.createElement(
+                                    'dd',
+                                    { className: `mt-1 ${contactValueColor} font-semibold` },
+                                    data.zipCode || 'Nezadané'
+                                )
                             ),
+                            // Krajina
                             React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold` },
-                                data.country || 'Nezadaná'
+                                'div',
+                                null,
+                                React.createElement(
+                                    'dt',
+                                    { className: `text-sm font-medium ${contactLabelColor}` },
+                                    'Krajina'
+                                ),
+                                React.createElement(
+                                    'dd',
+                                    { className: `mt-1 ${contactValueColor} font-semibold` },
+                                    data.country || 'Nezadaná'
+                                )
                             )
                         )
                     )
