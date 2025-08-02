@@ -8,6 +8,9 @@
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
+let registrationCheckIntervalId = null;
+
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
@@ -169,6 +172,25 @@ const setupFirestoreListeners = () => {
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
         });
+
+        // Spustíme časovač, ktorý každú minútu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
+        if (registrationCheckIntervalId) {
+            clearInterval(registrationCheckIntervalId);
+        }
+        registrationCheckIntervalId = setInterval(() => {
+            console.log("header.js: Kontrola času pre registračný odkaz...");
+            updateRegistrationLinkVisibility(window.globalUserProfileData);
+        }, 60000); // 60000 ms = 1 minúta
+        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
+        
+        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
+        window.addEventListener('beforeunload', () => {
+            if (registrationCheckIntervalId) {
+                clearInterval(registrationCheckIntervalId);
+                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
+            }
+        });
+
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
     }
