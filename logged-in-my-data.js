@@ -82,9 +82,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 'div',
                 { className: 'flex justify-between items-center mb-6' },
                 React.createElement(
-                    'h1',
+                    'h2',
                     { className: 'text-3xl font-bold text-gray-900' },
-                    'Môj profil'
+                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 ),
                 React.createElement(
                     'button',
@@ -94,26 +94,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         style: { backgroundColor: roleColor, borderColor: roleColor }
                     },
                     'Upraviť profil'
-                )
-            ),
-            // Zobrazenie roly a mena používateľa
-            React.createElement(
-                'div',
-                { className: 'mb-8' },
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-500 text-sm' },
-                    `Rola: `,
-                    React.createElement(
-                        'span',
-                        { className: 'font-semibold', style: { color: roleColor } },
-                        userProfileData.role
-                    )
-                ),
-                React.createElement(
-                    'h2',
-                    { className: 'text-4xl font-extrabold text-gray-900 mt-2' },
-                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
                 )
             ),
             React.createElement(
