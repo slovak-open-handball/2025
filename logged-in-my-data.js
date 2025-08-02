@@ -256,8 +256,9 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
             setNewLastName('');
             setNewEmail('');
             setCurrentPassword('');
+            setNewPhoneNumber('');
             
-            // Predvoľba telefónneho čísla a samotné číslo sa nastaví na základe existujúcich údajov
+            // Predvoľba telefónneho čísla sa nastaví na základe existujúcich údajov
             if (userProfileData?.contactPhoneNumber) {
                 // Skúsime nájsť najdlhšiu zhodnú predvoľbu
                 const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
@@ -265,15 +266,11 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
                 
                 if (foundDialCode) {
                     setSelectedDialCode(foundDialCode.dialCode);
-                    // Odstránime predvoľbu a medzery zo začiatku
-                    setNewPhoneNumber(userProfileData.contactPhoneNumber.substring(foundDialCode.dialCode.length).trim());
                 } else {
                     setSelectedDialCode('');
-                    setNewPhoneNumber(userProfileData.contactPhoneNumber.trim());
                 }
             } else {
                 setSelectedDialCode('');
-                setNewPhoneNumber('');
             }
         }
     }, [show, userProfileData]);
@@ -383,8 +380,8 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
     
-    // Zjednodušená logika pre placeholder, aby nikdy neobsahoval predvoľbu
-    const phoneNumberPlaceholder = 'Zadajte telefónne číslo';
+    // Zjednodušená logika pre placeholder telefónneho čísla
+    const phoneNumberPlaceholder = userProfileData.contactPhoneNumber ? userProfileData.contactPhoneNumber.replace(selectedDialCode, '').trim() : 'Zadajte telefónne číslo';
     
     return ReactDOM.createPortal(
         React.createElement(
