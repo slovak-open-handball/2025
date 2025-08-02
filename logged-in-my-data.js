@@ -39,31 +39,13 @@ const ErrorMessage = ({ message }) => {
 };
 
 /**
- * Zobrazuje dáta o registrácii a fakturácii používateľa.
+ * Zobrazuje dáta o fakturácii používateľa.
  * @param {object} userProfileData - Dáta profilu používateľa.
  * @param {string} headerColor - Farba hlavičky sekcie.
  * @returns {React.Element} - Vykreslený komponent.
  */
-const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
-    const isTeamRegistration = userProfileData.registrationType === 'team';
+const renderBillingInfo = (userProfileData, headerColor) => {
     const hasBillingAddress = userProfileData.billingAddress && Object.keys(userProfileData.billingAddress).length > 0;
-
-    // Obsah sekcie pre registračné dáta
-    const registrationSectionContent = isTeamRegistration
-        ? React.createElement(
-            'div',
-            null,
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Názov tímu:'), ` ${userProfileData.teamName}`),
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Kategória:'), ` ${userProfileData.categoryName}`),
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Štát:'), ` ${userProfileData.country}`),
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Počet členov:'), ` ${userProfileData.teamMembersCount}`),
-        )
-        : React.createElement(
-            'div',
-            null,
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Kategória:'), ` ${userProfileData.categoryName}`),
-            React.createElement('p', { className: 'text-gray-800 text-lg' }, React.createElement('span', { className: 'font-bold' }, 'Štát:'), ` ${userProfileData.country}`)
-        );
 
     // Obsah sekcie pre fakturačné dáta
     const addressSectionContent = hasBillingAddress
@@ -83,41 +65,25 @@ const renderBillingAndAddressInfo = (userProfileData, headerColor) => {
 
     return React.createElement(
         'div',
-        { className: 'space-y-8' },
-        // Sekcia registrácie
+        { className: 'bg-white rounded-lg shadow-md p-6' },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-lg shadow-md p-6' },
+            { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
+            React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Fakturačné údaje'),
             React.createElement(
-                'div',
-                { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Dáta registrácie'),
-            ),
-            registrationSectionContent
-        ),
-        // Sekcia fakturácie
-        React.createElement(
-            'div',
-            { className: 'bg-white rounded-lg shadow-md p-6' },
-            React.createElement(
-                'div',
-                { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Fakturačné údaje'),
+                'button',
+                {
+                    onClick: () => { /* Otvoriť modálne okno na úpravu */ },
+                    className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
+                },
                 React.createElement(
-                    'button',
-                    {
-                        onClick: () => { /* Otvoriť modálne okno na úpravu */ },
-                        className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
-                    },
-                    React.createElement(
-                        'svg',
-                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                    )
+                    'svg',
+                    { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                 )
-            ),
-            addressSectionContent
-        )
+            )
+        ),
+        addressSectionContent
     );
 };
 
@@ -183,6 +149,7 @@ const ChangeEmailApp = ({ isOpen, onClose, userProfileData }) => {
     // Funkcia na re-autentifikáciu používateľa
     const reauthenticateUser = async (user, currentPassword) => {
         try {
+            // Použijeme globálne dostupné funkcie z 'authentication.js'
             const credential = window.EmailAuthProvider.credential(user.email, currentPassword);
             await window.reauthenticateWithCredential(user, credential);
             return true;
@@ -405,56 +372,52 @@ const MyDataApp = () => {
 
     return React.createElement(
         'div',
-        { className: 'container mx-auto p-4 md:p-8 lg:p-12' },
+        { className: 'container mx-auto p-4 md:p-8 lg:p-12 space-y-8' }, // Pridaný space-y-8 pre vertikálny rozostup
         React.createElement(
             'div',
-            { className: 'flex flex-col lg:flex-row lg:space-x-8 space-y-8 lg:space-y-0' },
+            { className: 'bg-white rounded-lg shadow-md p-6 w-full' }, // Zmenené z lg:w-1/2 na w-full
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-lg shadow-md p-6 lg:w-1/2' },
+                { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
+                React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Kontaktná osoba'),
+                // Ikona ceruzky pre otvorenie modálneho okna na zmenu e-mailu
                 React.createElement(
-                    'div',
-                    { className: `flex items-center justify-between pb-4 mb-4 border-b-2 border-${headerColor}-200` },
-                    React.createElement('h2', { className: 'text-2xl font-bold text-gray-700' }, 'Kontaktná osoba'),
-                    // Ikona ceruzky pre otvorenie modálneho okna na zmenu e-mailu
+                    'button',
+                    {
+                        onClick: () => setIsChangeEmailModalOpen(true),
+                        className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
+                    },
                     React.createElement(
-                        'button',
-                        {
-                            onClick: () => setIsChangeEmailModalOpen(true),
-                            className: `text-${headerColor}-500 hover:text-${headerColor}-700 transition-colors duration-200`
-                        },
-                        React.createElement(
-                            'svg',
-                            { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-                            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                        )
+                        'svg',
+                        { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                     )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'space-y-2' },
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko: '),
-                        ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
-                        ` ${userProfileData.email}`
-                    ),
-                    !isUserAdmin && React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg' },
-                        React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
-                        ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
-                    ),
                 )
             ),
-            renderBillingAndAddressInfo(userProfileData, headerColor)
+            React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Meno a priezvisko: '),
+                    ` ${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'E-mailová adresa:'),
+                    ` ${userProfileData.email}`
+                ),
+                !isUserAdmin && React.createElement(
+                    'p',
+                    { className: 'text-gray-800 text-lg' },
+                    React.createElement('span', { className: 'font-bold' }, 'Telefónne číslo:'),
+                    ` ${formatPhoneNumber(userProfileData.contactPhoneNumber)}`
+                ),
+            )
         ),
+        renderBillingInfo(userProfileData, headerColor),
         // Modálne okno na zmenu e-mailu s logikou z ChangeEmailApp
         React.createElement(ChangeEmailApp, {
             isOpen: isChangeEmailModalOpen,
