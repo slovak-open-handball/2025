@@ -1,16 +1,3 @@
-// logged-in-my-data.js
-// Tento súbor bol upravený tak, aby okrem zobrazenia profilových údajov
-// umožňoval aj zmenu e-mailovej adresy prihláseného používateľa prostredníctvom modálneho okna.
-// Logika zmeny e-mailu bola prenesená z z-logged-in-change-email.js.
-// Kód bol aktualizovaný, aby bol odolnejší voči chybám s "undefined" premennými.
-// Bola pridaná aktualizovaná funkcia pre zobrazenie farebných notifikácií.
-// Farba hlavičky sa teraz mení dynamicky na základe roly používateľa.
-// Text v hlavičke bol upravený z "Môj profil" na "Kontaktná osoba".
-// Meno a priezvisko sú zobrazené v jednom riadku a boli zmenené popisy pred údajmi.
-// Rozloženie profilových údajov bolo zmenené tak, aby bol popis a hodnota na samostatných riadkoch s rôznou veľkosťou medzier.
-// Modálne okno pre zmenu e-mailu bolo upravené tak, aby jeho šírka zodpovedala hlavnému profilovému boxu a bolo trochu širšie.
-// Biely obdĺžnik a modrý obdĺžnik v profile majú teraz rovnakú šírku, a modrý obdĺžnik má ostré spodné rohy.
-
 // Importy pre Firebase funkcie
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -338,11 +325,11 @@ const MyDataApp = () => {
 
     return React.createElement(
         'div',
-        { className: 'relative flex flex-col items-center justify-center min-h-screen' },
+        { className: 'relative flex flex-col items-center pt-12' },
         React.createElement(
             'div',
             {
-                className: 'w-full max-w-2xl mx-auto rounded-xl shadow-lg overflow-hidden mt-8',
+                className: 'w-full max-w-2xl mx-auto rounded-xl shadow-lg overflow-hidden',
                 style: { marginBottom: '2rem' } // Pridaný spodný margin
             },
             React.createElement(
