@@ -149,7 +149,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 },
                                 React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
                             ),
-                            'Upraviť profil'
+                            'Upraviť'
                         )
                     ),
                 ),
@@ -254,22 +254,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 { className: `mt-1 ${contactValueColor} font-semibold` },
                                 data.country || 'Nezadaná'
                             )
-                        ),
-                        // Rola používateľa (presunutá sem)
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement(
-                                'dt',
-                                { className: `text-sm font-medium ${contactLabelColor}` },
-                                'Rola'
-                            ),
-                            React.createElement(
-                                'dd',
-                                { className: `mt-1 ${contactValueColor} font-semibold capitalize` },
-                                data.role || 'Nezadaná'
-                            )
                         )
+                        // Pôvodná Rola používateľa bola odstránená
                     )
                 )
             ),
