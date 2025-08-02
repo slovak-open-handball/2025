@@ -214,7 +214,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     React.createElement(
                         'dl',
                         { className: 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6' },
-                        // Meno a Priezvisko
+                        // Meno a priezvisko
                         React.createElement(
                             'div',
                             null,
@@ -244,8 +244,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                                 checkValue(data.email)
                             )
                         ),
-                        // Telefónne číslo
-                        React.createElement(
+                        // Telefónne číslo (zobrazí sa iba ak používateľ nie je admin)
+                        data.role !== 'admin' && React.createElement(
                             'div',
                             null,
                             React.createElement(
@@ -262,8 +262,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     )
                 )
             ),
-            // Fakturačný box
-            React.createElement(
+            // Fakturačný box (zobrazí sa iba ak používateľ nie je admin)
+            data.role !== 'admin' && React.createElement(
                 'div',
                 { className: `bg-white rounded-xl shadow-xl mb-8` },
                 React.createElement(
