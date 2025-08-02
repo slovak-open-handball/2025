@@ -271,30 +271,35 @@ const getRoleColor = (role) => {
 
 window.getRoleColor = getRoleColor;
 
-/**
- * Táto funkcia vykreslí hlavnú React aplikáciu MyDataApp do DOM.
- * Je exportovaná, aby mohla byť volaná priamo z iných skriptov, napr. authentication.js.
- * @param {object} userProfileData - Dáta používateľského profilu.
- */
-export const renderMyDataApp = (userProfileData) => {
-    console.log("MyDataApp.js: Spúšťa sa renderovacia funkcia renderMyDataApp.");
-
-    // Skryjeme loader
+// Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
+// Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
+const handleDataUpdateAndRender = (event) => {
+    // Okamžite skryjeme loader, akonáhle spracujeme udalosť.
     if (typeof window.hideGlobalLoader === 'function') {
         window.hideGlobalLoader();
     }
     
-    const rootElement = document.getElementById('root');
-    if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
-        const userRole = userProfileData.role;
-        const roleColor = getRoleColor(userRole);
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: userProfileData, roleColor: roleColor }));
-        console.log("MyDataApp.js: Aplikácia vykreslená po načítaní dát.");
+    const data = event.detail;
+    if (data && Object.keys(data).length > 0) {
+        const rootElement = document.getElementById('root');
+        if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
+            const userRole = data.role;
+            const roleColor = getRoleColor(userRole);
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(React.createElement(MyDataApp, { userProfileData: data, roleColor: roleColor }));
+        } else {
+            console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        }
     } else {
-        console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné.");
     }
 };
 
-// Pôvodné poslucháče a kontroly sú odstránené, pretože teraz sa spoliehame na explicitné volanie
-// funkcie renderMyDataApp z authentication.js, čím sa zabezpečí správne načítanie.
+// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
+document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+
+// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
+// skontrolujeme, či sú dáta už dostupné.
+if (window.globalUserProfileData) {
+    handleDataUpdateAndRender({ detail: window.globalUserProfileData });
+}
