@@ -67,6 +67,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         if (userProfileData && Object.keys(userProfileData).length > 0) {
             setData(userProfileData);
             setIsMyDataLoaded(true);
+            // Skrytie globálneho loadera po načítaní dát
+            if (typeof window.hideGlobalLoader === 'function') {
+                window.hideGlobalLoader();
+            }
         }
     }, [userProfileData]);
 
