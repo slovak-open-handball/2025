@@ -275,6 +275,13 @@ const MyDataApp = () => {
         setNotification({ message: '', type: '', visible: false });
     };
 
+    // Nová funkcia pre zatvorenie modalu po kliknutí mimo neho
+    const handleOverlayClick = (e) => {
+      if (e.target === e.currentTarget) {
+        handleCloseModal();
+      }
+    };
+
     const handleNewEmailChange = (event) => {
         setNewEmail(event.target.value);
         if (emailError) setEmailError('');
@@ -421,10 +428,16 @@ const MyDataApp = () => {
         ),
         isModalOpen && React.createElement(
             'div',
-            { className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-40 transition-opacity duration-300' },
+            { 
+              className: 'fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-40 transition-opacity duration-300',
+              onClick: handleOverlayClick, // Pridaný listener pre kliknutie na pozadie
+            },
             React.createElement(
                 'div',
-                { className: 'relative p-8 bg-white w-full max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100' },
+                { 
+                  className: 'relative p-8 bg-white w-full max-w-md m-auto rounded-xl shadow-2xl transition-transform duration-300 transform scale-100',
+                  onClick: e => e.stopPropagation(), // Zastaví šírenie udalosti, aby sa modal nezatvoril pri kliknutí do vnútra
+                },
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-center pb-4 border-b border-gray-200' },
