@@ -335,13 +335,3 @@ if (window.isGlobalAuthReady) {
 } else {
     window.addEventListener('globalDataUpdated', renderApp);
 }
-
-// Pridáme poslucháča udalosti 'globalDataUpdated' pre načítanie hlavičky.
-// Tým sa zabezpečí, že hlavička bude mať prístup k aktuálnemu stavu autentifikácie.
-window.addEventListener('globalDataUpdated', () => {
-  // Načítanie header.js po inicializácii autentifikácie
-  const headerScript = document.createElement('script');
-  headerScript.type = 'module';
-  headerScript.src = 'header.js';
-  document.body.appendChild(headerScript);
-});
