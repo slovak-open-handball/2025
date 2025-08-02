@@ -54,7 +54,7 @@ const updateRegistrationStatusText = (dates) => {
     if (now < registrationStart) {
         // Registrácia sa ešte nezačala
         messageElement.innerHTML = `
-            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}.</p>
+            <p>Registrácia sa spustí ${formatDate(dates.registrationStartDate)}</p>
             <p id="countdown-timer" class="font-semibold text-gray-700"></p>
         `;
         startCountdown(registrationStart);
