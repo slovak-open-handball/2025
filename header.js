@@ -101,23 +101,23 @@ const updateHeaderLinks = (userProfileData) => {
     }
 
     // Teraz skontrolujeme stav registrácie na turnaj, aby sme vedeli, či zobraziť link na registráciu
-    updateRegistrationLinkVisibility(userProfileData);
+    updateRegistrationLinkVisibility(window.globalUserProfileData);
 };
 
 /**
  * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
  * aktuálneho dátumu a existencie kategórií.
+ * Odkaz sa zobrazí len vtedy, ak obe podmienky platia súčasne.
  * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    // Kontrola, či sú registrationDates a categoriesData načítané a platné
+    // Podmienka: Musí byť otvorená registrácia (aktuálny dátum v rozmedzí) A zároveň musia existovať kategórie.
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
     const hasCategories = window.hasCategories;
 
-    // Odkaz na registráciu sa zobrazí len vtedy, ak je registrácia otvorená a kategórie existujú
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
         // Nastavíme správny href v závislosti od prihlásenia
