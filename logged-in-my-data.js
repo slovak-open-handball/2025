@@ -237,7 +237,6 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const [isFirstNameFocused, setIsFirstNameFocused] = useState(false);
     const [isLastNameFocused, setIsLastNameFocused] = useState(false);
     const [isPhoneNumberFocused, setIsPhoneNumberFocused] = useState(false); // Nový stav pre fokus telefónneho čísla
-    const [isPhoneNumberFocused, setIsPhoneNumberFocused] = useState(false);
 
     useEffect(() => {
         // Reset stavu pri zatvorení modálu
