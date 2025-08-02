@@ -128,14 +128,6 @@ const MyDataApp = () => {
         return fullPhoneNumber;
     };
 
-    // Vytvorenie komponentu pre riadok s údajmi
-    const DataRow = ({ label, value }) => (
-        React.createElement('div', { className: 'flex flex-col md:flex-row md:items-center py-4 border-b border-gray-200' },
-            React.createElement('p', { className: 'font-bold text-gray-800 w-full md:w-1/3' }, label),
-            React.createElement('p', { className: 'text-gray-800 text-lg mt-1 md:mt-0 w-full md:w-2/3' }, value || 'Nezadané')
-        )
-    );
-
     // Hlavné používateľské rozhranie
     return (
         React.createElement('div', { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16' },
@@ -168,12 +160,26 @@ const MyDataApp = () => {
 
             // Informačná karta
             React.createElement('div', { className: 'bg-white rounded-xl shadow-lg p-6 md:p-8' },
-                // Riadky s údajmi
-                React.createElement(DataRow, { label: 'Meno a Priezvisko:', value: `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim() }),
-                userProfileData?.role !== 'admin' &&
-                React.createElement(DataRow, { label: 'Telefónne číslo:', value: formatPhoneNumber(userProfileData.phoneNumber) }),
-                React.createElement(DataRow, { label: 'E-mailová adresa:', value: userProfileData.email }),
-                React.createElement(DataRow, { label: 'Rola:', value: userProfileData.role })
+                // Rozloženie s dvoma stĺpcami pre telefón a meno
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-y-4 md:gap-y-0 md:gap-x-12 pb-4 border-b border-gray-200' },
+                    // Riadok s menom a priezviskom
+                    React.createElement('div', { className: 'flex-1' },
+                        React.createElement('p', { className: 'font-bold text-gray-800' }, 'Meno a Priezvisko:'),
+                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim())
+                    ),
+                    // Riadok s telefónnym číslom (iba pre bežných používateľov)
+                    userProfileData?.role !== 'admin' &&
+                    React.createElement('div', { className: 'flex-1' },
+                        React.createElement('p', { className: 'font-bold text-gray-800' }, 'Telefónne číslo:'),
+                        React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, formatPhoneNumber(userProfileData.phoneNumber))
+                    )
+                ),
+
+                // Samostatný riadok pre e-mail
+                React.createElement('div', { className: 'mt-4 md:mt-6' },
+                    React.createElement('p', { className: 'font-bold text-gray-800 flex items-center' }, 'E-mailová adresa kontaktnej osoby:'),
+                    React.createElement('p', { className: 'text-gray-800 text-lg mt-1' }, userProfileData.email || 'Nezadané')
+                )
             ),
 
             // Na tomto mieste sa modálne okno zavolá a po úspešnom uložení zmien sa zobrazí notifikácia
