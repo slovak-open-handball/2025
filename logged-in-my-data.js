@@ -308,7 +308,7 @@ const handleDataUpdateAndRender = (event) => {
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 console.log("MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.");
-document.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
+window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
