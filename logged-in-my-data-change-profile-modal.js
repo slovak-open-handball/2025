@@ -65,12 +65,12 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
  * Komponent pre výber predvoľby krajiny.
  */
 const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
-    // Logika je podobná ako pri ChangeProfileModal, ale s menším zoznamom
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Oprava: Pridaná kontrola, či c.name existuje, aby sa predišlo chybe TypeError.
+    // Opravená logika filtra pre nový formát dát v countryDialCodes
     const filteredCodes = countryDialCodes.filter(c =>
-        (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) || (c.dial_code && c.dial_code.includes(searchQuery))
+        (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.dialCode && c.dialCode.includes(searchQuery))
     );
 
     const ModalHeader = React.createElement(
@@ -103,11 +103,14 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                 'li',
                 {
                     key: country.code,
-                    onClick: () => onSelect(country.dial_code),
-                    className: `flex justify-between items-center px-4 py-2 cursor-pointer transition-colors duration-200 hover:bg-gray-100 ${selectedDialCode === country.dial_code ? 'bg-blue-100 font-semibold' : ''}`
+                    onClick: () => {
+                        onSelect(country.dialCode);
+                        onClose(); // Zatvoríme modálne okno po výbere
+                    },
+                    className: `flex justify-between items-center px-4 py-2 cursor-pointer transition-colors duration-200 hover:bg-gray-100 ${selectedDialCode === country.dialCode ? 'bg-blue-100 font-semibold' : ''}`
                 },
-                React.createElement('span', null, `${country.name} (${country.dial_code})`),
-                selectedDialCode === country.dial_code && React.createElement(
+                React.createElement('span', null, `${country.name} (${country.dialCode})`),
+                selectedDialCode === country.dialCode && React.createElement(
                     'svg',
                     { className: 'h-5 w-5 text-blue-600', xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
                     React.createElement('path', { fillRule: 'evenodd', d: 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z', clipRule: 'evenodd' })
@@ -147,7 +150,6 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
  * Modálne okno pre zmenu profilu
  */
 export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileData, roleColor }) => {
-    // ... existujúci kód pre stavy, handlery, atď. ...
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -171,11 +173,14 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             let dialCode = '+421'; // Predvolená predvoľba
             let phoneNumber = initialPhoneNumber;
 
-            // Ak telefónne číslo obsahuje predvoľbu, oddelíme ju
-            const match = initialPhoneNumber.match(/^(\+\d{1,4})(.+)$/);
-            if (match) {
-                dialCode = match[1];
-                phoneNumber = match[2];
+            // Nájdeme predvoľbu v zozname
+            // Najprv zoradíme predvoľby od najdlhšej, aby sme správne identifikovali napr. +421 a nie len +4
+            const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+            const foundDialCode = sortedDialCodes.find(c => initialPhoneNumber.startsWith(c.dialCode));
+
+            if (foundDialCode) {
+                dialCode = foundDialCode.dialCode;
+                phoneNumber = initialPhoneNumber.substring(dialCode.length);
             }
 
             const initialFormData = {
@@ -197,11 +202,13 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     // Kontrola zmien vo formulári
     useEffect(() => {
         if (show) {
-            const currentPhoneNumber = selectedDialCode + formData.contactPhoneNumber;
+            const currentFullPhoneNumber = selectedDialCode + formData.contactPhoneNumber;
+            const initialFullPhoneNumber = initialData.contactPhoneNumber ? initialData.contactPhoneNumber : (initialData.dialCode + initialData.contactPhoneNumber);
+
             const changes =
                 formData.firstName !== initialData.firstName ||
                 formData.lastName !== initialData.lastName ||
-                currentPhoneNumber !== (initialData.contactPhoneNumber.includes(selectedDialCode) ? initialData.contactPhoneNumber : selectedDialCode + initialData.contactPhoneNumber) ||
+                currentFullPhoneNumber !== initialFullPhoneNumber ||
                 formData.email !== initialData.email;
 
             setHasAnyChanges(changes);
