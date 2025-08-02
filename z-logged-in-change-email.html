@@ -59,14 +59,14 @@
         if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             try {
                 firebase.initializeApp(firebaseConfig);
-                console.log("logged-in-change-email.html: Firebase inicializovaný globálne.");
+                console.log("z-logged-in-change-email.html: Firebase inicializovaný globálne.");
             } catch (e) {
-                console.error("logged-in-change-email.html: Chyba pri globálnej inicializácii Firebase:", e);
+                console.error("z-logged-in-change-email.html: Chyba pri globálnej inicializácii Firebase:", e);
             }
         } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
-            console.log("logged-in-change-email.html: Firebase už bol inicializovaný.");
+            console.log("z-logged-in-change-email.html: Firebase už bol inicializovaný.");
         } else {
-            console.error("logged-in-change-email.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
+            console.error("z-logged-in-change-email.html: Firebase SDK nie je načítané pred pokusom o inicializáciu.");
         }
     </script>
 </head>
@@ -86,7 +86,7 @@
     </div>
 
     <!-- Načítanie hlavného skriptu pre túto stránku (ChangeEmailApp) -->
-    <script src="logged-in-change-email.js"></script>
+    <script src="z-logged-in-change-email.js"></script>
 
     <!-- Načítanie hlavičky a logiky menu -->
     <script>
@@ -155,16 +155,16 @@
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Zabezpečíme, že ChangeEmailApp je definovaná (je v logged-in-change-email.js)
+            // Zabezpečíme, že ChangeEmailApp je definovaná (je v z-logged-in-change-email.js)
             if (typeof ChangeEmailApp === 'undefined') {
-                console.error("Chyba: Komponent ChangeEmailApp nie je definovaný. Skontrolujte logged-in-change-email.js.");
+                console.error("Chyba: Komponent ChangeEmailApp nie je definovaný. Skontrolujte z-logged-in-change-email.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                 return;
             }
 
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(React.createElement(ChangeEmailApp, null));
-            console.log("logged-in-change-email.html: React App vykreslená.");
+            console.log("z-logged-in-change-email.html: React App vykreslená.");
         };
     </script>
 </body>
