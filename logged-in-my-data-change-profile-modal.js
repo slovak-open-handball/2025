@@ -91,7 +91,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                 placeholder: 'Hľadať krajinu alebo predvoľbu...',
                 value: searchQuery,
                 onChange: (e) => setSearchQuery(e.target.value),
-                className: 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500' // Tu je zachované modré orámovanie pri focus
+                className: 'w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500'
             }
         )
     );
@@ -189,6 +189,9 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                 dialCode = foundDialCode.dialCode;
                 phoneNumber = initialPhoneNumber.substring(dialCode.length);
             }
+            
+            // Odstránenie medzier z pôvodného telefónneho čísla
+            phoneNumber = phoneNumber.replace(/\s/g, '');
 
             setInitialData({
                 firstName: userProfileData.firstName || '',
@@ -207,9 +210,13 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
     // Kontrola zmien vo formulári
     useEffect(() => {
         if (show) {
+            // Pred porovnaním odstránime medzery z oboch čísel
+            const cleanedCurrentPhone = formData.contactPhoneNumber.replace(/\s/g, '');
+            const cleanedInitialPhone = initialData.contactPhoneNumber;
+
             const hasFirstNameChanged = formData.firstName !== '' && formData.firstName !== initialData.firstName;
             const hasLastNameChanged = formData.lastName !== '' && formData.lastName !== initialData.lastName;
-            const hasPhoneNumberChanged = formData.contactPhoneNumber !== '' && (selectedDialCode + formData.contactPhoneNumber) !== (selectedDialCode + initialData.contactPhoneNumber);
+            const hasPhoneNumberChanged = formData.contactPhoneNumber !== '' && cleanedCurrentPhone !== cleanedInitialPhone;
             const hasEmailChanged = formData.email !== '' && formData.email !== initialData.email;
             const hasPasswordChanged = password.length > 0;
 
@@ -224,10 +231,29 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         }
     }, [formData, initialData, selectedDialCode, show, password]);
 
+    /**
+     * Funkcia na formátovanie telefónneho čísla.
+     * Prijíma iba číslice a pridáva medzeru po každých troch znakoch.
+     */
+    const formatPhoneNumber = (value) => {
+        if (!value) return value;
+        const onlyNums = value.replace(/[^\d]/g, '');
+        // Zoskupí číslice po troch a oddelí ich medzerou
+        return onlyNums.match(/.{1,3}/g)?.join(' ') || '';
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({ ...prevData, [name]: value }));
+        
+        if (name === 'contactPhoneNumber') {
+            // Odstránime nečíselné znaky
+            const onlyNums = value.replace(/[^\d]/g, '');
+            // Ak je dĺžka väčšia ako 9 (max. dĺžka čísla), skrátime
+            const formattedValue = onlyNums.length > 9 ? onlyNums.substring(0, 9) : onlyNums;
+            setFormData(prevData => ({ ...prevData, [name]: formattedValue }));
+        } else {
+            setFormData(prevData => ({ ...prevData, [name]: value }));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -256,7 +282,11 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
             const updateData = {};
             if (formData.firstName !== '') updateData.firstName = formData.firstName;
             if (formData.lastName !== '') updateData.lastName = formData.lastName;
-            if (formData.contactPhoneNumber !== '') updateData.contactPhoneNumber = selectedDialCode + formData.contactPhoneNumber;
+            // Uložíme telefónne číslo bez medzier
+            if (formData.contactPhoneNumber !== '') {
+                const cleanedPhone = formData.contactPhoneNumber.replace(/\s/g, '');
+                updateData.contactPhoneNumber = selectedDialCode + cleanedPhone;
+            }
 
             if (Object.keys(updateData).length > 0) {
                 await updateDoc(userDocRef, updateData);
@@ -298,6 +328,8 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
         dialCodeForPlaceholder = foundDialCodeForPlaceholder.dialCode;
         phoneNumberForPlaceholder = initialPhoneNumber.substring(dialCodeForPlaceholder.length);
     }
+    // Formátujeme telefónne číslo pre placeholder, aby bolo viditeľné pre používateľa
+    const formattedPlaceholderNumber = formatPhoneNumber(phoneNumberForPlaceholder);
 
     // Spoločná trieda pre štýlovanie vstupných polí
     const inputStyleClass = 'mt-1 block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-0 sm:text-sm';
@@ -390,12 +422,12 @@ export const ChangeProfileModal = ({ show, onClose, onSaveSuccess, userProfileDa
                                     selectedDialCode
                                 ),
                                 React.createElement('input', {
-                                    type: 'text',
+                                    type: 'tel',
                                     id: 'contactPhoneNumber',
                                     name: 'contactPhoneNumber',
-                                    value: formData.contactPhoneNumber,
+                                    value: formatPhoneNumber(formData.contactPhoneNumber),
                                     onChange: handleChange,
-                                    placeholder: phoneNumberForPlaceholder || '', // Placeholder pre telefónne číslo
+                                    placeholder: formattedPlaceholderNumber || '', // Placeholder pre telefónne číslo
                                     className: 'flex-1 block w-full rounded-r-md px-3 py-2 placeholder-gray-400 focus:outline-none focus:ring-0 sm:text-sm', // focus:ring-0 removes blue ring
                                     style: { 'borderColor': roleColor, 'ringColor': roleColor }
                                 })
