@@ -72,7 +72,7 @@ const updateRegistrationStatusText = (dates) => {
         // Registrácia je už ukončená
         messageElement.innerHTML = `
             <p class="text-red-600 font-semibold">Registrácia na turnaj je už ukončená.</p>
-            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}.</p>
+            <p>Registrácia bola ukončená ${formatDate(dates.registrationEndDate)}</p>
         `;
         toggleRegistrationButton(false, 'end');
     }
