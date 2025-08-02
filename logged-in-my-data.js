@@ -1,6 +1,6 @@
 // logged-in-my-data.js
 // Tento súbor bol upravený, aby vždy synchronizoval e-mailovú adresu v profile používateľa
-// s aktuálnou e-mailovou adresou v Firebase Authentication.
+// s aktuálnou e-mailovou adresou v Firebase Authentication a farba hlavičky sa mení podľa roly.
 
 import { doc, onSnapshot, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -98,6 +98,24 @@ const ErrorMessage = ({ message, isSuccess = false }) => {
     );
 };
 
+/**
+ * Vráti farbu hlavičky na základe roly používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
+ * @returns {string} Hexadecimálny kód farby.
+ */
+const getHeaderColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff'; // Farba pre admina
+        case 'hall':
+            return '#b06835'; // Farba pre halu
+        case 'user':
+            return '#9333EA'; // Farba pre bežného používateľa
+        default:
+            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+    }
+};
+
 
 /**
  * Hlavný React komponent MyDataApp, ktorý zobrazuje údaje profilu
@@ -115,6 +133,10 @@ const MyDataApp = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [currentAuthEmail, setCurrentAuthEmail] = useState('');
+
+    // Stav pre dynamickú farbu ikony ceruzky
+    const [pencilHover, setPencilHover] = useState(false);
+
 
     useEffect(() => {
         const auth = getAuth();
@@ -277,7 +299,8 @@ const MyDataApp = () => {
         return React.createElement(ErrorMessage, { message: error });
     }
 
-    const headerColor = 'bg-blue-600';
+    const role = userProfileData?.role || 'default'; // Získame rolu z profilu, alebo použijeme 'default'
+    const headerColor = getHeaderColor(role);
 
     return React.createElement(
         'div',
@@ -287,7 +310,8 @@ const MyDataApp = () => {
             { className: `bg-white p-8 rounded-xl shadow-lg mt-8` },
             React.createElement(
                 'div',
-                { className: `p-6 rounded-lg shadow-lg ${headerColor} mb-8` },
+                // Použijeme inline style pre dynamické nastavenie farby
+                { className: 'p-6 rounded-lg shadow-lg mb-8', style: { backgroundColor: headerColor } },
                 React.createElement(
                     'h2',
                     { className: 'text-2xl font-bold text-white' },
@@ -308,10 +332,23 @@ const MyDataApp = () => {
                     ),
                     React.createElement(
                         'button',
-                        { onClick: handleOpenModal, className: 'p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors' },
+                        { 
+                          onClick: handleOpenModal, 
+                          className: 'p-2 rounded-full hover:bg-gray-100 transition-colors',
+                          // Použijeme onMouseEnter a onMouseLeave na dynamickú zmenu farby
+                          onMouseEnter: () => setPencilHover(true),
+                          onMouseLeave: () => setPencilHover(false),
+                        },
                         React.createElement(
                             'svg',
-                            { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                            // Dynamický štýl pre farbu ceruzky na základe stavu hoveru
+                            { 
+                                className: 'h-6 w-6 transition-colors',
+                                style: { color: pencilHover ? headerColor : '#6b7280' }, // #6b7280 je text-gray-500
+                                fill: 'none', 
+                                viewBox: '0 0 24 24', 
+                                stroke: 'currentColor' 
+                            },
                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L15.232 5.232z' })
                         )
                     )
