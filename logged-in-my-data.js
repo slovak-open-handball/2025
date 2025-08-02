@@ -376,8 +376,14 @@ const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     const firstNamePlaceholder = userProfileData?.firstName || 'Meno';
     const lastNamePlaceholder = userProfileData?.lastName || 'Priezvisko';
     const emailPlaceholder = userProfileData?.email || 'e-mail@priklad.sk';
-    const phoneNumberPlaceholder = userProfileData?.contactPhoneNumber || ''; // Použitie ako placeholder
-
+    
+    // Zmena: Extrahuje len samotné telefónne číslo bez predvoľby pre placeholder
+    const contactPhoneNumber = userProfileData?.contactPhoneNumber || '';
+    let phoneNumberPlaceholder = contactPhoneNumber;
+    if (contactPhoneNumber && selectedDialCode && contactPhoneNumber.startsWith(selectedDialCode)) {
+        phoneNumberPlaceholder = contactPhoneNumber.substring(selectedDialCode.length);
+    }
+    
     return ReactDOM.createPortal(
         React.createElement(
             'div',
