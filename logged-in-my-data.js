@@ -5,7 +5,7 @@
 // sú už definované globálne v 'authentication.js'.
 
 const { useState, useEffect, useCallback } = React;
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 /**
@@ -129,13 +129,13 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
             const user = auth.currentUser;
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
+
+            // Odoslať overovací e-mail na novú adresu
             await updateEmail(user, newEmail);
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, {
-                email: newEmail
-            });
-            showGlobalNotification('E-mailová adresa bola úspešne zmenená.', 'success');
-            onClose(); // Zatvorí modál po úspešnej zmene
+            await sendEmailVerification(user);
+
+            showGlobalNotification('Na novú e-mailovú adresu bol odoslaný overovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maile.', 'success');
+            onClose();
         } catch (error) {
             console.error('Chyba pri zmene e-mailovej adresy:', error);
 
@@ -146,7 +146,7 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
             } else if (error.code === 'auth/requires-recent-login') {
                 showGlobalNotification('Pre vykonanie tejto akcie sa musíte znova prihlásiť. Skúste to prosím znova.', 'error');
             } else if (error.code === 'auth/operation-not-allowed') {
-                 showGlobalNotification('Operácia nie je povolená. Prosím, skontrolujte, či máte v konzole Firebase povolenú metódu prihlásenia "Email/Password".', 'error');
+                showGlobalNotification('Táto operácia nie je povolená. Pre dokončenie zmeny e-mailu je potrebné overenie e-mailu. Ak ste už overovací e-mail dostali, kliknite na odkaz v ňom. ', 'error');
             } else {
                 showGlobalNotification(`Chyba: ${error.message}`, 'error');
             }
@@ -256,7 +256,7 @@ const ChangeEmailModal = ({ isOpen, onClose }) => {
                             className: `px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out ${!isFormValid || loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`,
                             disabled: loading || !isFormValid,
                         },
-                        loading ? 'Ukladám...' : 'Uložiť zmeny'
+                        loading ? 'Ukladám...' : 'Odoslať overovací e-mail'
                     )
                 )
             )
