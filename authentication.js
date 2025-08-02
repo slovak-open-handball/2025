@@ -9,29 +9,32 @@ window.auth = null; // Inštancia Firebase Auth
 window.db = null; // Inštancia Firebase Firestore
 window.showGlobalNotification = null; // Funkcia pre zobrazenie globálnych notifikácií
 window.reauthenticateWithCredential = null; // Funkcia pre re-autentifikáciu
-window.updateEmail = null; // Funkcia na zmenu emailu
+window.as = null; // Funkcia na zmenu emailu
 window.EmailAuthProvider = null; // Poskytovateľ autentifikácie pre email
+window.verifyBeforeUpdateEmail = null; // Funkcia na overenie emailu pred zmenou
 
 // Import necessary Firebase functions
-import { 
-    initializeApp 
+import {
+    initializeApp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    signOut, 
+import {
+    getAuth,
+    onAuthStateChanged,
+    signOut,
     signInWithEmailAndPassword,
     reauthenticateWithCredential, // Dôležité: pridaný import
     updateEmail, // Dôležité: pridaný import
-    EmailAuthProvider // Dôležité: pridaný import
+    EmailAuthProvider, // Dôležité: pridaný import
+    verifyBeforeUpdateEmail // Dôležité: pridaný import pre overenie e-mailu
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, 
-    onSnapshot 
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Pevne definovaná konfigurácia Firebase
+// Vložený konfiguračný objekt, ktorý ste poskytli
 const firebaseConfig = {
     apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
     authDomain: "soh2025-2s0o2h5.firebaseapp.com",
@@ -41,42 +44,43 @@ const firebaseConfig = {
     appId: "1:367316414164:web:fce079e1c7f4223292490b"
 };
 
+// Definovanie globálnych premenných, ktoré sú poskytnuté z Canvas prostredia
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Inicializácia Firebase aplikácie
+let app;
+let db;
+let auth;
+
 const setupFirebase = () => {
     try {
-        const app = initializeApp(firebaseConfig);
-        window.auth = getAuth(app);
-        window.db = getFirestore(app);
-        
-        // Sprístupníme potrebné funkcie globálne
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        console.log("AuthManager: Firebase inicializovaný.");
+
+        // Pridáme globálne sprístupnené funkcie
+        window.auth = auth;
+        window.db = db;
         window.reauthenticateWithCredential = reauthenticateWithCredential;
         window.updateEmail = updateEmail;
         window.EmailAuthProvider = EmailAuthProvider;
-
-        console.log("AuthManager: Firebase inicializovaný.");
-    } catch (error) {
-        console.error("AuthManager: Chyba pri inicializácii Firebase:", error);
-        // Zobrazí globálnu notifikáciu, ak je dostupná
-        if (window.showGlobalNotification) {
-            window.showGlobalNotification("Chyba pri inicializácii aplikácie. Skúste to prosím neskôr.", 'error');
-        }
+        window.verifyBeforeUpdateEmail = verifyBeforeUpdateEmail; // Pridané
+    } catch (e) {
+        console.error("AuthManager: Chyba pri inicializácii Firebase:", e);
     }
 };
 
-const handleAuthState = () => {
-    // Nastavenie listenera, ktorý sa spustí pri každej zmene stavu prihlásenia
-    onAuthStateChanged(window.auth, (user) => {
+const handleAuthState = async () => {
+    onAuthStateChanged(auth, async (user) => {
         window.isGlobalAuthReady = true;
-        console.log("AuthManager: Zmena stavu autentifikácie, používateľ:", user);
-
-        // Zrušíme predchádzajúci listener, ak existuje
-        if (window.unsubscribeUserDoc) {
-            window.unsubscribeUserDoc();
-            window.unsubscribeUserDoc = null;
-        }
 
         if (user) {
-            // Používateľ je prihlásený, načítame a sledujeme jeho profilové dáta
-            const userDocRef = doc(window.db, 'users', user.uid);
+            console.log("AuthManager: Používateľ prihlásený:", user.uid);
+            
+            // Správna cesta k profilovému dokumentu na základe poskytnutých pravidiel
+            const userDocRef = doc(db, `users/${user.uid}`);
             
             window.unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
