@@ -20,281 +20,134 @@ let countdownIntervalId = null; // ID pre interval odpočtu
  * @returns {string} Formátovaný dátum a čas.
  */
 const formatDate = (timestamp) => {
-    if (!timestamp) return '';
+    if (!timestamp) return 'Neurčený dátum';
     const date = timestamp.toDate();
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `dňa ${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
+    return `dňa&nbsp;${day}.&nbsp;${month}.&nbsp;${year}&nbsp;o&nbsp;${hours}:${minutes}&nbsp;hod.`;
 };
 
 /**
- * Získa farbu na základe role používateľa.
- * @param {string} role - Rola používateľa ('admin', 'hall', 'user', 'null').
- * @returns {string} Hexadecimálny kód farby.
+ * Aktualizuje stav registrácie a logiky pre tlačidlá na základe dátumov.
+ * @param {object} dates - Objekt s dátumami začiatku a konca registrácie.
  */
-const getRoleColor = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#47b3ff'; // admin
-        case 'hall':
-            return '#b06835'; // hall
-        case 'user':
-            return '#9333EA'; // user
-        default:
-            return '#1d4ed8'; // null alebo iná rola
+const updateRegistrationStatusText = (dates) => {
+    if (!dates) {
+        console.warn("Dáta o registrácii nie sú k dispozícii.");
+        return;
+    }
+
+    const now = new Date();
+    const registrationStart = dates.registrationStart.toDate();
+    const registrationEnd = dates.registrationEnd.toDate();
+    const messageElement = document.getElementById('registration-status-message');
+
+    if (!messageElement) {
+        console.warn("Element #registration-status-message nebol nájdený.");
+        return;
+    }
+
+    if (now < registrationStart) {
+        // Registrácia sa ešte nezačala
+        messageElement.innerHTML = `
+            <p>Registrácia sa spustí ${formatDate(dates.registrationStart)}.</p>
+            <p id="countdown-timer" class="font-semibold text-gray-700"></p>
+        `;
+        startCountdown(registrationStart);
+        toggleRegistrationButton(false, 'start');
+    } else if (now >= registrationStart && now <= registrationEnd) {
+        // Registrácia je spustená
+        messageElement.innerHTML = `
+            <p class="text-green-600 font-semibold">Registrácia je spustená!</p>
+            <p>Končí ${formatDate(dates.registrationEnd)}.</p>
+            <p id="countdown-timer" class="font-semibold text-gray-700"></p>
+        `;
+        startCountdown(registrationEnd);
+        toggleRegistrationButton(true);
+    } else {
+        // Registrácia je už ukončená
+        messageElement.innerHTML = `
+            <p class="text-red-600 font-semibold">Registrácia na turnaj je už ukončená.</p>
+            <p>Registrácia bola ukončená ${formatDate(dates.registrationEnd)}.</p>
+        `;
+        toggleRegistrationButton(false, 'end');
     }
 };
 
 /**
- * Nastaví onSnapshot listener na kategórie v Firestore a reaguje na ich zmeny.
- * Zobrazí/skryje tlačidlo na registráciu a zmení text na základe existencie kategórií
- * a platnosti dátumu registrácie.
- */
-const setupCategoriesListener = () => {
-    if (window.db) {
-        const categoriesDocRef = doc(window.db, "settings", "categories");
-        
-        onSnapshot(categoriesDocRef, (docSnap) => {
-            console.log("Dáta kategórií boli aktualizované!");
-            // Spustíme logiku na zobrazenie/skrytie tlačidiel po načítaní dát kategórií
-            updateRegistrationUI(docSnap);
-        }, (error) => {
-            console.error("Chyba pri načítaní údajov o kategóriách:", error);
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText("Registrácia na turnaj nie je možná, neexistuje súťažná kategória.");
-        });
-    }
-};
-
-/**
- * Spustí odpočet do cieľového dátumu a aktualizuje text na stránke.
- * @param {Date} targetDate - Dátum, do ktorého sa má odpočítavať.
+ * Spustí odpočet času do určeného dátumu.
+ * @param {Date} targetDate - Dátum, do ktorého sa má odpočet počítať.
  */
 const startCountdown = (targetDate) => {
-    // Zrušíme predchádzajúci odpočet
     if (countdownIntervalId) {
         clearInterval(countdownIntervalId);
     }
 
-    const updateCountdown = () => {
+    const timerElement = document.getElementById('countdown-timer');
+    if (!timerElement) return;
+
+    countdownIntervalId = setInterval(() => {
         const now = new Date().getTime();
         const distance = targetDate.getTime() - now;
-        const countdownElement = document.getElementById('countdown-timer');
-
-        if (distance < 0) {
-            clearInterval(countdownIntervalId);
-            if (countdownElement) {
-                countdownElement.innerHTML = '';
-            }
-            // Získame najnovšie dáta o kategóriách a aktualizujeme UI
-            getDoc(doc(window.db, "settings", "categories")).then(updateRegistrationUI);
-            return;
-        }
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        const countdownText = `
-            <br>
-            <span class="font-semibold text-lg">Zostáva: 
-                ${days} d ${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}
-            </span>
-        `;
-        
-        if (countdownElement) {
-            countdownElement.innerHTML = countdownText;
-        }
-    };
-
-    updateCountdown();
-    countdownIntervalId = setInterval(updateCountdown, 1000);
-};
-
-/**
- * Aktualizuje zobrazenie tlačidiel a textu na základe stavu registrácie a prihlásenia.
- * @param {import('firebase/firestore').DocumentSnapshot} docSnap - Dokument s dátami o kategóriách.
- */
-const updateRegistrationUI = (docSnap) => {
-    // Zabezpečíme, že docSnap je platný objekt predtým, než k nemu pristupujeme.
-    if (!docSnap) {
-        console.warn("Chyba: Očakávaný objekt docSnap je null alebo undefined.");
-        toggleRegistrationButton(false);
-        return;
-    }
-    
-    // Ak je používateľ prihlásený, skryjeme všetky registratúra texty a tlačidlá,
-    // a zobrazíme len správu pre prihláseného používateľa.
-    if (window.globalUserProfileData) {
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(''); // Vždy vymaže text o registrácii
-        toggleLoggedInMessage(true);
-        console.log("Používateľ je prihlásený, registračný text a tlačidlo sú skryté. Správa pre prihlásenie je zobrazená.");
-        return;
-    }
-
-    // Ak používateľ nie je prihlásený, skryjeme správu o prihlásení a pokračujeme s logikou registrácie
-    toggleLoggedInMessage(false);
-
-    // Zrušíme existujúci časovač a interval, aby sme predišli duplicitným spusteniam
-    if (timerId) {
-        clearTimeout(timerId);
-        timerId = null;
-    }
-    if (countdownIntervalId) {
-        clearInterval(countdownIntervalId);
-        countdownIntervalId = null;
-    }
-
-    const now = new Date();
-    // Uistíme sa, že pracujeme s Timestamp objektmi priamo z Firestore
-    const registrationStartDate = window.registrationDates?.registrationStartDate;
-    const registrationEndDate = window.registrationDates?.registrationEndDate;
-    
-    const isRegistrationOpen = registrationStartDate && registrationEndDate &&
-                               now >= registrationStartDate.toDate() &&
-                               now < registrationEndDate.toDate();
-    const isRegistrationBeforeStart = registrationStartDate && now < registrationStartDate.toDate();
-    const isRegistrationEnded = registrationEndDate && now >= registrationEndDate.toDate();
-
-    if (docSnap.exists() && Object.keys(docSnap.data()).length > 0) {
-        console.log("Dáta kategórií:", docSnap.data());
-        
-        if (isRegistrationOpen) {
-            toggleRegistrationButton(true);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je spustená.</p>
-                <p>Registrácia sa končí ${formatDate(registrationEndDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
-            
-            // Spustíme odpočet do konca registrácie
-            startCountdown(registrationEndDate.toDate());
-        } else if (isRegistrationBeforeStart) {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj ešte nebola spustená.</p>
-                <p>Registrácia sa spustí ${formatDate(registrationStartDate)}</p>
-                <p class="text-sm text-gray-500" id="countdown-timer"></p>
-            `);
-            
-            // Spustíme odpočet do začiatku registrácie
-            startCountdown(registrationStartDate.toDate());
-        } else if (isRegistrationEnded) {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`
-                <p>Registrácia na turnaj je už ukončená.</p>
-                <p>Registrácia bola ukončená ${formatDate(registrationEndDate)}</p>
-            `);
+        if (distance < 0) {
+            clearInterval(countdownIntervalId);
+            timerElement.textContent = "Čas vypršal.";
+            updateRegistrationStatusText(window.registrationDates); // Znovu skontrolujeme stav registrácie
         } else {
-            toggleRegistrationButton(false);
-            updateRegistrationStatusText(`<p>Registrácia na turnaj momentálne nie je otvorená.</p>`);
+            timerElement.textContent = `Zostáva: ${days}d ${hours}h ${minutes}m ${seconds}s`;
         }
-    } else {
-        console.log("Dokument s kategóriami nebol nájdený alebo je prázdny!");
-        toggleRegistrationButton(false);
-        updateRegistrationStatusText(`<p>Registrácia na turnaj nie je možná, neexistuje súťažná kategória.</p>`);
-    }
+    }, 1000);
 };
 
 /**
- * Nastaví onSnapshot listener pre dáta o registrácii.
- * Dátumy uloží do globálnej premennej a následne spustí listener pre kategórie.
- */
-const setupRegistrationDataListener = () => {
-    if (window.db) {
-        const docRef = doc(window.db, "settings", "registration");
-        onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                window.registrationDates = docSnap.data();
-                console.log("Údaje o registrácii načítané a aktualizované:", window.registrationDates);
-            } else {
-                console.log("Dokument o registrácii nebol nájdený!");
-                window.registrationDates = null;
-            }
-            // Po načítaní dát o registrácii spustíme listener pre kategórie,
-            // aby sa prehodnotila viditeľnosť tlačidla.
-            setupCategoriesListener();
-        }, (error) => {
-            console.error("Chyba pri načítaní údajov o registrácii:", error);
-            window.registrationDates = null;
-            setupCategoriesListener(); // Pokračujeme aj v prípade chyby, aby sme skryli tlačidlo.
-        });
-    } else {
-        console.log("Firebase databáza nie je pripravená.");
-    }
-};
-
-/**
- * Prepína viditeľnosť tlačidla na registráciu na turnaj.
+ * Prepína viditeľnosť tlačidla "Registrácia na turnaj".
  * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
+ * @param {string} [reason] - Dôvod pre skrytie (napr. 'start' pre ešte nezačatú registráciu).
  */
-const toggleRegistrationButton = (isVisible) => {
-    const registrationButtonWrapper = document.getElementById('tournament-registration-button-wrapper');
-    if (registrationButtonWrapper) {
-        registrationButtonWrapper.style.display = isVisible ? 'inline-block' : 'none';
-        console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}.`);
+const toggleRegistrationButton = (isVisible, reason = '') => {
+    const buttonWrapper = document.getElementById('tournament-registration-button-wrapper');
+    if (buttonWrapper) {
+        buttonWrapper.style.display = isVisible ? 'inline-block' : 'none';
+        console.log(`Tlačidlo 'Registrácia na turnaj' bolo ${isVisible ? 'zobrazené' : 'skryté'}. Dôvod: ${reason}`);
+    } else {
+        console.warn("Element pre tlačidlo 'Registrácia na turnaj' nebol nájdený.");
     }
 };
 
 /**
- * Prepína viditeľnosť textu o registrácii na domovskej stránke.
- * @param {string} [htmlContent=''] - HTML obsah na zobrazenie. Ak je prázdny, element sa skryje.
- */
-const updateRegistrationStatusText = (htmlContent = '') => {
-    const statusMessageElement = document.getElementById('registration-status-message');
-    if (statusMessageElement) {
-        if (htmlContent) {
-            statusMessageElement.innerHTML = htmlContent;
-            statusMessageElement.style.display = 'block';
-            console.log(`Registračný text bol aktualizovaný a zobrazený.`);
-        } else {
-            statusMessageElement.innerHTML = '';
-            statusMessageElement.style.display = 'none';
-            console.log(`Registračný text bol skrytý.`);
-        }
-    }
-};
-
-/**
- * Prepína viditeľnosť správy pre prihláseného používateľa.
- * @param {boolean} isVisible - true pre zobrazenie, false pre skrytie.
- */
-const toggleLoggedInMessage = (isVisible) => {
-    const messageElement = document.getElementById('logged-in-message');
-    if (messageElement) {
-        messageElement.style.display = isVisible ? 'block' : 'none';
-        console.log(`Správa pre prihláseného používateľa bola ${isVisible ? 'zobrazená' : 'skrytá'}.`);
-    }
-};
-
-/**
- * Aktualizuje text, odkaz a farbu tlačidla pre prihlásenie na základe stavu autentifikácie.
- * Ak je používateľ prihlásený, zobrazí "Moja zóna" a farbu zmení podľa jeho role.
- * @param {boolean} isLoggedIn - True, ak je používateľ prihlásený.
+ * Prepína viditeľnosť a text tlačidla "Prihlásenie"/"Moja zóna".
+ * @param {boolean} isLoggedIn - true ak je používateľ prihlásený, inak false.
  */
 const updateLoginButton = (isLoggedIn) => {
     const loginLink = document.getElementById('login-button-wrapper');
-    const loginButton = loginLink ? loginLink.querySelector('button') : null;
+    const loginButton = document.getElementById('login-button');
 
     if (loginLink && loginButton) {
-        // Na začiatku funkcie skryjeme tlačidlo, aby sa zabránilo blikaniu
-        loginLink.style.display = 'none';
-
         if (isLoggedIn) {
+            // Používateľ je prihlásený, zobrazíme "Moja zóna"
             loginLink.href = 'logged-in-my-data.html';
             loginButton.textContent = 'Moja zóna';
-            const role = window.globalUserProfileData?.role || 'null';
-            const roleColor = getRoleColor(role);
+
+            // Získame rolu používateľa z globálnych dát
+            const userRole = window.globalUserProfileData ? window.globalUserProfileData.role : null;
+            const roleColor = getRoleColor(userRole);
+            
+            // Odstránime pôvodné triedy a nastavíme novú farbu pomocou inline štýlu
+            loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'bg-green-500', 'hover:bg-green-600', 'bg-red-500', 'hover:bg-red-600');
             loginButton.style.backgroundColor = roleColor;
-            // Odstránime Tailwind triedy pre farbu, aby sme predišli konfliktom
-            loginButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            console.log(`Používateľ prihlásený s rolou '${role}'. Tlačidlo 'Moja zóna' bolo zmenené a zafarbené na ${roleColor}.`);
+            loginButton.style.borderColor = roleColor;
+            console.log(`Používateľ je prihlásený ako ${userRole}. Tlačidlo 'Moja zóna' bolo nastavené s farbou ${roleColor}.`);
         } else {
+            // Používateľ je odhlásený, zobrazíme "Prihlásenie"
             loginLink.href = 'login.html';
             loginButton.textContent = 'Prihlásenie';
             // Vrátime pôvodné Tailwind triedy pre farbu
@@ -307,6 +160,104 @@ const updateLoginButton = (isLoggedIn) => {
         loginLink.style.display = 'inline-block';
     } else {
         console.warn("Elementy pre tlačidlo prihlásenia neboli nájdené.");
+    }
+};
+
+/**
+ * Pomocná funkcia, ktorá vráti farbu na základe roly používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user', atď.).
+ * @returns {string} - Hex kód farby.
+ */
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#E53E3E'; // Červená pre admina
+        case 'hall':
+            return '#38A169'; // Zelená pre halu
+        default:
+            return '#4299E1'; // Modrá pre bežného používateľa
+    }
+};
+
+/**
+ * Zobrazí alebo skryje uvítaciu správu pre prihláseného používateľa.
+ * @param {boolean} isLoggedIn - true pre zobrazenie, false pre skrytie.
+ */
+const toggleLoggedInMessage = (isLoggedIn) => {
+    const loggedInMessage = document.getElementById('logged-in-message');
+    if (loggedInMessage) {
+        loggedInMessage.classList.toggle('hidden', !isLoggedIn);
+        console.log(`Správa pre prihláseného používateľa bola ${isLoggedIn ? 'zobrazená' : 'skrytá'}.`);
+    }
+};
+
+/**
+ * Nastaví listener pre dáta o registrácii z Firestore.
+ * Tieto dáta sa používajú na dynamické zobrazenie stavu registrácie na hlavnej stránke.
+ */
+const setupRegistrationDataListener = () => {
+    try {
+        if (!window.db) {
+            console.error("Firestore databáza nie je inicializovaná. Nemôžem načítavať dáta.");
+            return;
+        }
+
+        // Vytvorenie referencie na dokument
+        const registrationDocRef = doc(window.db, "settings", "registration");
+
+        // Počúvanie zmien v dokumente v reálnom čase
+        onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.registrationDates = docSnap.data();
+                console.log("Dáta o registrácii boli aktualizované:", window.registrationDates);
+                
+                // Zobrazíme hlavičku, pretože už máme dáta o používateľovi a registrácii
+                const mainHeader = document.getElementById('header-placeholder')?.querySelector('header');
+                if (mainHeader) {
+                    mainHeader.classList.remove('invisible');
+                    console.log("Hlavička bola zobrazená po načítaní dát.");
+                }
+
+                // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
+                if (window.globalUserProfileData) {
+                    toggleLoggedInMessage(true);
+                    toggleRegistrationButton(false);
+                    // Ostatná logika stavu registrácie je pre prihláseného používateľa skrytá
+                } else {
+                    // Ak nie je prihlásený, zobrazíme mu stav registrácie
+                    toggleLoggedInMessage(false);
+                    updateRegistrationStatusText(window.registrationDates);
+                }
+            } else {
+                console.log("Dokument 'settings/registration' nebol nájdený!");
+                window.registrationDates = null;
+                // Skryjeme tlačidlo, ak dáta nie sú k dispozícii
+                toggleRegistrationButton(false);
+            }
+        }, (error) => {
+            console.error("Chyba pri počúvaní dát o registrácii:", error);
+        });
+
+        // Kontrola, či existujú kategórie (môže byť oddelená od registračných dátumov)
+        const categoriesDocRef = doc(window.db, "settings", "categories");
+        onSnapshot(categoriesDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const categories = docSnap.data();
+                const hasCategories = Object.keys(categories).length > 0;
+                console.log(`Dáta kategórií boli aktualizované. Počet kategórií: ${Object.keys(categories).length}`);
+                
+                // Ak nie sú kategórie, skryjeme tlačidlo na registráciu
+                if (!hasCategories) {
+                    toggleRegistrationButton(false, 'no-categories');
+                }
+            } else {
+                console.warn("Dokument 'settings/categories' nebol nájdený!");
+                toggleRegistrationButton(false, 'no-categories');
+            }
+        });
+
+    } catch (error) {
+        console.error("Chyba pri inicializácii listenerov Firestore:", error);
     }
 };
 
@@ -326,9 +277,9 @@ window.addEventListener('globalDataUpdated', () => {
 });
 
 // Volanie funkcie aj pri prvom spustení pre prípad, že sa autentifikácia dokončí
-// skôr, ako sa stihne pripojiť listener.
-if (window.db) {
-    const isLoggedIn = !!window.globalUserProfileData;
-    updateLoginButton(isLoggedIn);
+// skôr, ako sa stihne spustiť listener.
+// Ak už existujú globálne dáta, spustíme listener hneď.
+if (window.globalUserProfileData !== undefined) {
+    console.log("Globálne dáta existujú už pri štarte, spúšťam listener.");
     setupRegistrationDataListener();
 }
