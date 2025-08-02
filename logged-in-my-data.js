@@ -5,6 +5,11 @@
 
 const { useState, useEffect } = React;
 
+// Dôležité: Importujeme potrebné funkcie pre Firestore priamo,
+// aby sme predišli chybám s chýbajúcimi globálnymi objektmi.
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
 /**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  * Používa sa pre pole aktuálneho hesla v modálnom okne.
@@ -113,8 +118,9 @@ const MyDataApp = () => {
             const appId = window.__app_id;
             
             if (user) {
-                const userDocRef = window.firebase.firestore.doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
-                const unsubscribeFirestore = window.firebase.firestore.onSnapshot(userDocRef, (docSnap) => {
+                // Používame importované funkcie doc a onSnapshot
+                const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
+                const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserProfileData(docSnap.data());
                     } else {
@@ -212,9 +218,10 @@ const MyDataApp = () => {
         setLoading(true);
 
         try {
-            const credential = window.firebase.auth.EmailAuthProvider.credential(user.email, password);
-            await window.firebase.auth.reauthenticateWithCredential(user, credential);
-            await window.firebase.auth.updateEmail(user, newEmail);
+            // Používame správne globálne funkcie, ktoré sú sprístupnené z authentication.js
+            const credential = window.EmailAuthProvider.credential(user.email, password);
+            await window.reauthenticateWithCredential(user, credential);
+            await window.updateEmail(user, newEmail);
             console.log("E-mailová adresa bola úspešne zmenená.");
             // Namiesto alertu použijeme globálnu notifikáciu, ak je definovaná.
             if (window.showGlobalNotification) {
