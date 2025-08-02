@@ -69,8 +69,11 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         );
     }
     
-    // Pridanie premennej na zobrazenie emailu
     const userEmail = userProfileData.email || 'Nezadané';
+    const fullName = (userProfileData.firstName || '' || userProfileData.lastName || '')
+        ? `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`.trim()
+        : 'Nezadané';
+
 
     return React.createElement(
         'div',
@@ -84,7 +87,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'h2',
                     { className: 'text-3xl font-bold text-gray-900' },
-                    `${userProfileData.firstName || ''} ${userProfileData.lastName || ''}`
+                    fullName
                 ),
                 React.createElement(
                     'button',
@@ -100,33 +103,19 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'space-y-6' },
-                // Sekcia s osobnými údajmi
+                // Sekcia s menom a priezviskom v jednom riadku
                 React.createElement(
                     'div',
                     { className: 'mb-4' },
                     React.createElement(
                         'p',
                         { className: 'font-bold text-gray-800' },
-                        'Meno:'
+                        'Meno a priezvisko:'
                     ),
                     React.createElement(
                         'p',
                         { className: 'text-gray-800 text-lg mt-1' },
-                        userProfileData.firstName || 'Nezadané'
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
-                    React.createElement(
-                        'p',
-                        { className: 'font-bold text-gray-800' },
-                        'Priezvisko:'
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-800 text-lg mt-1' },
-                        userProfileData.lastName || 'Nezadané'
+                        fullName
                     )
                 ),
                 React.createElement(
