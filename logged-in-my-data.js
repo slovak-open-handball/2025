@@ -7,6 +7,9 @@
 const { useState, useEffect } = React;
 // Dôležité: Opravená chyba pridaním importov pre funkcie Firestore
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Dôležité: Importy pre reautentifikáciu a aktualizáciu e-mailu
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 
 /**
  * Pomocný komponent pre načítavanie dát.
@@ -241,42 +244,79 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
     const [formData, setFormData] = useState({
         firstName: userProfileData.firstName || '',
         lastName: userProfileData.lastName || '',
+        email: userProfileData.email || '',
         contactPhoneNumber: userProfileData.contactPhoneNumber || '',
     });
+    const [password, setPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
+    const handlePasswordChange = (e) => {
+        setPassword(e.target.value);
+        setPasswordError(''); // Clear error on change
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true);
+        setPasswordError('');
+
         const db = window.db;
         const auth = window.auth;
+        const currentUser = auth.currentUser;
 
-        if (!db || !auth || !auth.currentUser) {
+        if (!db || !currentUser) {
             console.error("Firestore nie je inicializovaný alebo používateľ nie je prihlásený.");
+            setLoading(false);
             return;
         }
-        
-        const userId = auth.currentUser.uid;
-        // Pevne zadefinovaná cesta na základe štruktúry databázy v 'authentication.js'
-        const userDocRef = doc(db, 'users', userId);
 
+        // Overenie hesla pred aktualizáciou údajov
         try {
+            const credential = EmailAuthProvider.credential(currentUser.email, password);
+            await reauthenticateWithCredential(currentUser, credential);
+            
+            // Reautentifikácia bola úspešná, pokračujeme s aktualizáciou
+            const userId = currentUser.uid;
+            const userDocRef = doc(db, 'users', userId);
+            
             await setDoc(userDocRef, {
                 firstName: formData.firstName,
                 lastName: formData.lastName,
+                email: formData.email,
                 contactPhoneNumber: formData.contactPhoneNumber,
             }, { merge: true });
+
             console.log("Kontaktné údaje boli úspešne uložené!");
             onClose();
+
         } catch (error) {
-            console.error("Chyba pri ukladaní kontaktných údajov: ", error);
+            console.error("Chyba pri overovaní hesla alebo ukladaní údajov: ", error);
+            if (error.code === 'auth/wrong-password') {
+                setPasswordError('Nesprávne heslo. Prosím, skúste to znova.');
+            } else if (error.code === 'auth/invalid-credential') {
+                setPasswordError('Zadané heslo je neplatné.');
+            } else {
+                setPasswordError('Nastala chyba pri overovaní hesla. Skúste to neskôr.');
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
     if (!isOpen) return null;
+
+    const isFormValid = formData.firstName && formData.lastName && formData.email && password;
+
+    const buttonClasses = `
+        bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline
+        ${loading || !isFormValid ? 'opacity-50 cursor-not-allowed' : ''}
+    `;
 
     return React.createElement(
         'div',
@@ -320,6 +360,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                         value: formData.firstName,
                         onChange: handleChange,
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        disabled: loading,
                     })
                 ),
                 React.createElement(
@@ -337,6 +378,25 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                         value: formData.lastName,
                         onChange: handleChange,
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        disabled: loading,
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'email', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                        'E-mailová adresa'
+                    ),
+                    React.createElement('input', {
+                        type: 'email',
+                        id: 'email',
+                        name: 'email',
+                        value: formData.email,
+                        onChange: handleChange,
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        disabled: loading,
                     })
                 ),
                 !isUserAdmin && React.createElement(
@@ -354,7 +414,32 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                         value: formData.contactPhoneNumber,
                         onChange: handleChange,
                         className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        disabled: loading,
                     })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mb-6' },
+                    React.createElement(
+                        'label',
+                        { htmlFor: 'current-password', className: 'block text-gray-700 text-sm font-bold mb-2' },
+                        'Aktuálne heslo'
+                    ),
+                    React.createElement('input', {
+                        type: 'password',
+                        id: 'current-password',
+                        name: 'current-password',
+                        value: password,
+                        onChange: handlePasswordChange,
+                        className: 'shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                        disabled: loading,
+                        required: true,
+                    }),
+                    passwordError && React.createElement(
+                        'p',
+                        { className: 'text-red-500 text-xs italic mt-1' },
+                        passwordError
+                    )
                 ),
                 React.createElement(
                     'div',
@@ -363,9 +448,10 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                         'button',
                         {
                             type: 'submit',
-                            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline',
+                            className: buttonClasses,
+                            disabled: loading || !isFormValid,
                         },
-                        'Uložiť zmeny'
+                        loading ? 'Ukladám...' : 'Uložiť zmeny'
                     ),
                     React.createElement(
                         'button',
@@ -373,6 +459,7 @@ const EditContactModal = ({ userProfileData, isOpen, onClose, isUserAdmin }) => 
                             type: 'button',
                             onClick: onClose,
                             className: 'inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800',
+                            disabled: loading
                         },
                         'Zrušiť'
                     )
