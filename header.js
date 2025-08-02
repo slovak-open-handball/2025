@@ -1,7 +1,12 @@
 // header.js
 // Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
 // a obsluhuje akcie ako odhlásenie používateľa.
-// Je prispôsobený na spoluprácu s aktualizovaným authentication.js.
+// Bol upravený tak, aby podmienečne zobrazoval odkaz na registráciu na turnaj,
+// ak je registrácia otvorená a existujú kategórie, rovnako ako na hlavnej stránke.
+
+// Importy pre potrebné Firebase funkcie
+import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -25,93 +30,154 @@ window.showGlobalNotification = (message, type = 'success') => {
     // Nastavíme obsah a farbu na základe typu notifikácie
     // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
     const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
+    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor);
     notificationElement.innerHTML = `
-        <div class="flex-shrink-0">
-            <!-- Ikony pre notifikácie -->
-            ${type === 'success' ? '<svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>' : '<svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>'}
-        </div>
-        <div>${message}</div>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ${type === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'}
+        </svg>
+        <span>${message}</span>
     `;
-    notificationElement.className = `${notificationElement.className.replace(/bg-\w+-\d+/g, '')} ${bgColor} opacity-100 pointer-events-auto`;
 
-    // Skryjeme notifikáciu po 5 sekundách
+    // Zobrazenie notifikácie
     setTimeout(() => {
-        notificationElement.className = notificationElement.className.replace('opacity-100 pointer-events-auto', 'opacity-0 pointer-events-none');
+        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
+    }, 10);
+
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
     }, 5000);
 };
 
-// Funkcia na odhlásenie
+/**
+ * Funkcia na odhlásenie používateľa
+ */
 const handleLogout = async () => {
     try {
-        await window.auth.signOut();
-        // Presmerovanie na domovskú stránku po úspešnom odhlásení
+        const auth = getAuth();
+        await signOut(auth);
+        console.log("header.js: Používateľ bol úspešne odhlásený.");
+        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
+        // Presmerovanie na domovskú stránku po odhlásení
         window.location.href = 'index.html';
     } catch (error) {
-        console.error("Chyba pri odhlasovaní:", error);
-        window.showGlobalNotification('Chyba pri odhlasovaní. Skúste to prosím znova.', 'error');
+        console.error("header.js: Chyba pri odhlásení:", error);
+        window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
     }
 };
 
 /**
- * Dynamicky upraví navigačné odkazy na základe stavu autentifikácie používateľa.
- * @param {object|null} userProfileData - Objekt s dátami profilu používateľa, alebo null.
+ * Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke na základe stavu autentifikácie.
+ * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateHeaderLinks = (userProfileData) => {
-    const header = document.querySelector('header');
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
     const registerLink = document.getElementById('register-link');
+    const headerElement = document.querySelector('header');
     
-    // Predvolená farba hlavičky, ak používateľ nie je prihlásený
-    const defaultColor = '#1d4ed8';
-
-    // Skryjeme všetky odkazy na začiatku
-    if (authLink) authLink.style.display = 'none';
-    if (profileLink) profileLink.style.display = 'none';
-    if (logoutButton) logoutButton.style.display = 'none';
-    if (registerLink) registerLink.style.display = 'none';
-
-    // Ak je používateľ prihlásený
-    if (userProfileData) {
-        if (profileLink) profileLink.style.display = 'block';
-        if (logoutButton) logoutButton.style.display = 'block';
-
-        // Zmena farby hlavičky na základe roly
-        let roleColor = defaultColor;
-        switch (userProfileData.role) {
-            case 'admin':
-                roleColor = '#47b3ff';
-                break;
-            case 'hall':
-                roleColor = '#b06835';
-                break;
-            case 'user':
-                roleColor = '#9333EA';
-                break;
-            default:
-                roleColor = defaultColor;
-                break;
-        }
-        if (header) {
-             header.style.backgroundColor = roleColor;
-        }
-
-    } else { // Ak nie je prihlásený
-        if (authLink) authLink.style.display = 'block';
-        if (header) {
-            header.style.backgroundColor = defaultColor;
-        }
+    if (!authLink || !profileLink || !logoutButton || !registerLink || !headerElement) {
+        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
+        return;
     }
-    
-    // Po nastavení všetkých vlastností zviditeľníme hlavičku
-    const headerPlaceholder = document.getElementById('header-placeholder');
-    if (headerPlaceholder) {
-        headerPlaceholder.classList.remove('invisible');
+
+    // Vždy zobrazíme hlavičku po načítaní
+    headerElement.classList.remove('invisible');
+    headerElement.classList.add('bg-blue-800');
+
+    if (userProfileData) {
+        // Používateľ je prihlásený
+        authLink.classList.add('hidden');
+        profileLink.classList.remove('hidden');
+        logoutButton.classList.remove('hidden');
+    } else {
+        // Používateľ nie je prihlásený
+        authLink.classList.remove('hidden');
+        profileLink.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+    }
+
+    // Teraz skontrolujeme stav registrácie na turnaj, aby sme vedeli, či zobraziť link na registráciu
+    updateRegistrationLinkVisibility(userProfileData);
+};
+
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
+ * aktuálneho dátumu a existencie kategórií.
+ * @param {object} userProfileData - Dáta profilu používateľa.
+ */
+const updateRegistrationLinkVisibility = (userProfileData) => {
+    const registerLink = document.getElementById('register-link');
+    if (!registerLink) return;
+
+    // Kontrola, či sú registrationDates a categoriesData načítané a platné
+    const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
+    const hasCategories = window.hasCategories;
+
+    // Odkaz na registráciu sa zobrazí len vtedy, ak je registrácia otvorená a kategórie existujú
+    if (isRegistrationOpen && hasCategories) {
+        registerLink.classList.remove('hidden');
+        // Nastavíme správny href v závislosti od prihlásenia
+        if (userProfileData) {
+            registerLink.href = 'logged-in-registration.html';
+        } else {
+            registerLink.href = 'register.html';
+        }
+    } else {
+        registerLink.classList.add('hidden');
     }
 };
 
-// Funkcia na načítanie a inicializáciu hlavičky
+// Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
+const setupFirestoreListeners = () => {
+    try {
+        if (!window.db) {
+            console.warn("header.js: Firestore databáza nie je inicializovaná.");
+            return;
+        }
+
+        // Listener pre registračné dáta
+        const registrationDocRef = doc(window.db, "settings", "registration");
+        onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.registrationDates = docSnap.data();
+                console.log("header.js: Dáta o registrácii aktualizované.", window.registrationDates);
+            } else {
+                window.registrationDates = null;
+                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
+            }
+            updateRegistrationLinkVisibility(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+        });
+
+        // Listener pre kategórie
+        const categoriesDocRef = doc(window.db, "settings", "categories");
+        onSnapshot(categoriesDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const categories = docSnap.data();
+                window.hasCategories = Object.keys(categories).length > 0;
+                console.log(`header.js: Dáta kategórií aktualizované. Počet kategórií: ${Object.keys(categories).length}`);
+            } else {
+                window.hasCategories = false;
+                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
+            }
+            updateRegistrationLinkVisibility(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+        });
+    } catch (error) {
+        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
+    }
+};
+
+/**
+ * Hlavná funkcia na načítanie hlavičky a pripojenie skriptov.
+ * Načítava header.html a vkladá ho do placeholderu.
+ */
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
@@ -137,8 +203,10 @@ window.loadHeaderAndScripts = async () => {
             updateHeaderLinks(window.globalUserProfileData);
         });
 
-        // Pre prípad, že authentication.js už vyslalo udalosť pred pripojením listenera,
-        // zavoláme funkciu raz hneď po načítaní.
+        // Nastavíme listenery pre Firestore hneď po inicializácii
+        setupFirestoreListeners();
+
+        // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
         updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
