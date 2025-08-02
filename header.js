@@ -3,6 +3,8 @@
 // a obsluhuje akcie ako odhlásenie používateľa.
 // Bol upravený tak, aby podmienečne zobrazoval odkaz na registráciu na turnaj,
 // ak je registrácia otvorená a existujú kategórie, rovnako ako na hlavnej stránke.
+// Tiež bol upravený, aby sa farba hlavičky menila na základe roly prihláseného používateľa.
+// Časovač pre kontrolu stavu registrácie bol zmenený na 1 sekundu.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -72,7 +74,25 @@ const handleLogout = async () => {
 };
 
 /**
- * Funkcia na aktualizáciu viditeľnosti odkazov v hlavičke na základe stavu autentifikácie.
+ * Funkcia, ktorá vráti farbu hlavičky na základe role používateľa.
+ * @param {string} role - Rola používateľa ('admin', 'hall', 'user').
+ * @returns {string} Hex kód farby.
+ */
+const getHeaderColorByRole = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff'; // Farba pre admina
+        case 'hall':
+            return '#b06835'; // Farba pre halu
+        case 'user':
+            return '#9333EA'; // Farba pre bežného používateľa
+        default:
+            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+    }
+}
+
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
  * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateHeaderLinks = (userProfileData) => {
@@ -89,18 +109,21 @@ const updateHeaderLinks = (userProfileData) => {
 
     // Vždy zobrazíme hlavičku po načítaní
     headerElement.classList.remove('invisible');
-    headerElement.classList.add('bg-blue-800');
 
     if (userProfileData) {
         // Používateľ je prihlásený
         authLink.classList.add('hidden');
         profileLink.classList.remove('hidden');
         logoutButton.classList.remove('hidden');
+        // Nastavíme farbu hlavičky podľa roly
+        headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
     } else {
         // Používateľ nie je prihlásený
         authLink.classList.remove('hidden');
         profileLink.classList.add('hidden');
         logoutButton.classList.add('hidden');
+        // Nastavíme predvolenú farbu
+        headerElement.style.backgroundColor = getHeaderColorByRole(null);
     }
 
     // Teraz skontrolujeme stav registrácie na turnaj, aby sme vedeli, či zobraziť link na registráciu
@@ -173,14 +196,14 @@ const setupFirestoreListeners = () => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
         });
 
-        // Spustíme časovač, ktorý každú minútu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
+        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
         if (registrationCheckIntervalId) {
             clearInterval(registrationCheckIntervalId);
         }
         registrationCheckIntervalId = setInterval(() => {
             console.log("header.js: Kontrola času pre registračný odkaz...");
             updateRegistrationLinkVisibility(window.globalUserProfileData);
-        }, 60000); // 60000 ms = 1 minúta
+        }, 1000); // 1000 ms = 1 sekunda
         console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
         // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
