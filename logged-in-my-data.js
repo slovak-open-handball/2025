@@ -113,7 +113,6 @@ const MyDataApp = () => {
     useEffect(() => {
         const auth = getAuth();
         const db = window.db;
-        const appId = window.__app_id;
 
         if (!auth || !db) {
             console.error("Firebase Auth alebo Firestore nie je inicializovaný.");
@@ -124,15 +123,10 @@ const MyDataApp = () => {
 
         const unsubscribeAuth = auth.onAuthStateChanged(user => {
             if (user) {
-                const userDocRef = doc(db, `/artifacts/${appId}/users/${user.uid}/private/user-profile`);
+                // Správna cesta k profilovému dokumentu používateľa na základe vašich pravidiel a štruktúry databázy.
+                // Načítanie dát z kolekcie 'users'
+                const userDocRef = doc(db, `users/${user.uid}`);
                 
-                // Prihlásený používateľ
-                // Dôležité: Ak sa vyskytne chyba s povoleniami (Missing or insufficient permissions),
-                // skontrolujte svoje Firebase Security Rules pre danú cestu.
-                // Pravidlá by mali vyzerať podobne ako:
-                // match /artifacts/{appId}/users/{userId}/private/user-profile {
-                //   allow read, write: if request.auth.uid == userId;
-                // }
                 const unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserProfileData(docSnap.data());
