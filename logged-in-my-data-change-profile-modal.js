@@ -403,10 +403,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 await reauthenticateWithCredential(user, credential);
             }
 
+            // Zoznam zmien
+            const changes = [];
+
             // Aktualizácia e-mailu
             if (isEmailChanged) {
+                const oldEmail = originalData.current.email;
                 await verifyBeforeUpdateEmail(user, email);
                 window.showGlobalNotification('Potvrďte zmenu e-mailu kliknutím na odkaz vo svojej novej e-mailovej schránke.', 'info');
+                changes.push(`Zmena e-mailu: z '${oldEmail}' na '${email}'`);
             }
 
             // Zmena hesla
@@ -418,29 +423,49 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 }
                 await updatePassword(user, newPassword);
                 window.showGlobalNotification('Heslo bolo úspešne zmenené.', 'success');
+                changes.push('Zmena hesla');
             }
 
             // Aktualizácia ostatných údajov
             const updatedData = {};
 
-            if (firstName !== '') updatedData.firstName = firstName;
-            if (lastName !== '') updatedData.lastName = lastName;
+            if (firstName !== '' && firstName !== originalData.current.firstName) {
+                updatedData.firstName = firstName;
+                changes.push(`Zmena mena: z '${originalData.current.firstName}' na '${firstName}'`);
+            }
+            if (lastName !== '' && lastName !== originalData.current.lastName) {
+                updatedData.lastName = lastName;
+                changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
+            }
 
             // Logika pre aktualizáciu telefónneho čísla
+            let newContactPhoneNumber = null;
             if (userProfileData.role !== 'admin' && (phoneNumber !== '' || selectedDialCode !== extractDialCodeAndNumber(originalData.current.contactPhoneNumber).foundDialCode)) {
-                 // Ak bolo zadané nové číslo, použije sa, inak sa použije pôvodné
-                const newPhoneNumberValue = phoneNumber !== '' ? `${selectedDialCode}${phoneNumber.replace(/\s/g, '')}` : originalData.current.contactPhoneNumber;
-                 // Ak bola zmenená iba predvoľba a číslo nebolo zadané, použije sa pôvodné číslo s novou predvoľbou
                 if (phoneNumber === '' && selectedDialCode !== extractDialCodeAndNumber(originalData.current.contactPhoneNumber).foundDialCode) {
-                    updatedData.contactPhoneNumber = `${selectedDialCode}${extractDialCodeAndNumber(originalData.current.contactPhoneNumber).numberWithoutDialCode.trim()}`;
+                    newContactPhoneNumber = `${selectedDialCode}${extractDialCodeAndNumber(originalData.current.contactPhoneNumber).numberWithoutDialCode.trim()}`;
                 } else if (phoneNumber !== '') {
-                    updatedData.contactPhoneNumber = `${selectedDialCode}${phoneNumber.replace(/\s/g, '')}`;
+                    newContactPhoneNumber = `${selectedDialCode}${phoneNumber.replace(/\s/g, '')}`;
+                }
+                
+                if (newContactPhoneNumber && newContactPhoneNumber !== originalData.current.contactPhoneNumber) {
+                    updatedData.contactPhoneNumber = newContactPhoneNumber;
+                    changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${newContactPhoneNumber}'`);
                 }
             }
 
 
             if (Object.keys(updatedData).length > 0) {
                  await updateDoc(userRef, updatedData);
+            }
+
+            // Vytvorenie záznamu v kolekcii 'notifications'
+            if (changes.length > 0) {
+                const notificationsRef = collection(db, "notifications");
+                await addDoc(notificationsRef, {
+                    timestamp: new Date(),
+                    userEmail: user.email,
+                    changes: changes
+                });
             }
 
             // Úspešné uloženie, zatvoríme modálne okno a zobrazíme notifikáciu.
@@ -464,7 +489,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setLoading(false);
         }
     };
-
 
     const ModalHeader = React.createElement(
         'div',
