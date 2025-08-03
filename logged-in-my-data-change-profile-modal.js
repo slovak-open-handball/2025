@@ -44,14 +44,12 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2`,
-                // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight`,
+                // Odstránenie akéhokoľvek orámovania pri focus
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor,
+                    outline: 'none',
                     cursor: disabled ? 'not-allowed' : 'text'
                 }
             }),
@@ -134,13 +132,13 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         placeholder: 'Hľadať krajinu alebo kód...',
                         value: filter,
                         onChange: (e) => setFilter(e.target.value),
-                        className: 'mt-3 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2',
+                        className: 'mt-3 w-full px-3 py-2 border rounded-lg focus:outline-none',
                         style: {
                             borderColor: roleColor,
                             // Odstránenie čierneho rámika pri focus
                             boxShadow: 'none',
-                            // Zmena farby rámika pri focus
-                            outlineColor: roleColor
+                            // Odstránenie akéhokoľvek orámovania pri focus
+                            outline: 'none',
                         }
                     })
                 ),
@@ -509,15 +507,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'firstName',
                 value: firstName,
                 onChange: (e) => setFirstName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                 placeholder: userProfileData.firstName || 'Zadajte meno',
-                // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
+                // Odstránenie akéhokoľvek orámovania pri focus
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
+                    outline: 'none',
                 }
             })
         ),
@@ -530,15 +526,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'lastName',
                 value: lastName,
                 onChange: (e) => setLastName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                 placeholder: userProfileData.lastName || 'Zadajte priezvisko',
-                // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
+                // Odstránenie akéhokoľvek orámovania pri focus
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
+                    outline: 'none',
                 }
             })
         ),
@@ -555,12 +549,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     {
                         type: 'button',
                         onClick: () => setShowDialCodeModal(true),
-                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-gray-100 border rounded-l-lg hover:bg-gray-200 focus:outline-none focus:ring-2`,
+                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-gray-100 border rounded-l-lg`,
                         style: {
                             color: roleColor,
                             borderColor: roleColor,
                             boxShadow: 'none',
-                            outlineColor: roleColor,
+                            outline: 'none',
                         }
                     },
                     selectedDialCode
@@ -574,10 +568,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     placeholder: formattedPhoneNumberPlaceholder || 'Zadajte telefónne číslo',
                     style: {
                         borderColor: roleColor,
-                        // Odstránenie čierneho rámika pri focus
+                        // Odstránenie akéhokoľvek orámovania pri focus
                         boxShadow: 'none',
-                        // Zmena farby rámika pri focus
-                        outlineColor: roleColor
+                        outline: 'none',
                     }
                 })
             )
@@ -591,15 +584,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'email',
                 value: email,
                 onChange: handleEmailChange, // Nový handler pre real-time validáciu
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight`,
                 placeholder: userProfileData.email || 'Zadajte e-mail',
-                // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
+                // Odstránenie akéhokoľvek orámovania pri focus
                 style: {
                     borderColor: (email !== '' && !isEmailValid) ? '#EF4444' : roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
+                    outline: 'none',
                 }
             }),
             email !== '' && !isEmailValid && React.createElement(
