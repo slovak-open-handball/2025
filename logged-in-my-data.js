@@ -1,7 +1,11 @@
+// Tento súbor bol upravený tak, aby sa spoliehal na globálne premenné 'window.auth' a 'window.db',
+// ktoré sú inicializované v 'authentication.js'. Kód pre inicializáciu Firebase bol odstránený,
+// aby sa zabránilo chybám duplicitnej inicializácie a aby sa zabezpečilo, že aplikácia sa
+// vykreslí až po načítaní používateľských dát.
+
 // Importy pre Firebase funkcie
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, getDoc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -10,15 +14,6 @@ import { countryDialCodes } from "./countryDialCodes.js";
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 
 const { useState, useEffect } = React;
-
-// Iniciaizácia Firebase
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-// Získanie ID aplikácie z globálnej premennej
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -115,8 +110,10 @@ const formatPhoneNumber = (phoneNumber) => {
  * @param {string} userId - ID aktuálneho používateľa.
  */
 const logProfileChanges = async (oldData, newData, userId) => {
-    if (!userId) {
-        console.error("Zápis zmien do notifikácií: Používateľ nie je prihlásený.");
+    // Použijeme globálne premenné z authentication.js
+    const db = window.db;
+    if (!db || !userId) {
+        console.error("Zápis zmien do notifikácií: Databáza alebo používateľ nie sú prihlásení.");
         return;
     }
 
@@ -146,7 +143,7 @@ const logProfileChanges = async (oldData, newData, userId) => {
             });
         }
     }
-    
+
     console.log("Zmeny v profile na zaznamenanie:", changes);
 
     // Vytvorenie dokumentu pre každú zmenu
@@ -178,47 +175,26 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     console.log("MyDataApp.js: Komponent MyDataApp sa vykresľuje s dátami:", userProfileData);
     const [data, setData] = useState(userProfileData);
     const [isMyDataLoaded, setIsMyDataLoaded] = useState(false);
-    const [isAuthReady, setIsAuthReady] = useState(false);
     const [userId, setUserId] = useState(null);
     const [showModal, setShowModal] = useState(false);
 
-    // Inicializácia Firebase Auth a získanie user ID
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                setUserId(user.uid);
-                setIsAuthReady(true);
-            } else {
-                try {
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : '';
-                    if (token) {
-                        await signInWithCustomToken(auth, token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Chyba pri prihlasovaní:", error);
-                }
-            }
-        });
-        return () => unsubscribe();
-    }, []);
-
     // Načítanie a spracovanie globálnych dát
     useEffect(() => {
-        if (isAuthReady && userProfileData && Object.keys(userProfileData).length > 0) {
+        if (userProfileData && Object.keys(userProfileData).length > 0) {
             console.log("MyDataApp.js: Dáta používateľa nájdené, aktualizujem stav.");
             setData(userProfileData);
             setIsMyDataLoaded(true);
+            setUserId(window.auth.currentUser?.uid || 'anonymous');
         } else {
              console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
         }
-    }, [userProfileData, isAuthReady]);
+    }, [userProfileData]);
 
     const handleProfileUpdate = (newData) => {
         // Zaznamenanie zmeny profilu pred aktualizáciou stavu
-        if (isAuthReady && userId) {
-             logProfileChanges(data, newData, userId);
+        const currentUserId = window.auth.currentUser?.uid || 'anonymous';
+        if (currentUserId) {
+             logProfileChanges(data, newData, currentUserId);
         } else {
             console.error("Chyba: Nie je možné zaznamenať zmeny. Používateľ nie je overený.");
         }
@@ -493,6 +469,16 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 // Pomocná funkcia na určenie farby podľa roly
 const getRoleColor = (role) => {
     switch (role) {
+        case 'organizator':
+            return '#1D4ED8'; // Modrá
+        case 'trener':
+            return '#059669'; // Zelená
+        case 'rozhodca':
+            return '#DC2626'; // Červená
+        case 'delegat':
+            return '#CA8A04'; // Žltá
+        case 'zdravotnik':
+            return '#6D28D9'; // Fialová
         case 'admin':
             return '#47b3ff'; // Farba pre admina
         case 'hall':
