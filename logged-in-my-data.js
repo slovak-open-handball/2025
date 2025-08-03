@@ -1,7 +1,7 @@
 // Importy pre Firebase funkcie
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, getDoc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -100,6 +100,56 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 /**
+ * Funkcia na porovnanie starých a nových dát a zápis zmien do kolekcie '/notification'.
+ * @param {object} oldData - Pôvodné dáta profilu.
+ * @param {object} newData - Nové dáta profilu.
+ */
+const logProfileChanges = async (oldData, newData) => {
+    const db = getFirestore();
+    const notificationsCollection = collection(db, "notification");
+    const changes = [];
+
+    // Porovnanie top-level fieldov
+    for (const key of Object.keys(newData)) {
+        if (typeof newData[key] === 'object' && newData[key] !== null) {
+            // Spracovanie vnorených objektov (napr. 'billing')
+            for (const subKey of Object.keys(newData[key])) {
+                if (oldData[key] && oldData[key][subKey] !== newData[key][subKey]) {
+                    changes.push({
+                        field: `${key}.${subKey}`,
+                        oldValue: oldData[key][subKey] || '-',
+                        newValue: newData[key][subKey] || '-'
+                    });
+                }
+            }
+        } else if (oldData[key] !== newData[key]) {
+            changes.push({
+                field: key,
+                oldValue: oldData[key] || '-',
+                newValue: newData[key] || '-'
+            });
+        }
+    }
+    
+    console.log("Zmeny v profile na zaznamenanie:", changes);
+
+    // Vytvorenie dokumentu pre každú zmenu
+    for (const change of changes) {
+        const message = `Používateľ zmenil údaj '${change.field}' z hodnoty '${change.oldValue}' na hodnotu '${change.newValue}'.`;
+        try {
+            await addDoc(notificationsCollection, {
+                message: message,
+                timestamp: serverTimestamp(),
+                userId: getAuth().currentUser.uid
+            });
+            console.log("Zmena profilu úspešne zaznamenaná:", message);
+        } catch (error) {
+            console.error("Chyba pri zápise zmeny do notifikácií:", error);
+        }
+    }
+};
+
+/**
  * Hlavný React komponent pre zobrazenie a úpravu profilu prihláseného používateľa.
  * @param {object} props - Vlastnosti komponentu.
  * @param {object} props.userProfileData - Dáta používateľského profilu.
@@ -123,6 +173,14 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
              console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
         }
     }, [userProfileData]);
+
+    const handleProfileUpdate = (newData) => {
+        // Zaznamenanie zmeny profilu pred aktualizáciou stavu
+        logProfileChanges(data, newData);
+        
+        setData(newData);
+        setShowModal(false);
+    };
 
     // Funkcia na overenie a zobrazenie dát
     const renderContent = () => {
@@ -373,10 +431,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 onClose: () => setShowModal(false),
                 userProfileData: data,
                 roleColor: getRoleColor(data.role),
-                onProfileUpdated: (newData) => {
-                    setData(newData);
-                    setShowModal(false);
-                }
+                onProfileUpdated: handleProfileUpdate // Použijeme novú funkciu
             })
         );
     };
