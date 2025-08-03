@@ -228,6 +228,62 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         return { foundDialCode, numberWithoutDialCode };
     };
 
+    /**
+     * Formátuje telefónne číslo s medzerami po troch čísliciach.
+     * @param {string} value - Telefónne číslo ako reťazec.
+     * @returns {string} - Formátovaný reťazec.
+     */
+    const formatPhoneNumber = (value) => {
+        // Odstráni všetky nečíselné znaky
+        const cleanValue = value.replace(/\D/g, '');
+        // Pridá medzery po každých troch čísliciach
+        let formattedValue = '';
+        for (let i = 0; i < cleanValue.length; i++) {
+            if (i > 0 && i % 3 === 0) {
+                formattedValue += ' ';
+            }
+            formattedValue += cleanValue[i];
+        }
+        return formattedValue;
+    };
+
+    /**
+     * Spracováva zmeny v inpute telefónneho čísla, filtruje znaky a formátuje reťazec.
+     * @param {object} event - Objekt udalosti z inputu.
+     */
+    const handlePhoneNumberChange = (event) => {
+        const { value, selectionStart } = event.target;
+        // Odstráni všetky nečíselné znaky z hodnoty, vrátane medzier
+        const cleanValue = value.replace(/\s/g, '');
+        
+        // Zastaví sa, ak hodnota obsahuje nečíselné znaky, okrem backspace
+        if (!/^\d*$/.test(cleanValue) && event.nativeEvent.inputType !== 'deleteContentBackward') {
+            return;
+        }
+    
+        const formattedValue = formatPhoneNumber(cleanValue);
+        setPhoneNumber(formattedValue);
+    
+        // Logika pre korekciu pozície kurzora
+        if (event.nativeEvent.inputType === 'deleteContentBackward') {
+            // Vypočítame novú pozíciu kurzora po vymazaní
+            let newSelectionStart = selectionStart;
+            // Ak kurzor bol pred medzerou, presunieme ho o jedno dozadu
+            if (formattedValue.charAt(selectionStart - 1) === ' ' && formattedValue.length > 0) {
+                newSelectionStart--;
+            }
+            // Nastavíme kurzor
+            setTimeout(() => event.target.setSelectionRange(newSelectionStart, newSelectionStart), 0);
+        } else {
+            // Upravíme pozíciu kurzora pri vkladaní textu
+            let newSelectionStart = selectionStart;
+            if ((selectionStart > 0 && selectionStart % 4 === 0) && formattedValue.charAt(selectionStart - 1) === ' ') {
+                newSelectionStart++;
+            }
+            setTimeout(() => event.target.setSelectionRange(newSelectionStart, newSelectionStart), 0);
+        }
+    };
+
     useEffect(() => {
         // Obnovenie stavov pri zobrazení modálu na prázdne reťazce
         if (show) {
@@ -387,7 +443,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Vytvorenie placeholderu pre telefónne číslo s formátovaním
     const { numberWithoutDialCode } = extractDialCodeAndNumber(userProfileData.contactPhoneNumber);
-    const formattedPhoneNumberPlaceholder = numberWithoutDialCode.replace(/\D/g, '').replace(/(\d{3})(?=\d)/g, '$1 ');
+    const formattedPhoneNumberPlaceholder = formatPhoneNumber(numberWithoutDialCode);
 
 
     const ModalContent = React.createElement(
@@ -444,7 +500,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'tel',
                     id: 'phoneNumber',
                     value: phoneNumber,
-                    onChange: (e) => setPhoneNumber(e.target.value),
+                    onChange: handlePhoneNumberChange, // Použijeme novú funkciu pre formátovanie
                     className: 'rounded-none rounded-r-lg bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm p-2.5',
                     placeholder: formattedPhoneNumberPlaceholder || 'Zadajte telefónne číslo',
                     style: { borderColor: roleColor }
