@@ -8,12 +8,11 @@
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
-let displayedNotificationTimestamps = new Set(); // Súbor pre uloženie časových pečiatok zobrazených notifikácií
 
 
 // Globálna funkcia pre zobrazenie notifikácií
@@ -72,6 +71,7 @@ const showDatabaseNotification = (message, type = 'info') => {
     const notificationElement = document.createElement('div');
     
     notificationElement.id = notificationId;
+    // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
     notificationElement.className = `
         fixed top-4 right-4 z-[100]
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
@@ -249,17 +249,21 @@ const setupNotificationListenerForAdmin = () => {
     // Získame referenciu na kolekciu notifikácií
     const notificationsCollectionRef = collection(window.db, "notifications");
     
-    // Vytvoríme dotaz pre notifikácie (napr. 10 najnovších, ak je to potrebné)
-    const q = query(notificationsCollectionRef, orderBy("timestamp", "desc"));
+    // Nastavíme onSnapshot listener pre všetky notifikácie
+    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
+        const auth = getAuth();
+        const userId = auth.currentUser ? auth.currentUser.uid : null;
 
-    // Nastavíme onSnapshot listener
-    unsubscribeFromNotifications = onSnapshot(q, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
+        snapshot.docChanges().forEach(async (change) => { // Používame async, pretože voláme updateDoc
             if (change.type === "added") {
                 const newNotification = change.doc.data();
-                // Notifikáciu zobrazíme len vtedy, ak sme ju ešte nezobrazili
-                if (!displayedNotificationTimestamps.has(newNotification.timestamp.toMillis())) {
-                    console.log("header.js: Nová notifikácia prijatá:", newNotification);
+                const notificationId = change.doc.id;
+                
+                // Kontrola, či používateľ notifikáciu už videl
+                const seenBy = newNotification.seenBy || [];
+                if (userId && !seenBy.includes(userId)) {
+                    console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+                    
                     // Dynamicky vytvoríme správu na základe poľa 'changes'
                     let changesMessage = '';
                     if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
@@ -273,7 +277,18 @@ const setupNotificationListenerForAdmin = () => {
                     }
                     
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
-                    displayedNotificationTimestamps.add(newNotification.timestamp.toMillis());
+                    
+                    // Po zobrazení správy, aktualizujeme dokument v databáze, že ju používateľ videl
+                    const notificationDocRef = doc(window.db, "notifications", notificationId);
+                    try {
+                        await updateDoc(notificationDocRef, {
+                            seenBy: arrayUnion(userId)
+                        });
+                    } catch (e) {
+                        console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
+                    }
+                } else if (userId && seenBy.includes(userId)) {
+                    console.log(`header.js: Notifikácia ${notificationId} už bola videná používateľom ${userId}. Nebude sa zobrazovať znova.`);
                 }
             }
         });
