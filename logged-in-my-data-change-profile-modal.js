@@ -55,7 +55,7 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                     onClick: toggleShowPassword,
                     className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
                     disabled: disabled,
-                    style: { 
+                    style: {
                         color: roleColor,
                         // Zmena kurzora na 'not-allowed' pri disabled
                         cursor: disabled ? 'not-allowed' : 'pointer'
@@ -235,8 +235,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             (firstName !== '' && firstName !== originalData.current.firstName) ||
             (lastName !== '' && lastName !== originalData.current.lastName) ||
             (email !== '' && email !== originalData.current.email) ||
-            (userProfileData.role !== 'admin' && (phoneNumber !== '' && phoneNumber !== originalData.current.contactPhoneNumber)) ||
-            (userProfileData.role !== 'admin' && (selectedDialCode !== originalData.current.dialCode))
+            (userProfileData.role !== 'admin' && phoneNumber !== '' && (selectedDialCode + phoneNumber.replace(/\s/g, '')) !== originalData.current.contactPhoneNumber) ||
+            (userProfileData.role !== 'admin' && phoneNumber === '' && selectedDialCode !== originalData.current.dialCode)
         );
 
         const hasPasswordChanged = newPassword !== '' || retypePassword !== '' || currentPassword !== '';
@@ -294,8 +294,22 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
             if (firstName !== '') updatedData.firstName = firstName;
             if (lastName !== '') updatedData.lastName = lastName;
-            if (userProfileData.role !== 'admin' && phoneNumber !== '') updatedData.contactPhoneNumber = phoneNumber;
-            if (userProfileData.role !== 'admin' && selectedDialCode !== originalData.current.dialCode) updatedData.dialCode = selectedDialCode;
+            
+            // Logika pre aktualizáciu telefónneho čísla
+            if (userProfileData.role !== 'admin' && (phoneNumber !== '' || selectedDialCode !== originalData.current.dialCode)) {
+                let newPhoneNumber = phoneNumber.replace(/\s/g, ''); // odstránenie medzier z nového čísla
+                
+                // Ak sa zmenila len predvoľba, použijeme pôvodné číslo (bez starej predvoľby)
+                if (phoneNumber === '' && selectedDialCode !== originalData.current.dialCode) {
+                    const originalNumberWithoutDialCode = originalData.current.contactPhoneNumber.startsWith(originalData.current.dialCode)
+                        ? originalData.current.contactPhoneNumber.substring(originalData.current.dialCode.length).trim()
+                        : originalData.current.contactPhoneNumber;
+                    newPhoneNumber = originalNumberWithoutDialCode.replace(/\s/g, '');
+                }
+
+                updatedData.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber}`;
+                updatedData.dialCode = selectedDialCode;
+            }
 
             if (Object.keys(updatedData).length > 0) {
                  await updateDoc(userRef, updatedData);
@@ -352,8 +366,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     if (originalPhoneNumber) {
         let numberToFormat = originalPhoneNumber;
-        if (originalPhoneNumber.startsWith(selectedDialCode)) {
-            numberToFormat = originalPhoneNumber.substring(selectedDialCode.length).trim();
+        const currentDialCode = selectedDialCode || userProfileData.dialCode;
+
+        if (originalPhoneNumber.startsWith(currentDialCode)) {
+            numberToFormat = originalPhoneNumber.substring(currentDialCode.length).trim();
+        } else if (originalData.current.dialCode && originalPhoneNumber.startsWith(originalData.current.dialCode)) {
+            numberToFormat = originalPhoneNumber.substring(originalData.current.dialCode.length).trim();
         }
         
         // Odstránenie všetkých nečíselných znakov a formátovanie
