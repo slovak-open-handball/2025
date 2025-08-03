@@ -1,11 +1,7 @@
-// Tento súbor bol upravený tak, aby sa spoliehal na globálne premenné 'window.auth' a 'window.db',
-// ktoré sú inicializované v 'authentication.js'. Kód pre inicializáciu Firebase bol odstránený,
-// aby sa zabránilo chybám duplicitnej inicializácie a aby sa zabezpečilo, že aplikácia sa
-// vykreslí až po načítaní používateľských dát.
-
 // Importy pre Firebase funkcie
-import { onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getFirestore, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -104,68 +100,6 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 /**
- * Funkcia na porovnanie starých a nových dát a zápis zmien do kolekcie '/notifications'.
- * @param {object} oldData - Pôvodné dáta profilu.
- * @param {object} newData - Nové dáta profilu.
- * @param {string} userId - ID aktuálneho používateľa.
- */
-const logProfileChanges = async (oldData, newData, userId) => {
-    // Použijeme globálne premenné z authentication.js
-    const db = window.db;
-    if (!db || !userId) {
-        console.error("Zápis zmien do notifikácií: Databáza alebo používateľ nie sú prihlásení.");
-        return;
-    }
-
-    // Ukladanie do verejnej kolekcie
-    const notificationsCollectionPath = `/notifications`;
-    const notificationsCollection = collection(db, notificationsCollectionPath);
-    const changes = [];
-
-    // Porovnanie top-level fieldov
-    for (const key of Object.keys(newData)) {
-        if (typeof newData[key] === 'object' && newData[key] !== null) {
-            // Spracovanie vnorených objektov (napr. 'billing')
-            for (const subKey of Object.keys(newData[key])) {
-                if (oldData[key] && oldData[key][subKey] !== newData[key][subKey]) {
-                    changes.push({
-                        field: `${key}.${subKey}`,
-                        oldValue: oldData[key][subKey] || '-',
-                        newValue: newData[key][subKey] || '-'
-                    });
-                }
-            }
-        } else if (oldData[key] !== newData[key]) {
-            changes.push({
-                field: key,
-                oldValue: oldData[key] || '-',
-                newValue: newData[key] || '-'
-            });
-        }
-    }
-
-    console.log("Zmeny v profile na zaznamenanie:", changes);
-
-    // Vytvorenie dokumentu pre každú zmenu
-    for (const change of changes) {
-        const message = `Používateľ ${userId} zmenil údaj '${change.field}' z hodnoty '${change.oldValue}' na hodnotu '${change.newValue}'.`;
-        try {
-            await addDoc(notificationsCollection, {
-                message: message,
-                timestamp: serverTimestamp(),
-                userId: userId,
-                oldValue: change.oldValue,
-                newValue: change.newValue,
-                field: change.field
-            });
-            console.log("Zmena profilu úspešne zaznamenaná:", message);
-        } catch (error) {
-            console.error("Chyba pri zápise zmeny do notifikácií:", error);
-        }
-    }
-};
-
-/**
  * Hlavný React komponent pre zobrazenie a úpravu profilu prihláseného používateľa.
  * @param {object} props - Vlastnosti komponentu.
  * @param {object} props.userProfileData - Dáta používateľského profilu.
@@ -173,35 +107,22 @@ const logProfileChanges = async (oldData, newData, userId) => {
  */
 const MyDataApp = ({ userProfileData, roleColor }) => {
     console.log("MyDataApp.js: Komponent MyDataApp sa vykresľuje s dátami:", userProfileData);
+    // Inicializujeme stav s počiatočnými dátami.
     const [data, setData] = useState(userProfileData);
-    const [isMyDataLoaded, setIsMyDataLoaded] = useState(false);
-    const [userId, setUserId] = useState(null);
+    const [isMyDataLoaded, setIsMyDataLoaded] = useState(!!userProfileData && Object.keys(userProfileData).length > 0);
     const [showModal, setShowModal] = useState(false);
 
     // Načítanie a spracovanie globálnych dát
     useEffect(() => {
+        console.log("MyDataApp.js: useEffect spustený, kontrola dát.");
         if (userProfileData && Object.keys(userProfileData).length > 0) {
             console.log("MyDataApp.js: Dáta používateľa nájdené, aktualizujem stav.");
             setData(userProfileData);
             setIsMyDataLoaded(true);
-            setUserId(window.auth.currentUser?.uid || 'anonymous');
         } else {
              console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
         }
     }, [userProfileData]);
-
-    const handleProfileUpdate = (newData) => {
-        // Zaznamenanie zmeny profilu pred aktualizáciou stavu
-        const currentUserId = window.auth.currentUser?.uid || 'anonymous';
-        if (currentUserId) {
-             logProfileChanges(data, newData, currentUserId);
-        } else {
-            console.error("Chyba: Nie je možné zaznamenať zmeny. Používateľ nie je overený.");
-        }
-        
-        setData(newData);
-        setShowModal(false);
-    };
 
     // Funkcia na overenie a zobrazenie dát
     const renderContent = () => {
@@ -236,12 +157,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         return React.createElement(
             'div',
             { className: 'max-w-4xl mx-auto' },
-            // Zobrazenie ID používateľa pre diagnostiku (MANDATORY for multi-user apps)
-            React.createElement(
-                'div',
-                { className: 'text-sm text-gray-500 text-center mb-4' },
-                `User ID: ${userId}`
-            ),
             // Profilový box
             React.createElement(
                 'div',
@@ -458,7 +373,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 onClose: () => setShowModal(false),
                 userProfileData: data,
                 roleColor: getRoleColor(data.role),
-                onProfileUpdated: handleProfileUpdate // Použijeme novú funkciu
+                onProfileUpdated: (newData) => {
+                    setData(newData);
+                    setShowModal(false);
+                }
             })
         );
     };
