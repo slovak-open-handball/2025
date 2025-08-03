@@ -55,7 +55,11 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                     onClick: toggleShowPassword,
                     className: 'absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5',
                     disabled: disabled,
-                    style: { color: roleColor }
+                    style: { 
+                        color: roleColor,
+                        // Zmena kurzora na 'not-allowed' pri disabled
+                        cursor: disabled ? 'not-allowed' : 'pointer'
+                    }
                 },
                 showPassword ? EyeOffIcon : EyeIcon
             )
