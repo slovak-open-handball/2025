@@ -276,23 +276,15 @@ const setupNotificationListenerForAdmin = () => {
                         
                         // NOVÁ LOGIKA PRE FORMÁTOVANIE ZMIEN
                         const formattedChanges = newNotification.changes.map(changeString => {
-                            // Použijeme regex na extrakciu názvu poľa, pôvodnej a novej hodnoty
-                            const match = changeString.match(/(.+?): '(.+?)' -> '(.+?)'/);
-                            if (match && match.length === 4) {
-                                // Ak nájdeme zhodu, naformátujeme reťazec
-                                const fieldName = match[1];
-                                const oldValue = match[2];
-                                const newValue = match[3];
-                                return `${fieldName}: <em>${oldValue}</em> -> <strong>${newValue}</strong>`;
-                            }
-                            // Ak sa formát nezhoduje, vrátime pôvodný reťazec
-                            return changeString;
+                            // Použijeme regulárny výraz na nájdenie pôvodnej a novej hodnoty
+                            // a na ich formátovanie s odstránením apostrofov
+                            return changeString.replace(/'([^']*)' -> '([^']*)'/, '<em>$1</em> -> <strong>$2</strong>');
                         });
                         
                         changesMessage += formattedChanges.join('\n');
 
                     } else if (typeof newNotification.changes === 'string') {
-                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${newNotification.changes}`;
+                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${newNotification.changes.replace(/'([^']*)' -> '([^']*)'/, '<em>$1</em> -> <strong>$2</strong>')}`;
                     } else {
                         changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
                     }
@@ -314,7 +306,7 @@ const setupNotificationListenerForAdmin = () => {
             }
         });
     }, (error) => {
-        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
 
     console.log("header.js: Listener pre notifikácie admina nastavený.");
