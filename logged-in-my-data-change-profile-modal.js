@@ -336,6 +336,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             return;
         }
 
+        // Validácia e-mailu
+        const emailRegex = /.+@.+\..{2,}/;
+        if (email !== '' && !emailRegex.test(email)) {
+            window.showGlobalNotification('Prosím, zadajte platný formát e-mailovej adresy (napr. meno@domena.sk).', 'error');
+            setLoading(false);
+            return;
+        }
+
         // Kontrola, či sa menia citlivé údaje
         const isEmailChanged = email !== '' && email !== originalData.current.email;
         const isPasswordChanged = newPassword !== '';
@@ -344,7 +352,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
              window.showGlobalNotification('Pre zmenu e-mailu alebo hesla je potrebné zadať aktuálne heslo.', 'error');
              return;
         }
-
+        
         setLoading(true);
         const db = getFirestore();
         const userRef = doc(db, "users", user.uid);
