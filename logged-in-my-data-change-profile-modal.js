@@ -46,7 +46,7 @@ const EyeOffIcon = React.createElement(
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight`,
+                className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight`,
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: roleColor,
@@ -505,7 +505,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'firstName',
                 value: firstName,
                 onChange: (e) => setFirstName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                 placeholder: userProfileData.firstName || 'Zadajte meno',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
@@ -523,7 +523,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'lastName',
                 value: lastName,
                 onChange: (e) => setLastName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                 placeholder: userProfileData.lastName || 'Zadajte priezvisko',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
@@ -559,7 +559,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'phoneNumber',
                     value: phoneNumber,
                     onChange: handlePhoneNumberChange, // Použijeme novú funkciu pre formátovanie
-                    className: 'rounded-none rounded-r-lg bg-white border-t border-b border-r text-gray-900 block flex-1 min-w-0 w-full text-sm p-2.5',
+                    className: 'focus:outline-none rounded-none rounded-r-lg bg-white border-t border-b border-r text-gray-900 block flex-1 min-w-0 w-full text-sm p-2.5',
                     placeholder: formattedPhoneNumberPlaceholder || 'Zadajte telefónne číslo',
                     style: {
                         borderColor: roleColor,
@@ -577,7 +577,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'email',
                 value: email,
                 onChange: handleEmailChange, // Nový handler pre real-time validáciu
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
+                className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
                 placeholder: userProfileData.email || 'Zadajte e-mail',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
