@@ -286,7 +286,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 firstName: firstName,
                 lastName: lastName,
             };
-            
+
             // Pridanie telefónneho čísla len ak nie je rola 'admin'
             if (userProfileData.role !== 'admin') {
                 updatedData.phoneNumber = phoneNumber;
@@ -369,19 +369,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 placeholder: 'Zadajte priezvisko',
             })
         ),
-        React.createElement(
-            'div',
-            { className: 'mb-4' },
-            React.createElement('label', { htmlFor: 'email', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'E-mail'),
-            React.createElement('input', {
-                type: 'email',
-                id: 'email',
-                value: email,
-                onChange: (e) => setEmail(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                placeholder: 'Zadajte e-mail',
-            })
-        ),
         // Podmienene zobrazenie telefónneho čísla pre iné roly ako 'admin'
         userProfileData.role !== 'admin' && React.createElement(
             'div',
@@ -413,38 +400,52 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 })
             )
         ),
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('label', { htmlFor: 'email', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'E-mail'),
+            React.createElement('input', {
+                type: 'email',
+                id: 'email',
+                value: email,
+                onChange: (e) => setEmail(e.target.value),
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                placeholder: 'Zadajte e-mail',
+            })
+        ),
+        // Aktuálne heslo je teraz vždy zobrazené pod e-mailom
         React.createElement(PasswordInput, {
-            id: 'newPassword',
-            label: 'Nové heslo (voliteľné)',
-            value: newPassword,
-            onChange: (e) => setNewPassword(e.target.value),
-            placeholder: 'Zadajte nové heslo',
-            showPassword: showNewPassword,
-            toggleShowPassword: () => setShowNewPassword(!showNewPassword),
+            id: 'currentPassword',
+            label: 'Aktuálne heslo (pre potvrdenie zmien e-mailu alebo hesla)',
+            value: currentPassword,
+            onChange: (e) => setCurrentPassword(e.target.value),
+            placeholder: 'Zadajte aktuálne heslo',
+            showPassword: showPassword,
+            toggleShowPassword: () => setShowPassword(!showPassword),
             roleColor: roleColor
         }),
-        React.createElement(PasswordInput, {
-            id: 'retypePassword',
-            label: 'Znovu zadajte nové heslo',
-            value: retypePassword,
-            onChange: (e) => setRetypePassword(e.target.value),
-            placeholder: 'Zopakujte nové heslo',
-            showPassword: showRetypePassword,
-            toggleShowPassword: () => setShowRetypePassword(!showRetypePassword),
-            disabled: !newPassword,
-            roleColor: roleColor
-        }),
-        (email !== originalData.current.email || newPassword) && React.createElement(
+        React.createElement(
             'div',
             { className: 'mt-6 pt-4 border-t border-gray-200' },
             React.createElement(PasswordInput, {
-                id: 'currentPassword',
-                label: 'Aktuálne heslo (pre potvrdenie zmien e-mailu alebo hesla)',
-                value: currentPassword,
-                onChange: (e) => setCurrentPassword(e.target.value),
-                placeholder: 'Zadajte aktuálne heslo',
-                showPassword: showPassword,
-                toggleShowPassword: () => setShowPassword(!showPassword),
+                id: 'newPassword',
+                label: 'Nové heslo (voliteľné)',
+                value: newPassword,
+                onChange: (e) => setNewPassword(e.target.value),
+                placeholder: 'Zadajte nové heslo',
+                showPassword: showNewPassword,
+                toggleShowPassword: () => setShowNewPassword(!showNewPassword),
+                roleColor: roleColor
+            }),
+            React.createElement(PasswordInput, {
+                id: 'retypePassword',
+                label: 'Znovu zadajte nové heslo',
+                value: retypePassword,
+                onChange: (e) => setRetypePassword(e.target.value),
+                placeholder: 'Zopakujte nové heslo',
+                showPassword: showRetypePassword,
+                toggleShowPassword: () => setShowRetypePassword(!showRetypePassword),
+                disabled: !newPassword,
                 roleColor: roleColor
             })
         ),
