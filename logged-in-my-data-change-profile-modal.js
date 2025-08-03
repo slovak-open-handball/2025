@@ -171,10 +171,10 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
  */
 export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }) => {
     // Definícia stavov pre polia formulára
-    const [firstName, setFirstName] = useState(userProfileData.firstName || '');
-    const [lastName, setLastName] = useState(userProfileData.lastName || '');
-    const [email, setEmail] = useState(userProfileData.email || '');
-    const [phoneNumber, setPhoneNumber] = useState(userProfileData.phoneNumber || '');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [retypePassword, setRetypePassword] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
@@ -199,12 +199,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     });
 
     useEffect(() => {
-        // Obnovenie stavov pri zobrazení modálu s novými dátami
+        // Obnovenie stavov pri zobrazení modálu na prázdne reťazce
         if (show) {
-            setFirstName(userProfileData.firstName || '');
-            setLastName(userProfileData.lastName || '');
-            setEmail(userProfileData.email || '');
-            setPhoneNumber(userProfileData.phoneNumber || '');
+            setFirstName('');
+            setLastName('');
+            setEmail('');
+            setPhoneNumber('');
             setSelectedDialCode(userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode));
             setNewPassword('');
             setRetypePassword('');
@@ -226,16 +226,18 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     // Kontrola, či sa zmenili nejaké dáta
     const isFormChanged = () => {
         const hasDataChanged = (
-            firstName !== originalData.current.firstName ||
-            lastName !== originalData.current.lastName ||
-            email !== originalData.current.email ||
-            (userProfileData.role !== 'admin' && (phoneNumber !== originalData.current.phoneNumber || selectedDialCode !== originalData.current.dialCode))
+            (firstName !== '' && firstName !== originalData.current.firstName) ||
+            (lastName !== '' && lastName !== originalData.current.lastName) ||
+            (email !== '' && email !== originalData.current.email) ||
+            (userProfileData.role !== 'admin' && (phoneNumber !== '' && phoneNumber !== originalData.current.phoneNumber)) ||
+            (userProfileData.role !== 'admin' && (selectedDialCode !== originalData.current.dialCode))
         );
 
         const hasPasswordChanged = newPassword !== '' || retypePassword !== '' || currentPassword !== '';
 
         return hasDataChanged || hasPasswordChanged;
     };
+
 
     // Funkcia na uloženie zmien
     const handleSave = async () => {
@@ -245,7 +247,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         }
 
         // Kontrola, či sa menia citlivé údaje
-        const isEmailChanged = email !== originalData.current.email;
+        const isEmailChanged = email !== '' && email !== originalData.current.email;
         const isPasswordChanged = newPassword !== '';
 
         if ((isEmailChanged || isPasswordChanged) && !currentPassword) {
@@ -282,18 +284,16 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             }
 
             // Aktualizácia ostatných údajov
-            const updatedData = {
-                firstName: firstName,
-                lastName: lastName,
-            };
+            const updatedData = {};
 
-            // Pridanie telefónneho čísla len ak nie je rola 'admin'
-            if (userProfileData.role !== 'admin') {
-                updatedData.phoneNumber = phoneNumber;
-                updatedData.dialCode = selectedDialCode;
+            if (firstName !== '') updatedData.firstName = firstName;
+            if (lastName !== '') updatedData.lastName = lastName;
+            if (userProfileData.role !== 'admin' && phoneNumber !== '') updatedData.phoneNumber = phoneNumber;
+            if (userProfileData.role !== 'admin' && selectedDialCode !== originalData.current.dialCode) updatedData.dialCode = selectedDialCode;
+
+            if (Object.keys(updatedData).length > 0) {
+                 await updateDoc(userRef, updatedData);
             }
-
-            await updateDoc(userRef, updatedData);
 
             // Úspešné uloženie, zatvoríme modálne okno a zobrazíme notifikáciu.
             window.showGlobalNotification('Profil bol úspešne aktualizovaný.', 'success');
@@ -353,7 +353,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 value: firstName,
                 onChange: (e) => setFirstName(e.target.value),
                 className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                placeholder: 'Zadajte meno',
+                placeholder: userProfileData.firstName || 'Zadajte meno',
             })
         ),
         React.createElement(
@@ -366,7 +366,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 value: lastName,
                 onChange: (e) => setLastName(e.target.value),
                 className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                placeholder: 'Zadajte priezvisko',
+                placeholder: userProfileData.lastName || 'Zadajte priezvisko',
             })
         ),
         // Podmienene zobrazenie telefónneho čísla pre iné roly ako 'admin'
@@ -396,6 +396,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     value: phoneNumber,
                     onChange: (e) => setPhoneNumber(e.target.value),
                     className: 'rounded-none rounded-r-lg bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm p-2.5',
+                    placeholder: userProfileData.phoneNumber || 'Zadajte telefónne číslo',
                     style: { borderColor: roleColor }
                 })
             )
@@ -410,7 +411,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 value: email,
                 onChange: (e) => setEmail(e.target.value),
                 className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
-                placeholder: 'Zadajte e-mail',
+                placeholder: userProfileData.email || 'Zadajte e-mail',
             })
         ),
         // Aktuálne heslo je teraz vždy zobrazené pod e-mailom
