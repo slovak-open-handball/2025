@@ -5,6 +5,7 @@
 // a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
 // presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
 // Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
+// Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -58,6 +59,37 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+/**
+ * Nová funkcia na formátovanie reťazca notifikácie s bold a italic textom.
+ * Hľadá štyri apostrofy a formátuje text medzi nimi.
+ * @param {string} text - Pôvodný reťazec.
+ * @returns {string} Naformátovaný reťazec.
+ */
+const formatNotificationMessage = (text) => {
+    // Nájdeme indexy apostrofov
+    const firstApostrophe = text.indexOf("'");
+    const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
+    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
+    const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
+
+    // Ak nájdeme všetky štyri apostrofy, naformátujeme text
+    if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
+        const oldText = text.substring(firstApostrophe + 1, secondApostrophe);
+        const newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
+
+        // Nahradíme pôvodné časti novými s HTML tagmi
+        let formattedText = text.substring(0, firstApostrophe);
+        formattedText += `<em>${oldText}</em>`;
+        formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
+        formattedText += `<strong>${newText}</strong>`;
+        formattedText += text.substring(fourthApostrophe + 1);
+        
+        return formattedText;
+    }
+    
+    // Ak sa formát nezhoduje, vrátime pôvodný text
+    return text;
+};
 
 /**
  * Nová funkcia na zobrazenie notifikácie z databázy v pravom hornom rohu.
@@ -66,23 +98,30 @@ window.showGlobalNotification = (message, type = 'success') => {
  * @param {string} type - Typ notifikácie ('success', 'error', 'info').
  */
 const showDatabaseNotification = (message, type = 'info') => {
-    // Vytvoríme jedinečný ID pre každú notifikáciu
+    // Vytvoríme kontajner pre notifikácie, ak ešte neexistuje
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = `
+            fixed top-4 right-4 z-[100]
+            flex flex-col space-y-2
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
     const notificationId = `db-notification-${Date.now()}`;
     const notificationElement = document.createElement('div');
     
     notificationElement.id = notificationId;
-    // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
     notificationElement.className = `
-        fixed top-4 right-4 z-[100]
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
         transform translate-x-full transition-all duration-500 ease-out
         flex items-center space-x-2
     `;
 
-    // Nastavenie obsahu a farby na základe typu notifikácie
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
-    // Nová úprava: Nahradíme '\n' za '<br>' pre správne zalomenie riadkov
     const formattedMessage = message.replace(/\n/g, '<br>');
 
     notificationElement.innerHTML = `
@@ -91,7 +130,8 @@ const showDatabaseNotification = (message, type = 'info') => {
         <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
     `;
 
-    document.body.appendChild(notificationElement);
+    // Pridáme novú notifikáciu na koniec kontajnera
+    notificationContainer.appendChild(notificationElement);
 
     // Animácia vstupu notifikácie
     setTimeout(() => {
@@ -101,7 +141,7 @@ const showDatabaseNotification = (message, type = 'info') => {
     // Animácia zmiznutia po 7 sekundách
     setTimeout(() => {
         notificationElement.classList.add('translate-x-full');
-        setTimeout(() => notificationElement.remove(), 500); // Odstránime element po dokončení animácie
+        setTimeout(() => notificationElement.remove(), 500);
     }, 7000);
 };
 
@@ -114,13 +154,11 @@ const handleLogout = async () => {
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
         window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
-        // Zrušíme listener notifikácií, ak existuje
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
             console.log("header.js: Listener notifikácií zrušený.");
         }
-        // Presmerovanie na domovskú stránku po odhlásení
         window.location.href = 'index.html';
     } catch (error) {
         console.error("header.js: Chyba pri odhlásení:", error);
@@ -136,13 +174,13 @@ const handleLogout = async () => {
 const getHeaderColorByRole = (role) => {
     switch (role) {
         case 'admin':
-            return '#47b3ff'; // Farba pre admina
+            return '#47b3ff';
         case 'hall':
-            return '#b06835'; // Farba pre halu
+            return '#b06835';
         case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
+            return '#9333EA';
         default:
-            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+            return '#1D4ED8';
     }
 }
 
@@ -162,23 +200,18 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    // Až keď sú všetky dáta načítané, vykonáme zmeny
     if (window.isGlobalAuthReady && window.registrationDates && window.hasCategories !== null) {
         if (userProfileData) {
-            // Používateľ je prihlásený
             authLink.classList.add('hidden');
             profileLink.classList.remove('hidden');
             logoutButton.classList.remove('hidden');
-            // Nastavíme farbu hlavičky podľa roly
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // NOVÉ: Skontrolujeme, či má admin povolené notifikácie
             if (userProfileData.role === 'admin' && userProfileData.displayNotifications) {
                 if (!unsubscribeFromNotifications) {
                     setupNotificationListenerForAdmin();
                 }
             } else {
-                // Ak notifikácie nie sú povolené alebo používateľ nie je admin, zrušíme listener
                 if (unsubscribeFromNotifications) {
                     unsubscribeFromNotifications();
                     unsubscribeFromNotifications = null;
@@ -186,13 +219,10 @@ const updateHeaderLinks = (userProfileData) => {
                 }
             }
         } else {
-            // Používateľ nie je prihlásený
             authLink.classList.remove('hidden');
             profileLink.classList.add('hidden');
             logoutButton.classList.add('hidden');
-            // Nastavíme predvolenú farbu
             headerElement.style.backgroundColor = getHeaderColorByRole(null);
-            // Zrušíme listener, ak bol nejaký nastavený (pre istotu)
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
@@ -200,10 +230,8 @@ const updateHeaderLinks = (userProfileData) => {
             }
         }
 
-        // Aktualizujeme viditeľnosť odkazu na registráciu
         updateRegistrationLinkVisibility(userProfileData);
 
-        // Hlavička sa stane viditeľnou LEN ak sú všetky dáta načítané
         headerElement.classList.remove('invisible');
     }
 };
@@ -218,13 +246,11 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    // Podmienka: Musí byť otvorená registrácia (aktuálny dátum v rozmedzí) A zároveň musia existovať kategórie.
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
     const hasCategories = window.hasCategories;
 
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
-        // Nastavíme správny href v závislosti od prihlásenia
         if (userProfileData) {
             registerLink.href = 'logged-in-registration.html';
         } else {
@@ -245,53 +271,41 @@ const setupNotificationListenerForAdmin = () => {
         return;
     }
 
-    // Zabezpečíme, že predchádzajúci listener je zrušený, ak existuje
     if (unsubscribeFromNotifications) {
         unsubscribeFromNotifications();
     }
     
-    // Získame referenciu na kolekciu notifikácií
     const notificationsCollectionRef = collection(window.db, "notifications");
     
-    // Nastavíme onSnapshot listener pre všetky notifikácie
     unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
-        snapshot.docChanges().forEach(async (change) => { // Používame async, pretože voláme updateDoc
+        snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
                 const newNotification = change.doc.data();
                 const notificationId = change.doc.id;
                 
-                // Kontrola, či používateľ notifikáciu už videl
                 const seenBy = newNotification.seenBy || [];
                 if (userId && !seenBy.includes(userId)) {
                     console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                     
-                    // Dynamicky vytvoríme správu na základe poľa 'changes'
                     let changesMessage = '';
                     if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
                         const changeLabel = newNotification.changes.length > 1 ? "si zmenil tieto údaje:" : "si zmenil tento údaj:";
                         changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
                         
-                        // NOVÁ LOGIKA PRE FORMÁTOVANIE ZMIEN
-                        const formattedChanges = newNotification.changes.map(changeString => {
-                            // Použijeme regulárny výraz na nájdenie pôvodnej a novej hodnoty
-                            // a na ich formátovanie s odstránením apostrofov
-                            return changeString.replace(/'([^']*)' -> '([^']*)'/, '<em>$1</em> -> <strong>$2</strong>');
-                        });
+                        const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                         
-                        changesMessage += formattedChanges.join('\n');
-
+                        changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
                     } else if (typeof newNotification.changes === 'string') {
-                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${newNotification.changes.replace(/'([^']*)' -> '([^']*)'/, '<em>$1</em> -> <strong>$2</strong>')}`;
+                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
                     } else {
                         changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
                     }
                     
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
                     
-                    // Po zobrazení správy, aktualizujeme dokument v databáze, že ju používateľ videl
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
