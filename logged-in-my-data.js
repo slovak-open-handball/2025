@@ -109,7 +109,7 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 /**
- * Funkcia na porovnanie starých a nových dát a zápis zmien do kolekcie '/notification'.
+ * Funkcia na porovnanie starých a nových dát a zápis zmien do kolekcie '/notifications'.
  * @param {object} oldData - Pôvodné dáta profilu.
  * @param {object} newData - Nové dáta profilu.
  * @param {string} userId - ID aktuálneho používateľa.
@@ -121,7 +121,7 @@ const logProfileChanges = async (oldData, newData, userId) => {
     }
 
     // Ukladanie do verejnej kolekcie
-    const notificationsCollectionPath = `/artifacts/${appId}/public/data/notification`;
+    const notificationsCollectionPath = `/notifications`;
     const notificationsCollection = collection(db, notificationsCollectionPath);
     const changes = [];
 
@@ -493,16 +493,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 // Pomocná funkcia na určenie farby podľa roly
 const getRoleColor = (role) => {
     switch (role) {
-        case 'organizator':
-            return '#1D4ED8'; // Modrá
-        case 'trener':
-            return '#059669'; // Zelená
-        case 'rozhodca':
-            return '#DC2626'; // Červená
-        case 'delegat':
-            return '#CA8A04'; // Žltá
-        case 'zdravotnik':
-            return '#6D28D9'; // Fialová
         case 'admin':
             return '#47b3ff'; // Farba pre admina
         case 'hall':
