@@ -281,7 +281,10 @@ window.loadHeaderAndScripts = async (userProfileData) => {
             return;
         }
         
-        const response = await fetch('/header.html');
+        // Dynamicky vytvoríme URL pre header.html, aby sa prispôsobila akejkoľvek sub-ceste
+        const headerUrl = './header.html';
+
+        const response = await fetch(headerUrl);
         
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
