@@ -68,9 +68,9 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
     const [filter, setFilter] = useState('');
     const modalRef = useRef(null);
 
+    // Opravená logika filtrovania s kontrolou na existenciu 'country'
     const filteredCodes = countryDialCodes.filter(c =>
-        c.country.toLowerCase().includes(filter.toLowerCase()) ||
-        c.code.includes(filter)
+        (c.country && c.country.toLowerCase().includes(filter.toLowerCase())) || c.code.includes(filter)
     );
 
     useEffect(() => {
