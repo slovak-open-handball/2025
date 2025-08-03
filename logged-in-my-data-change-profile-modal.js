@@ -44,7 +44,9 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${disabled ? 'bg-gray-100' : ''}`
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${disabled ? 'bg-gray-100' : ''}`,
+                // Zmena kurzora na 'not-allowed' pri disabled
+                style: { cursor: disabled ? 'not-allowed' : 'text' }
             }),
             React.createElement(
                 'button',
