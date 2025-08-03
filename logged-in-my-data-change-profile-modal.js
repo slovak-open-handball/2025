@@ -555,7 +555,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     {
                         type: 'button',
                         onClick: () => setShowDialCodeModal(true),
-                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-gray-100 border-t border-b border-l rounded-l-lg hover:bg-gray-200`,
+                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-white border-t border-b border-l rounded-l-lg hover:bg-gray-200`,
                         style: {
                             color: roleColor,
                             borderColor: roleColor,
@@ -570,7 +570,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'phoneNumber',
                     value: phoneNumber,
                     onChange: handlePhoneNumberChange, // Použijeme novú funkciu pre formátovanie
-                    className: 'rounded-none rounded-r-lg bg-gray-50 border-t border-b border-r text-gray-900 block flex-1 min-w-0 w-full text-sm p-2.5',
+                    className: 'rounded-none rounded-r-lg bg-white border-t border-b border-r text-gray-900 block flex-1 min-w-0 w-full text-sm p-2.5',
                     placeholder: formattedPhoneNumberPlaceholder || 'Zadajte telefónne číslo',
                     style: {
                         borderColor: roleColor,
