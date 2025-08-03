@@ -52,8 +52,6 @@ const EyeOffIcon = React.createElement(
                     borderColor: roleColor,
                     // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor,
                     cursor: disabled ? 'not-allowed' : 'text'
                 }
             }),
@@ -139,10 +137,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         className: 'mt-3 w-full px-3 py-2 border rounded-lg',
                         style: {
                             borderColor: roleColor,
-                            // Odstránenie čierneho rámika pri focus
                             boxShadow: 'none',
-                            // Zmena farby rámika pri focus
-                            outlineColor: roleColor
                         }
                     })
                 ),
@@ -516,10 +511,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
                 }
             })
         ),
@@ -537,10 +529,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
                 }
             })
         ),
@@ -562,7 +551,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             color: roleColor,
                             borderColor: roleColor,
                             boxShadow: 'none',
-                            outlineColor: roleColor,
                         }
                     },
                     selectedDialCode
@@ -577,7 +565,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     style: {
                         borderColor: roleColor,
                         boxShadow: 'none',
-                        outlineColor: roleColor
                     }
                 })
             )
@@ -596,10 +583,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: (email !== '' && !isEmailValid) ? '#EF4444' : roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
-                    // Zmena farby rámika pri focus
-                    outlineColor: roleColor
                 }
             }),
             email !== '' && !isEmailValid && React.createElement(
