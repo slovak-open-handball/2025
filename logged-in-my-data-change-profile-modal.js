@@ -346,6 +346,19 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         )
     );
 
+    // Vytvorenie placeholderu pre telefónne číslo
+    const originalPhoneNumber = userProfileData.contactPhoneNumber;
+    let phoneNumberPlaceholder = 'Zadajte telefónne číslo';
+
+    if (originalPhoneNumber) {
+        if (originalPhoneNumber.startsWith(selectedDialCode)) {
+            // Odstránenie predvoľby a prípadných medzier z placeholderu
+            phoneNumberPlaceholder = originalPhoneNumber.substring(selectedDialCode.length).trim();
+        } else {
+            phoneNumberPlaceholder = originalPhoneNumber;
+        }
+    }
+
     const ModalContent = React.createElement(
         'div',
         { className: 'p-6 max-h-[70vh] overflow-y-auto' },
@@ -402,7 +415,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     value: phoneNumber,
                     onChange: (e) => setPhoneNumber(e.target.value),
                     className: 'rounded-none rounded-r-lg bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm p-2.5',
-                    placeholder: userProfileData.contactPhoneNumber || 'Zadajte telefónne číslo',
+                    placeholder: phoneNumberPlaceholder,
                     style: { borderColor: roleColor }
                 })
             )
