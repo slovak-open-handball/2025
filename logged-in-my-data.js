@@ -460,5 +460,5 @@ if (window.globalUserProfileData) {
     console.log("MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    console.error("MyDataApp.js: Globálne dáta ešte neexistujú. Čakám na udalosť 'globalDataUpdated'.");
+    console.log("MyDataApp.js: Globálne dáta ešte neexistujú. Čakám na udalosť 'globalDataUpdated'.");
 }
