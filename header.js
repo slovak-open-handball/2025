@@ -273,7 +273,24 @@ const setupNotificationListenerForAdmin = () => {
                     if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
                         const changeLabel = newNotification.changes.length > 1 ? "si zmenil tieto údaje:" : "si zmenil tento údaj:";
                         changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
-                        changesMessage += newNotification.changes.join('\n');
+                        
+                        // NOVÁ LOGIKA PRE FORMÁTOVANIE ZMIEN
+                        const formattedChanges = newNotification.changes.map(changeString => {
+                            // Použijeme regex na extrakciu názvu poľa, pôvodnej a novej hodnoty
+                            const match = changeString.match(/(.+?): '(.+?)' -> '(.+?)'/);
+                            if (match && match.length === 4) {
+                                // Ak nájdeme zhodu, naformátujeme reťazec
+                                const fieldName = match[1];
+                                const oldValue = match[2];
+                                const newValue = match[3];
+                                return `${fieldName}: <em>${oldValue}</em> -> <strong>${newValue}</strong>`;
+                            }
+                            // Ak sa formát nezhoduje, vrátime pôvodný reťazec
+                            return changeString;
+                        });
+                        
+                        changesMessage += formattedChanges.join('\n');
+
                     } else if (typeof newNotification.changes === 'string') {
                         changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${newNotification.changes}`;
                     } else {
