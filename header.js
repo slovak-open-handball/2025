@@ -4,16 +4,22 @@
 // Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
 // a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
 // presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
+// Bola pridaná aj nová funkcionalita pre notifikácie pre administrátorov.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
 
-// Globálna funkcia pre zobrazenie notifikácií
-// Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
+// Zoznam aktívnych notifikácií
+let activeNotifications = [];
+
+/**
+ * Globálna funkcia pre zobrazenie notifikácií
+ * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
+ */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     
@@ -21,145 +27,183 @@ window.showGlobalNotification = (message, type = 'success') => {
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
-        notificationElement.className = `
-            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-            flex items-center space-x-2
-            opacity-0 pointer-events-none
-        `;
+        // Používame Tailwind CSS triedy pre štýlovanie a animáciu
+        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
 
-    // Nastavíme obsah a farbu na základe typu notifikácie
-    // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
-    const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor);
+    let bgColorClass, textColorClass;
+    if (type === 'success') {
+        bgColorClass = 'bg-green-500';
+        textColorClass = 'text-white';
+    } else if (type === 'error') {
+        bgColorClass = 'bg-red-500';
+        textColorClass = 'text-white';
+    } else if (type === 'info') {
+        bgColorClass = 'bg-blue-500';
+        textColorClass = 'text-white';
+    } else {
+        bgColorClass = 'bg-gray-700';
+        textColorClass = 'text-white';
+    }
+    
+    // Nastavenie obsahu a tried pre zobrazenie
+    notificationElement.textContent = message;
+    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[9999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
+    
+    // Zobrazenie notifikácie
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-0');
+        notificationElement.classList.add('opacity-100');
+    }, 10);
+    
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-100');
+        notificationElement.classList.add('opacity-0');
+    }, 5000);
+};
+
+
+/**
+ * Funkcia na zobrazenie pop-up notifikácie pre admina.
+ * @param {string} message - Správa, ktorá sa zobrazí.
+ */
+const showAdminNotification = (message) => {
+    // Vytvoríme nový element pre notifikáciu
+    const notificationElement = document.createElement('div');
+    notificationElement.className = `
+        fixed top-4 right-4 z-[99999] p-4 rounded-lg shadow-xl text-white font-semibold bg-gray-800
+        transform translate-x-full transition-transform duration-500 ease-in-out
+        flex items-center space-x-2
+    `;
     notificationElement.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success' 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'}
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6.222 8.324 6.222 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         <span>${message}</span>
     `;
 
-    // Zobrazenie notifikácie
-    setTimeout(() => {
-        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
-    }, 10);
+    document.body.appendChild(notificationElement);
 
-    // Skrytie notifikácie po 5 sekundách
+    // Pridanie notifikácie do zoznamu
+    activeNotifications.push(notificationElement);
+
+    // Animácia zobrazenia
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
-    }, 5000);
+        notificationElement.style.transform = 'translateX(0)';
+    }, 50);
+
+    // Automatické skrytie po 8 sekundách
+    setTimeout(() => {
+        notificationElement.style.transform = 'translateX(120%)'; // Skrytie doprava
+        // Po skončení animácie element odstránime
+        notificationElement.addEventListener('transitionend', () => {
+            notificationElement.remove();
+            // Odstránenie notifikácie zo zoznamu
+            activeNotifications = activeNotifications.filter(n => n !== notificationElement);
+        });
+    }, 8000);
 };
 
 /**
- * Funkcia na odhlásenie používateľa
+ * Funkcia, ktorá obsluhuje odhlásenie používateľa
  */
 const handleLogout = async () => {
     try {
         const auth = getAuth();
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
-        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
-        // Presmerovanie na domovskú stránku po odhlásení
-        window.location.href = 'index.html';
+        window.location.href = '/';
     } catch (error) {
-        console.error("header.js: Chyba pri odhlásení:", error);
-        window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
+        console.error("header.js: Chyba pri odhlasovaní:", error);
+        window.showGlobalNotification("Chyba pri odhlasovaní: " + error.message, 'error');
     }
 };
 
 /**
- * Funkcia, ktorá vráti farbu hlavičky na základe role používateľa.
- * @param {string} role - Rola používateľa ('admin', 'hall', 'user').
- * @returns {string} Hex kód farby.
+ * Funkcia na získanie farby hlavičky podľa roly
+ * @param {string} role - Rola používateľa
  */
 const getHeaderColorByRole = (role) => {
     switch (role) {
-        case 'admin':
-            return '#47b3ff'; // Farba pre admina
-        case 'hall':
-            return '#b06835'; // Farba pre halu
-        case 'user':
-            return '#9333EA'; // Farba pre bežného používateľa
-        default:
-            return '#1D4ED8'; // Predvolená farba (bg-blue-800)
+        case 'admin': return 'bg-red-600 hover:bg-red-700';
+        case 'organization': return 'bg-orange-600 hover:bg-orange-700';
+        case 'judge': return 'bg-green-600 hover:bg-green-700';
+        default: return 'bg-gray-800 hover:bg-gray-700';
     }
-}
+};
 
 /**
- * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
- * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
+ * Funkcia, ktorá dynamicky aktualizuje odkazy v hlavičke na základe stavu používateľa.
  * @param {object} userProfileData - Dáta profilu používateľa.
  */
 const updateHeaderLinks = (userProfileData) => {
-    const authLink = document.getElementById('auth-link');
-    const profileLink = document.getElementById('profile-link');
-    const logoutButton = document.getElementById('logout-button');
-    const headerElement = document.querySelector('header');
-    
-    if (!authLink || !profileLink || !logoutButton || !headerElement) {
-        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
+    const headerElement = document.getElementById('main-header');
+    const headerLinks = document.getElementById('header-links');
+
+    if (!headerElement || !headerLinks) {
         return;
     }
 
-    // Až keď sú všetky dáta načítané, vykonáme zmeny
-    if (window.isGlobalAuthReady && window.registrationDates && window.hasCategories !== null) {
-        if (userProfileData) {
-            // Používateľ je prihlásený
-            authLink.classList.add('hidden');
-            profileLink.classList.remove('hidden');
-            logoutButton.classList.remove('hidden');
-            // Nastavíme farbu hlavičky podľa roly
-            headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
-        } else {
-            // Používateľ nie je prihlásený
-            authLink.classList.remove('hidden');
-            profileLink.classList.add('hidden');
-            logoutButton.classList.add('hidden');
-            // Nastavíme predvolenú farbu
-            headerElement.style.backgroundColor = getHeaderColorByRole(null);
-        }
+    // Vyčistíme staré odkazy
+    headerLinks.innerHTML = '';
+    
+    // Získame farbu hlavičky na základe roly
+    const headerColorClass = getHeaderColorByRole(userProfileData?.role);
+    headerElement.className = `p-4 text-white shadow-md transition-colors duration-300 ${headerColorClass}`;
 
-        // Aktualizujeme viditeľnosť odkazu na registráciu
-        updateRegistrationLinkVisibility(userProfileData);
+    // Podmienene zobrazíme odkazy podľa stavu prihlásenia
+    if (userProfileData && userProfileData.isLoggedIn) {
+        const dashboardLink = document.createElement('a');
+        dashboardLink.href = userProfileData.role === 'admin' ? '/admin-dashboard.html' : '/logged-in-my-data.html';
+        dashboardLink.className = 'px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:text-gray-900 transition-colors duration-300';
+        dashboardLink.textContent = userProfileData.role === 'admin' ? 'Admin Dashboard' : 'Môj Profil';
+        headerLinks.appendChild(dashboardLink);
+        
+        // Pridáme odkaz na odhlásenie
+        const logoutLink = document.createElement('button');
+        logoutLink.id = 'logout-button';
+        logoutLink.className = 'px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:text-gray-900 transition-colors duration-300';
+        logoutLink.textContent = 'Odhlásiť sa';
+        headerLinks.appendChild(logoutLink);
+        logoutLink.addEventListener('click', handleLogout);
 
-        // Hlavička sa stane viditeľnou LEN ak sú všetky dáta načítané
-        headerElement.classList.remove('invisible');
+    } else {
+        const loginLink = document.createElement('a');
+        loginLink.href = '/login.html';
+        loginLink.className = 'px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:text-gray-900 transition-colors duration-300';
+        loginLink.textContent = 'Prihlásenie';
+        headerLinks.appendChild(loginLink);
     }
 };
 
 /**
- * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
- * aktuálneho dátumu a existencie kategórií.
- * Odkaz sa zobrazí len vtedy, ak obe podmienky platia súčasne.
- * @param {object} userProfileData - Dáta profilu používateľa.
+ * Aktualizuje viditeľnosť odkazu na registráciu na základe nastavenia v databáze a aktuálneho času.
+ * @param {object} registrationData - Dáta o stave registrácie z Firestore.
  */
-const updateRegistrationLinkVisibility = (userProfileData) => {
-    const registerLink = document.getElementById('register-link');
-    if (!registerLink) return;
+const updateRegistrationLinkVisibility = (registrationData) => {
+    const registrationLink = document.getElementById('registration-link');
 
-    // Podmienka: Musí byť otvorená registrácia (aktuálny dátum v rozmedzí) A zároveň musia existovať kategórie.
-    const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
-    const hasCategories = window.hasCategories;
+    if (!registrationLink || !registrationData) {
+        return;
+    }
 
-    if (isRegistrationOpen && hasCategories) {
-        registerLink.classList.remove('hidden');
-        // Nastavíme správny href v závislosti od prihlásenia
-        if (userProfileData) {
-            registerLink.href = 'logged-in-registration.html';
-        } else {
-            registerLink.href = 'register.html';
-        }
+    const now = new Date();
+    const openDate = registrationData.open?.toDate();
+    const closeDate = registrationData.close?.toDate();
+    const isRegistrationOpen = now >= openDate && now <= closeDate;
+    
+    if (isRegistrationOpen) {
+        registrationLink.classList.remove('hidden');
     } else {
-        registerLink.classList.add('hidden');
+        registrationLink.classList.add('hidden');
     }
 };
 
-// Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
+/**
+ * Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie a notifikácie.
+ */
 const setupFirestoreListeners = () => {
     try {
         if (!window.db) {
@@ -167,55 +211,46 @@ const setupFirestoreListeners = () => {
             return;
         }
 
-        // Listener pre registračné dáta
+        // Listener pre zmeny v dokumente 'registration'
         const registrationDocRef = doc(window.db, "settings", "registration");
-        onSnapshot(registrationDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                window.registrationDates = docSnap.data();
-                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
+        onSnapshot(registrationDocRef, (doc) => {
+            if (doc.exists()) {
+                const registrationData = doc.data();
+                updateRegistrationLinkVisibility(registrationData);
+                // Nastavenie intervalu pre kontrolu
+                if (registrationCheckIntervalId) {
+                    clearInterval(registrationCheckIntervalId);
+                }
+                // Každú minútu preverí, či sa nezmenil stav registrácie
+                registrationCheckIntervalId = setInterval(() => {
+                    updateRegistrationLinkVisibility(registrationData);
+                }, 60000); // 60 000 ms = 1 minúta
             } else {
-                window.registrationDates = null;
-                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
+                console.warn("header.js: Dokument 'settings/registration' neexistuje.");
             }
-            updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+            console.error("header.js: Chyba pri počúvaní dokumentu 'registration':", error);
         });
 
-        // Listener pre kategórie
-        const categoriesDocRef = doc(window.db, "settings", "categories");
-        onSnapshot(categoriesDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const categories = docSnap.data();
-                window.hasCategories = Object.keys(categories).length > 0;
-                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
-            } else {
-                window.hasCategories = false;
-                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
-            }
-            updateHeaderLinks(window.globalUserProfileData);
+        // Listener pre notifikácie
+        const notificationsCollectionRef = collection(window.db, "notifications");
+        onSnapshot(notificationsCollectionRef, (querySnapshot) => {
+            const isFirstLoad = !window.hasNotificationsListenerLoaded;
+            window.hasNotificationsListenerLoaded = true;
+            
+            querySnapshot.docChanges().forEach((change) => {
+                if (change.type === "added" && !isFirstLoad) {
+                    const newNotification = change.doc.data();
+                    console.log("header.js: Nová notifikácia prijatá:", newNotification);
+                    // Zobrazíme notifikáciu, ak je používateľ admin a má zapnuté notifikácie
+                    if (window.globalUserProfileData?.role === 'admin' && window.globalUserProfileData?.displayNotifications) {
+                        const message = newNotification.changes.join(', ');
+                        showAdminNotification(message);
+                    }
+                }
+            });
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
-        });
-
-        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
-        if (registrationCheckIntervalId) {
-            clearInterval(registrationCheckIntervalId);
-        }
-        registrationCheckIntervalId = setInterval(() => {
-            // Kontrola beží každú sekundu, ale len ak máme potrebné dáta
-            if (window.registrationDates) {
-                updateRegistrationLinkVisibility(window.globalUserProfileData);
-            }
-        }, 1000); // 1000 ms = 1 sekunda
-        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
-        
-        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
-        window.addEventListener('beforeunload', () => {
-            if (registrationCheckIntervalId) {
-                clearInterval(registrationCheckIntervalId);
-                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
-            }
+            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
         });
 
     } catch (error) {
@@ -223,14 +258,18 @@ const setupFirestoreListeners = () => {
     }
 };
 
+
 /**
- * Hlavná funkcia na načítanie hlavičky a pripojenie skriptov.
- * Načítava header.html a vkladá ho do placeholderu.
+ * Globálna funkcia pre načítanie a inicializáciu hlavičky
  */
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
-        const response = await fetch('header.html');
+        if (!headerPlaceholder) {
+            return;
+        }
+        
+        const response = await fetch('/header.html');
         
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
