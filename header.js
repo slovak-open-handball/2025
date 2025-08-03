@@ -14,6 +14,9 @@ let registrationCheckIntervalId = null;
 // Zoznam aktívnych notifikácií
 let activeNotifications = [];
 
+// Flag, ktorý zabráni opakovanému spúšťaniu inicializácie hlavičky
+let headerInitialized = false;
+
 /**
  * Globálna funkcia pre zobrazenie notifikácií
  * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -262,29 +265,17 @@ const setupFirestoreListeners = () => {
 };
 
 /**
- * Nová funkcia pre inicializáciu Firebase a dynamických poslucháčov.
- * Tým sa oddelí načítanie statického HTML od dynamickej, na dátach závislej logiky.
- */
-const initDynamicHeader = () => {
-    // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
-    window.addEventListener('globalDataUpdated', (event) => {
-        console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
-        updateHeaderLinks(window.globalUserProfileData);
-    });
-
-    // Nastavíme listenery pre Firestore hneď po inicializácii
-    setupFirestoreListeners();
-
-    // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
-    updateHeaderLinks(window.globalUserProfileData);
-};
-
-
-/**
  * Globálna funkcia pre načítanie a inicializáciu hlavičky
  */
-window.loadHeaderAndScripts = async () => {
+window.loadHeaderAndScripts = async (userProfileData) => {
     try {
+        // Kontrola, či už bola hlavička inicializovaná
+        if (headerInitialized) {
+            console.log("header.js: Hlavička už bola inicializovaná, aktualizujem len odkazy.");
+            updateHeaderLinks(userProfileData);
+            return;
+        }
+
         const headerPlaceholder = document.getElementById('header-placeholder');
         if (!headerPlaceholder) {
             return;
@@ -295,9 +286,7 @@ window.loadHeaderAndScripts = async () => {
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
         
-        if (headerPlaceholder) {
-            headerPlaceholder.innerHTML = headerHtml;
-        }
+        headerPlaceholder.innerHTML = headerHtml;
 
         // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
@@ -306,17 +295,27 @@ window.loadHeaderAndScripts = async () => {
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
         
-        // Po úspešnom načítaní statického obsahu inicializujeme dynamickú logiku
-        initDynamicHeader();
+        // Nastavíme listenery pre Firestore
+        setupFirestoreListeners();
+
+        // Aktualizujeme odkazy, pretože dáta sú už k dispozícii
+        updateHeaderLinks(userProfileData);
+
+        headerInitialized = true;
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
 
-// Spustenie načítania hlavičky, ak DOM už bol načítaný
-if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
-} else {
-    window.loadHeaderAndScripts();
+// Zaregistrujeme poslucháča udalosti 'globalDataUpdated' a spustíme inicializáciu hlavičky.
+window.addEventListener('globalDataUpdated', (event) => {
+    console.log('header.js: Prijatá udalosť "globalDataUpdated". Spúšťam inicializáciu hlavičky.');
+    window.loadHeaderAndScripts(event.detail);
+});
+
+// Ak sú dáta už dostupné (napríklad pri opätovnom načítaní stránky), spustíme inicializáciu ihneď.
+if (window.globalUserProfileData) {
+    console.log("header.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    window.loadHeaderAndScripts(window.globalUserProfileData);
 }
