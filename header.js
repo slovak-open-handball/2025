@@ -296,6 +296,7 @@ window.loadHeaderAndScripts = async (userProfileData) => {
         }
         
         // Nastavíme listenery pre Firestore
+        // Táto funkcia musí byť volaná až po tom, čo sú globálne dáta dostupné
         setupFirestoreListeners();
 
         // Aktualizujeme odkazy, pretože dáta sú už k dispozícii
