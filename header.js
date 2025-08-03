@@ -4,13 +4,17 @@
 // Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
 // a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
 // presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
+// Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
+let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
+let displayedNotificationTimestamps = new Set(); // Súbor pre uloženie časových pečiatok zobrazených notifikácií
+
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -55,6 +59,48 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+
+/**
+ * Nová funkcia na zobrazenie notifikácie z databázy v pravom hornom rohu.
+ * Vytvorí a spravuje dočasný element, ktorý sa objaví a po čase zmizne.
+ * @param {string} message - Správa notifikácie.
+ * @param {string} type - Typ notifikácie ('success', 'error', 'info').
+ */
+const showDatabaseNotification = (message, type = 'info') => {
+    // Vytvoríme jedinečný ID pre každú notifikáciu
+    const notificationId = `db-notification-${Date.now()}`;
+    const notificationElement = document.createElement('div');
+    
+    notificationElement.id = notificationId;
+    notificationElement.className = `
+        fixed top-4 right-4 z-[100]
+        bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
+        transform translate-x-full transition-all duration-500 ease-out
+        flex items-center space-x-2
+    `;
+
+    // Nastavenie obsahu a farby na základe typu notifikácie
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    notificationElement.innerHTML = `
+        <span>${icon}</span>
+        <span>${message}</span>
+        <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
+    `;
+
+    document.body.appendChild(notificationElement);
+
+    // Animácia vstupu notifikácie
+    setTimeout(() => {
+        notificationElement.classList.remove('translate-x-full');
+    }, 10);
+
+    // Animácia zmiznutia po 7 sekundách
+    setTimeout(() => {
+        notificationElement.classList.add('translate-x-full');
+        setTimeout(() => notificationElement.remove(), 500); // Odstránime element po dokončení animácie
+    }, 7000);
+};
+
 /**
  * Funkcia na odhlásenie používateľa
  */
@@ -64,6 +110,12 @@ const handleLogout = async () => {
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
         window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
+        // Zrušíme listener notifikácií, ak existuje
+        if (unsubscribeFromNotifications) {
+            unsubscribeFromNotifications();
+            unsubscribeFromNotifications = null;
+            console.log("header.js: Listener notifikácií zrušený.");
+        }
         // Presmerovanie na domovskú stránku po odhlásení
         window.location.href = 'index.html';
     } catch (error) {
@@ -115,6 +167,20 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             // Nastavíme farbu hlavičky podľa roly
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+
+            // NOVÉ: Skontrolujeme, či má admin povolené notifikácie
+            if (userProfileData.role === 'admin' && userProfileData.displayNotifications) {
+                if (!unsubscribeFromNotifications) {
+                    setupNotificationListenerForAdmin();
+                }
+            } else {
+                // Ak notifikácie nie sú povolené alebo používateľ nie je admin, zrušíme listener
+                if (unsubscribeFromNotifications) {
+                    unsubscribeFromNotifications();
+                    unsubscribeFromNotifications = null;
+                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin alebo ich nemá povolené.");
+                }
+            }
         } else {
             // Používateľ nie je prihlásený
             authLink.classList.remove('hidden');
@@ -122,6 +188,12 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.add('hidden');
             // Nastavíme predvolenú farbu
             headerElement.style.backgroundColor = getHeaderColorByRole(null);
+            // Zrušíme listener, ak bol nejaký nastavený (pre istotu)
+            if (unsubscribeFromNotifications) {
+                unsubscribeFromNotifications();
+                unsubscribeFromNotifications = null;
+                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
+            }
         }
 
         // Aktualizujeme viditeľnosť odkazu na registráciu
@@ -158,6 +230,48 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
         registerLink.classList.add('hidden');
     }
 };
+
+/**
+ * NOVÁ FUNKCIA: Nastaví listener pre notifikácie admina.
+ * Počúva na zmeny v kolekcii /notifications a zobrazuje nové správy.
+ */
+const setupNotificationListenerForAdmin = () => {
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
+        return;
+    }
+
+    // Zabezpečíme, že predchádzajúci listener je zrušený, ak existuje
+    if (unsubscribeFromNotifications) {
+        unsubscribeFromNotifications();
+    }
+    
+    // Získame referenciu na kolekciu notifikácií
+    const notificationsCollectionRef = collection(window.db, "notifications");
+    
+    // Vytvoríme dotaz pre notifikácie (napr. 10 najnovších, ak je to potrebné)
+    const q = query(notificationsCollectionRef, orderBy("timestamp", "desc"));
+
+    // Nastavíme onSnapshot listener
+    unsubscribeFromNotifications = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const newNotification = change.doc.data();
+                // Notifikáciu zobrazíme len vtedy, ak sme ju ešte nezobrazili
+                if (!displayedNotificationTimestamps.has(newNotification.timestamp.toMillis())) {
+                    console.log("header.js: Nová notifikácia prijatá:", newNotification);
+                    showDatabaseNotification(newNotification.message, newNotification.type || 'info');
+                    displayedNotificationTimestamps.add(newNotification.timestamp.toMillis());
+                }
+            }
+        });
+    }, (error) => {
+        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+    });
+
+    console.log("header.js: Listener pre notifikácie admina nastavený.");
+};
+
 
 // Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
 const setupFirestoreListeners = () => {
