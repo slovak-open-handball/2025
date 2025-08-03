@@ -224,7 +224,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
         if (userProfileData) {
             registerLink.href = 'logged-in-registration.html';
         } else {
-            registerLink.href = 'register.html';
+        registerLink.href = 'register.html';
         }
     } else {
         registerLink.classList.add('hidden');
@@ -260,7 +260,8 @@ const setupNotificationListenerForAdmin = () => {
                 // Notifikáciu zobrazíme len vtedy, ak sme ju ešte nezobrazili
                 if (!displayedNotificationTimestamps.has(newNotification.timestamp.toMillis())) {
                     console.log("header.js: Nová notifikácia prijatá:", newNotification);
-                    showDatabaseNotification(newNotification.message, newNotification.type || 'info');
+                    // Zmena z newNotification.message na newNotification.changes
+                    showDatabaseNotification(newNotification.changes, newNotification.type || 'info');
                     displayedNotificationTimestamps.add(newNotification.timestamp.toMillis());
                 }
             }
