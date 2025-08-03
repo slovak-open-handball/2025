@@ -346,17 +346,19 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         )
     );
 
-    // Vytvorenie placeholderu pre telefónne číslo
+    // Vytvorenie placeholderu pre telefónne číslo s formátovaním
     const originalPhoneNumber = userProfileData.contactPhoneNumber;
     let phoneNumberPlaceholder = 'Zadajte telefónne číslo';
 
     if (originalPhoneNumber) {
+        let numberToFormat = originalPhoneNumber;
         if (originalPhoneNumber.startsWith(selectedDialCode)) {
-            // Odstránenie predvoľby a prípadných medzier z placeholderu
-            phoneNumberPlaceholder = originalPhoneNumber.substring(selectedDialCode.length).trim();
-        } else {
-            phoneNumberPlaceholder = originalPhoneNumber;
+            numberToFormat = originalPhoneNumber.substring(selectedDialCode.length).trim();
         }
+        
+        // Odstránenie všetkých nečíselných znakov a formátovanie
+        const cleanedNumber = numberToFormat.replace(/\D/g, '');
+        phoneNumberPlaceholder = cleanedNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
     }
 
     const ModalContent = React.createElement(
