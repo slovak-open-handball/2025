@@ -50,7 +50,6 @@ const EyeOffIcon = React.createElement(
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: roleColor,
-                    // Odstránenie čierneho rámika pri focus
                     boxShadow: 'none',
                     cursor: disabled ? 'not-allowed' : 'text'
                 }
