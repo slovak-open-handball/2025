@@ -68,7 +68,6 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
     const [filter, setFilter] = useState('');
     const modalRef = useRef(null);
 
-    // Opravená logika filtrovania na základe "name" a "dialCode"
     const filteredCodes = countryDialCodes.filter(c =>
         (c.name && c.name.toLowerCase().includes(filter.toLowerCase())) ||
         (c.dialCode && c.dialCode.toLowerCase().includes(filter.toLowerCase()))
@@ -230,8 +229,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             firstName !== originalData.current.firstName ||
             lastName !== originalData.current.lastName ||
             email !== originalData.current.email ||
-            phoneNumber !== originalData.current.phoneNumber ||
-            selectedDialCode !== originalData.current.dialCode
+            (userProfileData.role !== 'admin' && (phoneNumber !== originalData.current.phoneNumber || selectedDialCode !== originalData.current.dialCode))
         );
 
         const hasPasswordChanged = newPassword !== '' || retypePassword !== '' || currentPassword !== '';
@@ -287,9 +285,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             const updatedData = {
                 firstName: firstName,
                 lastName: lastName,
-                phoneNumber: phoneNumber,
-                dialCode: selectedDialCode
             };
+            
+            // Pridanie telefónneho čísla len ak nie je rola 'admin'
+            if (userProfileData.role !== 'admin') {
+                updatedData.phoneNumber = phoneNumber;
+                updatedData.dialCode = selectedDialCode;
+            }
+
             await updateDoc(userRef, updatedData);
 
             // Úspešné uloženie, zatvoríme modálne okno a zobrazíme notifikáciu.
@@ -379,7 +382,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 placeholder: 'Zadajte e-mail',
             })
         ),
-        React.createElement(
+        // Podmienene zobrazenie telefónneho čísla pre iné roly ako 'admin'
+        userProfileData.role !== 'admin' && React.createElement(
             'div',
             { className: 'mb-4' },
             React.createElement('label', { htmlFor: 'phoneNumber', className: 'block text-gray-700 text-sm font-bold mb-2' }, 'Telefónne číslo'),
@@ -463,7 +467,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 loading ? 'Ukladám...' : 'Uložiť zmeny'
             )
         ),
-        React.createElement(DialCodeModal, {
+        // Podmienene zobrazenie DialCodeModal pre iné roly ako 'admin'
+        userProfileData.role !== 'admin' && React.createElement(DialCodeModal, {
             show: showDialCodeModal,
             onClose: () => setShowDialCodeModal(false),
             onSelect: (dialCode) => {
