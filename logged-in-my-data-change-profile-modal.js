@@ -308,7 +308,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 }
 
                 updatedData.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber}`;
-                updatedData.dialCode = selectedDialCode;
             }
 
             if (Object.keys(updatedData).length > 0) {
