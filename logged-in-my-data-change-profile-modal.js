@@ -196,7 +196,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         firstName: userProfileData.firstName || '',
         lastName: userProfileData.lastName || '',
         email: userProfileData.email || '',
-        phoneNumber: userProfileData.phoneNumber || '',
+        contactPhoneNumber: userProfileData.contactPhoneNumber || '',
         dialCode: userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode)
     });
 
@@ -219,7 +219,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 firstName: userProfileData.firstName || '',
                 lastName: userProfileData.lastName || '',
                 email: userProfileData.email || '',
-                phoneNumber: userProfileData.phoneNumber || '',
+                contactPhoneNumber: userProfileData.contactPhoneNumber || '',
                 dialCode: userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode)
             };
         }
@@ -231,7 +231,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             (firstName !== '' && firstName !== originalData.current.firstName) ||
             (lastName !== '' && lastName !== originalData.current.lastName) ||
             (email !== '' && email !== originalData.current.email) ||
-            (userProfileData.role !== 'admin' && (phoneNumber !== '' && phoneNumber !== originalData.current.phoneNumber)) ||
+            (userProfileData.role !== 'admin' && (phoneNumber !== '' && phoneNumber !== originalData.current.contactPhoneNumber)) ||
             (userProfileData.role !== 'admin' && (selectedDialCode !== originalData.current.dialCode))
         );
 
@@ -290,7 +290,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
             if (firstName !== '') updatedData.firstName = firstName;
             if (lastName !== '') updatedData.lastName = lastName;
-            if (userProfileData.role !== 'admin' && phoneNumber !== '') updatedData.phoneNumber = phoneNumber;
+            if (userProfileData.role !== 'admin' && phoneNumber !== '') updatedData.contactPhoneNumber = phoneNumber;
             if (userProfileData.role !== 'admin' && selectedDialCode !== originalData.current.dialCode) updatedData.dialCode = selectedDialCode;
 
             if (Object.keys(updatedData).length > 0) {
@@ -398,7 +398,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     value: phoneNumber,
                     onChange: (e) => setPhoneNumber(e.target.value),
                     className: 'rounded-none rounded-r-lg bg-gray-50 border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 block flex-1 min-w-0 w-full text-sm p-2.5',
-                    placeholder: userProfileData.phoneNumber || 'Zadajte telefónne číslo',
+                    placeholder: userProfileData.contactPhoneNumber || 'Zadajte telefónne číslo',
                     style: { borderColor: roleColor }
                 })
             )
