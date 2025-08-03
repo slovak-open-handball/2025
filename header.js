@@ -81,9 +81,13 @@ const showDatabaseNotification = (message, type = 'info') => {
 
     // Nastavenie obsahu a farby na základe typu notifikácie
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    
+    // Nová úprava: Nahradíme '\n' za '<br>' pre správne zalomenie riadkov
+    const formattedMessage = message.replace(/\n/g, '<br>');
+
     notificationElement.innerHTML = `
         <span>${icon}</span>
-        <span>${message}</span>
+        <span>${formattedMessage}</span>
         <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
     `;
 
