@@ -44,7 +44,7 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
                 onChange: onChange,
                 placeholder: placeholder,
                 disabled: disabled,
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2`,
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-0`,
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
                     borderColor: roleColor,
@@ -134,7 +134,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         placeholder: 'Hľadať krajinu alebo kód...',
                         value: filter,
                         onChange: (e) => setFilter(e.target.value),
-                        className: 'mt-3 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2',
+                        className: 'mt-3 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-0',
                         style: {
                             borderColor: roleColor,
                             // Odstránenie čierneho rámika pri focus
@@ -509,7 +509,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'firstName',
                 value: firstName,
                 onChange: (e) => setFirstName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-0',
                 placeholder: userProfileData.firstName || 'Zadajte meno',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
@@ -530,7 +530,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'lastName',
                 value: lastName,
                 onChange: (e) => setLastName(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2',
+                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-0',
                 placeholder: userProfileData.lastName || 'Zadajte priezvisko',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
@@ -555,7 +555,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     {
                         type: 'button',
                         onClick: () => setShowDialCodeModal(true),
-                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-gray-100 border rounded-l-lg hover:bg-gray-200 focus:outline-none focus:ring-2`,
+                        className: `flex-shrink-0 z-10 inline-flex items-center py-2.5 px-4 text-sm font-medium text-center bg-gray-100 border rounded-l-lg hover:bg-gray-200 focus:outline-none focus:ring-0`,
                         style: {
                             color: roleColor,
                             borderColor: roleColor,
@@ -570,7 +570,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'phoneNumber',
                     value: phoneNumber,
                     onChange: handlePhoneNumberChange, // Použijeme novú funkciu pre formátovanie
-                    className: 'rounded-none rounded-r-lg bg-gray-50 border text-gray-900 focus:outline-none focus:ring-2 block flex-1 min-w-0 w-full text-sm p-2.5',
+                    className: 'rounded-none rounded-r-lg bg-gray-50 border text-gray-900 focus:outline-none focus:ring-0 block flex-1 min-w-0 w-full text-sm p-2.5',
                     placeholder: formattedPhoneNumberPlaceholder || 'Zadajte telefónne číslo',
                     style: {
                         borderColor: roleColor,
@@ -591,7 +591,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'email',
                 value: email,
                 onChange: handleEmailChange, // Nový handler pre real-time validáciu
-                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-0 ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
                 placeholder: userProfileData.email || 'Zadajte e-mail',
                 // Pridanie štýlov pre orámovanie, aby sa zhodovalo s poľom pre telefónne číslo
                 style: {
