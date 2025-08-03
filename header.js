@@ -260,8 +260,19 @@ const setupNotificationListenerForAdmin = () => {
                 // Notifikáciu zobrazíme len vtedy, ak sme ju ešte nezobrazili
                 if (!displayedNotificationTimestamps.has(newNotification.timestamp.toMillis())) {
                     console.log("header.js: Nová notifikácia prijatá:", newNotification);
-                    // Zmena z newNotification.message na newNotification.changes
-                    showDatabaseNotification(newNotification.changes, newNotification.type || 'info');
+                    // Dynamicky vytvoríme správu na základe poľa 'changes'
+                    let changesMessage = '';
+                    if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
+                        const changeLabel = newNotification.changes.length > 1 ? "si zmenil tieto údaje:" : "si zmenil tento údaj:";
+                        changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
+                        changesMessage += newNotification.changes.join('\n');
+                    } else if (typeof newNotification.changes === 'string') {
+                        changesMessage = `Používateľ ${newNotification.userEmail} si zmenil tento údaj:\n${newNotification.changes}`;
+                    } else {
+                        changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
+                    }
+                    
+                    showDatabaseNotification(changesMessage, newNotification.type || 'info');
                     displayedNotificationTimestamps.add(newNotification.timestamp.toMillis());
                 }
             }
