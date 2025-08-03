@@ -191,7 +191,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     const [loading, setLoading] = useState(false);
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
-    const [selectedDialCode, setSelectedDialCode] = useState(userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode));
+    const [selectedDialCode, setSelectedDialCode] = useState('');
 
     const auth = getAuth();
     const user = auth.currentUser;
@@ -201,8 +201,32 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         lastName: userProfileData.lastName || '',
         email: userProfileData.email || '',
         contactPhoneNumber: userProfileData.contactPhoneNumber || '',
-        dialCode: userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode)
     });
+
+    // Funkcia na extrahovanie predvoľby a čísla z reťazca
+    const extractDialCodeAndNumber = (contactNumber) => {
+        // Zoradíme predvoľby od najdlhšej po najkratšiu
+        const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+        
+        let foundDialCode = '';
+        let numberWithoutDialCode = contactNumber || '';
+
+        // Skúsime nájsť predvoľbu v čísle
+        for (const country of sortedDialCodes) {
+            if (contactNumber && contactNumber.startsWith(country.dialCode)) {
+                foundDialCode = country.dialCode;
+                numberWithoutDialCode = contactNumber.substring(country.dialCode.length);
+                break;
+            }
+        }
+
+        // Ak sa nenašla žiadna predvoľba, použijeme defaultnú pre Slovensko
+        if (!foundDialCode) {
+            foundDialCode = countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode;
+        }
+
+        return { foundDialCode, numberWithoutDialCode };
+    };
 
     useEffect(() => {
         // Obnovenie stavov pri zobrazení modálu na prázdne reťazce
@@ -211,7 +235,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setLastName('');
             setEmail('');
             setPhoneNumber('');
-            setSelectedDialCode(userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode));
             setNewPassword('');
             setRetypePassword('');
             setCurrentPassword('');
@@ -224,8 +247,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 lastName: userProfileData.lastName || '',
                 email: userProfileData.email || '',
                 contactPhoneNumber: userProfileData.contactPhoneNumber || '',
-                dialCode: userProfileData.dialCode || (countryDialCodes.find(c => c.code === 'SK')?.dialCode || countryDialCodes[0].dialCode)
             };
+            
+            // Inicializácia predvoľby a telefónneho čísla
+            const { foundDialCode, numberWithoutDialCode } = extractDialCodeAndNumber(userProfileData.contactPhoneNumber);
+            setSelectedDialCode(foundDialCode);
+            setPhoneNumber(numberWithoutDialCode.trim());
         }
     }, [show, userProfileData]);
 
@@ -235,8 +262,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             (firstName !== '' && firstName !== originalData.current.firstName) ||
             (lastName !== '' && lastName !== originalData.current.lastName) ||
             (email !== '' && email !== originalData.current.email) ||
-            (userProfileData.role !== 'admin' && phoneNumber !== '' && (selectedDialCode + phoneNumber.replace(/\s/g, '')) !== originalData.current.contactPhoneNumber) ||
-            (userProfileData.role !== 'admin' && phoneNumber === '' && selectedDialCode !== originalData.current.dialCode)
+            (userProfileData.role !== 'admin' && phoneNumber !== originalData.current.contactPhoneNumber.replace(extractDialCodeAndNumber(originalData.current.contactPhoneNumber).foundDialCode, '').trim()) ||
+            (userProfileData.role !== 'admin' && selectedDialCode !== extractDialCodeAndNumber(originalData.current.contactPhoneNumber).foundDialCode)
         );
 
         const hasPasswordChanged = newPassword !== '' || retypePassword !== '' || currentPassword !== '';
@@ -296,18 +323,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             if (lastName !== '') updatedData.lastName = lastName;
             
             // Logika pre aktualizáciu telefónneho čísla
-            if (userProfileData.role !== 'admin' && (phoneNumber !== '' || selectedDialCode !== originalData.current.dialCode)) {
-                let newPhoneNumber = phoneNumber.replace(/\s/g, ''); // odstránenie medzier z nového čísla
-                
-                // Ak sa zmenila len predvoľba, použijeme pôvodné číslo (bez starej predvoľby)
-                if (phoneNumber === '' && selectedDialCode !== originalData.current.dialCode) {
-                    const originalNumberWithoutDialCode = originalData.current.contactPhoneNumber.startsWith(originalData.current.dialCode)
-                        ? originalData.current.contactPhoneNumber.substring(originalData.current.dialCode.length).trim()
-                        : originalData.current.contactPhoneNumber;
-                    newPhoneNumber = originalNumberWithoutDialCode.replace(/\s/g, '');
-                }
-
-                updatedData.contactPhoneNumber = `${selectedDialCode}${newPhoneNumber}`;
+            if (userProfileData.role !== 'admin' && (phoneNumber !== extractDialCodeAndNumber(originalData.current.contactPhoneNumber).numberWithoutDialCode.trim() || selectedDialCode !== extractDialCodeAndNumber(originalData.current.contactPhoneNumber).foundDialCode)) {
+                updatedData.contactPhoneNumber = `${selectedDialCode}${phoneNumber.replace(/\s/g, '')}`;
             }
 
             if (Object.keys(updatedData).length > 0) {
@@ -360,23 +377,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     );
 
     // Vytvorenie placeholderu pre telefónne číslo s formátovaním
-    const originalPhoneNumber = userProfileData.contactPhoneNumber;
     let phoneNumberPlaceholder = 'Zadajte telefónne číslo';
-
-    if (originalPhoneNumber) {
-        let numberToFormat = originalPhoneNumber;
-        const currentDialCode = selectedDialCode || userProfileData.dialCode;
-
-        if (originalPhoneNumber.startsWith(currentDialCode)) {
-            numberToFormat = originalPhoneNumber.substring(currentDialCode.length).trim();
-        } else if (originalData.current.dialCode && originalPhoneNumber.startsWith(originalData.current.dialCode)) {
-            numberToFormat = originalPhoneNumber.substring(originalData.current.dialCode.length).trim();
-        }
-        
-        // Odstránenie všetkých nečíselných znakov a formátovanie
-        const cleanedNumber = numberToFormat.replace(/\D/g, '');
+    const originalPhoneNumberWithoutDialCode = extractDialCodeAndNumber(userProfileData.contactPhoneNumber).numberWithoutDialCode;
+    
+    // Odstránenie všetkých nečíselných znakov a formátovanie
+    const cleanedNumber = originalPhoneNumberWithoutDialCode.replace(/\D/g, '');
+    if (cleanedNumber) {
         phoneNumberPlaceholder = cleanedNumber.replace(/(\d{3})(?=\d)/g, '$1 ');
     }
+
 
     const ModalContent = React.createElement(
         'div',
