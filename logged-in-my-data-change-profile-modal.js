@@ -193,6 +193,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [selectedDialCode, setSelectedDialCode] = useState('');
 
+    // Nový stav pre validáciu e-mailu v reálnom čase
+    const [isEmailValid, setIsEmailValid] = useState(true);
+
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -202,6 +205,26 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         email: userProfileData.email || '',
         contactPhoneNumber: userProfileData.contactPhoneNumber || '',
     });
+
+    /**
+     * Funkcia na validáciu e-mailovej adresy
+     * @param {string} email - E-mailová adresa na validáciu.
+     * @returns {boolean} - true ak je formát platný alebo reťazec je prázdny, inak false.
+     */
+    const validateEmail = (email) => {
+        // Kontrola, či je pole prázdne, ak áno, považujeme ho za platné
+        if (email === '') {
+            return true;
+        }
+        // Regulárny výraz na kontrolu:
+        // 1. Aspoň jeden znak pred @
+        // 2. @
+        // 3. Aspoň jeden znak po @
+        // 4. .
+        // 5. Aspoň dva znaky po .
+        const emailRegex = /^.+@.+\..{2,}$/;
+        return emailRegex.test(email);
+    };
 
     // Funkcia na extrahovanie predvoľby a čísla z reťazca
     const extractDialCodeAndNumber = (contactNumber) => {
@@ -283,6 +306,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setTimeout(() => event.target.setSelectionRange(newSelectionStart, newSelectionStart), 0);
         }
     };
+    
+    // Nová funkcia pre e-mail input handler
+    const handleEmailChange = (e) => {
+        const newEmail = e.target.value;
+        setEmail(newEmail);
+        setIsEmailValid(validateEmail(newEmail));
+    };
+
 
     useEffect(() => {
         // Obnovenie stavov pri zobrazení modálu na prázdne reťazce
@@ -297,6 +328,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setShowPassword(false);
             setShowNewPassword(false);
             setShowRetypePassword(false);
+            setIsEmailValid(true); // Reset validácie
 
             originalData.current = {
                 firstName: userProfileData.firstName || '',
@@ -336,11 +368,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             return;
         }
 
-        // Validácia e-mailu
-        const emailRegex = /.+@.+\..{2,}/;
-        if (email !== '' && !emailRegex.test(email)) {
-            window.showGlobalNotification('Prosím, zadajte platný formát e-mailovej adresy (napr. meno@domena.sk).', 'error');
-            setLoading(false);
+        // Kontrola platnosti e-mailu pred uložením
+        if (email !== '' && !isEmailValid) {
+            window.showGlobalNotification('Prosím, zadajte platný formát e-mailovej adresy.', 'error');
             return;
         }
 
@@ -523,10 +553,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 type: 'email',
                 id: 'email',
                 value: email,
-                onChange: (e) => setEmail(e.target.value),
-                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline',
+                onChange: handleEmailChange, // Nový handler pre real-time validáciu
+                className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${email !== '' && !isEmailValid ? 'border-red-500' : ''}`,
                 placeholder: userProfileData.email || 'Zadajte e-mail',
-            })
+            }),
+            email !== '' && !isEmailValid && React.createElement(
+                'p',
+                { className: 'text-red-500 text-xs italic mt-1' },
+                'Prosím, zadajte platný formát e-mailovej adresy.'
+            )
         ),
         // Aktuálne heslo je teraz vždy zobrazené pod e-mailom
         React.createElement(PasswordInput, {
@@ -571,13 +606,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 'button',
                 {
                     onClick: handleSave,
-                    disabled: loading || !isFormChanged(),
+                    disabled: loading || !isFormChanged() || !isEmailValid, // Pridaná podmienka pre email validáciu
                     className: `font-bold py-2 px-4 rounded-lg focus:outline-none`,
                     style: {
-                        backgroundColor: (loading || !isFormChanged()) ? '#E5E7EB' : roleColor,
-                        color: (loading || !isFormChanged()) ? '#9CA3AF' : 'white',
+                        backgroundColor: (loading || !isFormChanged() || !isEmailValid) ? '#E5E7EB' : roleColor,
+                        color: (loading || !isFormChanged() || !isEmailValid) ? '#9CA3AF' : 'white',
                         border: 'none',
-                        cursor: (loading || !isFormChanged()) ? 'not-allowed' : 'pointer',
+                        cursor: (loading || !isFormChanged() || !isEmailValid) ? 'not-allowed' : 'pointer',
                     }
                 },
                 loading ? 'Ukladám...' : 'Uložiť zmeny'
