@@ -109,6 +109,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         )
     );
 
+    const fullName = `${localProfileData.firstName || ''} ${localProfileData.lastName || ''}`.trim();
+    const phoneNumber = (localProfileData.dialCode && localProfileData.phoneNumber) ? `${localProfileData.dialCode} ${localProfileData.phoneNumber}` : '';
+
     return React.createElement(
         'div',
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:pt-16' },
@@ -134,9 +137,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         'Upraviť'
                     )
                 ),
-                React.createElement(DataRow, { label: 'Meno a Priezvisko', value: localProfileData.displayName }),
+                React.createElement(DataRow, { label: 'Meno a Priezvisko', value: fullName }),
                 React.createElement(DataRow, { label: 'Email', value: localProfileData.email }),
-                React.createElement(DataRow, { label: 'Telefónne číslo', value: `${localProfileData.dialCode} ${localProfileData.phoneNumber}` }),
+                React.createElement(DataRow, { label: 'Telefónne číslo', value: phoneNumber }),
                 React.createElement(DataRow, { label: 'Rola', value: localProfileData.role }),
                 React.createElement(DataRow, { label: 'Status', value: localProfileData.status })
             ),
