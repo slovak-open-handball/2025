@@ -86,16 +86,20 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             setIsEditingAllowed(true);
             return;
         }
+        
+        // Získame referenciu na dokument aktuálneho používateľa
+        // Predpokladá sa, že userProfileData obsahuje `uid` používateľa,
+        // čo sa používa ako ID dokumentu v kolekcii 'users'.
+        const userDocRef = doc(db, 'users', userProfileData.uid);
 
-        const settingsDocRef = doc(db, 'settings', 'registration');
-        const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
+        const unsubscribe = onSnapshot(userDocRef, (userSnap) => {
             // Vyčistíme predchádzajúci časovač, ak existuje
             if (deadlineTimerRef.current) {
                 clearTimeout(deadlineTimerRef.current);
             }
 
-            if (settingsSnap.exists()) {
-                const data = settingsSnap.data();
+            if (userSnap.exists()) {
+                const data = userSnap.data();
                 if (data.dataEditDeadline) {
                     const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
                     const now = new Date();
@@ -119,7 +123,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 setIsEditingAllowed(false);
             }
         }, (error) => {
-            console.error("Error fetching dataEditDeadline:", error);
+            console.error("Error fetching user dataEditDeadline:", error);
             // V prípade chyby tiež zakážeme úpravy
             setIsEditingAllowed(false);
         });
@@ -131,7 +135,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             }
             unsubscribe();
         };
-    }, [db, userProfileData.role]); // Pridáme db a userProfileData.role do dependency array
+    }, [db, userProfileData.role, userProfileData.uid]); // Pridáme db, role a uid do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
