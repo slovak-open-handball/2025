@@ -46,27 +46,33 @@ const setupMenuListeners = () => {
 // Hlavná funkcia na načítanie menu
 window.loadLeftMenu = async () => {
     console.log("left-menu.js: Spúšťam funkciu loadLeftMenu.");
-    try {
-        const menuPlaceholder = document.getElementById('left-menu-placeholder');
-        if (!menuPlaceholder) {
-            console.error("left-menu.js: Nepodarilo sa nájsť element s id 'left-menu-placeholder'.");
-            return;
+
+    // Kontrola existencie globálnych používateľských dát
+    if (window.globalUserProfileData) {
+        try {
+            const menuPlaceholder = document.getElementById('left-menu-placeholder');
+            if (!menuPlaceholder) {
+                console.error("left-menu.js: Nepodarilo sa nájsť element s id 'left-menu-placeholder'.");
+                return;
+            }
+
+            console.log("left-menu.js: Placeholder pre menu bol nájdený. Načítavam HTML...");
+            const response = await fetch('logged-in-left-menu.html');
+            if (!response.ok) {
+                throw new Error(`Chyba pri načítaní logged-in-left-menu.html: ${response.status} ${response.statusText}`);
+            }
+            const menuHtml = await response.text();
+            menuPlaceholder.innerHTML = menuHtml;
+            console.log("left-menu.js: Obsah menu bol úspešne vložený do placeholderu.");
+
+            // Po úspešnom vložení HTML hneď nastavíme poslucháčov
+            setupMenuListeners();
+
+        } catch (error) {
+            console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
         }
-
-        console.log("left-menu.js: Placeholder pre menu bol nájdený. Načítavam HTML...");
-        const response = await fetch('logged-in-left-menu.html');
-        if (!response.ok) {
-            throw new Error(`Chyba pri načítaní logged-in-left-menu.html: ${response.status} ${response.statusText}`);
-        }
-        const menuHtml = await response.text();
-        menuPlaceholder.innerHTML = menuHtml;
-        console.log("left-menu.js: Obsah menu bol úspešne vložený do placeholderu.");
-
-        // Po úspešnom vložení HTML hneď nastavíme poslucháčov
-        setupMenuListeners();
-
-    } catch (error) {
-        console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
+    } else {
+        console.log("left-menu.js: Globálne dáta používateľa nie sú dostupné. Menu sa nenačíta.");
     }
 };
 
