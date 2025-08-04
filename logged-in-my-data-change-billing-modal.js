@@ -132,7 +132,20 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             
             // Logika pre vytvorenie záznamu o zmene v databáze
             const originalBillingData = originalDataRef.current;
-            const changedData = {};
+            const changeMessages = [];
+
+            // Mapovanie pre názvy polí
+            const fieldNames = {
+                'billing.clubName': 'Názov klubu',
+                'billing.ico': 'IČO',
+                'billing.dic': 'DIČ',
+                'billing.icdph': 'IČ DPH',
+                'street': 'Ulica',
+                'houseNumber': 'Číslo domu',
+                'city': 'Mesto',
+                'postalCode': 'PSČ',
+                'country': 'Krajina',
+            };
 
             const changes = {
                 'billing.clubName': clubName,
@@ -151,17 +164,17 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 const originalValue = key.startsWith('billing.') ? originalBillingData[key.substring(8)] : originalBillingData[key];
 
                 if (newValue !== '' && getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
-                     changedData[key] = {
-                        old: originalValue,
-                        new: newValue
-                    };
+                    const fieldName = fieldNames[key] || key;
+                    const oldVal = originalValue || 'prázdne';
+                    const newVal = newValue || 'prázdne';
+                    changeMessages.push(`Zmena ${fieldName}: z '${oldVal}' na '${newVal}'`);
                 }
             }
 
-            if (Object.keys(changedData).length > 0) {
+            if (changeMessages.length > 0) {
                  await addDoc(collection(db, 'notifications'), {
-                    userId: user.uid,
-                    changes: changedData,
+                    userEmail: user.email,
+                    changes: changeMessages,
                     timestamp: new Date().toISOString(),
                     type: 'billing_update'
                 });
@@ -308,7 +321,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Popisné číslo'
+                        'Číslo domu'
                     ),
                     React.createElement('input', {
                         type: 'text',
