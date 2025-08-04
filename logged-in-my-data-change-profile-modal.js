@@ -475,7 +475,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             const credential = EmailAuthProvider.credential(user.email, currentPassword);
             await reauthenticateWithCredential(user, credential);
             await verifyBeforeUpdateEmail(user, email);
-            window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maili.', 'success');
+            window.showGlobalNotification('Na novú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Na dokončenie zmeny kliknite na odkaz v e-maile. Z bezpečnostných dôvodov budete teraz automaticky odhlásený.', 'success');
             
             // Odhlásiť používateľa po 10 sekundách a presmerovať ho na stránku login.html
             setTimeout(async () => {
