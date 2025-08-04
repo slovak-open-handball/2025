@@ -201,6 +201,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const [loading, setLoading] = useState(false);
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [selectedDialCode, setSelectedDialCode] = useState('');
+    
+    // Stav pre validáciu hesla
+    const [validationStatus, setValidationStatus] = useState({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumber: false
+    });
 
     // Nový stav pre validáciu e-mailu v reálnom čase
     const [isEmailValid, setIsEmailValid] = useState(true);
@@ -236,12 +244,17 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     };
 
     /**
-     * Funkcia na validáciu hesla (minimálne 10 znakov)
+     * Funkcia na validáciu hesla
      * @param {string} password - Heslo na validáciu.
-     * @returns {boolean} - true ak je heslo platné, inak false.
+     * @returns {object} - Objekt s pravidlami validácie.
      */
     const validatePassword = (password) => {
-        return password.length >= 10;
+        const minLength = password.length >= 10;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        
+        return { minLength, hasUpperCase, hasLowerCase, hasNumber };
     }
 
     // Funkcia na extrahovanie predvoľby a čísla z reťazca
@@ -294,6 +307,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setNewPassword('');
             setRetypePassword('');
             setCurrentPassword('');
+            
+            // Reset validácie hesla
+            setValidationStatus({
+                minLength: false,
+                hasUpperCase: false,
+                hasLowerCase: false,
+                hasNumber: false
+            });
 
             setIsEmailValid(true);
 
@@ -307,6 +328,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             };
         }
     }, [show, userProfileData]);
+
+    // useEffect pre validáciu nového hesla
+    useEffect(() => {
+        const status = validatePassword(newPassword);
+        setValidationStatus(status);
+    }, [newPassword]);
+
 
     // Kontrola, či sa zmenil aspoň jeden údaj vo formulári
     const isFormChanged = () => {
@@ -348,12 +376,19 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         
         // Ak sa mení e-mail, musí byť zadané aktuálne heslo s minimálne 10 znakmi
         if (emailChange) {
-            return isFormChanged() && isEmailValid && validatePassword(currentPassword);
+            return isFormChanged() && isEmailValid && validatePassword(currentPassword).minLength;
         }
         
         // Ak sa mení iba heslo, nové heslá sa musia zhodovať, byť validné a musí byť zadané aktuálne heslo
         if (passwordChange) {
-            return isFormChanged() && validatePassword(newPassword) && newPassword === retypePassword && validatePassword(currentPassword);
+            const newPasswordStatus = validatePassword(newPassword);
+            return isFormChanged() && 
+                   newPasswordStatus.minLength && 
+                   newPasswordStatus.hasUpperCase && 
+                   newPasswordStatus.hasLowerCase && 
+                   newPasswordStatus.hasNumber &&
+                   newPassword === retypePassword && 
+                   validatePassword(currentPassword).minLength;
         }
         
         // Ak sa menia iba ostatné údaje, stačí, že sa niečo zmenilo a e-mail je platný
@@ -362,8 +397,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     
     // Handler pre zmenu hesla
     const handlePasswordChange = async () => {
-        if (!validatePassword(newPassword) || newPassword !== retypePassword) {
-            window.showGlobalNotification('Nové heslá sa nezhodujú alebo nie sú dostatočne dlhé (min. 10 znakov).', 'error');
+        const newPasswordStatus = validatePassword(newPassword);
+        if (!newPasswordStatus.minLength || !newPasswordStatus.hasUpperCase || !newPasswordStatus.hasLowerCase || !newPasswordStatus.hasNumber || newPassword !== retypePassword) {
+            window.showGlobalNotification('Nové heslá sa nezhodujú alebo nespĺňajú požiadavky na komplexnosť.', 'error');
             return false;
         }
 
@@ -551,7 +587,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     }
                 })
             ),
-            // Telefónne číslo - presunuté sem
+            // Telefónne číslo
             userProfileData.role !== 'admin' && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -611,7 +647,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     )
                 )
             ),
-            // E-mailová adresa - presunutá sem
+            // E-mailová adresa
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -659,7 +695,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             // Nové heslo
             React.createElement(PasswordInput, {
                 id: 'newPassword',
-                label: 'Nové heslo (min. 10 znakov)',
+                label: 'Nové heslo',
                 value: newPassword,
                 onChange: (e) => setNewPassword(e.target.value),
                 placeholder: 'Zadajte nové heslo',
@@ -668,6 +704,40 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 disabled: loading,
                 roleColor: roleColor
             }),
+            // Podmienky pre heslo
+            newPassword !== '' && React.createElement(
+                'div',
+                { className: `text-xs italic mt-1 text-gray-600` },
+                'Heslo musí obsahovať:',
+                React.createElement(
+                    'ul',
+                    { className: 'list-none pl-4' },
+                    React.createElement(
+                        'li',
+                        { className: `flex items-center ${validationStatus.minLength ? 'text-green-600' : 'text-gray-600'}` },
+                        React.createElement('span', { className: 'mr-2' }, validationStatus.minLength ? '✔' : '•'),
+                        'aspoň 10 znakov,'
+                    ),
+                    React.createElement(
+                        'li',
+                        { className: `flex items-center ${validationStatus.hasUpperCase ? 'text-green-600' : 'text-gray-600'}` },
+                        React.createElement('span', { className: 'mr-2' }, validationStatus.hasUpperCase ? '✔' : '•'),
+                        'aspoň jedno veľké písmeno,'
+                    ),
+                    React.createElement(
+                        'li',
+                        { className: `flex items-center ${validationStatus.hasLowerCase ? 'text-green-600' : 'text-gray-600'}` },
+                        React.createElement('span', { className: 'mr-2' }, validationStatus.hasLowerCase ? '✔' : '•'),
+                        'aspoň jedno malé písmeno,'
+                    ),
+                    React.createElement(
+                        'li',
+                        { className: `flex items-center ${validationStatus.hasNumber ? 'text-green-600' : 'text-gray-600'}` },
+                        React.createElement('span', { className: 'mr-2' }, validationStatus.hasNumber ? '✔' : '•'),
+                        'aspoň jednu číslicu.'
+                    )
+                )
+            ),
             // Potvrdenie nového hesla
             React.createElement(PasswordInput, {
                 id: 'retypePassword',
