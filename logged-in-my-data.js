@@ -162,7 +162,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col md:flex-row gap-8' },
+        { className: 'flex flex-col gap-8' }, // Zmenené z 'flex flex-col md:flex-row' na 'flex flex-col'
         profileContent,
         billingContent
     );
