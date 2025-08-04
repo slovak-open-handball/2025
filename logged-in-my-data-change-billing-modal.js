@@ -128,7 +128,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
     };
 
-    // Nová funkcia pre formátovanie PSČ
+    // Funkcia pre formátovanie PSČ
     const handlePostalCodeChange = (e) => {
         const input = e.target.value.replace(/\s/g, ''); // Odstránime medzery
         const sanitized = input.replace(/[^0-9]/g, ''); // Ponecháme len číslice
@@ -141,6 +141,22 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
 
         setPostalCode(formatted);
+    };
+
+    // Nová funkcia pre formátovanie IČ DPH počas zadávania
+    const handleIcdphChange = (e) => {
+        const input = e.target.value;
+        const sanitized = input.replace(/[^a-zA-Z0-9]/g, ''); // Odstránime všetko okrem písmen a číslic
+        let formatted = '';
+
+        // Prvé dva znaky musia byť písmená, prevedieme ich na veľké
+        const letters = sanitized.substring(0, 2).toUpperCase().replace(/[^A-Z]/g, '');
+        // Zvyšné znaky musia byť číslice
+        const digits = sanitized.substring(2).replace(/[^0-9]/g, '');
+
+        formatted = letters + digits;
+
+        setIcdph(formatted);
     };
     
     // Nadpis modálneho okna
@@ -358,9 +374,9 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'icdph',
                     value: icdph,
-                    // Validácia: povolené len veľké písmená a číslice, prevedené na veľké písmená
-                    onChange: (e) => setIcdph(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')),
-                    placeholder: userProfileData.billing?.icdph || '',
+                    // Použitie novej funkcie na formátovanie IČ DPH
+                    onChange: handleIcdphChange,
+                    placeholder: userProfileData.billing?.icdph || 'SK1234567890',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
                 })
