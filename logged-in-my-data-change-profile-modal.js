@@ -8,6 +8,24 @@ import { countryDialCodes } from "./countryDialCodes.js";
 const { useState, useEffect, useRef } = React;
 
 /**
+ * Funkcia na zosvetlenie farby o dané percento.
+ * @param {string} hex - Hex kód farby (napr. "#RRGGBB").
+ * @param {number} percent - Percento zosvetlenia (napr. 80).
+ * @returns {string} - Nový hex kód zosvetlenej farby.
+ */
+const lightenColor = (hex, percent) => {
+    let r = parseInt(hex.slice(1, 3), 16),
+        g = parseInt(hex.slice(3, 5), 16),
+        b = parseInt(hex.slice(5, 7), 16);
+
+    r = Math.min(255, r + (255 - r) * (percent / 100));
+    g = Math.min(255, g + (255 - g) * (percent / 100));
+    b = Math.min(255, b + (255 - b) * (percent / 100));
+
+    return `#${(Math.round(r)).toString(16).padStart(2, '0')}${(Math.round(g)).toString(16).padStart(2, '0')}${(Math.round(b)).toString(16).padStart(2, '0')}`;
+};
+
+/**
  * Komponent PasswordInput pre polia hesla s prepínaním viditeľnosti.
  */
 export const PasswordInput = ({ id, label, value, onChange, placeholder, showPassword, toggleShowPassword, disabled, roleColor }) => {
@@ -106,6 +124,9 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
 
     if (!show) return null;
 
+    // Vypočítame svetlejšiu farbu pre pozadie
+    const lighterRoleColor = lightenColor(roleColor, 80);
+
     return ReactDOM.createPortal(
         React.createElement(
             'div',
@@ -160,7 +181,9 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                                             onSelect(country.dialCode);
                                             onClose();
                                         },
-                                        className: `flex items-center justify-between p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors ${selectedDialCode === country.dialCode ? 'bg-blue-100 font-semibold' : ''}`
+                                        // Dynamické štýly pre vybranú položku
+                                        className: `flex items-center justify-between p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors`,
+                                        style: selectedDialCode === country.dialCode ? { backgroundColor: lighterRoleColor, fontWeight: '600' } : {}
                                     },
                                     React.createElement(
                                         'span',
@@ -168,7 +191,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                                         `${country.name} (${country.dialCode})`
                                     ),
                                     selectedDialCode === country.dialCode &&
-                                    React.createElement('svg', { className: 'h-5 w-5 text-blue-500', fill: 'currentColor', viewBox: '0 0 20 20' },
+                                    React.createElement('svg', { className: 'h-5 w-5', fill: 'currentColor', viewBox: '0 0 20 20', style: { color: roleColor } },
                                         React.createElement('path', { fillRule: 'evenodd', d: 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z', clipRule: 'evenodd' })
                                     )
                                 )
