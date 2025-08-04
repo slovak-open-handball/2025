@@ -49,6 +49,18 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             }
         });
     };
+    
+    // Nová funkcia na dynamickú zmenu textu menu
+    const updateMenuText = () => {
+        const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
+        if (myDataLinkSpan) {
+            if (userProfileData.role === 'user') {
+                myDataLinkSpan.textContent = 'Údaje kontaktnej osoby';
+            } else {
+                myDataLinkSpan.textContent = 'Moje údaje';
+            }
+        }
+    };
 
     /**
      * Funkcia na uloženie stavu menu do databázy.
@@ -74,6 +86,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     // Aplikujeme počiatočný stav menu pri načítaní
     applyMenuState();
+    // Aplikujeme dynamický text menu
+    updateMenuText();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
