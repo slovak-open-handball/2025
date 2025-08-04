@@ -105,120 +105,111 @@ const MyDataApp = ({ userProfileData, onUpdate }) => {
     };
 
     if (!profileData) {
-        return (
-            <div className="flex justify-center items-center h-full pt-16">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500">
-            </div>
+        return React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
         );
     }
+    
+    // Konverzia JSX na React.createElement volania
+    return React.createElement('div', { className: 'max-w-4xl mx-auto py-8 px-4' },
+        React.createElement('h1', { className: 'text-3xl font-bold text-gray-900 mb-8' }, 'Môj profil'),
 
-    return (
-        <div className="max-w-4xl mx-auto py-8 px-4">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Môj profil</h1>
-            
-            {/* Sekcia Osobné údaje */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">Osobné údaje</h2>
-                    {/* Ikona ceruzky sa teraz zobrazí iba vtedy, ak má používateľ rolu 'admin' */}
-                    {profileData.role === 'admin' && (
-                        <button 
-                            onClick={() => setIsProfileModalOpen(true)}
-                            className="text-gray-500 hover:text-blue-600 transition-colors duration-200"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </button>
-                    )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">Meno a priezvisko</p>
-                        <p className="font-medium text-gray-900">{profileData.firstName} {profileData.lastName}</p>
-                    </div>
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">E-mail</p>
-                        <p className="font-medium text-gray-900">{profileData.email}</p>
-                    </div>
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">Tel. číslo</p>
-                        <p className="font-medium text-gray-900">{profileData.phoneNumber}</p>
-                    </div>
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">Dátum narodenia</p>
-                        <p className="font-medium text-gray-900">{profileData.birthDate}</p>
-                    </div>
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">Adresa</p>
-                        <p className="font-medium text-gray-900">{profileData.address}, {profileData.city}, {profileData.zip}</p>
-                    </div>
-                    <div className="border-b pb-2">
-                        <p className="text-sm text-gray-500">Krajina</p>
-                        <p className="font-medium text-gray-900">{profileData.country}</p>
-                    </div>
-                </div>
-            </div>
+        // Sekcia Osobné údaje
+        React.createElement('div', { className: 'bg-white shadow rounded-lg p-6 mb-6' },
+            React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h2', { className: 'text-xl font-semibold text-gray-800' }, 'Osobné údaje'),
+                profileData.role === 'admin' && React.createElement('button', {
+                    onClick: () => setIsProfileModalOpen(true),
+                    className: 'text-gray-500 hover:text-blue-600 transition-colors duration-200'
+                },
+                    React.createElement('svg', { xmlns: 'http://www.w3.org/2000/svg', className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    )
+                )
+            ),
+            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'Meno a priezvisko'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, `${profileData.firstName} ${profileData.lastName}`)
+                ),
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'E-mail'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.email)
+                ),
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'Tel. číslo'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.phoneNumber)
+                ),
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'Dátum narodenia'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.birthDate)
+                ),
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'Adresa'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, `${profileData.address}, ${profileData.city}, ${profileData.zip}`)
+                ),
+                React.createElement('div', { className: 'border-b pb-2' },
+                    React.createElement('p', { className: 'text-sm text-gray-500' }, 'Krajina'),
+                    React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.country)
+                )
+            )
+        ),
 
-            {/* Sekcia Fakturačné údaje */}
-            <div className="bg-white shadow rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">Fakturačné údaje</h2>
-                    {/* Ikona ceruzky sa teraz zobrazí iba vtedy, ak má používateľ rolu 'admin' */}
-                    {profileData.role === 'admin' && (
-                         <button 
-                            onClick={() => setIsBillingModalOpen(true)}
-                            className="text-gray-500 hover:text-blue-600 transition-colors duration-200"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </button>
-                    )}
-                </div>
-                {profileData.billing ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="border-b pb-2">
-                            <p className="text-sm text-gray-500">Názov firmy</p>
-                            <p className="font-medium text-gray-900">{profileData.billing.companyName}</p>
-                        </div>
-                        <div className="border-b pb-2">
-                            <p className="text-sm text-gray-500">Adresa</p>
-                            <p className="font-medium text-gray-900">{profileData.billing.address}, {profileData.billing.city}, {profileData.billing.zip}</p>
-                        </div>
-                        <div className="border-b pb-2">
-                            <p className="text-sm text-gray-500">IČO</p>
-                            <p className="font-medium text-gray-900">{profileData.billing.companyId}</p>
-                        </div>
-                        <div className="border-b pb-2">
-                            <p className="text-sm text-gray-500">DIČ / IČ DPH</p>
-                            <p className="font-medium text-gray-900">{profileData.billing.taxId}</p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <p className="text-gray-500">Fakturačné údaje ešte neboli zadané.</p>
-                        <button onClick={() => setIsBillingModalOpen(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
-                            Pridať údaje
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <ChangeProfileModal 
-                isOpen={isProfileModalOpen} 
-                onClose={() => setIsProfileModalOpen(false)} 
-                onSave={handleSaveProfile} 
-                initialData={profileData}
-            />
-            <ChangeBillingModal
-                isOpen={isBillingModalOpen}
-                onClose={() => setIsBillingModalOpen(false)}
-                onSave={handleSaveBilling}
-                initialData={profileData.billing}
-            />
-
-        </div>
+        // Sekcia Fakturačné údaje
+        React.createElement('div', { className: 'bg-white shadow rounded-lg p-6' },
+            React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h2', { className: 'text-xl font-semibold text-gray-800' }, 'Fakturačné údaje'),
+                profileData.role === 'admin' && React.createElement('button', {
+                    onClick: () => setIsBillingModalOpen(true),
+                    className: 'text-gray-500 hover:text-blue-600 transition-colors duration-200'
+                },
+                    React.createElement('svg', { xmlns: 'http://www.w3.org/2000/svg', className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                    )
+                )
+            ),
+            profileData.billing ? (
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                    React.createElement('div', { className: 'border-b pb-2' },
+                        React.createElement('p', { className: 'text-sm text-gray-500' }, 'Názov firmy'),
+                        React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.billing.companyName)
+                    ),
+                    React.createElement('div', { className: 'border-b pb-2' },
+                        React.createElement('p', { className: 'text-sm text-gray-500' }, 'Adresa'),
+                        React.createElement('p', { className: 'font-medium text-gray-900' }, `${profileData.billing.address}, ${profileData.billing.city}, ${profileData.billing.zip}`)
+                    ),
+                    React.createElement('div', { className: 'border-b pb-2' },
+                        React.createElement('p', { className: 'text-sm text-gray-500' }, 'IČO'),
+                        React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.billing.companyId)
+                    ),
+                    React.createElement('div', { className: 'border-b pb-2' },
+                        React.createElement('p', { className: 'text-sm text-gray-500' }, 'DIČ / IČ DPH'),
+                        React.createElement('p', { className: 'font-medium text-gray-900' }, profileData.billing.taxId)
+                    )
+                )
+            ) : (
+                React.createElement('div', { className: 'flex items-center justify-between p-4 bg-gray-50 rounded-lg' },
+                    React.createElement('p', { className: 'text-gray-500' }, 'Fakturačné údaje ešte neboli zadané.'),
+                    React.createElement('button', {
+                        onClick: () => setIsBillingModalOpen(true),
+                        className: 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200'
+                    }, 'Pridať údaje')
+                )
+            )
+        ),
+        
+        React.createElement(ChangeProfileModal, { 
+            isOpen: isProfileModalOpen,
+            onClose: () => setIsProfileModalOpen(false),
+            onSave: handleSaveProfile,
+            initialData: profileData
+        }),
+        React.createElement(ChangeBillingModal, {
+            isOpen: isBillingModalOpen,
+            onClose: () => setIsBillingModalOpen(false),
+            onSave: handleSaveBilling,
+            initialData: profileData.billing
+        })
     );
 };
 
