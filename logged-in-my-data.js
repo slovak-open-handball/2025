@@ -172,19 +172,19 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             { className: 'space-y-6 text-gray-700 text-lg' },
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
-                React.createElement('div', { className: 'font-normal' }, `${userProfileData.billing?.street || '-'} ${userProfileData.billing?.houseNumber || '-'}`)
+                React.createElement('div', { className: 'font-normal' }, `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}`)
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Mesto'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.city || '-')
+                React.createElement('div', { className: 'font-normal' }, userProfileData.city || '-')
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'PSČ'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.postalCode || '-')
+                React.createElement('div', { className: 'font-normal' }, userProfileData.postalCode || '-')
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Krajina'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.country || '-')
+                React.createElement('div', { className: 'font-normal' }, userProfileData.country || '-')
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Názov klubu'),
