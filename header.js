@@ -6,6 +6,7 @@
 // presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
 // Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
 // Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
+// Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -14,6 +15,7 @@ import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
+let isAuthenticationDataLoaded = false; // Nová premenná na sledovanie stavu načítania
 
 
 // Globálna funkcia pre zobrazenie notifikácií
@@ -233,6 +235,7 @@ const updateHeaderLinks = (userProfileData) => {
         updateRegistrationLinkVisibility(userProfileData);
 
         headerElement.classList.remove('invisible');
+        isAuthenticationDataLoaded = true;
     }
 };
 
@@ -417,13 +420,14 @@ window.loadHeaderAndScripts = async () => {
         // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
-            updateHeaderLinks(window.globalUserProfileData);
+            updateHeaderLinks(event.detail); // Použijeme dáta z udalosti
         });
 
         // Nastavíme listenery pre Firestore hneď po inicializácii
         setupFirestoreListeners();
 
         // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
+        // Týmto sa vyrieši problém s prvým načítaním
         updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
