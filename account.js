@@ -201,7 +201,7 @@ function ResetPasswordApp() {
                             console.log("z-account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
                             
                             // NOVINKA: Zobrazenie novej správy o úspechu
-                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená. Pre jej úspešnú aktualizáciu sa prosím prihláste. Budete presmerovaní na prihlasovaciu stránku.");
+                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
                             
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
@@ -354,7 +354,7 @@ function ResetPasswordApp() {
         return React.createElement(
             'div',
             { className: 'bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center' },
-            React.createElement('h1', { className: 'text-2xl font-bold text-green-600 mb-4' }, 'Úspech!'),
+            React.createElement('h1', { className: 'text-2xl font-bold text-green-600 mb-4' }, 'Potvrdenie'),
             React.createElement(
                 'div',
                 { className: 'bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
