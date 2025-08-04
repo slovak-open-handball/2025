@@ -375,6 +375,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         setter(value);
     };
 
+    // Handler pre zmenu predvoľby, ktorý zaznamená zmenu formulára
+    const handleDialCodeChange = (dialCode) => {
+        isInitialLoad.current = false;
+        setSelectedDialCode(dialCode);
+    };
+
     // Kontrola, či sa mení e-mail
     const isEmailChanged = () => {
         return email !== '';
@@ -830,7 +836,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             show: showDialCodeModal,
             onClose: () => setShowDialCodeModal(false),
             onSelect: (dialCode) => {
-                setSelectedDialCode(dialCode);
+                handleDialCodeChange(dialCode); // Používame novú funkciu
             },
             selectedDialCode: selectedDialCode,
             roleColor: roleColor
