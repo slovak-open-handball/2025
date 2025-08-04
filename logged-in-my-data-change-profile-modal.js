@@ -79,7 +79,7 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
 const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
     const [filter, setFilter] = useState('');
     const modalRef = useRef(null);
-    
+
     // Vytvorenie kópie a zoradenie podľa názvu krajiny predtým, než sa zoznam prefiltruje
     const sortedCodes = [...countryDialCodes].sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
 
@@ -131,6 +131,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                             )
                         )
                     ),
+                    // Upravený riadok pre odstránenie orámovania pri fokuse
                     React.createElement('input', {
                         type: 'text',
                         placeholder: 'Hľadať krajinu alebo kód...',
@@ -204,7 +205,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const [loading, setLoading] = useState(false);
     const [showDialCodeModal, setShowDialCodeModal] = useState(false);
     const [selectedDialCode, setSelectedDialCode] = useState('');
-    
+
     // Stav pre validáciu hesla
     const [validationStatus, setValidationStatus] = useState({
         minLength: false,
@@ -258,7 +259,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         const hasUpperCase = /[A-Z]/.test(password);
         const hasLowerCase = /[a-z]/.test(password);
         const hasNumber = /[0-9]/.test(password);
-        
+
         return { minLength, hasUpperCase, hasLowerCase, hasNumber };
     }
 
@@ -312,7 +313,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setNewPassword('');
             setRetypePassword('');
             setCurrentPassword('');
-            
+
             // Reset validácie hesla
             setValidationStatus({
                 minLength: false,
@@ -348,13 +349,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         if (isInitialLoad.current) {
             return false;
         }
-        
+
         const currentFirstName = firstName === '' ? originalData.current.firstName : firstName;
         const currentLastName = lastName === '' ? originalData.current.lastName : lastName;
         const currentPhoneNumber = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
         const currentEmail = email === '' ? originalData.current.email : email;
-        
+
         // Funkcia na normalizáciu hodnôt pre bezpečné porovnanie,
         // ošetruje undefined/null a biele znaky.
         const getNormalizedValue = (value) => {
@@ -371,7 +372,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             retypePassword !== ''
         );
     };
-    
+
      // Nový handler, ktorý zruší počiatočný stav načítania
     const handleValueChange = (setter, value) => {
         isInitialLoad.current = false;
@@ -393,33 +394,33 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const isPasswordChanged = () => {
         return newPassword !== '';
     };
-    
+
     // Kontrola, či je tlačidlo Uložiť povolené
     const isSaveButtonEnabled = () => {
         const emailChange = isEmailChanged();
         const passwordChange = isPasswordChanged();
-        
+
         // Ak sa mení e-mail, musí byť zadané aktuálne heslo s minimálne 10 znakmi
         if (emailChange) {
             return isFormChanged() && isEmailValid && validatePassword(currentPassword).minLength;
         }
-        
+
         // Ak sa mení iba heslo, nové heslá sa musia zhodovať, byť validné a musí byť zadané aktuálne heslo
         if (passwordChange) {
             const newPasswordStatus = validatePassword(newPassword);
-            return isFormChanged() && 
-                   newPasswordStatus.minLength && 
-                   newPasswordStatus.hasUpperCase && 
-                   newPasswordStatus.hasLowerCase && 
+            return isFormChanged() &&
+                   newPasswordStatus.minLength &&
+                   newPasswordStatus.hasUpperCase &&
+                   newPasswordStatus.hasLowerCase &&
                    newPasswordStatus.hasNumber &&
-                   newPassword === retypePassword && 
+                   newPassword === retypePassword &&
                    validatePassword(currentPassword).minLength;
         }
-        
+
         // Ak sa menia iba ostatné údaje, stačí, že sa niečo zmenilo a e-mail je platný
         return isFormChanged() && isEmailValid;
     };
-    
+
     // Handler pre zmenu hesla
     const handlePasswordChange = async () => {
         const newPasswordStatus = validatePassword(newPassword);
@@ -446,7 +447,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             return false;
         }
     };
-    
+
     // Handler pre zmenu e-mailu
     const handleEmailChange = async () => {
         try {
@@ -467,21 +468,21 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             return false;
         }
     };
-    
+
     // Handler pre uloženie zmien
     const handleSaveChanges = async () => {
         setLoading(true);
 
         const emailChanged = isEmailChanged();
         const passwordChanged = isPasswordChanged();
-        
+
         if (!isFormChanged()) {
             window.showGlobalNotification('Nič sa nezmenilo.', 'error');
             setLoading(false);
             onClose();
             return;
         }
-        
+
         let profileUpdateSuccess = true;
 
         const updatedData = {};
@@ -496,13 +497,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             updatedData.lastName = lastName;
             changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
         }
-        const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
-        const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
-        if (phoneNumber !== '' && fullPhoneNumber !== originalData.current.contactPhoneNumber) {
+
+        // Upravená logika pre telefónne číslo: Zaznamená zmenu aj v prípade, že sa zmenila len predvoľba.
+        const currentPhoneNumberWithoutDialCode = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
+        const fullPhoneNumber = selectedDialCode + currentPhoneNumberWithoutDialCode;
+        if (fullPhoneNumber !== originalData.current.contactPhoneNumber) {
             updatedData.contactPhoneNumber = fullPhoneNumber;
             changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
         }
-        
+
         if (Object.keys(updatedData).length > 0) {
             try {
                 const db = getFirestore();
@@ -517,7 +520,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                         timestamp: new Date(), // Používame timestamp namiesto createdAt
                     });
                 }
-                
+
                 window.showGlobalNotification('Profilové údaje boli úspešne aktualizované.', 'success');
             } catch (error) {
                 console.error("Chyba pri aktualizácii profilu:", error);
@@ -525,7 +528,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 profileUpdateSuccess = false;
             }
         }
-        
+
         // Zmena hesla
         let passwordUpdateSuccess = true;
         if (passwordChanged) {
@@ -537,13 +540,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         if (emailChanged) {
             emailUpdateSuccess = await handleEmailChange();
         }
-        
+
         setLoading(false);
         if (profileUpdateSuccess && passwordUpdateSuccess && emailUpdateSuccess) {
             onClose();
         }
     };
-    
+
     // Handler na zatvorenie modalu s kontrolou zmien
     const handleCloseWithCheck = () => {
         if (isFormChanged()) {
@@ -739,7 +742,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     }
                 })
             ),
-            
+
             // Polia pre zmenu hesla (už nie sú podmienene)
             React.createElement('hr', { className: 'my-6' }),
             React.createElement(
@@ -817,7 +820,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 disabled: loading,
                 roleColor: roleColor
             }),
-            
+
             // Tlačidlo na uloženie zmien
             React.createElement(
                 'div',
