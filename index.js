@@ -190,11 +190,18 @@ const getRoleColor = (role) => {
 /**
  * Zobrazí alebo skryje uvítaciu správu pre prihláseného používateľa.
  * @param {boolean} isLoggedIn - true pre zobrazenie, false pre skrytie.
+ * @param {object} userProfileData - Dáta o profile prihláseného používateľa.
  */
-const toggleLoggedInMessage = (isLoggedIn) => {
+const toggleLoggedInMessage = (isLoggedIn, userProfileData) => {
     const loggedInMessage = document.getElementById('logged-in-message');
     if (loggedInMessage) {
-        loggedInMessage.classList.toggle('hidden', !isLoggedIn);
+        if (isLoggedIn && userProfileData) {
+            const userName = `${userProfileData.firstName} ${userProfileData.lastName}`;
+            loggedInMessage.textContent = `Vitajte, ${userName}!`;
+            loggedInMessage.classList.remove('hidden');
+        } else {
+            loggedInMessage.classList.add('hidden');
+        }
         console.log(`Správa pre prihláseného používateľa bola ${isLoggedIn ? 'zobrazená' : 'skrytá'}.`);
     }
 };
@@ -229,7 +236,7 @@ const setupRegistrationDataListener = () => {
 
                 // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
                 if (isLoggedIn) {
-                    toggleLoggedInMessage(true);
+                    toggleLoggedInMessage(true, window.globalUserProfileData);
                     toggleRegistrationButton(false);
                 } else {
                     // Ak nie je prihlásený, zobrazíme mu stav registrácie
