@@ -389,7 +389,7 @@ const handleDataUpdateAndRender = (event) => {
                                     timestamp: new Date()
                                 });
                                 
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'info');
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
                                 console.log("logged-in-my-data.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
             
                             } else {
