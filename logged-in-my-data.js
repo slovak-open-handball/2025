@@ -118,12 +118,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'space-y-6 text-lg' },
             React.createElement('div', null,
-                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Meno:'),
-                React.createElement('div', { className: 'font-medium' }, userProfileData.firstName)
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Priezvisko:'),
-                React.createElement('div', { className: 'font-medium' }, userProfileData.lastName)
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Meno a Priezvisko:'),
+                React.createElement('div', { className: 'font-medium' }, `${userProfileData.firstName} ${userProfileData.lastName}`)
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Email:'),
