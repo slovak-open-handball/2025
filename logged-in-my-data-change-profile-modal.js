@@ -456,22 +456,22 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         let profileUpdateSuccess = true;
 
         const updatedData = {};
-        const notificationMessages = []; // Pole pre formátované notifikácie
+        const changes = []; // Premenované pole pre formátované notifikácie
 
         // Kontrola zmien a príprava dát
         if (firstName !== '' && firstName !== originalData.current.firstName) {
             updatedData.firstName = firstName;
-            notificationMessages.push(`Zmena mena: z '${originalData.current.firstName}' na '${firstName}'`);
+            changes.push(`Zmena mena: z '${originalData.current.firstName}' na '${firstName}'`);
         }
         if (lastName !== '' && lastName !== originalData.current.lastName) {
             updatedData.lastName = lastName;
-            notificationMessages.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
+            changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
         }
         const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
         if (phoneNumber !== '' && fullPhoneNumber !== originalData.current.contactPhoneNumber) {
             updatedData.contactPhoneNumber = fullPhoneNumber;
-            notificationMessages.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
+            changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
         }
         
         if (Object.keys(updatedData).length > 0) {
@@ -481,10 +481,10 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 await updateDoc(userDocRef, updatedData);
 
                 // Vytvorenie notifikácie pre správcu, ak došlo k zmenám
-                if (notificationMessages.length > 0) {
+                if (changes.length > 0) {
                     await addDoc(collection(db, 'notifications'), {
                         userEmail: userProfileData.email, // Používame userEmail namiesto userId a userName
-                        changes: notificationMessages, // Pole správ
+                        changes: changes, // Pole správ
                         timestamp: new Date(), // Používame timestamp namiesto createdAt
                     });
                 }
