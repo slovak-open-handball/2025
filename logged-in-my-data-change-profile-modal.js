@@ -475,11 +475,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             const credential = EmailAuthProvider.credential(user.email, currentPassword);
             await reauthenticateWithCredential(user, credential);
             await verifyBeforeUpdateEmail(user, email);
-            window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maile. Z bezpečnostných dôvodov budete teraz automaticky odhlásený.', 'success');
+            window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maili.', 'success');
+            
+            // Odhlásiť používateľa po 10 sekundách a presmerovať ho na stránku login.html
             setTimeout(async () => {
                 await signOut(auth);
                 window.location.href = 'login.html';
             }, 10000); 
+
             return true;
         } catch (error) {
             console.error("Chyba pri zmene e-mailu:", error);
