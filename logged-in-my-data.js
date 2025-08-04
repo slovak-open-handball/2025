@@ -84,65 +84,87 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         }
     };
 
-    return (
-        <div className="flex flex-col md:flex-row gap-8">
-            <div className={`flex-1 rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] ${roleColor} text-white`}>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-3xl font-bold tracking-tight">Môj Profil</h2>
-                    <button
-                        onClick={onOpenProfileModal}
-                        className="p-2 rounded-full text-white hover:bg-white hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white"
-                        aria-label="Upraviť profil"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                    </button>
-                </div>
-                <div className="space-y-4 text-lg">
-                    <p><strong>Rola:</strong> <span className="font-semibold">{getFullRoleName(userProfileData.role)}</span></p>
-                    <p><strong>Meno:</strong> {userProfileData.firstName}</p>
-                    <p><strong>Priezvisko:</strong> {userProfileData.lastName}</p>
-                    <p><strong>Email:</strong> {userProfileData.email}</p>
-                    <p><strong>Telefón:</strong> {userProfileData.dialCode} {userProfileData.phone}</p>
-                    <p><strong>Adresa:</strong> {userProfileData.address}</p>
-                    {userProfileData.role === 'referee' && (
-                        <p><strong>Licencia Rozhodcu:</strong> {userProfileData.refereeLicense}</p>
-                    )}
-                    {userProfileData.club && userProfileData.club !== '' && (
-                        <p><strong>Klub:</strong> {userProfileData.club}</p>
-                    )}
-                </div>
-            </div>
+    const profileContent = React.createElement(
+        'div',
+        { className: `flex-1 rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] ${roleColor} text-white` },
+        React.createElement(
+            'div',
+            { className: 'flex items-center justify-between mb-6' },
+            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Môj Profil'),
+            React.createElement(
+                'button',
+                {
+                    onClick: onOpenProfileModal,
+                    className: 'p-2 rounded-full text-white hover:bg-white hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white',
+                    'aria-label': 'Upraviť profil'
+                },
+                React.createElement(
+                    'svg',
+                    { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                )
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'space-y-4 text-lg' },
+            React.createElement('p', null,
+                React.createElement('strong', null, 'Rola:'),
+                ' ',
+                React.createElement('span', { className: 'font-semibold' }, getFullRoleName(userProfileData.role))
+            ),
+            React.createElement('p', null, React.createElement('strong', null, 'Meno:'), ' ', userProfileData.firstName),
+            React.createElement('p', null, React.createElement('strong', null, 'Priezvisko:'), ' ', userProfileData.lastName),
+            React.createElement('p', null, React.createElement('strong', null, 'Email:'), ' ', userProfileData.email),
+            React.createElement('p', null, React.createElement('strong', null, 'Telefón:'), ' ', userProfileData.dialCode, ' ', userProfileData.phone),
+            React.createElement('p', null, React.createElement('strong', null, 'Adresa:'), ' ', userProfileData.address),
+            userProfileData.role === 'referee' &&
+            React.createElement('p', null, React.createElement('strong', null, 'Licencia Rozhodcu:'), ' ', userProfileData.refereeLicense),
+            userProfileData.club && userProfileData.club !== '' &&
+            React.createElement('p', null, React.createElement('strong', null, 'Klub:'), ' ', userProfileData.club)
+        )
+    );
 
-            {/* Sekcia Pravý stĺpec - Fakturačné údaje */}
-            {(userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : (
-                <div className="flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-3xl font-bold tracking-tight text-gray-800">Fakturačné údaje</h2>
-                        <button
-                            onClick={onOpenBillingModal}
-                            className="p-2 rounded-full text-gray-800 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                            aria-label="Upraviť fakturačné údaje"
-                        >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="space-y-4 text-gray-700 text-lg">
-                        <p><strong>Názov klubu:</strong> {userProfileData.billing?.clubName || '-'}</p>
-                        <p><strong>Adresa:</strong> {userProfileData.billing?.street || '-'} {userProfileData.billing?.houseNumber || '-'}</p>
-                        <p><strong>Mesto:</strong> {userProfileData.billing?.city || '-'}</p>
-                        <p><strong>PSČ:</strong> {userProfileData.billing?.postalCode || '-'}</p>
-                        <p><strong>Krajina:</strong> {userProfileData.billing?.country || '-'}</p>
-                        <p><strong>IČO:</strong> {userProfileData.billing?.ico || '-'}</p>
-                        <p><strong>DIČ:</strong> {userProfileData.billing?.dic || '-'}</p>
-                        <p><strong>IČ DPH:</strong> {userProfileData.billing?.icdph || '-'}</p>
-                    </div>
-                </div>
-            )}
-        </div>
+    const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : React.createElement(
+        'div',
+        { className: 'flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
+        React.createElement(
+            'div',
+            { className: 'flex items-center justify-between mb-6' },
+            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-gray-800' }, 'Fakturačné údaje'),
+            React.createElement(
+                'button',
+                {
+                    onClick: onOpenBillingModal,
+                    className: 'p-2 rounded-full text-gray-800 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300',
+                    'aria-label': 'Upraviť fakturačné údaje'
+                },
+                React.createElement(
+                    'svg',
+                    { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
+                    React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
+                )
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'space-y-4 text-gray-700 text-lg' },
+            React.createElement('p', null, React.createElement('strong', null, 'Názov klubu:'), ' ', userProfileData.billing?.clubName || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'Adresa:'), ' ', userProfileData.billing?.street || '-', ' ', userProfileData.billing?.houseNumber || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'Mesto:'), ' ', userProfileData.billing?.city || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'PSČ:'), ' ', userProfileData.billing?.postalCode || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'Krajina:'), ' ', userProfileData.billing?.country || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'IČO:'), ' ', userProfileData.billing?.ico || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'DIČ:'), ' ', userProfileData.billing?.dic || '-'),
+            React.createElement('p', null, React.createElement('strong', null, 'IČ DPH:'), ' ', userProfileData.billing?.icdph || '-')
+        )
+    );
+
+    return React.createElement(
+        'div',
+        { className: 'flex flex-col md:flex-row gap-8' },
+        profileContent,
+        billingContent
     );
 };
 
@@ -169,27 +191,35 @@ const MyDataApp = ({ userProfileData }) => {
     };
     const roleColor = roleColors[userProfileData?.role] || 'bg-gray-500';
 
-    return (
-        <div className="flex-grow">
-            <ProfileSection
-                userProfileData={userProfileData}
-                onOpenProfileModal={() => setShowProfileModal(true)}
-                onOpenBillingModal={() => setShowBillingModal(true)}
-            />
-            {/* Modálne okná */}
-            <ChangeProfileModal
-                show={showProfileModal}
-                onClose={() => setShowProfileModal(false)}
-                userProfileData={userProfileData}
-                roleColor={roleColor}
-            />
-            <ChangeBillingModal
-                show={showBillingModal}
-                onClose={() => setShowBillingModal(false)}
-                userProfileData={userProfileData}
-                roleColor={roleColor}
-            />
-        </div>
+    return React.createElement(
+        'div',
+        { className: 'flex-grow' },
+        React.createElement(
+            ProfileSection,
+            {
+                userProfileData: userProfileData,
+                onOpenProfileModal: () => setShowProfileModal(true),
+                onOpenBillingModal: () => setShowBillingModal(true)
+            }
+        ),
+        React.createElement(
+            ChangeProfileModal,
+            {
+                show: showProfileModal,
+                onClose: () => setShowProfileModal(false),
+                userProfileData: userProfileData,
+                roleColor: roleColor
+            }
+        ),
+        React.createElement(
+            ChangeBillingModal,
+            {
+                show: showBillingModal,
+                onClose: () => setShowBillingModal(false),
+                userProfileData: userProfileData,
+                roleColor: roleColor
+            }
+        )
     );
 };
 
@@ -205,24 +235,24 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log(\"MyDataApp.js: Aplikácia bola úspešne vykreslená po udalosti 'globalDataUpdated'.\");
+            console.log("MyDataApp.js: Aplikácia bola úspešne vykreslená po udalosti 'globalDataUpdated'.");
         } else {
-            console.error(\"MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.\");
+            console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        console.error(\"MyDataApp.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.\");
+        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
     }
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log(\"MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.\");
+console.log("MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
-console.log(\"MyDataApp.js: Kontrolujem, či existujú globálne dáta.\");
+console.log("MyDataApp.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log(\"MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.\");
+    console.log("MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
