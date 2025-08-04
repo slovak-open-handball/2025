@@ -63,37 +63,41 @@ const MyDataApp = ({ userProfileData, userId }) => {
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [billingModalVisible, setBillingModalVisible] = useState(false);
 
-    // Listener pre menu, ktorý spúšťa zmenu okraja a šírky obsahu pri nabehnutí myšou/odídení myši
+    // Listener pre menu, ktorý spúšťa zmenu okraja a šírky obsahu pri zmenách šírky menu
     useEffect(() => {
         const leftMenu = document.getElementById('left-menu');
         const mainContent = document.getElementById('main-content-area');
     
         if (leftMenu && mainContent) {
-            // Funkcia na obsluhu nabehnutia myšou
-            const handleMouseEnter = () => {
-                // Keď sa menu rozbalí (256px), posunieme obsah a zmenšíme jeho šírku
-                mainContent.style.marginLeft = '256px';
-                mainContent.style.width = 'calc(100% - 256px)';
+            // Funkcia na aktualizáciu obsahu na základe šírky menu
+            const updateContentPosition = () => {
+                const menuWidth = leftMenu.offsetWidth;
+                mainContent.style.marginLeft = `${menuWidth}px`;
+                mainContent.style.width = `calc(100% - ${menuWidth}px)`;
             };
-            // Funkcia na obsluhu odídenia myši
-            const handleMouseLeave = () => {
-                // Keď sa menu zbalí (64px), posunieme obsah späť a zväčšíme jeho šírku
-                mainContent.style.marginLeft = '64px';
-                mainContent.style.width = 'calc(100% - 64px)';
-            };
+
+            // Vytvorenie MutationObserver
+            // Bude sledovať zmeny v štýloch a atribútoch menu, aby sa dynamicky prispôsoboval obsah
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                        updateContentPosition();
+                    }
+                });
+            });
+
+            // Spustenie pozorovateľa na ľavom menu
+            observer.observe(leftMenu, {
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+
+            // Počiatočné nastavenie pozície
+            updateContentPosition();
     
-            // Pridanie event listenerov
-            leftMenu.addEventListener('mouseenter', handleMouseEnter);
-            leftMenu.addEventListener('mouseleave', handleMouseLeave);
-            
-            // Počiatočné nastavenie okraja a šírky
-            mainContent.style.marginLeft = '64px';
-            mainContent.style.width = 'calc(100% - 64px)';
-    
-            // Cleanup funkcia pre odstránenie listenerov
+            // Cleanup funkcia pre odpojenie pozorovateľa
             return () => {
-                leftMenu.removeEventListener('mouseenter', handleMouseEnter);
-                leftMenu.removeEventListener('mouseleave', handleMouseLeave);
+                observer.disconnect();
             };
         }
     }, []);
