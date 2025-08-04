@@ -458,18 +458,44 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         }
         
         let profileUpdateSuccess = true;
-        if (firstName !== originalData.current.firstName ||
-            lastName !== originalData.current.lastName ||
-            (selectedDialCode + phoneNumber.replace(/\s/g, '')) !== originalData.current.contactPhoneNumber) {
 
+        const updatedData = {};
+        const changes = {};
+
+        // Skontrolujeme zmeny a pripravíme dáta na aktualizáciu a notifikáciu
+        if (firstName !== '' && firstName !== originalData.current.firstName) {
+            updatedData.firstName = firstName;
+            changes.firstName = { from: originalData.current.firstName, to: firstName };
+        }
+        if (lastName !== '' && lastName !== originalData.current.lastName) {
+            updatedData.lastName = lastName;
+            changes.lastName = { from: originalData.current.lastName, to: lastName };
+        }
+        const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
+        const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
+        if (currentPhoneNumber !== '' && fullPhoneNumber !== originalData.current.contactPhoneNumber) {
+            updatedData.contactPhoneNumber = fullPhoneNumber;
+            changes.contactPhoneNumber = { from: originalData.current.contactPhoneNumber, to: fullPhoneNumber };
+        }
+
+        if (Object.keys(updatedData).length > 0) {
             try {
                 const db = getFirestore();
                 const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    firstName: firstName || originalData.current.firstName,
-                    lastName: lastName || originalData.current.lastName,
-                    contactPhoneNumber: (selectedDialCode + phoneNumber.replace(/\s/g, '')) || originalData.current.contactPhoneNumber
-                });
+                await updateDoc(userDocRef, updatedData);
+
+                // Vytvorenie notifikácie pre správcu
+                if (Object.keys(changes).length > 0) {
+                    await addDoc(collection(db, 'notifications'), {
+                        userId: user.uid,
+                        userName: `${userProfileData.firstName} ${userProfileData.lastName}`,
+                        type: 'profile_update',
+                        changes: changes,
+                        read: false,
+                        createdAt: new Date(),
+                    });
+                }
+
                 window.showGlobalNotification('Profilové údaje boli úspešne aktualizované.', 'success');
             } catch (error) {
                 console.error("Chyba pri aktualizácii profilu:", error);
