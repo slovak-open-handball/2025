@@ -90,6 +90,9 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     // Skontrolujeme, či je aktuálny čas menší ako uzávierka pre úpravu dát
     const canEdit = userProfileData?.dataEditDeadline?.toMillis() > Date.now();
+    // Dynamicky nastavíme názov karty podľa roly
+    const profileCardTitle = userProfileData?.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
+
 
     const profileContent = React.createElement(
         'div',
@@ -97,7 +100,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         React.createElement(
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
-            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Moje údaje'),
+            React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
             canEdit && React.createElement(
                 'button',
                 {
@@ -133,7 +136,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            canEdit && React.createElement( // podmienka pre zobrazenie ceruzky
+            canEdit && React.createElement(
                 'button',
                 {
                     onClick: onOpenBillingModal,
