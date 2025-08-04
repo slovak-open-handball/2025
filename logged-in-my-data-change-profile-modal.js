@@ -579,7 +579,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'div',
                         {
-                            className: `relative flex-shrink-0 mr-2 shadow rounded-lg`,
+                            className: `relative flex-shrink-0 shadow`,
                             style: { borderColor: roleColor, boxShadow: 'none' }
                         },
                         React.createElement(
@@ -587,11 +587,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             {
                                 type: 'button',
                                 onClick: () => setShowDialCodeModal(true),
-                                className: `p-2 flex items-center justify-between focus:outline-none text-gray-700 rounded-lg`,
+                                className: `p-2 flex items-center justify-between focus:outline-none text-gray-700 rounded-l-lg`,
                                 style: {
                                     backgroundColor: 'white',
                                     border: '1px solid',
                                     borderColor: roleColor,
+                                    borderRight: 'none',
+                                    borderRadius: '0.5rem 0 0 0.5rem', // Použijeme Tailwind triedy
                                     width: '100px'
                                 }
                             },
@@ -609,10 +611,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             id: 'phoneNumber',
                             value: phoneNumber,
                             onChange: (e) => setPhoneNumber(e.target.value),
-                            className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                            className: 'focus:outline-none shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight',
                             style: {
                                 borderColor: roleColor,
-                                boxShadow: 'none'
+                                boxShadow: 'none',
+                                borderLeft: 'none',
+                                borderRadius: '0 0.5rem 0.5rem 0' // Použijeme Tailwind triedy
                             }
                         }
                     )
