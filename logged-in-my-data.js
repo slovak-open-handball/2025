@@ -65,7 +65,7 @@ const MyDataApp = ({ userProfileData, userId }) => {
 
     // Efekt, ktorý sa vykoná iba raz po načítaní komponentu.
     // Pôvodný MutationObserver bol odstránený, pretože celá logika rozloženia
-    // je teraz spracovaná pomocou CSS Flexbox.
+    // je teraz spracovaná pomocou CSS Flexbox v logged-in-my-data.html.
     useEffect(() => {
         // Tu môžeme v budúcnosti pridať iné jednorazové inicializačné logiky,
         // ak to bude potrebné.
