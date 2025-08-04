@@ -90,10 +90,10 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     const profileContent = React.createElement(
         'div',
-        { className: `flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` }, // Celá karta je biela
+        { className: `flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
         React.createElement(
             'div',
-            { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } }, // Len horná časť je farebná
+            { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Môj Profil'),
             React.createElement(
                 'button',
@@ -131,16 +131,16 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall') ? null : React.createElement(
         'div',
-        { className: 'flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' }, // Celá karta je biela
+        { className: 'flex-1 bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]' },
         React.createElement(
             'div',
-            { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-gray-800 bg-gray-200' }, // Horná časť s vlastným podfarbením
+            { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } }, // Zmenená farba pozadia na základe role
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
             React.createElement(
                 'button',
                 {
                     onClick: onOpenBillingModal,
-                    className: 'p-2 rounded-full text-gray-800 hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400',
+                    className: 'p-2 rounded-full text-white hover:bg-white hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white', // Zmenené farby tlačidla
                     'aria-label': 'Upraviť fakturačné údaje'
                 },
                 React.createElement(
