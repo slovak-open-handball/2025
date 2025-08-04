@@ -212,6 +212,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Nový stav pre validáciu e-mailu v reálnom čase
     const [isEmailValid, setIsEmailValid] = useState(true);
+    // Ref pre sledovanie, či ide o počiatočné načítanie formulára
+    const isInitialLoad = useRef(true);
 
     const auth = getAuth();
     const user = auth.currentUser;
@@ -326,6 +328,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 contactPhoneNumber: userProfileData.contactPhoneNumber || '',
                 phoneNumberWithoutDialCode: numberWithoutDialCode
             };
+
+             isInitialLoad.current = true;
         }
     }, [show, userProfileData]);
 
@@ -338,21 +342,37 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Kontrola, či sa zmenil aspoň jeden údaj vo formulári
     const isFormChanged = () => {
+        if (isInitialLoad.current) {
+            return false;
+        }
+        
         const currentFirstName = firstName === '' ? originalData.current.firstName : firstName;
         const currentLastName = lastName === '' ? originalData.current.lastName : lastName;
         const currentPhoneNumber = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
         const currentEmail = email === '' ? originalData.current.email : email;
+        
+        // Funkcia na normalizáciu hodnôt pre bezpečné porovnanie,
+        // ošetruje undefined/null a biele znaky.
+        const getNormalizedValue = (value) => {
+            return String(value || '').replace(/\s/g, '');
+        };
 
         // Porovnávame aktuálny stav s pôvodnými dátami, ktoré sú v placeholderoch
         return (
-            currentFirstName !== originalData.current.firstName ||
-            currentLastName !== originalData.current.lastName ||
-            fullPhoneNumber !== originalData.current.contactPhoneNumber ||
-            currentEmail !== originalData.current.email ||
+            getNormalizedValue(currentFirstName) !== getNormalizedValue(originalData.current.firstName) ||
+            getNormalizedValue(currentLastName) !== getNormalizedValue(originalData.current.lastName) ||
+            getNormalizedValue(fullPhoneNumber) !== getNormalizedValue(originalData.current.contactPhoneNumber) ||
+            getNormalizedValue(currentEmail) !== getNormalizedValue(originalData.current.email) ||
             newPassword !== '' ||
             retypePassword !== ''
         );
+    };
+    
+     // Nový handler, ktorý zruší počiatočný stav načítania
+    const handleValueChange = (setter, value) => {
+        isInitialLoad.current = false;
+        setter(value);
     };
 
     // Kontrola, či sa mení e-mail
@@ -515,6 +535,20 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         }
     };
     
+    // Handler na zatvorenie modalu s kontrolou zmien
+    const handleCloseWithCheck = () => {
+        if (isFormChanged()) {
+            onClose(); // Zatvorenie modalu
+            // Zobrazíme notifikáciu s krátkym oneskorením, aby sa modal stihol zavrieť
+            setTimeout(() => {
+                window.showGlobalNotification('Údaje neboli aktualizované!', 'error');
+            }, 50);
+        } else {
+            // Ak sa žiadne zmeny neuskutočnili, modal sa zatvorí bez upozornenia
+            onClose();
+        }
+    };
+
     const ModalHeader = React.createElement(
         'div',
         { className: 'flex justify-between items-center px-6 py-4 border-b rounded-t-xl sticky top-0 z-10', style: { backgroundColor: roleColor } },
@@ -522,7 +556,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         React.createElement(
             'button',
             {
-                onClick: onClose,
+                onClick: handleCloseWithCheck, // Používame upravený handler
                 className: 'text-white hover:text-gray-200'
             },
             React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -573,7 +607,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'firstName',
                     value: firstName,
-                    onChange: (e) => setFirstName(e.target.value),
+                    onChange: (e) => handleValueChange(setFirstName, e.target.value),
                     placeholder: originalData.current.firstName, // Hodnota ako placeholder
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: {
@@ -595,7 +629,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'lastName',
                     value: lastName,
-                    onChange: (e) => setLastName(e.target.value),
+                    onChange: (e) => handleValueChange(setLastName, e.target.value),
                     placeholder: originalData.current.lastName, // Hodnota ako placeholder
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: {
@@ -652,6 +686,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             id: 'phoneNumber',
                             value: phoneNumber,
                             onChange: (e) => {
+                                handleValueChange(setPhoneNumber, e.target.value);
                                 // Odstránime všetky znaky, ktoré nie sú číslice
                                 const cleanedValue = e.target.value.replace(/[^\d]/g, '');
                                 // Formátujeme číslo pridaním medzier po troch čísliciach
@@ -684,7 +719,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'email',
                     value: email,
                     onChange: (e) => {
-                        setEmail(e.target.value);
+                        handleValueChange(setEmail, e.target.value);
                         setIsEmailValid(validateEmail(e.target.value));
                     },
                     placeholder: originalData.current.email, // Hodnota ako placeholder
@@ -708,7 +743,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'currentPassword',
                 label: 'Aktuálne heslo',
                 value: currentPassword,
-                onChange: (e) => setCurrentPassword(e.target.value),
+                onChange: (e) => handleValueChange(setCurrentPassword, e.target.value),
                 placeholder: 'Zadajte aktuálne heslo',
                 showPassword: showPassword,
                 toggleShowPassword: () => setShowPassword(!showPassword),
@@ -720,7 +755,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'newPassword',
                 label: 'Nové heslo',
                 value: newPassword,
-                onChange: (e) => setNewPassword(e.target.value),
+                onChange: (e) => handleValueChange(setNewPassword, e.target.value),
                 placeholder: 'Zadajte nové heslo',
                 showPassword: showNewPassword,
                 toggleShowPassword: () => setShowNewPassword(!showNewPassword),
@@ -766,7 +801,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 id: 'retypePassword',
                 label: 'Potvrdiť nové heslo',
                 value: retypePassword,
-                onChange: (e) => setRetypePassword(e.target.value),
+                onChange: (e) => handleValueChange(setRetypePassword, e.target.value),
                 placeholder: 'Zadajte znova nové heslo',
                 showPassword: showRetypePassword,
                 toggleShowPassword: () => setShowRetypePassword(!showRetypePassword),
@@ -808,7 +843,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
             onClick: (e) => {
                 if (e.target === e.currentTarget) {
-                    onClose();
+                    handleCloseWithCheck();
                 }
             }
         },
