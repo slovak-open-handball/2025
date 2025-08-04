@@ -176,7 +176,6 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     userEmail: user.email,
                     changes: changeMessages,
                     timestamp: new Date().toISOString(),
-                    type: 'billing_update'
                 });
             }
             
