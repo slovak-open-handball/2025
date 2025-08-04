@@ -128,7 +128,19 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
     };
 
-    // Funkcia pre formátovanie PSČ
+    // Funkcia na formátovanie PSČ do formátu "XXX XX"
+    const formatPostalCodeDisplay = (code) => {
+        if (!code) {
+            return '';
+        }
+        const sanitized = code.replace(/\s/g, '').replace(/[^0-9]/g, '');
+        if (sanitized.length > 3) {
+            return sanitized.substring(0, 3) + ' ' + sanitized.substring(3, 5);
+        }
+        return sanitized;
+    };
+
+    // Funkcia pre formátovanie PSČ (pre input)
     const handlePostalCodeChange = (e) => {
         const input = e.target.value.replace(/\s/g, ''); // Odstránime medzery
         const sanitized = input.replace(/[^0-9]/g, ''); // Ponecháme len číslice
@@ -292,8 +304,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         value: postalCode,
                         // Použitie novej funkcie pre formátovanie
                         onChange: handlePostalCodeChange,
-                        // Nový placeholder
-                        placeholder: userProfileData.postalCode || 'XXX XX',
+                        // Nový placeholder, ktorý zobrazí buď existujúcu formátovanú hodnotu alebo inštrukciu
+                        placeholder: userProfileData.postalCode
+                            ? formatPostalCodeDisplay(userProfileData.postalCode)
+                            : 'Zadajte hodnotu vo formáte: XXX XX',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
