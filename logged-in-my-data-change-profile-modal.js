@@ -618,7 +618,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                                     borderColor: roleColor,
                                     borderRight: 'none',
                                     borderRadius: '0.5rem 0 0 0.5rem', // Použijeme Tailwind triedy
-                                    width: '100px'
+                                    width: '80px'
                                 }
                             },
                             React.createElement('span', { className: 'text-sm' }, selectedDialCode),
