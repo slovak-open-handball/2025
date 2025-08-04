@@ -26,8 +26,10 @@
 </head>
 <body>
     <div id="header-placeholder"></div>
-    <main id="main-content-area" class="flex-grow">
-        <div id="root" class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div id="left-menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+        <div class="flex-shrink-0 w-16"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
