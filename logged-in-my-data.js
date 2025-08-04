@@ -107,7 +107,7 @@ const MyDataApp = ({ userProfileData, onUpdate }) => {
     if (!profileData) {
         return (
             <div className="flex justify-center items-center h-full pt-16">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500">
             </div>
         );
     }
