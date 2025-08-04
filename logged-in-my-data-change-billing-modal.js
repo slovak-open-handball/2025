@@ -1,7 +1,7 @@
 // Importy pre Firebase funkcie
 import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Modálny komponent pre zmenu fakturačných údajov.
@@ -9,7 +9,7 @@ const { useState, useEffect } = React;
 export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }) => {
     const db = window.db;
 
-    // Stavy pre formulár
+    // Stavy pre formulár, inicializované ako prázdne
     const [clubName, setClubName] = useState('');
     const [street, setStreet] = useState('');
     const [houseNumber, setHouseNumber] = useState('');
@@ -22,37 +22,55 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Načítanie počiatočných hodnôt z `userProfileData` do stavu pri zobrazení modálu
+    // Ref pre uloženie pôvodných hodnôt pre porovnanie
+    const originalDataRef = useRef({});
+
+    // Načítanie počiatočných hodnôt z `userProfileData` do ref a vyčistenie formulára
     useEffect(() => {
         if (show && userProfileData) {
-            // Načítanie hodnôt z objektu 'billing'
-            setClubName(userProfileData.billing?.clubName || '');
-            setIco(userProfileData.billing?.ico || '');
-            setDic(userProfileData.billing?.dic || '');
-            setIcdph(userProfileData.billing?.icdph || '');
-
-            // Načítanie ostatných údajov priamo z userProfileData
-            setStreet(userProfileData.street || '');
-            setHouseNumber(userProfileData.houseNumber || '');
-            setCity(userProfileData.city || '');
-            setPostalCode(userProfileData.postalCode || '');
-            setCountry(userProfileData.country || '');
+            // Uložíme pôvodné dáta do ref pre neskoršie porovnanie
+            originalDataRef.current = {
+                clubName: userProfileData.billing?.clubName || '',
+                street: userProfileData.street || '',
+                houseNumber: userProfileData.houseNumber || '',
+                city: userProfileData.city || '',
+                postalCode: userProfileData.postalCode || '',
+                country: userProfileData.country || '',
+                ico: userProfileData.billing?.ico || '',
+                dic: userProfileData.billing?.dic || '',
+                icdph: userProfileData.billing?.icdph || ''
+            };
+            
+            // Pri otvorení modalu vyčistíme stavy, aby polia neboli predvyplnené
+            setClubName('');
+            setStreet('');
+            setHouseNumber('');
+            setCity('');
+            setPostalCode('');
+            setCountry('');
+            setIco('');
+            setDic('');
+            setIcdph('');
             setError(null);
         }
     }, [show, userProfileData]);
 
     // Kontrola, či sa zmenil formulár
     const isFormChanged = () => {
+        // Porovnávame aktuálne hodnoty v stave s pôvodnými hodnotami v ref.
+        // Ak sa hodnota v stave zmenila a je prázdna, alebo je iná ako pôvodná, považujeme to za zmenu.
+        // Ak sa hodnota v stave nezmenila, ale pôvodná hodnota bola prázdna, taktiež to nie je zmena
+        // ak sú obe prazdne.
         return (
-            clubName !== userProfileData.billing?.clubName ||
-            street !== userProfileData.street ||
-            houseNumber !== userProfileData.houseNumber ||
-            city !== userProfileData.city ||
-            postalCode !== userProfileData.postalCode ||
-            country !== userProfileData.country ||
-            ico !== userProfileData.billing?.ico ||
-            dic !== userProfileData.billing?.dic ||
-            icdph !== userProfileData.billing?.icdph
+            (clubName !== originalDataRef.current.clubName) ||
+            (street !== originalDataRef.current.street) ||
+            (houseNumber !== originalDataRef.current.houseNumber) ||
+            (city !== originalDataRef.current.city) ||
+            (postalCode !== originalDataRef.current.postalCode) ||
+            (country !== originalDataRef.current.country) ||
+            (ico !== originalDataRef.current.ico) ||
+            (dic !== originalDataRef.current.dic) ||
+            (icdph !== originalDataRef.current.icdph)
         );
     };
 
@@ -77,19 +95,20 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
         try {
             const updatedData = {
-                // Ukladáme tieto údaje pod 'billing'
+                // Použijeme pôvodné hodnoty z ref, ak používateľ nič nezmenil,
+                // alebo nové hodnoty zo stavu.
                 billing: {
-                    clubName: clubName,
-                    ico: ico,
-                    dic: dic,
-                    icdph: icdph
+                    clubName: clubName !== '' ? clubName : originalDataRef.current.clubName,
+                    ico: ico !== '' ? ico : originalDataRef.current.ico,
+                    dic: dic !== '' ? dic : originalDataRef.current.dic,
+                    icdph: icdph !== '' ? icdph : originalDataRef.current.icdph
                 },
                 // Ostatné údaje ostávajú na hlavnej úrovni
-                street: street,
-                houseNumber: houseNumber,
-                city: city,
-                postalCode: postalCode,
-                country: country
+                street: street !== '' ? street : originalDataRef.current.street,
+                houseNumber: houseNumber !== '' ? houseNumber : originalDataRef.current.houseNumber,
+                city: city !== '' ? city : originalDataRef.current.city,
+                postalCode: postalCode !== '' ? postalCode : originalDataRef.current.postalCode,
+                country: country !== '' ? country : originalDataRef.current.country
             };
             
             await updateDoc(doc(db, "users", user.uid), updatedData);
