@@ -63,43 +63,12 @@ const MyDataApp = ({ userProfileData, userId }) => {
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [billingModalVisible, setBillingModalVisible] = useState(false);
 
-    // Listener pre menu, ktorý spúšťa zmenu okraja a šírky obsahu pri zmenách šírky menu
+    // Efekt, ktorý sa vykoná iba raz po načítaní komponentu.
+    // Pôvodný MutationObserver bol odstránený, pretože celá logika rozloženia
+    // je teraz spracovaná pomocou CSS Flexbox.
     useEffect(() => {
-        const leftMenu = document.getElementById('left-menu');
-        const mainContent = document.getElementById('main-content-area');
-    
-        if (leftMenu && mainContent) {
-            // Funkcia na aktualizáciu obsahu na základe šírky menu
-            const updateContentPosition = () => {
-                const menuWidth = leftMenu.offsetWidth;
-                mainContent.style.marginLeft = `${menuWidth}px`;
-                mainContent.style.width = `calc(100% - ${menuWidth}px)`;
-            };
-
-            // Vytvorenie MutationObserver
-            // Bude sledovať zmeny v štýloch a atribútoch menu, aby sa dynamicky prispôsoboval obsah
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
-                        updateContentPosition();
-                    }
-                });
-            });
-
-            // Spustenie pozorovateľa na ľavom menu
-            observer.observe(leftMenu, {
-                attributes: true,
-                attributeFilter: ['style', 'class']
-            });
-
-            // Počiatočné nastavenie pozície
-            updateContentPosition();
-    
-            // Cleanup funkcia pre odpojenie pozorovateľa
-            return () => {
-                observer.disconnect();
-            };
-        }
+        // Tu môžeme v budúcnosti pridať iné jednorazové inicializačné logiky,
+        // ak to bude potrebné.
     }, []);
 
     if (!userProfileData) {
