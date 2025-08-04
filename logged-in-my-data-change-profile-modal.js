@@ -338,22 +338,18 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Kontrola, či sa zmenil aspoň jeden údaj vo formulári
     const isFormChanged = () => {
-        const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
+        const currentFirstName = firstName === '' ? originalData.current.firstName : firstName;
+        const currentLastName = lastName === '' ? originalData.current.lastName : lastName;
+        const currentPhoneNumber = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
+        const currentEmail = email === '' ? originalData.current.email : email;
 
         // Porovnávame aktuálny stav s pôvodnými dátami, ktoré sú v placeholderoch
         return (
-            firstName !== '' ||
-            lastName !== '' ||
-            email !== '' ||
-            currentPhoneNumber !== '' ||
-            newPassword !== '' ||
-            retypePassword !== ''
-        ) && (
-            firstName !== originalData.current.firstName ||
-            lastName !== originalData.current.lastName ||
-            email !== originalData.current.email ||
+            currentFirstName !== originalData.current.firstName ||
+            currentLastName !== originalData.current.lastName ||
             fullPhoneNumber !== originalData.current.contactPhoneNumber ||
+            currentEmail !== originalData.current.email ||
             newPassword !== '' ||
             retypePassword !== ''
         );
@@ -462,7 +458,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         const updatedData = {};
         const changes = {};
 
-        // Skontrolujeme zmeny a pripravíme dáta na aktualizáciu a notifikáciu
+        // Kontrola zmien v mene, priezvisku a telefónnom čísle
         if (firstName !== '' && firstName !== originalData.current.firstName) {
             updatedData.firstName = firstName;
             changes.firstName = { from: originalData.current.firstName, to: firstName };
@@ -473,18 +469,18 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         }
         const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
-        if (currentPhoneNumber !== '' && fullPhoneNumber !== originalData.current.contactPhoneNumber) {
+        if (phoneNumber !== '' && fullPhoneNumber !== originalData.current.contactPhoneNumber) {
             updatedData.contactPhoneNumber = fullPhoneNumber;
             changes.contactPhoneNumber = { from: originalData.current.contactPhoneNumber, to: fullPhoneNumber };
         }
-
+        
         if (Object.keys(updatedData).length > 0) {
             try {
                 const db = getFirestore();
                 const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, updatedData);
 
-                // Vytvorenie notifikácie pre správcu
+                // Vytvorenie notifikácie pre správcu, len ak došlo k zmene mena, priezviska alebo tel. čísla
                 if (Object.keys(changes).length > 0) {
                     await addDoc(collection(db, 'notifications'), {
                         userId: user.uid,
@@ -495,7 +491,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                         createdAt: new Date(),
                     });
                 }
-
+                
                 window.showGlobalNotification('Profilové údaje boli úspešne aktualizované.', 'success');
             } catch (error) {
                 console.error("Chyba pri aktualizácii profilu:", error);
@@ -518,8 +514,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         
         setLoading(false);
         if (profileUpdateSuccess && passwordUpdateSuccess && emailUpdateSuccess) {
-            // Zavolanie onProfileUpdated z rodičovského komponentu pre aktualizáciu stavu
-            // E-mail sa aktualizuje az po potvrdeni, takze ho zatial nemozeme zmenit v state
             onClose();
         }
     };
