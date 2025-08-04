@@ -7,8 +7,9 @@ const setupMenuListeners = () => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .group-hover\\:opacity-100');
+    const menuIcon = menuToggleButton.querySelector('svg');
 
-    if (leftMenu && menuToggleButton && menuTexts.length > 0) {
+    if (leftMenu && menuToggleButton && menuTexts.length > 0 && menuIcon) {
         let isMenuToggled = false;
 
         // Funkcia pre prepínanie tried, ktorá zmení šírku menu
