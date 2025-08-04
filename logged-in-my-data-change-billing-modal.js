@@ -7,6 +7,11 @@ const { useState, useEffect, useRef } = React;
  * Modálny komponent pre zmenu fakturačných údajov.
  */
 export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }) => {
+    // Ak je rola používateľa 'admin' alebo 'hall', nezobrazíme modál.
+    if (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') {
+        return null;
+    }
+    
     const db = window.db;
 
     // Stavy pre formulár, inicializované ako prázdne
