@@ -1,4 +1,4 @@
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updatePassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -475,7 +475,10 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             const credential = EmailAuthProvider.credential(user.email, currentPassword);
             await reauthenticateWithCredential(user, credential);
             await verifyBeforeUpdateEmail(user, email);
-            window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maili.', 'success');
+            window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maile. Z bezpečnostných dôvodov budete teraz automaticky odhlásený.', 'success');
+            setTimeout(async () => {
+                await signOut(auth);
+            }, 10000); 
             return true;
         } catch (error) {
             console.error("Chyba pri zmene e-mailu:", error);
