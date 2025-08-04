@@ -166,7 +166,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         'button',
                         {
                             onClick: () => setShowChangeProfileModal(true),
-                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none`,
                             style: { color: roleColor, backgroundColor: 'white', border: `2px solid ${roleColor}` }
                         },
                         React.createElement(PencilIcon),
@@ -198,7 +198,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         'button',
                         {
                             onClick: () => setShowChangeBillingModal(true),
-                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none`,
                             style: { color: roleColor, backgroundColor: 'white', border: `2px solid ${roleColor}` }
                         },
                         React.createElement(PencilIcon),
