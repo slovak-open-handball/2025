@@ -282,13 +282,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     // useEffect pre inicializáciu stavov pri zobrazení modálneho okna
     useEffect(() => {
         if (show && userProfileData) {
-            setFirstName(userProfileData.firstName || '');
-            setLastName(userProfileData.lastName || '');
-            setEmail(userProfileData.email || '');
+            // Inicializujeme stavy na prázdne reťazce, aby sa hodnoty zobrazili ako placeholder
+            setFirstName('');
+            setLastName('');
+            setEmail('');
+            setPhoneNumber('');
 
             const { foundDialCode, numberWithoutDialCode } = extractDialCodeAndNumber(userProfileData.contactPhoneNumber);
             setSelectedDialCode(foundDialCode);
-            setPhoneNumber(formatPhoneNumberForInput(numberWithoutDialCode));
 
             setNewPassword('');
             setRetypePassword('');
@@ -296,12 +297,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
             setIsEmailValid(true);
 
-            // Nastavíme originálne dáta, ak sa zmenili
+            // Nastavíme originálne dáta, ktoré použijeme pre placeholder text
             originalData.current = {
                 firstName: userProfileData.firstName || '',
                 lastName: userProfileData.lastName || '',
                 email: userProfileData.email || '',
                 contactPhoneNumber: userProfileData.contactPhoneNumber || '',
+                phoneNumberWithoutDialCode: numberWithoutDialCode
             };
         }
     }, [show, userProfileData]);
@@ -311,7 +313,15 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         const currentPhoneNumber = phoneNumber.replace(/\s/g, '');
         const fullPhoneNumber = selectedDialCode + currentPhoneNumber;
 
+        // Porovnávame aktuálny stav s pôvodnými dátami, ktoré sú v placeholderoch
         return (
+            firstName !== '' ||
+            lastName !== '' ||
+            email !== '' ||
+            currentPhoneNumber !== '' ||
+            newPassword !== '' ||
+            retypePassword !== ''
+        ) && (
             firstName !== originalData.current.firstName ||
             lastName !== originalData.current.lastName ||
             email !== originalData.current.email ||
@@ -323,7 +333,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Kontrola, či sa mení e-mail
     const isEmailChanged = () => {
-        return email !== originalData.current.email;
+        return email !== '';
     };
 
     // Kontrola, či sa mení heslo
@@ -420,9 +430,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 const db = getFirestore();
                 const userDocRef = doc(db, 'users', user.uid);
                 await updateDoc(userDocRef, {
-                    firstName: firstName,
-                    lastName: lastName,
-                    contactPhoneNumber: selectedDialCode + phoneNumber.replace(/\s/g, '')
+                    firstName: firstName || originalData.current.firstName,
+                    lastName: lastName || originalData.current.lastName,
+                    contactPhoneNumber: (selectedDialCode + phoneNumber.replace(/\s/g, '')) || originalData.current.contactPhoneNumber
                 });
                 window.showGlobalNotification('Profilové údaje boli úspešne aktualizované.', 'success');
             } catch (error) {
@@ -511,6 +521,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'firstName',
                     value: firstName,
                     onChange: (e) => setFirstName(e.target.value),
+                    placeholder: originalData.current.firstName, // Hodnota ako placeholder
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: {
                         borderColor: roleColor,
@@ -532,6 +543,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'lastName',
                     value: lastName,
                     onChange: (e) => setLastName(e.target.value),
+                    placeholder: originalData.current.lastName, // Hodnota ako placeholder
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: {
                         borderColor: roleColor,
@@ -556,6 +568,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                         setEmail(e.target.value);
                         setIsEmailValid(validateEmail(e.target.value));
                     },
+                    placeholder: originalData.current.email, // Hodnota ako placeholder
                     className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid ? 'border-red-500' : ''}`,
                     style: {
                         borderColor: roleColor,
@@ -611,6 +624,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             id: 'phoneNumber',
                             value: phoneNumber,
                             onChange: (e) => setPhoneNumber(e.target.value),
+                            placeholder: formatPhoneNumberForInput(originalData.current.phoneNumberWithoutDialCode), // Hodnota ako placeholder
                             className: 'focus:outline-none shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight',
                             style: {
                                 borderColor: roleColor,
