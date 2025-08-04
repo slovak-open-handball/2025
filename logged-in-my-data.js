@@ -137,6 +137,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     // Formátovanie adresy
     const formattedAddress = `${localProfileData.street} ${localProfileData.houseNumber}, ${localProfileData.postalCode?.replace(/(\d{3})(\d{2})/, '$1 $2')} ${localProfileData.city}, ${localProfileData.country}`;
+    
+    // Podmienka pre nadpis
+    const profileSectionTitle = localProfileData.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
 
     return React.createElement(
         'div',
@@ -151,7 +154,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'div',
                     { className: 'flex justify-between items-center mb-6' },
-                    React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, 'Moje údaje'),
+                    React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, profileSectionTitle),
                     React.createElement(
                         'button',
                         {
