@@ -109,7 +109,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
             { className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10001] p-4' },
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[80vh] overflow-y-auto', ref: modalRef },
+                { className: 'bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[80vh] overflow-y-auto flex flex-col', ref: modalRef },
                 React.createElement(
                     'div',
                     { className: 'p-4 border-b border-gray-200 sticky top-0 bg-white z-10' },
@@ -142,7 +142,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                 ),
                 React.createElement(
                     'div',
-                    { className: 'p-4' },
+                    { className: 'p-4 overflow-y-auto h-full' },
                     React.createElement(
                         'ul',
                         { className: 'divide-y divide-gray-200' },
@@ -500,7 +500,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     
     const ModalHeader = React.createElement(
         'div',
-        { className: 'flex justify-between items-center px-6 py-4 border-b rounded-t-xl', style: { backgroundColor: roleColor } },
+        { className: 'flex justify-between items-center px-6 py-4 border-b rounded-t-xl sticky top-0 z-10', style: { backgroundColor: roleColor } },
         React.createElement('h3', { className: 'text-2xl font-bold text-white' }, 'Upraviť údaje'),
         React.createElement(
             'button',
@@ -526,7 +526,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     const ModalContent = React.createElement(
         'div',
-        { className: 'p-6' },
+        { className: 'p-6 h-full overflow-y-auto' }, // Pridaná trieda 'h-full' a 'overflow-y-auto'
         // Zobrazenie chybovej správy, ak je e-mail neplatný
         !isEmailValid && React.createElement(
             'div',
@@ -797,9 +797,11 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden max-h-[90vh] overflow-y-auto' },
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh]' },
             ModalHeader,
-            ModalContent
+            React.createElement('div', {className: 'flex-grow overflow-y-auto'},
+                ModalContent
+            )
         )
     ) : null;
 
