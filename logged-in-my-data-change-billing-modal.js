@@ -258,7 +258,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         // Ak boli vykonané zmeny, najskôr zatvoríme modal, potom zobrazíme notifikáciu
         if (isFormChanged()) {
             onClose(); // Zatvorenie modalu
-            window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error'); // Zobrazenie notifikácie
+            // Zobrazíme notifikáciu s krátkym oneskorením, aby sa modal stihol zatvoriť
+            setTimeout(() => {
+                window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error');
+            }, 50); 
         } else {
             // Ak sa žiadne zmeny neuskutočnili, modal sa zatvorí bez upozornenia
             onClose();
@@ -273,7 +276,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         React.createElement(
             'button',
             {
-                onClick: handleCloseWithCheck, // Používame nový handler
+                onClick: handleCloseWithCheck, // Používame upravený handler
                 className: 'text-white hover:text-gray-200'
             },
             React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
