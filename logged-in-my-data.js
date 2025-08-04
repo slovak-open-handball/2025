@@ -210,7 +210,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         // Hľadáme zhodu predvoľby v čísle
         let dialCodeMatch = null;
         for (const country of sortedDialCodes) {
-            if (cleanNumber.startsWith(country.dialCode)) {
+            // Pridaná kontrola, či country.dialCode existuje a je reťazec
+            if (country.dialCode && typeof country.dialCode === 'string' && cleanNumber.startsWith(country.dialCode)) {
                 dialCodeMatch = country.dialCode;
                 break;
             }
