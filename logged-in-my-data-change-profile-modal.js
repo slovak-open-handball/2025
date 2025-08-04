@@ -475,6 +475,16 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         )
     );
 
+    // určíme dynamické štýly pre tlačidlo
+    const isButtonEnabled = isSaveButtonEnabled();
+    const buttonStyle = {
+        backgroundColor: isButtonEnabled ? roleColor : 'white',
+        color: isButtonEnabled ? 'white' : roleColor,
+        border: isButtonEnabled ? 'none' : `2px solid ${roleColor}`,
+        cursor: isButtonEnabled && !loading ? 'pointer' : 'not-allowed',
+        boxShadow: isButtonEnabled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
+    };
+
     const ModalContent = React.createElement(
         'div',
         { className: 'p-6' },
@@ -675,14 +685,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     'button',
                     {
                         type: 'submit',
-                        className: `px-8 py-3 rounded-full font-bold text-lg shadow-lg transition-all duration-300 ${isSaveButtonEnabled() ? 'hover:scale-105' : ''} focus:outline-none`,
-                        disabled: !isSaveButtonEnabled() || loading,
-                        style: {
-                            backgroundColor: roleColor,
-                            color: (!isSaveButtonEnabled() || loading) ? '#9CA3AF' : 'white',
-                            border: 'none',
-                            cursor: (!isSaveButtonEnabled() || loading) ? 'not-allowed' : 'pointer',
-                        }
+                        className: `px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${isButtonEnabled ? 'hover:scale-105' : ''} focus:outline-none`,
+                        disabled: !isButtonEnabled || loading,
+                        style: buttonStyle,
                     },
                     loading ? 'Ukladám...' : 'Uložiť zmeny'
                 )
