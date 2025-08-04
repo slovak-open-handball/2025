@@ -788,7 +788,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const modal = show ? React.createElement(
         'div',
         {
-            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]',
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
             onClick: (e) => {
                 if (e.target === e.currentTarget) {
                     onClose();
@@ -797,7 +797,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden overflow-x-auto' },
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden max-h-[90vh] overflow-y-auto' },
             ModalHeader,
             ModalContent
         )
