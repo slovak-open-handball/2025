@@ -46,17 +46,16 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 icdph: userProfileData.billing?.icdph || ''
             };
             
-            // Pri otvorení modalu vyčistíme stavy, aby polia neboli predvyplnené
-            // Setneme stavy na prázdny reťazec alebo na pôvodné hodnoty z userProfileData
-            setClubName('');
-            setStreet('');
-            setHouseNumber('');
-            setCity('');
-            setPostalCode('');
-            setCountry('');
-            setIco('');
-            setDic('');
-            setIcdph('');
+            // Pri otvorení modalu inicializujeme stavy s pôvodnými hodnotami
+            setClubName(userProfileData.billing?.clubName || '');
+            setStreet(userProfileData.street || '');
+            setHouseNumber(userProfileData.houseNumber || '');
+            setCity(userProfileData.city || '');
+            setPostalCode(userProfileData.postalCode || '');
+            setCountry(userProfileData.country || '');
+            setIco(userProfileData.billing?.ico || '');
+            setDic(userProfileData.billing?.dic || '');
+            setIcdph(userProfileData.billing?.icdph || '');
             setError(null);
         }
     }, [show, userProfileData]);
@@ -141,7 +140,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 'billing.dic': 'DIČ',
                 'billing.icdph': 'IČ DPH',
                 'street': 'Ulica',
-                'houseNumber': 'Popisné číslo',
+                'houseNumber': 'Číslo domu',
                 'city': 'Mesto',
                 'postalCode': 'PSČ',
                 'country': 'Krajina',
@@ -320,7 +319,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Popisné číslo'
+                        'Číslo domu'
                     ),
                     React.createElement('input', {
                         type: 'text',
