@@ -107,7 +107,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             const timeRemaining = deadline.getTime() - now.getTime();
                             deadlineTimerRef.current = setTimeout(() => {
                                 setIsEditingAllowed(false);
-                                window.showGlobalNotification("Termín pre úpravu dát vypršal.", "error");
+                                window.showGlobalNotification("Uplynul termín pre úpravu údajov.", "error");
                             }, timeRemaining);
                         }
                     } else {
