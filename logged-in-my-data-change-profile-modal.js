@@ -734,8 +734,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             ),
         ),
 
-        // Zmena hesla (zobrazené len ak sa mení e-mail alebo sa mení heslo)
-        (isEmailChanged() || isPasswordChanged()) &&
+        // Zmena hesla (teraz vždy viditeľné)
         React.createElement('div', { className: 'mb-6' },
             React.createElement('h3', { className: 'text-lg font-bold text-gray-800 mb-4' }, 'Zmena hesla'),
             // Aktuálne heslo
