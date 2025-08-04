@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getFirestore, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect, useRef } = React;
 
@@ -117,21 +117,55 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         
         try {
             const updatedData = {
-                // Použijeme pôvodné hodnoty z ref, ak používateľ nič nezmenil,
-                // alebo nové hodnoty zo stavu.
                 billing: {
                     clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
                     ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
                     dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
                     icdph: icdph !== '' ? icdph : userProfileData.billing?.icdph || ''
                 },
-                // Ostatné údaje ostávajú na hlavnej úrovni
                 street: street !== '' ? street : userProfileData.street || '',
                 houseNumber: houseNumber !== '' ? houseNumber : userProfileData.houseNumber || '',
                 city: city !== '' ? city : userProfileData.city || '',
                 postalCode: postalCode !== '' ? postalCode.replace(/\s/g, '') : userProfileData.postalCode || '',
                 country: country !== '' ? country : userProfileData.country || ''
             };
+            
+            // Logika pre vytvorenie záznamu o zmene v databáze
+            const originalBillingData = originalDataRef.current;
+            const changedData = {};
+
+            const changes = {
+                'billing.clubName': clubName,
+                'billing.ico': ico,
+                'billing.dic': dic,
+                'billing.icdph': icdph,
+                'street': street,
+                'houseNumber': houseNumber,
+                'city': city,
+                'postalCode': postalCode.replace(/\s/g, ''),
+                'country': country,
+            };
+
+            for (const key in changes) {
+                const newValue = changes[key];
+                const originalValue = key.startsWith('billing.') ? originalBillingData[key.substring(8)] : originalBillingData[key];
+
+                if (newValue !== '' && getNormalizedValue(newValue) !== getNormalizedValue(originalValue)) {
+                     changedData[key] = {
+                        old: originalValue,
+                        new: newValue
+                    };
+                }
+            }
+
+            if (Object.keys(changedData).length > 0) {
+                 await addDoc(collection(db, 'notifications'), {
+                    userId: user.uid,
+                    changes: changedData,
+                    timestamp: new Date().toISOString(),
+                    type: 'billing_update'
+                });
+            }
             
             await updateDoc(doc(db, "users", user.uid), updatedData);
             window.showGlobalNotification('Fakturačné údaje boli úspešne aktualizované!', 'success');
