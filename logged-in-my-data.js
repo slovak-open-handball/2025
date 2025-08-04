@@ -145,7 +145,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
                 React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
                 // Podmienka na zobrazenie telefónneho čísla
-                localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.phone })
+                localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.contactPhoneNumber })
             )
         ),
         
