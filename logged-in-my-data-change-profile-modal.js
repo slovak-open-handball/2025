@@ -596,10 +596,11 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     // Podmienka pre povolenie tlačidla Uložiť zmeny
     const isButtonEnabled = isSaveButtonEnabled();
     const buttonStyle = {
-        backgroundColor: isButtonEnabled ? roleColor : '#d1d5db',
-        color: 'white',
+        backgroundColor: isButtonEnabled ? roleColor : 'white',
+        color: isButtonEnabled ? 'white' : roleColor,
         cursor: isButtonEnabled ? 'pointer' : 'not-allowed',
-        boxShadow: isButtonEnabled ? `0 4px 6px -1px ${roleColor}, 0 2px 4px -1px ${roleColor}` : 'none'
+        boxShadow: isButtonEnabled ? `0 4px 6px -1px ${roleColor}, 0 2px 4px -1px ${roleColor}` : 'none',
+        border: isButtonEnabled ? 'none' : `2px solid ${roleColor}`,
     };
 
     // Obsah modálneho okna s formulárom
