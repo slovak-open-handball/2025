@@ -141,12 +141,15 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     // Podmienka pre nadpis
     const profileSectionTitle = localProfileData.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
 
+    // Podmienene triedy pre kontajner, aby sa karta admina vycentrovala
+    const containerClasses = localProfileData.role === 'admin' ? 'flex flex-col lg:flex-row lg:justify-center' : 'flex flex-col lg:flex-row lg:space-x-8';
+
     return React.createElement(
         'div',
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:pt-16' },
         React.createElement(
             'div',
-            { className: 'flex flex-col lg:flex-row lg:space-x-8' },
+            { className: containerClasses },
             // Ľavý stĺpec pre osobné údaje
             React.createElement(
                 'div',
