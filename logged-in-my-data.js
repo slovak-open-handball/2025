@@ -125,6 +125,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Email'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.email)
             ),
+            // Podmienka pre zobrazenie telefónneho čísla
+            userProfileData.role !== 'admin' && userProfileData.role !== 'hall' &&
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Telefón'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.contactPhoneNumber)
