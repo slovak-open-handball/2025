@@ -54,7 +54,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal }) => {
+const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit }) => {
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
@@ -88,11 +88,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         }
     };
 
-    // Skontrolujeme, či je aktuálny čas menší ako uzávierka pre úpravu dát
-    const canEdit = userProfileData?.dataEditDeadline?.toMillis() > Date.now();
     // Dynamicky nastavíme názov karty podľa roly
     const profileCardTitle = userProfileData?.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
-
 
     const profileContent = React.createElement(
         'div',
@@ -101,6 +98,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
+            // Ceruzka sa zobrazí len ak je `canEdit` true
             canEdit && React.createElement(
                 'button',
                 {
@@ -136,6 +134,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
+            // Ceruzka sa zobrazí len ak je `canEdit` true
             canEdit && React.createElement(
                 'button',
                 {
@@ -176,12 +175,35 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
+    // Nový stav na sledovanie, či je možné dáta upravovať
+    const [canEdit, setCanEdit] = useState(false);
 
     // Ak sa dáta používateľa zmenia, zatvoríme modálne okná
     useEffect(() => {
         if (userProfileData) {
             setShowProfileModal(false);
             setShowBillingModal(false);
+        }
+    }, [userProfileData]);
+
+    // Časovač na automatické skrytie ceruziek
+    useEffect(() => {
+        if (userProfileData?.dataEditDeadline) {
+            const deadlineMillis = userProfileData.dataEditDeadline.toMillis();
+            const nowMillis = Date.now();
+            const timeRemaining = deadlineMillis - nowMillis;
+
+            if (timeRemaining > 0) {
+                setCanEdit(true);
+                const timer = setTimeout(() => {
+                    setCanEdit(false);
+                }, timeRemaining);
+                // Funkcia pre vyčistenie časovača pri odpojení komponentu
+                return () => clearTimeout(timer);
+            } else {
+                // Ak už je po termíne, hneď nastavíme stav na false
+                setCanEdit(false);
+            }
         }
     }, [userProfileData]);
 
@@ -207,7 +229,8 @@ const MyDataApp = ({ userProfileData }) => {
             {
                 userProfileData: userProfileData,
                 onOpenProfileModal: () => setShowProfileModal(true),
-                onOpenBillingModal: () => setShowBillingModal(true)
+                onOpenBillingModal: () => setShowBillingModal(true),
+                canEdit: canEdit // Odovzdáme stav do podkomponentu
             }
         ),
         React.createElement(
