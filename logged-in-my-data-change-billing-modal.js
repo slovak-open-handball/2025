@@ -293,7 +293,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         // Použitie novej funkcie pre formátovanie
                         onChange: handlePostalCodeChange,
                         // Nový placeholder
-                        placeholder: userProfileData.postalCode || '123 45',
+                        placeholder: userProfileData.postalCode || 'XXX XX',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
