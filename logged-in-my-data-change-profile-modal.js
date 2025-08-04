@@ -705,7 +705,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 roleColor: roleColor
             }),
             // Podmienky pre heslo
-            newPassword !== '' && React.createElement(
+             React.createElement(
                 'div',
                 { className: `text-xs italic mt-1 text-gray-600` },
                 'Heslo musí obsahovať:',
