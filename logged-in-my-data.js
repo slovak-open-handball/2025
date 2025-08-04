@@ -10,7 +10,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -75,6 +75,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     const [showChangeBillingModal, setShowChangeBillingModal] = useState(false);
     const [localProfileData, setLocalProfileData] = useState(userProfileData);
     const [isEditingAllowed, setIsEditingAllowed] = useState(false); // Nový stav pre povolenie úprav
+    const deadlineTimerRef = useRef(null); // Ref pre uloženie ID časovača
 
     const db = getFirestore();
 
@@ -88,12 +89,27 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
         const settingsDocRef = doc(db, 'settings', 'registration');
         const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
+            // Vyčistíme predchádzajúci časovač, ak existuje
+            if (deadlineTimerRef.current) {
+                clearTimeout(deadlineTimerRef.current);
+            }
+
             if (settingsSnap.exists()) {
                 const data = settingsSnap.data();
                 if (data.dataEditDeadline) {
                     const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
                     const now = new Date();
-                    setIsEditingAllowed(now < deadline); // Nastavíme stav podľa porovnania
+                    const isAllowed = now < deadline;
+                    setIsEditingAllowed(isAllowed); // Nastavíme stav podľa porovnania
+
+                    // Ak sú úpravy povolené, nastavíme časovač, aby sa automaticky zakázali po uplynutí termínu
+                    if (isAllowed) {
+                        const timeRemaining = deadline.getTime() - now.getTime();
+                        deadlineTimerRef.current = setTimeout(() => {
+                            setIsEditingAllowed(false);
+                            window.showGlobalNotification("Termín pre úpravu dát vypršal.", "error");
+                        }, timeRemaining);
+                    }
                 } else {
                     // Ak hodnota dataEditDeadline neexistuje, zakážeme úpravy
                     setIsEditingAllowed(false);
@@ -108,8 +124,13 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             setIsEditingAllowed(false);
         });
 
-        // Vrátime funkciu na odhlásenie odberu, aby sa listener správne vyčistil
-        return () => unsubscribe();
+        // Funkcia na vyčistenie časovača a odhlásenie odberu
+        return () => {
+            if (deadlineTimerRef.current) {
+                clearTimeout(deadlineTimerRef.current);
+            }
+            unsubscribe();
+        };
     }, [db, userProfileData.role]); // Pridáme db a userProfileData.role do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
