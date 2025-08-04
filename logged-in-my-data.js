@@ -74,6 +74,27 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     const [showChangeProfileModal, setShowChangeProfileModal] = useState(false);
     const [showChangeBillingModal, setShowChangeBillingModal] = useState(false);
     const [localProfileData, setLocalProfileData] = useState(userProfileData);
+    const [isEditingAllowed, setIsEditingAllowed] = useState(false); // Nový stav pre povolenie úprav
+
+    const db = getFirestore();
+
+    // Načítanie dátumu uzávierky úprav z databázy
+    useEffect(() => {
+        const fetchEditDeadline = async () => {
+            const settingsDocRef = doc(db, 'settings', 'registration');
+            const settingsSnap = await getDoc(settingsDocRef);
+            if (settingsSnap.exists()) {
+                const data = settingsSnap.data();
+                if (data.dataEditDeadline) {
+                    const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
+                    const now = new Date();
+                    setIsEditingAllowed(now < deadline); // Nastavíme stav podľa porovnania
+                }
+            }
+        };
+
+        fetchEditDeadline();
+    }, [db]); // Pridáme db do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
@@ -182,8 +203,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     { className: 'flex items-center justify-between p-4 rounded-t-xl', style: { backgroundColor: roleColor } },
                     // Dynamický nadpis pre sekciu Moje údaje
                     React.createElement('h2', { className: 'text-2xl font-bold text-white' }, profileTitle),
-                    // Tlačidlo na úpravu profilu
-                    React.createElement(
+                    // Tlačidlo na úpravu profilu, zobrazené len ak sú úpravy povolené
+                    isEditingAllowed && React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeProfileModal(true),
@@ -214,7 +235,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     'div',
                     { className: 'flex items-center justify-between p-4 rounded-t-xl', style: { backgroundColor: roleColor } },
                     React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Fakturačné údaje'),
-                    React.createElement(
+                    // Tlačidlo na úpravu fakturačných údajov, zobrazené len ak sú úpravy povolené
+                    isEditingAllowed && React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeBillingModal(true),
@@ -239,7 +261,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         ),
         
         // Modálne okno pre zmenu profilu
-        React.createElement(ChangeProfileModal, {
+        isEditingAllowed && React.createElement(ChangeProfileModal, {
             show: showChangeProfileModal,
             onClose: () => setShowChangeProfileModal(false),
             userProfileData: localProfileData,
@@ -247,7 +269,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         }),
         
         // Modálne okno pre zmenu fakturačných údajov
-        React.createElement(ChangeBillingModal, {
+        isEditingAllowed && React.createElement(ChangeBillingModal, {
             show: showChangeBillingModal,
             onClose: () => setShowChangeBillingModal(false),
             userProfileData: localProfileData,
