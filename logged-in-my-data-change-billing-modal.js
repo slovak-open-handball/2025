@@ -141,7 +141,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 'billing.dic': 'DIČ',
                 'billing.icdph': 'IČ DPH',
                 'street': 'Ulica',
-                'houseNumber': 'Číslo domu',
+                'houseNumber': 'Popisné číslo',
                 'city': 'Mesto',
                 'postalCode': 'PSČ',
                 'country': 'Krajina',
@@ -320,7 +320,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Číslo domu'
+                        'Popisné číslo'
                     ),
                     React.createElement('input', {
                         type: 'text',
