@@ -123,7 +123,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
              console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
         }
     }, [userProfileData]);
-
+    
     // Funkcia na overenie a zobrazenie dát
     const renderContent = () => {
         if (!isMyDataLoaded) {
@@ -421,6 +421,29 @@ const getContrastTextColor = (hexcolor) => {
 
 window.getRoleColor = getRoleColor;
 
+/**
+ * Nová funkcia pre synchronizáciu e-mailu.
+ * Porovná e-mail z Firebase Auth s e-mailom vo Firestore a aktualizuje ho, ak sa líšia.
+ * @param {object} user - Objekt používateľa z Firebase Auth.
+ * @param {object} userProfileData - Dáta profilu používateľa z Firestore.
+ */
+const syncUserEmail = async (user, userProfileData) => {
+    if (user && user.email && userProfileData && userProfileData.email !== user.email) {
+        console.log("MyDataApp.js: E-mail v Auth sa líši od e-mailu vo Firestore. Aktualizujem...");
+        try {
+            const userDocRef = doc(window.db, "users", user.uid);
+            await updateDoc(userDocRef, {
+                email: user.email
+            });
+            console.log("MyDataApp.js: E-mail bol úspešne aktualizovaný vo Firestore.");
+            window.showGlobalNotification('E-mail bol úspešne synchronizovaný s vaším prihlásením.', 'success');
+        } catch (error) {
+            console.error("MyDataApp.js: Chyba pri aktualizácii e-mailu vo Firestore:", error);
+            window.showGlobalNotification('Chyba pri synchronizácii e-mailu s databázou.', 'error');
+        }
+    }
+};
+
 // Funkcia na spracovanie udalosti 'globalDataUpdated' a vykreslenie aplikácie.
 // Táto funkcia sa spustí len vtedy, keď authentication.js úspešne načíta dáta.
 const handleDataUpdateAndRender = (event) => {
@@ -433,6 +456,12 @@ const handleDataUpdateAndRender = (event) => {
     
     const data = event.detail;
     if (data && Object.keys(data).length > 0) {
+        // Nová logika pre synchronizáciu e-mailu
+        const auth = getAuth();
+        if (auth.currentUser) {
+            syncUserEmail(auth.currentUser, data);
+        }
+
         console.log("MyDataApp.js: Dáta prijaté, vykresľujem aplikáciu.");
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
