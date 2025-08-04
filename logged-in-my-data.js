@@ -12,11 +12,11 @@ import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js"
 
 const { useState, useEffect, useRef } = React;
 
-// Inicilizácia Firebase v globálnom rozsahu
-const firebaseConfig = window.__firebase_config ? JSON.parse(window.__firebase_config) : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Deklarácia premenných pre Firebase v globálnom rozsahu, ale bez inicializácie
+let app;
+let auth;
+let db;
+let isFirebaseInitialized = false;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -366,6 +366,58 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
+        if (!isFirebaseInitialized) {
+            console.log("Inicializácia Firebase a nastavenie poslucháčov...");
+            const firebaseConfig = window.__firebase_config ? JSON.parse(window.__firebase_config) : {};
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            isFirebaseInitialized = true;
+
+            /**
+             * Listener pre zmeny v autentifikácii používateľa.
+             * Porovnáva e-mail z Firebase Auth s e-mailom vo Firestore.
+             * Ak sa líšia, automaticky ho aktualizuje vo Firestore a vytvorí notifikáciu.
+             */
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    try {
+                        const userProfileRef = doc(db, 'users', user.uid);
+                        const docSnap = await getDoc(userProfileRef);
+            
+                        if (docSnap.exists()) {
+                            const firestoreEmail = docSnap.data().email;
+                            if (user.email !== firestoreEmail) {
+                                console.log(`MyDataApp.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+                                
+                                await updateDoc(userProfileRef, {
+                                    email: user.email
+                                });
+            
+                                // Vytvorenie notifikácie v databáze
+                                const notificationsCollectionRef = collection(db, 'notifications');
+                                await addDoc(notificationsCollectionRef, {
+                                    userId: user.uid,
+                                    message: `E-mailová adresa bola automaticky aktualizovaná z ${firestoreEmail} na ${user.email}.`,
+                                    type: 'info',
+                                    timestamp: new Date()
+                                });
+                                
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'info');
+                                console.log("MyDataApp.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
+            
+                            } else {
+                                console.log("MyDataApp.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                            }
+                        }
+                    } catch (error) {
+                        console.error("MyDataApp.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
+                        window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
+                    }
+                }
+            });
+        }
+    
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
@@ -377,50 +429,6 @@ const handleDataUpdateAndRender = (event) => {
         console.error("MyDataApp.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
     }
 };
-
-/**
- * Listener pre zmeny v autentifikácii používateľa.
- * Porovnáva e-mail z Firebase Auth s e-mailom vo Firestore.
- * Ak sa líšia, automaticky ho aktualizuje vo Firestore a vytvorí notifikáciu.
- */
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        try {
-            const userProfileRef = doc(db, 'users', user.uid);
-            const docSnap = await getDoc(userProfileRef);
-
-            if (docSnap.exists()) {
-                const firestoreEmail = docSnap.data().email;
-                if (user.email !== firestoreEmail) {
-                    console.log(`MyDataApp.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                    
-                    await updateDoc(userProfileRef, {
-                        email: user.email
-                    });
-
-                    // Vytvorenie notifikácie v databáze
-                    const notificationsCollectionRef = collection(db, 'notifications');
-                    await addDoc(notificationsCollectionRef, {
-                        userId: user.uid,
-                        message: `E-mailová adresa bola automaticky aktualizovaná z ${firestoreEmail} na ${user.email}.`,
-                        type: 'info',
-                        timestamp: new Date()
-                    });
-                    
-                    window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'info');
-                    console.log("MyDataApp.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
-
-                } else {
-                    console.log("MyDataApp.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
-                }
-            }
-        } catch (error) {
-            console.error("MyDataApp.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
-            window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
-        }
-    }
-});
-
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
 console.log("MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.");
