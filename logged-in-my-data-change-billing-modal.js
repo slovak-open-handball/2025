@@ -46,16 +46,17 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 icdph: userProfileData.billing?.icdph || ''
             };
             
-            // Pri otvorení modalu inicializujeme stavy s pôvodnými hodnotami
-            setClubName(userProfileData.billing?.clubName || '');
-            setStreet(userProfileData.street || '');
-            setHouseNumber(userProfileData.houseNumber || '');
-            setCity(userProfileData.city || '');
-            setPostalCode(userProfileData.postalCode || '');
-            setCountry(userProfileData.country || '');
-            setIco(userProfileData.billing?.ico || '');
-            setDic(userProfileData.billing?.dic || '');
-            setIcdph(userProfileData.billing?.icdph || '');
+            // Pri otvorení modalu inicializujeme stavy ako prázdne reťazce,
+            // aby sa do inputov nepredvyplňovali hodnoty.
+            setClubName('');
+            setStreet('');
+            setHouseNumber('');
+            setCity('');
+            setPostalCode('');
+            setCountry('');
+            setIco('');
+            setDic('');
+            setIcdph('');
             setError(null);
         }
     }, [show, userProfileData]);
