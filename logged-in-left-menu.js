@@ -6,8 +6,13 @@
 // Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcia, ktorá sa spustí po načítaní HTML obsahu menu
-const setupMenuListeners = (userProfileData) => {
+/**
+ * Funkcia na zobrazenie/skrytie menu a uloženie stavu do databázy.
+ * @param {object} userProfileData - Dáta o profile používateľa.
+ * @param {object} db - Inštancia Firestore databázy.
+ * @param {string} userId - ID aktuálneho používateľa.
+ */
+const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
@@ -17,9 +22,6 @@ const setupMenuListeners = (userProfileData) => {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
     }
-
-    const userId = userProfileData.id;
-    const db = window.db;
 
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
     let isMenuToggled = userProfileData?.isMenuToggled || false;
@@ -119,7 +121,9 @@ const loadLeftMenu = async (userProfileData) => {
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // Po úspešnom vložení HTML hneď nastavíme poslucháčov
-            setupMenuListeners(userProfileData); // Teraz odovzdávame dáta
+            const db = window.db;
+            const userId = userProfileData.id;
+            setupMenuListeners(userProfileData, db, userId); // Teraz odovzdávame dáta
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) {
                 leftMenuElement.classList.remove('hidden');
