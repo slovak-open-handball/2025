@@ -127,6 +127,21 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             setLoading(false);
         }
     };
+
+    // Nová funkcia pre formátovanie PSČ
+    const handlePostalCodeChange = (e) => {
+        const input = e.target.value.replace(/\s/g, ''); // Odstránime medzery
+        const sanitized = input.replace(/[^0-9]/g, ''); // Ponecháme len číslice
+        
+        let formatted = '';
+        if (sanitized.length > 3) {
+            formatted = sanitized.substring(0, 3) + ' ' + sanitized.substring(3, 5);
+        } else {
+            formatted = sanitized;
+        }
+
+        setPostalCode(formatted);
+    };
     
     // Nadpis modálneho okna
     const ModalHeader = React.createElement(
@@ -259,8 +274,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'postalCode',
                         value: postalCode,
-                        onChange: (e) => setPostalCode(e.target.value),
-                        placeholder: userProfileData.postalCode || '',
+                        // Použitie novej funkcie pre formátovanie
+                        onChange: handlePostalCodeChange,
+                        // Nový placeholder
+                        placeholder: userProfileData.postalCode || '123 45',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
