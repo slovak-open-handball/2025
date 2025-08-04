@@ -229,7 +229,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'clubName',
                     value: clubName,
                     onChange: (e) => setClubName(e.target.value),
-                    placeholder: userProfileData.billing?.clubName || '',
+                    placeholder: userProfileData.billing?.clubName || '-',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
                 })
@@ -250,7 +250,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'street',
                         value: street,
                         onChange: (e) => setStreet(e.target.value),
-                        placeholder: userProfileData.street || '',
+                        placeholder: userProfileData.street || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -268,7 +268,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'houseNumber',
                         value: houseNumber,
                         onChange: (e) => setHouseNumber(e.target.value),
-                        placeholder: userProfileData.houseNumber || '',
+                        placeholder: userProfileData.houseNumber || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -290,7 +290,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'city',
                         value: city,
                         onChange: (e) => setCity(e.target.value),
-                        placeholder: userProfileData.city || '',
+                        placeholder: userProfileData.city || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -309,10 +309,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         value: postalCode,
                         // Použitie novej funkcie pre formátovanie
                         onChange: handlePostalCodeChange,
-                        // Nový placeholder, ktorý zobrazí buď existujúcu formátovanú hodnotu alebo inštrukciu
+                        // Ak PSČ neexistuje, zobrazí sa pomlčka
                         placeholder: userProfileData.postalCode
                             ? formatPostalCodeDisplay(userProfileData.postalCode)
-                            : 'Zadajte hodnotu vo formáte: XXX XX',
+                            : '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -331,7 +331,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     id: 'country',
                     value: country,
                     onChange: (e) => setCountry(e.target.value),
-                    placeholder: userProfileData.country || '',
+                    placeholder: userProfileData.country || '-',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
                 })
@@ -353,7 +353,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'ico',
                         value: ico,
                         onChange: (e) => setIco(e.target.value.replace(/[^0-9]/g, '')),
-                        placeholder: userProfileData.billing?.ico || '',
+                        placeholder: userProfileData.billing?.ico || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -372,7 +372,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'dic',
                         value: dic,
                         onChange: (e) => setDic(e.target.value.replace(/[^0-9]/g, '')),
-                        placeholder: userProfileData.billing?.dic || '',
+                        placeholder: userProfileData.billing?.dic || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -391,7 +391,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         id: 'icdph',
                         value: icdph,
                         onChange: handleIcdphChange,
-                        placeholder: userProfileData.billing?.icdph || 'SK1234567890',
+                        placeholder: userProfileData.billing?.icdph || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
@@ -408,7 +408,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         disabled: !isButtonEnabled || loading,
                         style: buttonStyle
                     },
-                    loading ? 'Ukladám...' : 'Uložiť zmeny'
+                    loading ? 'Ukladam...' : 'Uložiť zmeny'
                 )
             )
         )
