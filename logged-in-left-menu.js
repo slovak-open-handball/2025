@@ -1,47 +1,75 @@
 // logged-in-left-menu.js
 // Tento súbor spravuje logiku pre ľavé menu, vrátane jeho rozbalenia/zbalenia
 // a obsluhy udalostí pri kliknutí a prechode myšou.
+// Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
+
+// Importy pre potrebné Firebase funkcie
+import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia, ktorá sa spustí po načítaní HTML obsahu menu
-const setupMenuListeners = () => {
+const setupMenuListeners = (userProfileData) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .group-hover\\:opacity-100');
-    const menuIcon = menuToggleButton.querySelector('svg');
 
-    if (leftMenu && menuToggleButton && menuTexts.length > 0 && menuIcon) {
-        let isMenuToggled = false;
-
-        // Funkcia pre prepínanie tried, ktorá zmení šírku menu
-        const toggleMenu = () => {
-            isMenuToggled = !isMenuToggled;
-            console.log(`left-menu.js: Prepínam menu. Stav: ${isMenuToggled}`);
-            if (isMenuToggled) {
-                leftMenu.classList.remove('w-16', 'hover:w-64', 'group');
-                leftMenu.classList.add('w-64', 'is-toggled');
-                // Zabezpečíme viditeľnosť textov po kliknutí
-                menuTexts.forEach(text => {
-                    text.classList.remove('opacity-0');
-                    text.classList.add('opacity-100');
-                });
-            } else {
-                leftMenu.classList.remove('w-64', 'is-toggled');
-                leftMenu.classList.add('w-16', 'hover:w-64', 'group');
-                // Skryjeme texty, aby sa zobrazovali len pri hoveri
-                menuTexts.forEach(text => {
-                    text.classList.remove('opacity-100');
-                    text.classList.add('opacity-0');
-                });
-            }
-        };
-
-        // Event listener pre kliknutie na tlačidlo
-        menuToggleButton.addEventListener('click', toggleMenu);
-
-        console.log("left-menu.js: Listener pre tlačidlo prepínania menu bol pridaný.");
-    } else {
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button alebo textové elementy po vložení HTML.");
+        return;
     }
+
+    const userId = userProfileData.id;
+    const db = window.db;
+
+    // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
+    let isMenuToggled = userProfileData?.uiSettings?.isMenuToggled || false;
+    
+    // Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
+    const applyMenuState = () => {
+        if (isMenuToggled) {
+            leftMenu.classList.remove('w-16', 'hover:w-64', 'group');
+            leftMenu.classList.add('w-64', 'is-toggled');
+            menuTexts.forEach(text => {
+                text.classList.remove('opacity-0');
+                text.classList.add('opacity-100');
+            });
+        } else {
+            leftMenu.classList.remove('w-64', 'is-toggled');
+            leftMenu.classList.add('w-16', 'hover:w-64', 'group');
+            menuTexts.forEach(text => {
+                text.classList.remove('opacity-100');
+                text.classList.add('opacity-0');
+            });
+        }
+    };
+
+    // Aplikujeme počiatočný stav menu hneď po načítaní
+    applyMenuState();
+
+    // Asynchrónna funkcia pre prepínanie a ukladanie stavu menu
+    const toggleMenu = async () => {
+        isMenuToggled = !isMenuToggled;
+        console.log(`left-menu.js: Prepínam menu. Stav: ${isMenuToggled}`);
+        
+        applyMenuState(); // Aplikujeme nový stav
+
+        // Uložíme nový stav do Firestore
+        try {
+            if (db && userId) {
+                const userDocRef = doc(db, 'users', userId);
+                await updateDoc(userDocRef, {
+                    'uiSettings.isMenuToggled': isMenuToggled
+                });
+                console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
+            }
+        } catch (error) {
+            console.error("left-menu.js: Chyba pri ukladaní stavu menu do databázy:", error);
+        }
+    };
+
+    // Event listener pre kliknutie na tlačidlo
+    menuToggleButton.addEventListener('click', toggleMenu);
+
+    console.log("left-menu.js: Listener pre tlačidlo prepínania menu bol pridaný.");
 }
 
 // Hlavná funkcia na načítanie menu
@@ -67,7 +95,7 @@ window.loadLeftMenu = async (userProfileData) => {
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // Po úspešnom vložení HTML hneď nastavíme poslucháčov
-            setupMenuListeners();
+            setupMenuListeners(userProfileData); // Teraz odovzdávame dáta
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) {
                 leftMenuElement.classList.remove('hidden');
