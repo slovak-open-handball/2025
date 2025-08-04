@@ -79,8 +79,11 @@ export const PasswordInput = ({ id, label, value, onChange, placeholder, showPas
 const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor }) => {
     const [filter, setFilter] = useState('');
     const modalRef = useRef(null);
+    
+    // Vytvorenie kópie a zoradenie podľa názvu krajiny predtým, než sa zoznam prefiltruje
+    const sortedCodes = [...countryDialCodes].sort((a, b) => a.name.localeCompare(b.name, 'sk', { sensitivity: 'base' }));
 
-    const filteredCodes = countryDialCodes.filter(c =>
+    const filteredCodes = sortedCodes.filter(c =>
         (c.name && c.name.toLowerCase().includes(filter.toLowerCase())) ||
         (c.dialCode && c.dialCode.toLowerCase().includes(filter.toLowerCase()))
     );
