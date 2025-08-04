@@ -111,8 +111,32 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     );
 
     const fullName = `${localProfileData.firstName || ''} ${localProfileData.lastName || ''}`.trim();
-    // Získanie telefónneho čísla z kľúča contactPhoneNumber
-    const phoneNumber = localProfileData.contactPhoneNumber || '';
+
+    // Funkcia na formátovanie telefónneho čísla
+    const formatPhoneNumber = (number) => {
+        // Skúsime nájsť najdlhšiu zhodu s predvoľbou
+        const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+        let dialCode = '';
+        let restOfNumber = number;
+
+        for (const country of sortedDialCodes) {
+            if (number.startsWith(country.dialCode)) {
+                dialCode = country.dialCode;
+                restOfNumber = number.substring(dialCode.length).trim();
+                break;
+            }
+        }
+
+        // Formátovanie zvyšnej časti čísla do skupín po troch
+        const formattedNumber = restOfNumber.replace(/(\d{3})/g, '$1 ').trim();
+        return `${dialCode} ${formattedNumber}`.trim();
+    };
+
+    const phoneNumber = localProfileData.contactPhoneNumber ? formatPhoneNumber(localProfileData.contactPhoneNumber) : '';
+
+
+    // Formátovanie adresy
+    const formattedAddress = `${localProfileData.street} ${localProfileData.houseNumber}, ${localProfileData.postalCode?.replace(/(\d{3})(\d{2})/, '$1 $2')} ${localProfileData.city}, ${localProfileData.country}`;
 
     return React.createElement(
         'div',
@@ -167,8 +191,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 [
                     // Upravené pre získanie údajov z billing objektu
                     React.createElement(DataRow, { key: 'clubName', label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
-                    React.createElement(DataRow, { key: 'address', label: 'Adresa', value: `${localProfileData.street} ${localProfileData.houseNumber}, ${localProfileData.city}, ${localProfileData.postalCode}` }),
-                    React.createElement(DataRow, { key: 'country', label: 'Krajina', value: localProfileData.country }),
+                    React.createElement(DataRow, { key: 'address', label: 'Adresa', value: formattedAddress }),
                     React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.billing?.ico }),
                     React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.billing?.dic }),
                     React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.billing?.icdph }),
