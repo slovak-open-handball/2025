@@ -100,7 +100,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     // Komponent pre zobrazenie jedného riadku údajov
     const DataRow = ({ label, value }) => {
-        const displayValue = value || 'Nezadané';
+        const displayValue = value || '-';
         const valueColorClass = value ? 'text-gray-800' : 'text-gray-400';
         return React.createElement(
             'div',
@@ -128,7 +128,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     // Spojenie adresných údajov do jedného reťazca
     const formattedAddress = localProfileData.street && localProfileData.houseNumber && localProfileData.postalCode && localProfileData.city && localProfileData.country ?
         `${localProfileData.street} ${localProfileData.houseNumber}, ${formatPostalCode(localProfileData.postalCode)} ${localProfileData.city}, ${localProfileData.country}` :
-        'Nezadané';
+        '-';
 
     /**
      * Funkcia na formátovanie telefónneho čísla.
@@ -136,7 +136,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
      */
     const formatPhoneNumber = (phoneNumber) => {
         if (!phoneNumber) {
-            return 'Nezadané';
+            return '-';
         }
 
         // Odstránime medzery a pomlčky pre jednoduchšie spracovanie
