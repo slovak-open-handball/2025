@@ -113,17 +113,36 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 )
             )
         ),
+        // Zmena rozloženia údajov
         React.createElement(
             'div',
-            { className: 'space-y-4 text-lg' },
-            React.createElement('p', null, React.createElement('strong', null, 'Meno:'), ' ', userProfileData.firstName),
-            React.createElement('p', null, React.createElement('strong', null, 'Priezvisko:'), ' ', userProfileData.lastName),
-            React.createElement('p', null, React.createElement('strong', null, 'Email:'), ' ', userProfileData.email),
-            React.createElement('p', null, React.createElement('strong', null, 'Telefón:'), ' ', userProfileData.contactPhoneNumber),
+            { className: 'space-y-6 text-lg' },
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Meno:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.firstName)
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Priezvisko:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.lastName)
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Email:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.email)
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Telefón:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.contactPhoneNumber)
+            ),
             userProfileData.role === 'referee' &&
-            React.createElement('p', null, React.createElement('strong', null, 'Licencia Rozhodcu:'), ' ', userProfileData.refereeLicense),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Licencia Rozhodcu:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.refereeLicense)
+            ),
             userProfileData.club && userProfileData.club !== '' &&
-            React.createElement('p', null, React.createElement('strong', null, 'Klub:'), ' ', userProfileData.club)
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Klub:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.club)
+            )
         )
     );
 
@@ -149,17 +168,42 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 )
             )
         ),
+        // Zmena rozloženia údajov
         React.createElement(
             'div',
-            { className: 'space-y-4 text-gray-700 text-lg' },
-            React.createElement('p', null, React.createElement('strong', null, 'Názov klubu:'), ' ', userProfileData.billing?.clubName || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'Adresa:'), ' ', userProfileData.billing?.street || '-', ' ', userProfileData.billing?.houseNumber || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'Mesto:'), ' ', userProfileData.billing?.city || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'PSČ:'), ' ', userProfileData.billing?.postalCode || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'Krajina:'), ' ', userProfileData.billing?.country || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'IČO:'), ' ', userProfileData.billing?.ico || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'DIČ:'), ' ', userProfileData.billing?.dic || '-'),
-            React.createElement('p', null, React.createElement('strong', null, 'IČ DPH:'), ' ', userProfileData.billing?.icdph || '-')
+            { className: 'space-y-6 text-gray-700 text-lg' },
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Názov klubu:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.clubName || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Adresa:'),
+                React.createElement('div', { className: 'font-medium' }, `${userProfileData.billing?.street || '-'} ${userProfileData.billing?.houseNumber || '-'}`)
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Mesto:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.city || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'PSČ:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.postalCode || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'Krajina:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.country || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'IČO:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.ico || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'DIČ:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.dic || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'text-sm font-semibold text-gray-500' }, 'IČ DPH:'),
+                React.createElement('div', { className: 'font-medium' }, userProfileData.billing?.icdph || '-')
+            )
         )
     );
 
