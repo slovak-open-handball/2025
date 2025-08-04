@@ -102,6 +102,13 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         );
     };
 
+    const PencilIcon = () => (
+        React.createElement('svg', { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "currentColor", className: "w-4 h-4 mr-2" },
+            React.createElement("path", { d: "M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32l8.4-8.4z" }),
+            React.createElement("path", { d: "M5.25 5.25a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V13.5a.75.75 0 00-1.5 0v5.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5h5.25a.75.75 0 000-1.5H5.25z" })
+        )
+    );
+
     return React.createElement(
         'div',
         { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:pt-16' },
@@ -112,7 +119,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl' },
-                React.createElement('h4', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Moje údaje'),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between items-center mb-6' },
+                    React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, 'Moje údaje'),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowChangeProfileModal(true),
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            style: { backgroundColor: roleColor }
+                        },
+                        React.createElement(PencilIcon),
+                        'Upraviť'
+                    )
+                ),
                 React.createElement(DataRow, { label: 'Meno a Priezvisko', value: localProfileData.displayName }),
                 React.createElement(DataRow, { label: 'Email', value: localProfileData.email }),
                 React.createElement(DataRow, { label: 'Telefónne číslo', value: `${localProfileData.dialCode} ${localProfileData.phoneNumber}` }),
@@ -123,7 +144,21 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl mt-8 lg:mt-0' },
-                React.createElement('h4', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Fakturačné údaje'),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between items-center mb-6' },
+                    React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, 'Fakturačné údaje'),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowChangeBillingModal(true),
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            style: { backgroundColor: roleColor }
+                        },
+                        React.createElement(PencilIcon),
+                        'Upraviť'
+                    )
+                ),
                 billingInfoExists ?
                 [
                     React.createElement(DataRow, { key: 'companyName', label: 'Názov spoločnosti', value: localProfileData.companyName }),
@@ -135,29 +170,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 ]
                 :
                 React.createElement('p', { className: 'text-lg text-gray-500' }, 'Fakturačné údaje neboli zadané.')
-            )
-        ),
-        // Tlačidlá pre akcie
-        React.createElement(
-            'div',
-            { className: 'mt-12 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4' },
-            React.createElement(
-                'button',
-                {
-                    onClick: () => setShowChangeProfileModal(true),
-                    className: `px-8 py-3 rounded-full font-bold text-lg text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
-                    style: { backgroundColor: roleColor }
-                },
-                'Upraviť profil'
-            ),
-            React.createElement(
-                'button',
-                {
-                    onClick: () => setShowChangeBillingModal(true),
-                    className: `px-8 py-3 rounded-full font-bold text-lg text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
-                    style: { backgroundColor: roleColor }
-                },
-                'Upraviť fakturačné údaje'
             )
         ),
 
