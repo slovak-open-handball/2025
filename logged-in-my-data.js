@@ -1,7 +1,6 @@
-// Importy pre Firebase funkcie
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -11,12 +10,6 @@ import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js"
 import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
 
 const { useState, useEffect, useRef } = React;
-
-// Deklarácia premenných pre Firebase v globálnom rozsahu, ale bez inicializácie
-let app;
-let auth;
-let db;
-let isFirebaseInitialized = false;
 
 /**
  * Globálna funkcia pre zobrazenie notifikácií
@@ -357,6 +350,9 @@ const MyDataApp = ({ userProfileData }) => {
     );
 };
 
+// Premenná na sledovanie, či bol poslucháč už nastavený
+let isEmailSyncListenerSetup = false;
+
 /**
  * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
  * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
@@ -366,36 +362,27 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        if (!isFirebaseInitialized) {
-            console.log("Inicializácia Firebase a nastavenie poslucháčov...");
-            const firebaseConfig = window.__firebase_config ? JSON.parse(window.__firebase_config) : {};
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            isFirebaseInitialized = true;
-
-            /**
-             * Listener pre zmeny v autentifikácii používateľa.
-             * Porovnáva e-mail z Firebase Auth s e-mailom vo Firestore.
-             * Ak sa líšia, automaticky ho aktualizuje vo Firestore a vytvorí notifikáciu.
-             */
-            onAuthStateChanged(auth, async (user) => {
+        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {
+            console.log("logged-in-my-data.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+            
+            onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
-                        const userProfileRef = doc(db, 'users', user.uid);
+                        const userProfileRef = doc(window.db, 'users', user.uid);
                         const docSnap = await getDoc(userProfileRef);
             
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`MyDataApp.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+                                console.log(`logged-in-my-data.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
                                 
                                 await updateDoc(userProfileRef, {
                                     email: user.email
                                 });
             
                                 // Vytvorenie notifikácie v databáze
-                                const notificationsCollectionRef = collection(db, 'notifications');
+                                const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
                                     userId: user.uid,
                                     message: `E-mailová adresa bola automaticky aktualizovaná z ${firestoreEmail} na ${user.email}.`,
@@ -404,41 +391,42 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'info');
-                                console.log("MyDataApp.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
+                                console.log("logged-in-my-data.js: E-mail vo Firestore bol úspešne aktualizovaný a notifikácia vytvorená.");
             
                             } else {
-                                console.log("MyDataApp.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                                console.log("logged-in-my-data.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
                         }
                     } catch (error) {
-                        console.error("MyDataApp.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
+                        console.error("logged-in-my-data.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
             });
+            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
         }
-    
+
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log("MyDataApp.js: Aplikácia bola úspešne vykreslená po udalosti 'globalDataUpdated'.");
+            console.log("logged-in-my-data.js: Aplikácia bola úspešne vykreslená po udalosti 'globalDataUpdated'.");
         } else {
-            console.error("MyDataApp.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+            console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        console.error("MyDataApp.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
+        console.error("logged-in-my-data.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'.");
     }
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("MyDataApp.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+console.log("logged-in-my-data.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
-console.log("MyDataApp.js: Kontrolujem, či existujú globálne dáta.");
+console.log("logged-in-my-data.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("MyDataApp.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    console.log("logged-in-my-data.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
