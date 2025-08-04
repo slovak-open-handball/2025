@@ -58,9 +58,6 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     // Kontrola, či sa zmenil formulár
     const isFormChanged = () => {
         // Porovnávame aktuálne hodnoty v stave s pôvodnými hodnotami v ref.
-        // Ak sa hodnota v stave zmenila a je prázdna, alebo je iná ako pôvodná, považujeme to za zmenu.
-        // Ak sa hodnota v stave nezmenila, ale pôvodná hodnota bola prázdna, taktiež to nie je zmena
-        // ak sú obe prazdne.
         return (
             (clubName !== originalDataRef.current.clubName) ||
             (street !== originalDataRef.current.street) ||
@@ -93,6 +90,13 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
              return;
         }
 
+        // Validácia IČ DPH pred odoslaním
+        if (icdph && !/^[A-Z]{2}\d+$/.test(icdph)) {
+            setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
+            setLoading(false);
+            return;
+        }
+        
         try {
             const updatedData = {
                 // Použijeme pôvodné hodnoty z ref, ak používateľ nič nezmenil,
@@ -153,7 +157,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
     const ModalContent = React.createElement(
         'div',
-        { className: 'p-6 h-full overflow-y-auto' }, // Pridaná trieda 'h-full' a 'overflow-y-auto'
+        { className: 'p-6 h-full overflow-y-auto' },
         error && React.createElement(
             'div',
             { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
@@ -164,7 +168,6 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             {
                 onSubmit: handleUpdateBilling
             },
-            // Zmenený popisok a placeholder pre Názov spoločnosti
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -297,7 +300,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'ico',
                         value: ico,
-                        onChange: (e) => setIco(e.target.value),
+                        // Validácia: iba číslice
+                        onChange: (e) => setIco(e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.ico || '',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -316,7 +320,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'dic',
                         value: dic,
-                        onChange: (e) => setDic(e.target.value),
+                        // Validácia: iba číslice
+                        onChange: (e) => setDic(e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.dic || '',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -336,7 +341,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'icdph',
                     value: icdph,
-                    onChange: (e) => setIcdph(e.target.value),
+                    // Validácia: povolené len veľké písmená a číslice, prevedené na veľké písmená
+                    onChange: (e) => setIcdph(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')),
                     placeholder: userProfileData.billing?.icdph || '',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
