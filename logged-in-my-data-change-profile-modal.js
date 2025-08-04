@@ -752,10 +752,21 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 'div',
                 { className: 'mb-4' },
                 React.createElement(
-                    'label',
-                    { className: `block text-sm font-bold mb-2 ${isEmailValid ? 'text-gray-700' : 'text-red-500'}`, htmlFor: 'email' },
-                    isEmailValid ? 'E-mailová adresa' : 'E-mailová adresa (chybný formát)'
-                ),
+                  'label',
+                  { className: `block text-sm font-bold mb-2 text-gray-700`, htmlFor: 'email' },
+                  React.createElement(
+                    'span',
+                    null,
+                    'E-mailová adresa'
+                  ),
+                  !isEmailValid && (
+                    React.createElement(
+                      'span',
+                      { className: 'text-red-500' },
+                      ' (chybný formát)'
+                    )
+                  )
+                )
                 React.createElement('input', {
                     type: 'email',
                     id: 'email',
