@@ -86,7 +86,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     return (
         <div className="flex flex-col md:flex-row gap-8">
-            {/* Sekcia Ľavý stĺpec - Profilové informácie */}
             <div className={`flex-1 rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] ${roleColor} text-white`}>
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-3xl font-bold tracking-tight">Môj Profil</h2>
