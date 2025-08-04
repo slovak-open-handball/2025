@@ -521,12 +521,14 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
         }
 
-        // Upravená logika pre telefónne číslo: Zaznamená zmenu aj v prípade, že sa zmenila len predvoľba.
-        const currentPhoneNumberWithoutDialCode = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
-        const fullPhoneNumber = selectedDialCode + currentPhoneNumberWithoutDialCode;
-        if (fullPhoneNumber !== originalData.current.contactPhoneNumber) {
-            updatedData.contactPhoneNumber = fullPhoneNumber;
-            changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
+        // Logika pre telefónne číslo platí len pre ne-adminov
+        if (userProfileData.role !== 'admin') {
+            const currentPhoneNumberWithoutDialCode = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
+            const fullPhoneNumber = selectedDialCode + currentPhoneNumberWithoutDialCode;
+            if (fullPhoneNumber !== originalData.current.contactPhoneNumber) {
+                updatedData.contactPhoneNumber = fullPhoneNumber;
+                changes.push(`Zmena telefónneho čísla: z '${originalData.current.contactPhoneNumber}' na '${fullPhoneNumber}'`);
+            }
         }
 
         if (Object.keys(updatedData).length > 0) {
