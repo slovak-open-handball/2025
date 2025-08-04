@@ -94,6 +94,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     // Spojenie krstného mena a priezviska do jedného reťazca pre zobrazenie
     const fullName = `${localProfileData.firstName || ''} ${localProfileData.lastName || ''}`.trim();
 
+    // Nová logika pre dynamický nadpis na základe roly
+    const profileTitle = localProfileData.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
+
 
     // Komponent pre zobrazenie jedného riadku údajov
     const DataRow = ({ label, value }) => {
@@ -177,7 +180,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between p-4 rounded-t-xl', style: { backgroundColor: roleColor } },
-                    React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Moje údaje'),
+                    // Dynamický nadpis pre sekciu Moje údaje
+                    React.createElement('h2', { className: 'text-2xl font-bold text-white' }, profileTitle),
                     // Tlačidlo na úpravu profilu
                     React.createElement(
                         'button',
