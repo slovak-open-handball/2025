@@ -214,7 +214,7 @@ const handleLogout = async () => {
             unsubscribeFromNotifications = null;
             console.log("header.js: Listener notifikácií zrušený.");
         }
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
     } catch (error) {
         console.error("header.js: Chyba pri odhlásení:", error);
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
