@@ -80,6 +80,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     // Načítanie dátumu uzávierky úprav z databázy pomocou onSnapshot pre real-time aktualizácie
     useEffect(() => {
+        // Ak je používateľ admin, povolia sa úpravy okamžite a ignoruje sa uzávierka
+        if (userProfileData.role === 'admin') {
+            setIsEditingAllowed(true);
+            return;
+        }
+
         const settingsDocRef = doc(db, 'settings', 'registration');
         const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
             if (settingsSnap.exists()) {
@@ -104,7 +110,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
         // Vrátime funkciu na odhlásenie odberu, aby sa listener správne vyčistil
         return () => unsubscribe();
-    }, [db]);
+    }, [db, userProfileData.role]); // Pridáme db a userProfileData.role do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
