@@ -782,7 +782,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                   boxShadow: 'none',
                 },
               })
-            )           
+            ),           
 
             // Polia pre zmenu hesla (už nie sú podmienene)
             React.createElement('hr', { className: 'my-6' }),
