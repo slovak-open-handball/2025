@@ -55,15 +55,19 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal }) => {
-    const roleColors = {
-        'admin': 'bg-red-500',
-        'super-admin': 'bg-red-700',
-        'referee': 'bg-orange-500',
-        'athlete': 'bg-green-500',
-        'coach': 'bg-blue-500',
-        'hall': 'bg-purple-500',
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff';
+            case 'hall':
+                return '#b06835';
+            case 'user':
+                return '#9333EA';
+            default:
+                return '#1D4ED8';
+        }
     };
-    const roleColor = roleColors[userProfileData?.role] || 'bg-gray-500';
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     const getFullRoleName = (role) => {
         switch (role) {
@@ -86,7 +90,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     const profileContent = React.createElement(
         'div',
-        { className: `flex-1 rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] ${roleColor} text-white` },
+        { className: `flex-1 rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] text-white`, style: { backgroundColor: roleColor } },
         React.createElement(
             'div',
             { className: 'flex items-center justify-between mb-6' },
@@ -162,7 +166,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col gap-8' }, // Zmenené z 'flex flex-col md:flex-row' na 'flex flex-col'
+        { className: 'flex flex-col gap-8' },
         profileContent,
         billingContent
     );
@@ -181,15 +185,19 @@ const MyDataApp = ({ userProfileData }) => {
         }
     }, [userProfileData]);
 
-    const roleColors = {
-        'admin': 'bg-red-500',
-        'super-admin': 'bg-red-700',
-        'referee': 'bg-orange-500',
-        'athlete': 'bg-green-500',
-        'coach': 'bg-blue-500',
-        'hall': 'bg-purple-500',
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'admin':
+                return '#47b3ff';
+            case 'hall':
+                return '#b06835';
+            case 'user':
+                return '#9333EA';
+            default:
+                return '#1D4ED8';
+        }
     };
-    const roleColor = roleColors[userProfileData?.role] || 'bg-gray-500';
+    const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
 
     return React.createElement(
         'div',
