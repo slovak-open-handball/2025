@@ -3,6 +3,7 @@
 // a obsluhy udalostí pri kliknutí a prechode myšou.
 
 window.loadLeftMenu = async () => {
+    console.log("left-menu.js: Spúšťam funkciu loadLeftMenu.");
     try {
         const menuPlaceholder = document.getElementById('left-menu-placeholder');
         if (!menuPlaceholder) {
@@ -10,12 +11,14 @@ window.loadLeftMenu = async () => {
             return;
         }
 
+        console.log("left-menu.js: Placeholder pre menu bol nájdený.");
         const response = await fetch('logged-in-left-menu.html');
         if (!response.ok) {
-            throw new Error('Chyba pri načítaní logged-in-left-menu.html');
+            throw new Error(`Chyba pri načítaní logged-in-left-menu.html: ${response.status} ${response.statusText}`);
         }
         const menuHtml = await response.text();
         menuPlaceholder.innerHTML = menuHtml;
+        console.log("left-menu.js: Obsah menu bol úspešne vložený do placeholderu.");
 
         const leftMenu = document.getElementById('left-menu');
         const menuToggleButton = document.getElementById('menu-toggle-button');
@@ -26,6 +29,7 @@ window.loadLeftMenu = async () => {
             // Funkcia pre prepínanie tried, ktorá zmení šírku menu
             const toggleMenu = () => {
                 isMenuToggled = !isMenuToggled;
+                console.log(`left-menu.js: Prepínam menu. Stav: ${isMenuToggled}`);
                 if (isMenuToggled) {
                     leftMenu.classList.remove('w-16', 'hover:w-64', 'group');
                     leftMenu.classList.add('w-64');
@@ -39,6 +43,8 @@ window.loadLeftMenu = async () => {
             menuToggleButton.addEventListener('click', toggleMenu);
 
             console.log("left-menu.js: Listener pre tlačidlo prepínania menu bol pridaný.");
+        } else {
+            console.error("left-menu.js: Nepodarilo sa nájsť #left-menu alebo #menu-toggle-button po vložení HTML.");
         }
     } catch (error) {
         console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
