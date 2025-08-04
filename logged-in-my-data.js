@@ -125,7 +125,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'flex items-center justify-between mb-4' },
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Môj profil'),
+                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Moje údaje'),
                 // Tlačidlo na úpravu profilu
                 React.createElement(
                     'button',
@@ -143,7 +143,6 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
                 // Upravený riadok pre meno a priezvisko
                 React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
-                React.createElement(DataRow, { label: 'Rola', value: localProfileData.role }),
                 React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
                 // Podmienka na zobrazenie telefónneho čísla
                 localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.phone })
