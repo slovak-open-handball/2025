@@ -127,6 +127,42 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         `${localProfileData.street} ${localProfileData.houseNumber}, ${formatPostalCode(localProfileData.postalCode)} ${localProfileData.city}, ${localProfileData.country}` :
         'Nezadané';
 
+    /**
+     * Funkcia na formátovanie telefónneho čísla.
+     * Nájdeme predvoľbu a zvyšok čísla rozdelíme do skupín po troch čísliciach.
+     */
+    const formatPhoneNumber = (phoneNumber) => {
+        if (!phoneNumber) {
+            return 'Nezadané';
+        }
+
+        // Odstránime medzery a pomlčky pre jednoduchšie spracovanie
+        const cleanNumber = phoneNumber.replace(/[\s-]/g, '');
+
+        // Získame a zoradíme predvoľby zostupne podľa dĺžky, aby sme našli najdlhšiu možnú zhodu
+        const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
+
+        // Hľadáme zhodu predvoľby v čísle
+        let dialCodeMatch = null;
+        for (const country of sortedDialCodes) {
+            if (cleanNumber.startsWith(country.dialCode)) {
+                dialCodeMatch = country.dialCode;
+                break;
+            }
+        }
+
+        if (dialCodeMatch) {
+            const numberWithoutDialCode = cleanNumber.substring(dialCodeMatch.length);
+            // Rozdelíme zvyšok čísla do skupín po troch čísliciach
+            const formattedRest = numberWithoutDialCode.match(/.{1,3}/g)?.join(' ') || '';
+            return `${dialCodeMatch} ${formattedRest}`;
+        }
+
+        // Ak sa predvoľba nenájde, formátujeme celé číslo po troch čísliciach
+        return cleanNumber.match(/.{1,3}/g)?.join(' ') || cleanNumber;
+    };
+
+
     return React.createElement(
         'div',
         { className: 'flex justify-center p-4' },
@@ -160,7 +196,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
                     React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
                     // Podmienka na zobrazenie telefónneho čísla
-                    localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.contactPhoneNumber })
+                    localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: formatPhoneNumber(localProfileData.contactPhoneNumber) })
                 )
             ),
             
