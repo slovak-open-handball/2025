@@ -110,7 +110,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     );
 
     const fullName = `${localProfileData.firstName || ''} ${localProfileData.lastName || ''}`.trim();
-    const phoneNumber = (localProfileData.dialCode && localProfileData.phoneNumber) ? `${localProfileData.dialCode} ${localProfileData.phoneNumber}` : '';
+    // Upravené pre získanie telefónneho čísla z kľúča contactPhoneNumber
+    const phoneNumber = localProfileData.contactPhoneNumber || '';
 
     return React.createElement(
         'div',
@@ -139,6 +140,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 ),
                 React.createElement(DataRow, { label: 'Meno a Priezvisko', value: fullName }),
                 React.createElement(DataRow, { label: 'Email', value: localProfileData.email }),
+                // Upravené pre získanie telefónneho čísla z kľúča contactPhoneNumber
                 React.createElement(DataRow, { label: 'Telefónne číslo', value: phoneNumber }),
                 React.createElement(DataRow, { label: 'Rola', value: localProfileData.role }),
                 React.createElement(DataRow, { label: 'Status', value: localProfileData.status })
