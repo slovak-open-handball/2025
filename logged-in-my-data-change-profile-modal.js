@@ -618,7 +618,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                                     borderColor: roleColor,
                                     borderRight: 'none',
                                     borderRadius: '0.5rem 0 0 0.5rem', // Použijeme Tailwind triedy
-                                    width: '80px'
+                                    width: '80px' // Zmenšená šírka tlačidla
                                 }
                             },
                             React.createElement('span', { className: 'text-sm' }, selectedDialCode),
@@ -797,7 +797,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden' },
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden overflow-x-auto' },
             ModalHeader,
             ModalContent
         )
