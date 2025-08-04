@@ -627,14 +627,20 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                             )
                         )
                     ),
-                    // Zvyšok telefónneho čísla
+                    // Zvyšok telefónneho čísla s novou logikou pre formátovanie
                     React.createElement(
                         'input',
                         {
                             type: 'text',
                             id: 'phoneNumber',
                             value: phoneNumber,
-                            onChange: (e) => setPhoneNumber(e.target.value),
+                            onChange: (e) => {
+                                // Odstránime všetky znaky, ktoré nie sú číslice
+                                const cleanedValue = e.target.value.replace(/[^\d]/g, '');
+                                // Formátujeme číslo pridaním medzier po troch čísliciach
+                                const formattedValue = cleanedValue.match(/.{1,3}/g)?.join(' ') || '';
+                                setPhoneNumber(formattedValue);
+                            },
                             placeholder: formatPhoneNumberForInput(originalData.current.phoneNumberWithoutDialCode), // Hodnota ako placeholder
                             className: 'focus:outline-none shadow appearance-none border rounded-r-lg w-full py-2 px-3 text-gray-700 leading-tight',
                             style: {
