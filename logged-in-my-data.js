@@ -172,18 +172,18 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Sekcia s hlavnými údajmi o profile
             React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6 mb-6' },
+                { className: 'bg-white rounded-b-xl shadow-md overflow-hidden mb-6' },
                 // Header bloku Moje údaje
                 React.createElement(
                     'div',
-                    { className: 'flex items-center justify-between mb-4 -mx-6 -mt-6 rounded-t-xl p-4', style: { backgroundColor: roleColor } },
+                    { className: 'flex items-center justify-between p-4 rounded-t-xl', style: { backgroundColor: roleColor } },
                     React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Moje údaje'),
                     // Tlačidlo na úpravu profilu
                     React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeProfileModal(true),
-                            className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
+                            className: 'flex items-center text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
                             style: { backgroundColor: 'white', color: roleColor }
                         },
                         React.createElement(PencilIcon, { color: roleColor }),
@@ -192,7 +192,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 ),
                 React.createElement(
                     'div',
-                    { className: 'mt-6 grid grid-cols-1 md:grid-cols-2 gap-4' },
+                    { className: 'p-6 grid grid-cols-1 md:grid-cols-2 gap-4' },
                     // Upravený riadok pre meno a priezvisko
                     React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
                     React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
@@ -204,17 +204,17 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Podmienka na zobrazenie sekcie s fakturačnými údajmi
             !hideBillingSection && React.createElement(
                 'div',
-                { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6' },
+                { className: 'bg-white rounded-b-xl shadow-md overflow-hidden' },
                 // Header bloku Fakturačné údaje
                 React.createElement(
                     'div',
-                    { className: 'flex items-center justify-between mb-4 -mx-6 -mt-6 rounded-t-xl p-4', style: { backgroundColor: roleColor } },
+                    { className: 'flex items-center justify-between p-4 rounded-t-xl', style: { backgroundColor: roleColor } },
                     React.createElement('h2', { className: 'text-2xl font-bold text-white' }, 'Fakturačné údaje'),
                     React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeBillingModal(true),
-                            className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
+                            className: 'flex items-center text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
                             style: { backgroundColor: 'white', color: roleColor }
                         },
                         React.createElement(PencilIcon, { color: roleColor }),
@@ -223,7 +223,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 ),
                 React.createElement(
                     'div',
-                    { className: 'mt-6 grid grid-cols-1 md:grid-cols-2 gap-4' },
+                    { className: 'p-6 grid grid-cols-1 md:grid-cols-2 gap-4' },
                     React.createElement(DataRow, { label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
                     // Zobrazenie spojeného adresného riadku
                     React.createElement(DataRow, { label: 'Fakturačná adresa', value: formattedAddress }),
