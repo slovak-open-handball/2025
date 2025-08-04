@@ -117,69 +117,73 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     return React.createElement(
         'div',
-        null,
-        // Sekcia s hlavnými údajmi o profile
+        { className: 'flex justify-center p-4' },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6 mb-6' },
+            { className: 'w-full max-w-4xl' },
+            // Sekcia s hlavnými údajmi o profile
             React.createElement(
                 'div',
-                { className: 'flex items-center justify-between mb-4' },
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Moje údaje'),
-                // Tlačidlo na úpravu profilu
+                { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6 mb-6' },
                 React.createElement(
-                    'button',
-                    {
-                        onClick: () => setShowChangeProfileModal(true),
-                        className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
-                        style: { backgroundColor: roleColor }
-                    },
-                    React.createElement(PencilIcon),
-                    'Upraviť'
+                    'div',
+                    { className: 'flex items-center justify-between mb-4' },
+                    React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Moje údaje'),
+                    // Tlačidlo na úpravu profilu
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowChangeProfileModal(true),
+                            className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
+                            style: { backgroundColor: roleColor }
+                        },
+                        React.createElement(PencilIcon),
+                        'Upraviť'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                    // Upravený riadok pre meno a priezvisko
+                    React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
+                    React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
+                    // Podmienka na zobrazenie telefónneho čísla
+                    localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.contactPhoneNumber })
                 )
             ),
-            React.createElement(
+            
+            // Podmienka na zobrazenie sekcie s fakturačnými údajmi
+            !hideBillingSection && React.createElement(
                 'div',
-                { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                // Upravený riadok pre meno a priezvisko
-                React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
-                React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
-                // Podmienka na zobrazenie telefónneho čísla
-                localProfileData.role !== 'admin' && localProfileData.role !== 'hall' && React.createElement(DataRow, { label: 'Telefónne číslo', value: localProfileData.contactPhoneNumber })
-            )
-        ),
-        
-        // Podmienka na zobrazenie sekcie s fakturačnými údajmi
-        !hideBillingSection && React.createElement(
-            'div',
-            { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6' },
-            React.createElement(
-                'div',
-                { className: 'flex items-center justify-between mb-4' },
-                React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Fakturačné údaje'),
+                { className: 'bg-white rounded-xl shadow-md overflow-hidden p-6' },
                 React.createElement(
-                    'button',
-                    {
-                        onClick: () => setShowChangeBillingModal(true),
-                        className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
-                        style: { backgroundColor: roleColor }
-                    },
-                    React.createElement(PencilIcon),
-                    'Upraviť'
+                    'div',
+                    { className: 'flex items-center justify-between mb-4' },
+                    React.createElement('h2', { className: 'text-2xl font-bold text-gray-800' }, 'Fakturačné údaje'),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowChangeBillingModal(true),
+                            className: 'flex items-center text-sm font-semibold text-white px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 shadow-md',
+                            style: { backgroundColor: roleColor }
+                        },
+                        React.createElement(PencilIcon),
+                        'Upraviť'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                    React.createElement(DataRow, { label: 'Názov klubu', value: localProfileData.billing?.clubName }),
+                    React.createElement(DataRow, { label: 'Ulica', value: localProfileData.street }),
+                    React.createElement(DataRow, { label: 'Číslo domu', value: localProfileData.houseNumber }),
+                    React.createElement(DataRow, { label: 'Mesto', value: localProfileData.city }),
+                    React.createElement(DataRow, { label: 'PSČ', value: localProfileData.postalCode }),
+                    React.createElement(DataRow, { label: 'Krajina', value: localProfileData.country }),
+                    React.createElement(DataRow, { label: 'IČO', value: localProfileData.billing?.ico }),
+                    React.createElement(DataRow, { label: 'DIČ', value: localProfileData.billing?.dic }),
+                    React.createElement(DataRow, { label: 'IČ DPH', value: localProfileData.billing?.icdph })
                 )
-            ),
-            React.createElement(
-                'div',
-                { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                React.createElement(DataRow, { label: 'Názov klubu', value: localProfileData.billing?.clubName }),
-                React.createElement(DataRow, { label: 'Ulica', value: localProfileData.street }),
-                React.createElement(DataRow, { label: 'Číslo domu', value: localProfileData.houseNumber }),
-                React.createElement(DataRow, { label: 'Mesto', value: localProfileData.city }),
-                React.createElement(DataRow, { label: 'PSČ', value: localProfileData.postalCode }),
-                React.createElement(DataRow, { label: 'Krajina', value: localProfileData.country }),
-                React.createElement(DataRow, { label: 'IČO', value: localProfileData.billing?.ico }),
-                React.createElement(DataRow, { label: 'DIČ', value: localProfileData.billing?.dic }),
-                React.createElement(DataRow, { label: 'IČ DPH', value: localProfileData.billing?.icdph })
             )
         ),
         
