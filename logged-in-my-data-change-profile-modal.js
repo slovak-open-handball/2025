@@ -136,7 +136,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         className: 'mt-3 w-full px-3 py-2 border rounded-lg',
                         style: {
                             borderColor: roleColor,
-                            boxShadow: 'none',
+                            boxShadow: 'none'
                         }
                     })
                 ),
@@ -204,8 +204,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
 
     // Nový stav pre validáciu e-mailu v reálnom čase
     const [isEmailValid, setIsEmailValid] = useState(true);
-    // Nový stav pre validáciu hesla pri zmene e-mailu
-    const [isPasswordValid, setIsPasswordValid] = useState(false);
 
     const auth = getAuth();
     const user = auth.currentUser;
@@ -297,7 +295,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             setCurrentPassword('');
 
             setIsEmailValid(true);
-            setIsPasswordValid(false);
 
             // Nastavíme originálne dáta, ak sa zmenili
             originalData.current = {
@@ -320,38 +317,42 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             email !== originalData.current.email ||
             fullPhoneNumber !== originalData.current.contactPhoneNumber ||
             newPassword !== '' ||
-            retypePassword !== '' ||
-            currentPassword !== ''
+            retypePassword !== ''
         );
     };
 
-    // Kontrola, či sa zmenilo heslo a je platné
-    const isPasswordChangeValid = () => {
-        return (newPassword !== '' && newPassword === retypePassword && validatePassword(newPassword));
+    // Kontrola, či sa mení e-mail
+    const isEmailChanged = () => {
+        return email !== originalData.current.email;
     };
 
+    // Kontrola, či sa mení heslo
+    const isPasswordChanged = () => {
+        return newPassword !== '';
+    };
+    
     // Kontrola, či je tlačidlo Uložiť povolené
     const isSaveButtonEnabled = () => {
-        const isEmailChanged = email !== originalData.current.email;
-        const isPasswordChanged = newPassword !== '';
+        const emailChange = isEmailChanged();
+        const passwordChange = isPasswordChanged();
         
-        // Ak sa mení e-mail, heslo nesmie byť prázdne a musí byť validné
-        if (isEmailChanged) {
-             return isEmailValid && isPasswordValid && isFormChanged();
+        // Ak sa mení e-mail, musí byť zadané aktuálne heslo s minimálne 10 znakmi
+        if (emailChange) {
+            return isFormChanged() && isEmailValid && validatePassword(currentPassword);
         }
         
-        // Ak sa mení iba heslo, heslo musí byť platné a zadané dvakrát
-        if (isPasswordChanged) {
-            return isPasswordChangeValid() && currentPassword !== '' && isFormChanged();
+        // Ak sa mení iba heslo, nové heslá sa musia zhodovať, byť validné a musí byť zadané aktuálne heslo
+        if (passwordChange) {
+            return isFormChanged() && validatePassword(newPassword) && newPassword === retypePassword && validatePassword(currentPassword);
         }
         
-        // Ak sa menia iba iné údaje, stačí, že je formulár zmenený a e-mail validný
+        // Ak sa menia iba ostatné údaje, stačí, že sa niečo zmenilo a e-mail je platný
         return isFormChanged() && isEmailValid;
     };
     
     // Handler pre zmenu hesla
     const handlePasswordChange = async () => {
-        if (!isPasswordChangeValid()) {
+        if (!validatePassword(newPassword) || newPassword !== retypePassword) {
             window.showGlobalNotification('Nové heslá sa nezhodujú alebo nie sú dostatočne dlhé (min. 10 znakov).', 'error');
             return false;
         }
@@ -400,25 +401,17 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
     const handleSaveChanges = async () => {
         setLoading(true);
 
-        const isEmailChanged = email !== originalData.current.email;
-        const isPasswordChanged = newPassword !== '';
-
+        const emailChanged = isEmailChanged();
+        const passwordChanged = isPasswordChanged();
+        
         if (!isFormChanged()) {
             window.showGlobalNotification('Nič sa nezmenilo.', 'error');
             setLoading(false);
             onClose();
             return;
         }
-
-        // Zmeny profilu (meno, priezvisko, telefón)
+        
         let profileUpdateSuccess = true;
-        const updatedProfile = {
-            ...userProfileData,
-            firstName: firstName,
-            lastName: lastName,
-            contactPhoneNumber: selectedDialCode + phoneNumber.replace(/\s/g, '')
-        };
-
         if (firstName !== originalData.current.firstName ||
             lastName !== originalData.current.lastName ||
             (selectedDialCode + phoneNumber.replace(/\s/g, '')) !== originalData.current.contactPhoneNumber) {
@@ -441,13 +434,13 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         
         // Zmena hesla
         let passwordUpdateSuccess = true;
-        if (isPasswordChanged) {
+        if (passwordChanged) {
             passwordUpdateSuccess = await handlePasswordChange();
         }
 
         // Zmena e-mailu
         let emailUpdateSuccess = true;
-        if (isEmailChanged) {
+        if (emailChanged) {
             emailUpdateSuccess = await handleEmailChange();
         }
         
@@ -562,13 +555,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                     onChange: (e) => {
                         setEmail(e.target.value);
                         setIsEmailValid(validateEmail(e.target.value));
-                        // Kontrolujeme, či sa e-mail zmenil, a podľa toho nastavíme isPasswordValid
-                        if (e.target.value !== originalData.current.email) {
-                            setIsPasswordValid(false);
-                        } else {
-                            // Ak sa e-mail vrátil na pôvodnú hodnotu, resetujeme validáciu hesla
-                            setIsPasswordValid(true);
-                        }
                     },
                     className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid ? 'border-red-500' : ''}`,
                     style: {
