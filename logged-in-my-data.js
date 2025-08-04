@@ -130,6 +130,12 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     // Dynamicky nastavíme názov karty podľa roly
     const profileCardTitle = userProfileData?.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
 
+    // Dynamicky nastavíme popisky polí
+    const nameLabel = userProfileData?.role === 'user' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
+    const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
+    const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
+
+
     const profileContent = React.createElement(
         'div',
         { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
@@ -157,17 +163,17 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'space-y-6 text-lg' },
             React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Meno a Priezvisko'),
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, nameLabel),
                 React.createElement('div', { className: 'font-normal' }, `${userProfileData.firstName} ${userProfileData.lastName}`)
             ),
             React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Email'),
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, emailLabel),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.email)
             ),
             // Podmienka pre zobrazenie telefónneho čísla
             userProfileData.role !== 'admin' && userProfileData.role !== 'hall' &&
             React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Telefón'),
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
                 React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
             ),
             userProfileData.role === 'referee' &&
@@ -237,7 +243,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
 
     return React.createElement(
         'div',
-        { className: 'flex flex-col items-center gap-8' }, // Pridaná trieda 'items-center' na centrovanie kariet
+        { className: 'flex flex-col items-center gap-8' },
         profileContent,
         billingContent
     );
