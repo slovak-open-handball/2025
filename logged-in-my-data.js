@@ -156,7 +156,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                             // Vytvoríme notifikáciu v databáze
                             await addDoc(collection(db, 'notifications'), {
                                 userEmail: authEmail,
-                                changes: [`E-mailová adresa bola aktualizovaná z "${firestoreEmail}" na "${authEmail}".`],
+                                changes: [`Zmena e-mailovej adresy z: "${firestoreEmail}" na "${authEmail}".`],
                                 timestamp: new Date(),
                             });
 
