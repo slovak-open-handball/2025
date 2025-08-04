@@ -87,15 +87,17 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             return;
         }
 
-        const settingsDocRef = doc(db, 'settings', 'registration');
-        const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
+        // Vytvorenie referencie na dokument aktuálneho používateľa
+        const userDocRef = doc(db, 'users', userProfileData.id);
+
+        const unsubscribe = onSnapshot(userDocRef, (userSnap) => {
             // Vyčistíme predchádzajúci časovač, ak existuje
             if (deadlineTimerRef.current) {
                 clearTimeout(deadlineTimerRef.current);
             }
 
-            if (settingsSnap.exists()) {
-                const data = settingsSnap.data();
+            if (userSnap.exists()) {
+                const data = userSnap.data();
                 if (data.dataEditDeadline) {
                     const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
                     const now = new Date();
@@ -131,7 +133,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             }
             unsubscribe();
         };
-    }, [db, userProfileData.role]); // Pridáme db a userProfileData.role do dependency array
+    }, [db, userProfileData.id, userProfileData.role]); // Pridáme db, userProfileData.id a userProfileData.role do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
