@@ -114,6 +114,18 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         )
     );
     
+    // Formátovanie PSČ
+    const formatPostalCode = (pc) => {
+        if (!pc || typeof pc !== 'string' || pc.length !== 5) {
+            return pc;
+        }
+        return `${pc.substring(0, 3)} ${pc.substring(3)}`;
+    };
+
+    // Spojenie adresných údajov do jedného reťazca
+    const formattedAddress = localProfileData.street && localProfileData.houseNumber && localProfileData.postalCode && localProfileData.city && localProfileData.country ?
+        `${localProfileData.street} ${localProfileData.houseNumber}, ${formatPostalCode(localProfileData.postalCode)} ${localProfileData.city}, ${localProfileData.country}` :
+        'Nezadané';
 
     return React.createElement(
         'div',
@@ -175,11 +187,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                     'div',
                     { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
                     React.createElement(DataRow, { label: 'Názov klubu', value: localProfileData.billing?.clubName }),
-                    React.createElement(DataRow, { label: 'Ulica', value: localProfileData.street }),
-                    React.createElement(DataRow, { label: 'Číslo domu', value: localProfileData.houseNumber }),
-                    React.createElement(DataRow, { label: 'Mesto', value: localProfileData.city }),
-                    React.createElement(DataRow, { label: 'PSČ', value: localProfileData.postalCode }),
-                    React.createElement(DataRow, { label: 'Krajina', value: localProfileData.country }),
+                    // Zobrazenie spojeného adresného riadku
+                    React.createElement(DataRow, { label: 'Adresa', value: formattedAddress }),
                     React.createElement(DataRow, { label: 'IČO', value: localProfileData.billing?.ico }),
                     React.createElement(DataRow, { label: 'DIČ', value: localProfileData.billing?.dic }),
                     React.createElement(DataRow, { label: 'IČ DPH', value: localProfileData.billing?.icdph })
