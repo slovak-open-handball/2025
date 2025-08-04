@@ -10,9 +10,9 @@ import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/fi
 const setupMenuListeners = (userProfileData) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
-    const menuTexts = document.querySelectorAll('#left-menu .group-hover\\:opacity-100');
+    const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
-
+    
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
@@ -27,13 +27,13 @@ const setupMenuListeners = (userProfileData) => {
     // Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
     const applyMenuState = () => {
         if (isMenuToggled) {
-            leftMenu.classList.remove('w-16', 'hover:w-64');
+            leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
         } else {
-            leftMenu.classList.add('w-16', 'hover:w-64');
+            leftMenu.classList.add('w-16');
             leftMenu.classList.remove('w-64');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
             menuSpacer.classList.remove('w-64');
@@ -67,18 +67,29 @@ const setupMenuListeners = (userProfileData) => {
         saveMenuState(isMenuToggled);
     });
 
-    // Pridáme poslucháčov na menu pre správne správanie myši
-    if (!isMenuToggled) {
-        leftMenu.addEventListener('mouseenter', () => {
+    // Pridáme poslucháčov na menu pre správne správanie myši, ak je menu zbalené
+    const handleMouseEnter = () => {
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-16');
+            leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
-        });
+            menuTexts.forEach(span => span.classList.remove('opacity-0'));
+        }
+    };
 
-        leftMenu.addEventListener('mouseleave', () => {
+    const handleMouseLeave = () => {
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-64');
+            leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
-        });
-    }
+            menuTexts.forEach(span => span.classList.add('opacity-0'));
+        }
+    };
+
+    leftMenu.addEventListener('mouseenter', handleMouseEnter);
+    leftMenu.addEventListener('mouseleave', handleMouseLeave);
 
     console.log("left-menu.js: Poslucháči udalostí menu sú nastavení.");
 };
