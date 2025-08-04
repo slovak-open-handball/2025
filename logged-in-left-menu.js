@@ -44,11 +44,11 @@ const setupMenuListeners = () => {
 }
 
 // Hlavná funkcia na načítanie menu
-window.loadLeftMenu = async () => {
+window.loadLeftMenu = async (userProfileData) => {
     console.log("left-menu.js: Spúšťam funkciu loadLeftMenu.");
 
     // Kontrola existencie globálnych používateľských dát
-    if (window.globalUserProfileData) {
+    if (userProfileData) {
         try {
             const menuPlaceholder = document.getElementById('left-menu-placeholder');
             if (!menuPlaceholder) {
@@ -63,40 +63,35 @@ window.loadLeftMenu = async () => {
             }
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
-            console.log("left-menu.js: Obsah menu bol úspešne vložený do placeholderu.");
+            console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // Po úspešnom vložení HTML hneď nastavíme poslucháčov
             setupMenuListeners();
+            const leftMenuElement = document.getElementById('left-menu');
+            if (leftMenuElement) {
+                leftMenuElement.classList.remove('hidden');
+            }
 
         } catch (error) {
             console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
         }
     } else {
-        console.log("left-menu.js: Globálne dáta používateľa nie sú dostupné. Menu sa nenačíta.");
+        const leftMenuElement = document.getElementById('left-menu');
+        if (leftMenuElement) {
+            leftMenuElement.classList.add('hidden');
+        }
+        console.log("left-menu.js: Globálne dáta používateľa nie sú dostupné. Menu sa skryje.");
     }
 };
 
 // Počúvanie udalosti globalDataUpdated, ktorá je odoslaná, keď sú dáta používateľa k dispozícii
 window.addEventListener('globalDataUpdated', (event) => {
     console.log('left-menu.js: Prijatá udalosť "globalDataUpdated". Kontrolujem dáta...');
-    if (event.detail) {
-        console.log('left-menu.js: Dáta používateľa sú dostupné. Načítavam menu...');
-        loadLeftMenu();
-        const leftMenuElement = document.getElementById('left-menu');
-        if (leftMenuElement) {
-            leftMenuElement.classList.remove('hidden');
-        }
-    } else {
-        console.log('left-menu.js: Používateľ odhlásený. Skrývam menu.');
-        const leftMenuElement = document.getElementById('left-menu');
-        if (leftMenuElement) {
-            leftMenuElement.classList.add('hidden');
-        }
-    }
+    loadLeftMenu(event.detail);
 });
 
 // Kontrola pri prvom načítaní pre prípad, že event už prebehol
 if (window.globalUserProfileData) {
     console.log('left-menu.js: Globálne dáta už existujú. Načítavam menu pri štarte.');
-    loadLeftMenu();
+    loadLeftMenu(window.globalUserProfileData);
 }
