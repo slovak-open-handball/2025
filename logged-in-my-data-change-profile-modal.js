@@ -749,41 +749,40 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             ),
             // E-mailová adresa
             React.createElement(
-                'div',
-                { className: 'mb-4' },
+              'div',
+              { className: 'mb-4' },
+              React.createElement(
+                'label',
+                { className: `block text-sm font-bold mb-2 text-gray-700`, htmlFor: 'email' },
                 React.createElement(
-                  'label',
-                  { className: `block text-sm font-bold mb-2 text-gray-700`, htmlFor: 'email' },
+                  'span',
+                  null,
+                  'E-mailová adresa'
+                ),
+                !isEmailValid && (
                   React.createElement(
                     'span',
-                    null,
-                    'E-mailová adresa'
-                  ),
-                  !isEmailValid && (
-                    React.createElement(
-                      'span',
-                      { className: 'text-red-500' },
-                      ' (chybný formát)'
-                     )
-                    )
-                   )
+                    { className: 'text-red-500' },
+                    ' (chybný formát)'
+                  )
                 )
-                React.createElement('input', {
-                    type: 'email',
-                    id: 'email',
-                    value: email,
-                    onChange: (e) => {
-                        handleValueChange(setEmail, e.target.value);
-                        setIsEmailValid(validateEmail(e.target.value));
-                    },
-                    placeholder: originalData.current.email, // Hodnota ako placeholder
-                    className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid ? 'border-red-500' : ''}`,
-                    style: {
-                        borderColor: roleColor,
-                        boxShadow: 'none'
-                    }
-                })
-            ),
+              ),
+              React.createElement('input', {
+                type: 'email',
+                id: 'email',
+                value: email,
+                onChange: (e) => {
+                  handleValueChange(setEmail, e.target.value);
+                  setIsEmailValid(validateEmail(e.target.value));
+                },
+                placeholder: originalData.current.email,
+                className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid ? 'border-red-500' : ''}`,
+                style: {
+                  borderColor: isEmailValid ? roleColor : '',
+                  boxShadow: 'none',
+                },
+              })
+            )           
 
             // Polia pre zmenu hesla (už nie sú podmienene)
             React.createElement('hr', { className: 'my-6' }),
