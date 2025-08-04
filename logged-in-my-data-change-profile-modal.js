@@ -136,7 +136,7 @@ const DialCodeModal = ({ show, onClose, onSelect, selectedDialCode, roleColor })
                         placeholder: 'Hľadať krajinu alebo kód...',
                         value: filter,
                         onChange: (e) => setFilter(e.target.value),
-                        className: 'mt-3 w-full px-3 py-2 border rounded-lg',
+                        className: 'mt-3 w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-transparent',
                         style: {
                             borderColor: roleColor,
                             boxShadow: 'none'
