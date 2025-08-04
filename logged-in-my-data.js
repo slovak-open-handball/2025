@@ -205,7 +205,11 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const cleanNumber = phoneNumber.replace(/[\s-]/g, '');
 
         // Získame a zoradíme predvoľby zostupne podľa dĺžky, aby sme našli najdlhšiu možnú zhodu
-        const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
+        const sortedDialCodes = countryDialCodes.sort((a, b) => {
+            const aLength = a?.dialCode?.length || 0;
+            const bLength = b?.dialCode?.length || 0;
+            return bLength - aLength;
+        });
 
         // Hľadáme zhodu predvoľby v čísle
         let dialCodeMatch = null;
