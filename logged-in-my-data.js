@@ -79,9 +79,13 @@ const formatPhoneNumber = (phoneNumber) => {
         }
     }
 
-    // Ak sa predvoľba nenašla, použijeme pôvodné číslo
+    // Ak sa predvoľba nenašla, skúsime formátovať celé číslo v trojčíslach
     if (!dialCode) {
-        return cleanNumber;
+        const parts = [];
+        for (let i = 0; i < cleanNumber.length; i += 3) {
+            parts.push(cleanNumber.substring(i, i + 3));
+        }
+        return parts.join(' ');
     }
 
     // Rozdelíme zvyšok čísla na trojčíselné skupiny
