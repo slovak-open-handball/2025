@@ -104,7 +104,7 @@ const MyDataApp = ({ userProfileData, userId }) => {
         );
     }
     
-    // UI pre používateľov, ktorí nie sú admin alebo hall
+    // UI pre používateľov
     const userUI = React.createElement('div', { className: 'bg-white rounded-xl shadow-xl p-8' },
         React.createElement('div', { className: 'flex justify-between items-center mb-6' },
             React.createElement('h2', { className: 'text-3xl font-bold text-gray-800' }, 'Môj Profil'),
@@ -183,7 +183,7 @@ const MyDataApp = ({ userProfileData, userId }) => {
     return React.createElement(
         'div',
         { className: 'min-h-screen' },
-        (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') && userUI,
+        userUI,
         React.createElement(ChangeProfileModal, { show: profileModalVisible, onClose: () => setProfileModalVisible(false), userProfileData: userProfileData, roleColor: userProfileData?.roleColor || '#5a67d8' }),
         React.createElement(ChangeBillingModal, { show: billingModalVisible, onClose: () => setBillingModalVisible(false), userProfileData: userProfileData, roleColor: userProfileData?.roleColor || '#5a67d8' })
     );
