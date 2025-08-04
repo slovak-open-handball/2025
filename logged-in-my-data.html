@@ -22,13 +22,29 @@
             flex-direction: column;
             min-height: 100vh;
         }
+        /* Pridané štýly pre prispôsobenie obsahu */
+        #main-content-area {
+            transition: margin-left 0.3s ease;
+            margin-left: 64px; /* Počiatočná šírka zbaleného menu */
+        }
+        #left-menu.is-toggled + #main-content-area {
+            margin-left: 256px; /* Šírka rozbaleného menu (64px + 192px) */
+        }
+        /* Zabezpečenie, že obsah nebude pretekať ani na mobile */
+        @media (max-width: 640px) {
+            #main-content-area {
+                margin-left: 0;
+            }
+            #left-menu.is-toggled + #main-content-area {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
     <div id="left-menu-placeholder"></div>
     <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-        <div class="flex-shrink-0 w-16"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
@@ -41,7 +57,7 @@
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <script type="module" src="./logged-in-left-menu.js"></script>
+    <script type="module" src="logged-in-left-menu.js"></script>
     <script type="module" src="logged-in-my-data-change-profile-modal.js"></script>
     <script type="module" src="logged-in-my-data.js"></script>
 </body>
