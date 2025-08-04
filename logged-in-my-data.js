@@ -32,303 +32,145 @@ window.showGlobalNotification = (message, type = 'success') => {
         bgColorClass = 'bg-red-500';
         textColorClass = 'text-white';
     } else {
-        bgColorClass = 'bg-blue-500';
+        bgColorClass = 'bg-gray-800';
         textColorClass = 'text-white';
     }
 
-    // Odstránenie predchádzajúcich tried farieb a pridanie nových
-    notificationElement.className = notificationElement.className.replace(/bg-\w+-\d+/g, '').replace(/text-\w+/, '');
-    notificationElement.classList.add(bgColorClass, textColorClass);
+    notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300 ${bgColorClass} ${textColorClass}`;
     notificationElement.textContent = message;
 
-    // Zobrazenie notifikácie
-    notificationElement.classList.remove('opacity-0');
-    notificationElement.classList.add('opacity-100');
-
-    // Skrytie notifikácie po 5 sekundách
+    // Zviditeľníme notifikáciu
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100');
-        notificationElement.classList.add('opacity-0');
+        notificationElement.style.opacity = '1';
+    }, 100);
+
+    // Skryjeme notifikáciu po 5 sekundách
+    setTimeout(() => {
+        notificationElement.style.opacity = '0';
     }, 5000);
 };
 
+
 /**
- * Funkcia na overenie a vrátenie obsahu, alebo znaku '-' ak je hodnota prázdna
- * @param {string} value - Hodnota, ktorá sa má zobraziť.
- * @returns {string} - Pôvodná hodnota alebo znak '-'.
+ * Funkcia na získanie farby na základe roly používateľa.
  */
-const checkValue = (value) => {
-    return value && value.trim() !== '' ? value : '-';
+const getRoleColor = (role) => {
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'user':
+            return '#9333EA';
+        default:
+            return '#1D4ED8';
+    }
 };
 
 /**
- * Funkcia na formátovanie PSČ
- * @param {string} postalCode - PSČ vo formáte xxxxx.
- * @returns {string} - Formátované PSČ vo formáte xxx xx.
- */
-const formatPostalCode = (postalCode) => {
-    if (postalCode && postalCode.length === 5) {
-        return `${postalCode.substring(0, 3)} ${postalCode.substring(3)}`;
-    }
-    return checkValue(postalCode);
-};
-
-/**
- * Funkcia na formátovanie telefónneho čísla
- * @param {string} phoneNumber - Telefónne číslo vrátane predvoľby (napr. +421901234567).
- * @returns {string} - Formátované telefónne číslo alebo '-'.
- */
-const formatPhoneNumber = (phoneNumber) => {
-    if (!phoneNumber) {
-        return '-';
-    }
-
-    // Nájdenie najdlhšej predvoľby, ktorá zodpovedá začiatku čísla
-    const matchingDialCode = countryDialCodes
-        .sort((a, b) => b.dialCode.length - a.dialCode.length)
-        .find(country => phoneNumber.startsWith(country.dialCode));
-
-    if (matchingDialCode) {
-        const countryCode = matchingDialCode.dialCode;
-        const number = phoneNumber.substring(countryCode.length).replace(/\s/g, '');
-        // Rozdelenie zvyšku čísla do skupín po troch
-        const formattedNumber = number.match(/.{1,3}/g)?.join(' ');
-        return `${countryCode} ${formattedNumber}`;
-    }
-
-    // Ak sa predvoľba nenájde, vrátime pôvodné číslo
-    return phoneNumber;
-};
-
-/**
- * Hlavný React komponent pre zobrazenie a úpravu profilu prihláseného používateľa.
- * @param {object} props - Vlastnosti komponentu.
- * @param {object} props.userProfileData - Dáta používateľského profilu.
- * @param {string} props.roleColor - Farba priradená role používateľa.
+ * Hlavný komponent aplikácie, ktorý zobrazuje údaje používateľa.
  */
 const MyDataApp = ({ userProfileData, roleColor }) => {
-    console.log("MyDataApp.js: Komponent MyDataApp sa vykresľuje s dátami:", userProfileData);
-    // Inicializujeme stav s počiatočnými dátami.
-    const [data, setData] = useState(userProfileData);
-    const [isMyDataLoaded, setIsMyDataLoaded] = useState(!!userProfileData && Object.keys(userProfileData).length > 0);
-    const [showModal, setShowModal] = useState(false);
-    const [showBillingModal, setShowBillingModal] = useState(false); // Nový stav pre fakturačné údaje
+    const [showChangeProfileModal, setShowChangeProfileModal] = useState(false);
+    const [showChangeBillingModal, setShowChangeBillingModal] = useState(false);
+    const [localProfileData, setLocalProfileData] = useState(userProfileData);
 
-    // Načítanie a spracovanie globálnych dát
+    // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
-        console.log("MyDataApp.js: useEffect spustený, kontrola dát.");
-        if (userProfileData && Object.keys(userProfileData).length > 0) {
-            console.log("MyDataApp.js: Dáta používateľa nájdené, aktualizujem stav.");
-            setData(userProfileData);
-            setIsMyDataLoaded(true);
-        } else {
-             console.log("MyDataApp.js: Dáta používateľa nie sú k dispozícii v počiatočnom stave.");
-        }
+        setLocalProfileData(userProfileData);
     }, [userProfileData]);
 
-    // Funkcia na overenie a zobrazenie dát
-    const renderContent = () => {
-        if (!isMyDataLoaded) {
-            console.log("MyDataApp.js: Zobrazujem načítavaciu animáciu.");
-            // Animácia načítania, ak dáta nie sú dostupné
-            return React.createElement(
-                'div',
-                { className: 'flex justify-center pt-16' },
-                React.createElement(
-                    'div',
-                    { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }
-                )
-            );
-        }
-
-        console.log("MyDataApp.js: Zobrazujem obsah aplikácie.");
-        // Zobrazenie obsahu
-        
-        // Získame farbu pozadia hlavného boxu
-        const mainBoxColor = getRoleColor(data.role);
-        const contactLabelColor = 'text-gray-500';
-        const contactValueColor = 'text-gray-900';
-        const invertedButtonColor = getRoleColor(data.role);
-
-        // Vytvorenie reťazca pre fakturačnú adresu
-        const billingAddress = `${checkValue(data.street)} ${checkValue(data.houseNumber)}`.trim().replace(/- -/, '-');
-        const billingAddress2 = `${formatPostalCode(data.postalCode)} ${checkValue(data.city)}`.trim().replace(/- -/, '-');
-        const billingAddress3 = `${checkValue(data.country)}`;
-        const fullBillingAddress = `${billingAddress}${billingAddress ? ', ' : ''}${billingAddress2}${billingAddress2 ? ', ' : ''}${billingAddress3}`.trim().replace(/^,|,$/g, '').trim();
-
+    if (!localProfileData) {
         return React.createElement(
             'div',
-            { className: 'max-w-4xl mx-auto' },
-            // Profilový box
-            React.createElement(
-                'div',
-                { className: `bg-white rounded-xl shadow-xl mb-8` },
-                React.createElement(
-                    'div',
-                    { className: `rounded-t-xl px-8 py-6 md:px-12 md:py-8`, style: { backgroundColor: mainBoxColor } },
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-between items-center flex-wrap gap-4' },
-                        // Ľavá strana: Meno
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1 min-w-0' },
-                            React.createElement(
-                                'h1',
-                                { className: `text-3xl md:text-4xl font-bold text-white truncate` }, // Farba nadpisu je vždy biela
-                                data.role === 'user'
-                                    ? 'Údaje kontaktnej osoby'
-                                    : data.role === 'hall' || data.role === 'admin'
-                                        ? 'Moje údaje'
-                                        : `${checkValue(data.firstName)} ${checkValue(data.lastName)}`
-                            )
-                        ),
-                        // Pravá strana: Tlačidlo Upraviť
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setShowModal(true),
-                                className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
-                                style: { backgroundColor: 'white', color: invertedButtonColor }
-                            },
-                            // Ikona ceruzky SVG
-                            React.createElement(
-                                'svg',
-                                { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", },
-                                React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
-                            ),
-                            React.createElement('span', null, 'Upraviť')
-                        )
-                    ),
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'px-8 py-6 md:px-12 md:py-8' },
-                    // Riadky s kontaktnými údajmi
-                    React.createElement(
-                        'div',
-                        { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
-                        // Riadok s E-mailom
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'E-mailová adresa'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(data.email))
-                        ),
-                        // Riadok s Telefónnym číslom
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'Telefónne číslo'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, formatPhoneNumber(data.contactPhoneNumber))
-                        ),
-                        // Riadok s Rolou
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'Rola'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(data.role))
-                        ),
-                    ),
-                    // Riadok s fakturačnými údajmi
-                    React.createElement('div', { className: 'mt-10' }),
-                    React.createElement('hr', { className: 'my-6' }),
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-between items-center flex-wrap gap-4' },
-                        React.createElement(
-                            'h2',
-                            { className: `text-2xl font-bold text-gray-900` },
-                            'Fakturačné údaje'
-                        ),
-                        // Tlačidlo na úpravu fakturačných údajov
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setShowBillingModal(true),
-                                className: `flex items-center space-x-2 px-6 py-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50`,
-                                style: { backgroundColor: 'white', color: invertedButtonColor }
-                            },
-                             // Ikona ceruzky SVG
-                            React.createElement(
-                                'svg',
-                                { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", },
-                                React.createElement('path', { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" })
-                            ),
-                            React.createElement('span', null, 'Upraviť')
-                        )
-                    ),
-                    React.createElement(
-                        'div',
-                        { className: 'mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
-                        // Riadok s fakturačnou adresou
-                        React.createElement(
-                            'div',
-                            { className: 'col-span-1 md:col-span-2' },
-                            React.createElement('p', { className: contactLabelColor }, 'Adresa'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(fullBillingAddress))
-                        ),
-                        // Riadok s IČO
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'IČO'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(data.ico))
-                        ),
-                        // Riadok s DIČ
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'DIČ'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(data.dic))
-                        ),
-                        // Riadok s IČ DPH
-                        React.createElement(
-                            'div',
-                            null,
-                            React.createElement('p', { className: contactLabelColor }, 'IČ DPH'),
-                            React.createElement('p', { className: `text-lg font-semibold ${contactValueColor}` }, checkValue(data.icdph))
-                        ),
-                    ),
-                )
-            ),
-            // Modálne okno pre úpravu profilu
-            React.createElement(ChangeProfileModal, {
-                show: showModal,
-                onClose: () => setShowModal(false),
-                userProfileData: data,
-                roleColor: roleColor
-            }),
-            // Modálne okno pre úpravu fakturačných údajov
-            React.createElement(ChangeBillingModal, {
-                show: showBillingModal,
-                onClose: () => setShowBillingModal(false),
-                userProfileData: data,
-                roleColor: roleColor
-            })
+            { className: 'flex justify-center items-center h-full' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500' })
+        );
+    }
+
+    const billingInfoExists = localProfileData.companyName || localProfileData.street || localProfileData.ico;
+
+    // Komponent pre zobrazenie jedného riadku údajov
+    const DataRow = ({ label, value }) => {
+        const displayValue = value || 'Nezadané';
+        const valueColorClass = value ? 'text-gray-800' : 'text-gray-400';
+        return React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement('p', { className: 'text-sm font-medium text-gray-500' }, label),
+            React.createElement('p', { className: `text-lg font-semibold ${valueColorClass}` }, displayValue)
         );
     };
 
-    return renderContent();
+    return React.createElement(
+        'div',
+        { className: 'container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:pt-16' },
+        React.createElement(
+            'div',
+            { className: 'flex flex-col lg:flex-row lg:space-x-8' },
+            // Ľavý stĺpec pre osobné údaje
+            React.createElement(
+                'div',
+                { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl' },
+                React.createElement('h4', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Moje údaje'),
+                React.createElement(DataRow, { label: 'Meno a Priezvisko', value: localProfileData.displayName }),
+                React.createElement(DataRow, { label: 'Email', value: localProfileData.email }),
+                React.createElement(DataRow, { label: 'Telefónne číslo', value: `${localProfileData.dialCode} ${localProfileData.phoneNumber}` }),
+                React.createElement(DataRow, { label: 'Rola', value: localProfileData.role }),
+                React.createElement(DataRow, { label: 'Status', value: localProfileData.status })
+            ),
+            // Pravý stĺpec pre fakturačné údaje
+            React.createElement(
+                'div',
+                { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl mt-8 lg:mt-0' },
+                React.createElement('h4', { className: 'text-2xl font-bold text-gray-900 mb-6' }, 'Fakturačné údaje'),
+                billingInfoExists ?
+                [
+                    React.createElement(DataRow, { key: 'companyName', label: 'Názov spoločnosti', value: localProfileData.companyName }),
+                    React.createElement(DataRow, { key: 'address', label: 'Adresa', value: `${localProfileData.street} ${localProfileData.houseNumber}, ${localProfileData.city}, ${localProfileData.postalCode}` }),
+                    React.createElement(DataRow, { key: 'country', label: 'Krajina', value: localProfileData.country }),
+                    React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.ico }),
+                    React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.dic }),
+                    React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.icdph }),
+                ]
+                :
+                React.createElement('p', { className: 'text-lg text-gray-500' }, 'Fakturačné údaje neboli zadané.')
+            )
+        ),
+        // Tlačidlá pre akcie
+        React.createElement(
+            'div',
+            { className: 'mt-12 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4' },
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setShowChangeProfileModal(true),
+                    className: `px-8 py-3 rounded-full font-bold text-lg text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                    style: { backgroundColor: roleColor }
+                },
+                'Upraviť profil'
+            ),
+            React.createElement(
+                'button',
+                {
+                    onClick: () => setShowChangeBillingModal(true),
+                    className: `px-8 py-3 rounded-full font-bold text-lg text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                    style: { backgroundColor: roleColor }
+                },
+                'Upraviť fakturačné údaje'
+            )
+        ),
+
+        // Modálne okná
+        React.createElement(ChangeProfileModal, { show: showChangeProfileModal, onClose: () => setShowChangeProfileModal(false), userProfileData: localProfileData, roleColor: roleColor }),
+        React.createElement(ChangeBillingModal, { show: showChangeBillingModal, onClose: () => setShowChangeBillingModal(false), userProfileData: localProfileData, roleColor: roleColor })
+    );
 };
 
-const getRoleColor = (role) => {
- switch (role) {
-        case 'admin':
-            return '#47b3ff';
-        case 'hall':
-            return '#b06835';
-        case 'user':
-            return '#9333EA';
-        default:
-            return '#1D4ED8';
-    }
-};
-
+// Funkcia na obsluhu udalosti 'globalDataUpdated' a vykreslenie React komponentu
 const handleDataUpdateAndRender = (event) => {
-    console.log("MyDataApp.js: Udalosť 'globalDataUpdated' prijatá.");
     const data = event.detail;
-    if (data && Object.keys(data).length > 0) {
+    if (data) {
         const rootElement = document.getElementById('root');
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const userRole = data.role;
@@ -359,6 +201,12 @@ if (window.globalUserProfileData) {
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
-        root.render(React.createElement(MyDataApp, { userProfileData: null, roleColor: null }));
+        root.render(
+            React.createElement(
+                'div',
+                { className: 'flex justify-center items-center h-full pt-16' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500' })
+            )
+        );
     }
 }
