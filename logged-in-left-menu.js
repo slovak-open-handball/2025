@@ -9,13 +9,15 @@ import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/fi
 /**
  * Funkcia na zobrazenie/skrytie menu a uloženie stavu do databázy.
  * @param {object} userProfileData - Dáta o profile používateľa.
+ * @param {object} db - Inštancia Firestore databázy.
+ * @param {string} userId - ID aktuálneho používateľa.
  */
-const setupMenuListeners = (userProfileData) => {
+const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
-    const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
-    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0');
-
+    const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
+    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
+    
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
@@ -24,83 +26,87 @@ const setupMenuListeners = (userProfileData) => {
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
-    // Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
+    /**
+     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
+     */
     const applyMenuState = () => {
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
-            menuTexts.forEach(span => span.classList.remove('opacity-0'));
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
         } else {
-            leftMenu.classList.add('w-16');
             leftMenu.classList.remove('w-64');
-            menuTexts.forEach(span => span.classList.add('opacity-0'));
+            leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
         }
+        menuTexts.forEach(span => {
+            if (isMenuToggled) {
+                span.classList.remove('opacity-0');
+            } else {
+                span.classList.add('opacity-0');
+            }
+        });
     };
 
-    // Aplikujeme počiatočný stav
-    applyMenuState();
-
-    // Funkcia na uloženie stavu do databázy
-    const saveMenuState = async (state) => {
-        const db = window.db;
-        const userId = window.globalUserProfileData?.id;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        if (!db || !userId || !appId) {
-            console.error("left-menu.js: DB, userId alebo appId nie sú dostupné pre uloženie stavu menu.");
+    /**
+     * Funkcia na uloženie stavu menu do databázy.
+     */
+    const saveMenuState = async () => {
+        if (!userId) {
+            console.error("left-menu.js: Upozornenie: Chýba ID používateľa. Stav menu nebude uložený.");
             return;
         }
 
+        const userDocRef = doc(db, 'users', userId);
         try {
-            const userDocRef = doc(db, 'artifacts', appId, 'users', userId);
-            await updateDoc(userDocRef, {
-                isMenuToggled: state
-            });
-            console.log("left-menu.js: Stav menu bol úspešne uložený.");
+            await setDoc(userDocRef, { isMenuToggled }, { merge: true });
+            console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
         } catch (error) {
-            console.error("left-menu.js: Chyba pri ukladaní stavu menu:", error);
-            // Ak dokument neexistuje, vytvoríme ho s daným stavom
-            try {
-                const userDocRef = doc(db, 'artifacts', appId, 'users', userId);
-                await setDoc(userDocRef, { isMenuToggled: state }, { merge: true });
-                console.log("left-menu.js: Dokument používateľa bol vytvorený a stav menu uložený.");
-            } catch (createError) {
-                console.error("left-menu.js: Chyba pri vytváraní dokumentu používateľa:", createError);
+            console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
+            // Zobrazenie globálnej notifikácie, ak je funkcia dostupná
+            if (window.showGlobalNotification) {
+                 window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
         }
     };
 
+    // Aplikujeme počiatočný stav menu pri načítaní
+    applyMenuState();
+    
+    // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
-        saveMenuState(isMenuToggled);
+        saveMenuState();
     });
 
+    // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
-            leftMenu.classList.add('hover:w-64');
+            leftMenu.classList.remove('w-16');
+            leftMenu.classList.add('w-64');
+            menuSpacer.classList.remove('w-16');
+            menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
         }
     });
 
     leftMenu.addEventListener('mouseleave', () => {
         if (!isMenuToggled) {
-            leftMenu.classList.remove('hover:w-64');
+            leftMenu.classList.remove('w-64');
+            leftMenu.classList.add('w-16');
+            menuSpacer.classList.remove('w-64');
+            menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
         }
     });
 };
 
-/**
- * Funkcia na načítanie HTML obsahu menu a nastavenie poslucháčov.
- * @param {object} userProfileData - Dáta o profile používateľa.
- */
 const loadLeftMenu = async (userProfileData) => {
-    if (userProfileData) {
+    // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
+    if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) {
             console.error("left-menu.js: Nebol nájdený žiadny element s ID 'menu-placeholder'.");
@@ -110,14 +116,16 @@ const loadLeftMenu = async (userProfileData) => {
         try {
             const response = await fetch('logged-in-left-menu.html');
             if (!response.ok) {
-                throw new Error(`HTTP chyba: ${response.status} ${response.statusText}`);
+                throw new Error(`HTTP chyba! Stav: ${response.status} ${response.statusText}`);
             }
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
             console.log("left-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             // Po úspešnom vložení HTML hneď nastavíme poslucháčov
-            setupMenuListeners(userProfileData);
+            const db = window.db;
+            const userId = userProfileData.id;
+            setupMenuListeners(userProfileData, db, userId);
             const leftMenuElement = document.getElementById('left-menu');
             if (leftMenuElement) {
                 leftMenuElement.classList.remove('hidden');
@@ -143,6 +151,6 @@ window.addEventListener('globalDataUpdated', (event) => {
 
 // Kontrola pri prvom načítaní pre prípad, že event už prebehol
 if (window.globalUserProfileData) {
-    console.log('left-menu.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.');
+    console.log('left-menu.js: Globálne dáta už existujú. Vykresľujem menu okamžite.');
     loadLeftMenu(window.globalUserProfileData);
 }
