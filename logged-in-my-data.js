@@ -54,6 +54,45 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+/**
+ * Funkcia na formátovanie telefónneho čísla
+ * Nájdeme predvoľbu a zvyšné číslo rozdelíme na trojčíselné skupiny
+ */
+const formatPhoneNumber = (phoneNumber) => {
+    if (!phoneNumber) return '-';
+
+    // Odstránime všetky medzery
+    const cleanNumber = phoneNumber.replace(/\s/g, '');
+
+    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa najprv našli dlhšie zhody (napr. +1234 pred +1)
+    const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+
+    let dialCode = '';
+    let restOfNumber = '';
+
+    // Nájdeme zodpovedajúcu predvoľbu
+    for (const country of sortedDialCodes) {
+        if (cleanNumber.startsWith(country.dialCode)) {
+            dialCode = country.dialCode;
+            restOfNumber = cleanNumber.substring(country.dialCode.length);
+            break;
+        }
+    }
+
+    // Ak sa predvoľba nenašla, použijeme pôvodné číslo
+    if (!dialCode) {
+        return cleanNumber;
+    }
+
+    // Rozdelíme zvyšok čísla na trojčíselné skupiny
+    const parts = [];
+    for (let i = 0; i < restOfNumber.length; i += 3) {
+        parts.push(restOfNumber.substring(i, i + 3));
+    }
+
+    return `${dialCode} ${parts.join(' ')}`;
+};
+
 const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit }) => {
     const getRoleColor = (role) => {
         switch (role) {
@@ -129,7 +168,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             userProfileData.role !== 'admin' && userProfileData.role !== 'hall' &&
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Telefón'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.contactPhoneNumber)
+                React.createElement('div', { className: 'font-normal' }, formatPhoneNumber(userProfileData.contactPhoneNumber))
             ),
             userProfileData.role === 'referee' &&
             React.createElement('div', null,
