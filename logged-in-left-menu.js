@@ -21,7 +21,7 @@ const setupMenuListeners = (userProfileData) => {
     const db = window.db;
 
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
-    let isMenuToggled = userProfileData?.uiSettings?.isMenuToggled || false;
+    let isMenuToggled = userProfileData?.isMenuToggled || false;
     
     // Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
     const applyMenuState = () => {
@@ -56,13 +56,11 @@ const setupMenuListeners = (userProfileData) => {
         try {
             if (db && userId) {
                 const userDocRef = doc(db, 'users', userId);
-                // Používame setDoc s merge: true, aby sme vytvorili pole uiSettings,
-                // ak ešte neexistuje, a aktualizovali iba isMenuToggled.
-                await setDoc(userDocRef, {
-                    uiSettings: {
-                        isMenuToggled: isMenuToggled
-                    }
-                }, { merge: true });
+                // Používame updateDoc na aktualizáciu existujúceho poľa, alebo setDoc s merge: true
+                // ak by pole neexistovalo. Ale v tomto prípade je priamo na koreni, takže je to jednoduchšie.
+                await updateDoc(userDocRef, {
+                    isMenuToggled: isMenuToggled
+                });
                 console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
             }
         } catch (error) {
