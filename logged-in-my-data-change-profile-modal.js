@@ -758,7 +758,7 @@ const ModalContent = React.createElement(
       { className: 'mb-4' },
       React.createElement(
         'label',
-        { className: `block text-sm font-bold mb-2 ${!isEmailValid ? 'text-red-500' : 'text-gray-700'}`, htmlFor: 'email' },
+        { className: `block text-sm font-bold mb-2 text-gray-700`, htmlFor: 'email' },
         React.createElement(
           'span',
           null,
