@@ -255,10 +255,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
     // Handler na zatvorenie modalu s kontrolou zmien
     const handleCloseWithCheck = () => {
+        // Ak boli vykonané zmeny, najskôr zatvoríme modal, potom zobrazíme notifikáciu
         if (isFormChanged()) {
-            window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error');
+            onClose(); // Zatvorenie modalu
+            window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error'); // Zobrazenie notifikácie
+        } else {
+            // Ak sa žiadne zmeny neuskutočnili, modal sa zatvorí bez upozornenia
+            onClose();
         }
-        onClose();
     };
     
     // Nadpis modálneho okna
@@ -505,7 +509,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
             onClick: (e) => {
                 if (e.target === e.currentTarget) {
-                    handleCloseWithCheck(); // Používame nový handler
+                    handleCloseWithCheck(); // Používame upravený handler
                 }
             }
         },
