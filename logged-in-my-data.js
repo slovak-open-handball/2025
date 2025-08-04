@@ -13,7 +13,7 @@ import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js"
 const { useState, useEffect, useRef } = React;
 
 // Inicilizácia Firebase v globálnom rozsahu
-const firebaseConfig = JSON.parse(window.__firebase_config);
+const firebaseConfig = window.__firebase_config ? JSON.parse(window.__firebase_config) : {};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
