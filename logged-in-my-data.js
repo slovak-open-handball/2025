@@ -79,13 +79,9 @@ const formatPhoneNumber = (phoneNumber) => {
         }
     }
 
-    // Ak sa predvoľba nenašla, skúsime formátovať celé číslo v trojčíslach
+    // Ak sa predvoľba nenašla, vrátime pôvodné číslo bez formátovania (ale s odstránenými medzerami)
     if (!dialCode) {
-        const parts = [];
-        for (let i = 0; i < cleanNumber.length; i += 3) {
-            parts.push(cleanNumber.substring(i, i + 3));
-        }
-        return parts.join(' ');
+        return cleanNumber;
     }
 
     // Rozdelíme zvyšok čísla na trojčíselné skupiny
@@ -94,7 +90,12 @@ const formatPhoneNumber = (phoneNumber) => {
         parts.push(restOfNumber.substring(i, i + 3));
     }
 
-    return `${dialCode} ${parts.join(' ')}`;
+    // Skontrolujeme, či máme nejaké časti na zobrazenie
+    if (parts.length > 0) {
+        return `${dialCode} ${parts.join(' ')}`;
+    } else {
+        return dialCode;
+    }
 };
 
 const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit }) => {
