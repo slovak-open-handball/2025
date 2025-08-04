@@ -163,8 +163,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                         'Upraviť'
                     )
                 ),
-                React.createElement(DataRow, { label: 'Meno a Priezvisko', value: fullName }),
-                React.createElement(DataRow, { label: 'Email', value: localProfileData.email }),
+                React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
+                React.createElement(DataRow, { label: 'E-mailová adresa', value: localProfileData.email }),
                 // Zobrazíme telefónne číslo len ak používateľ nie je admin
                 localProfileData.role !== 'admin' && React.createElement(DataRow, { label: 'Telefónne číslo', value: phoneNumber }),
             ),
