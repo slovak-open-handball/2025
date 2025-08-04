@@ -47,6 +47,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             };
             
             // Pri otvorení modalu vyčistíme stavy, aby polia neboli predvyplnené
+            // Setneme stavy na prázdny reťazec alebo na pôvodné hodnoty z userProfileData
             setClubName('');
             setStreet('');
             setHouseNumber('');
@@ -60,19 +61,31 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
     }, [show, userProfileData]);
 
+    // Funkcia na normalizáciu hodnôt pre bezpečné porovnanie,
+    // ošetruje undefined/null a biele znaky.
+    const getNormalizedValue = (value) => {
+        return String(value || '').replace(/\s/g, '');
+    };
+
     // Kontrola, či sa zmenil formulár
     const isFormChanged = () => {
-        // Porovnávame aktuálne hodnoty v stave s pôvodnými hodnotami v ref.
+        const originalData = originalDataRef.current;
+        
+        // Ak ešte nie sú načítané pôvodné dáta, nedá sa porovnávať.
+        if (!originalData.clubName && !originalData.street && !originalData.houseNumber && !originalData.city && !originalData.postalCode && !originalData.country && !originalData.ico && !originalData.dic && !originalData.icdph) {
+            return false;
+        }
+
         return (
-            (clubName !== originalDataRef.current.clubName) ||
-            (street !== originalDataRef.current.street) ||
-            (houseNumber !== originalDataRef.current.houseNumber) ||
-            (city !== originalDataRef.current.city) ||
-            (postalCode !== originalDataRef.current.postalCode) ||
-            (country !== originalDataRef.current.country) ||
-            (ico !== originalDataRef.current.ico) ||
-            (dic !== originalDataRef.current.dic) ||
-            (icdph !== originalDataRef.current.icdph)
+            getNormalizedValue(clubName) !== getNormalizedValue(originalData.clubName) ||
+            getNormalizedValue(street) !== getNormalizedValue(originalData.street) ||
+            getNormalizedValue(houseNumber) !== getNormalizedValue(originalData.houseNumber) ||
+            getNormalizedValue(city) !== getNormalizedValue(originalData.city) ||
+            getNormalizedValue(postalCode) !== getNormalizedValue(originalData.postalCode) ||
+            getNormalizedValue(country) !== getNormalizedValue(originalData.country) ||
+            getNormalizedValue(ico) !== getNormalizedValue(originalData.ico) ||
+            getNormalizedValue(dic) !== getNormalizedValue(originalData.dic) ||
+            getNormalizedValue(icdph) !== getNormalizedValue(originalData.icdph)
         );
     };
 
@@ -96,7 +109,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         }
 
         // Validácia IČ DPH pred odoslaním
-        if (icdph && !/^[A-Z]{2}\d+$/.test(icdph)) {
+        if (icdph && !/^[A-Z]{2}\d+$/.test(icdph) && icdph !== originalDataRef.current.icdph) {
             setError('IČ DPH musí začínať dvoma veľkými písmenami a obsahovať iba číslice.');
             setLoading(false);
             return;
@@ -107,17 +120,17 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 // Použijeme pôvodné hodnoty z ref, ak používateľ nič nezmenil,
                 // alebo nové hodnoty zo stavu.
                 billing: {
-                    clubName: clubName !== '' ? clubName : originalDataRef.current.clubName,
-                    ico: ico !== '' ? ico : originalDataRef.current.ico,
-                    dic: dic !== '' ? dic : originalDataRef.current.dic,
-                    icdph: icdph !== '' ? icdph : originalDataRef.current.icdph
+                    clubName: clubName !== '' ? clubName : userProfileData.billing?.clubName || '',
+                    ico: ico !== '' ? ico : userProfileData.billing?.ico || '',
+                    dic: dic !== '' ? dic : userProfileData.billing?.dic || '',
+                    icdph: icdph !== '' ? icdph : userProfileData.billing?.icdph || ''
                 },
                 // Ostatné údaje ostávajú na hlavnej úrovni
-                street: street !== '' ? street : originalDataRef.current.street,
-                houseNumber: houseNumber !== '' ? houseNumber : originalDataRef.current.houseNumber,
-                city: city !== '' ? city : originalDataRef.current.city,
-                postalCode: postalCode !== '' ? postalCode : originalDataRef.current.postalCode,
-                country: country !== '' ? country : originalDataRef.current.country
+                street: street !== '' ? street : userProfileData.street || '',
+                houseNumber: houseNumber !== '' ? houseNumber : userProfileData.houseNumber || '',
+                city: city !== '' ? city : userProfileData.city || '',
+                postalCode: postalCode !== '' ? postalCode.replace(/\s/g, '') : userProfileData.postalCode || '',
+                country: country !== '' ? country : userProfileData.country || ''
             };
             
             await updateDoc(doc(db, "users", user.uid), updatedData);
@@ -404,7 +417,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     'button',
                     {
                         type: 'submit',
-                        className: `px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${isButtonEnabled ? 'hover:scale-105' : ''} focus:outline-none`,
+                        className: `px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${isButtonEnabled ? 'hover:scale-105' : 'cursor-not-allowed'} focus:outline-none`,
                         disabled: !isButtonEnabled || loading,
                         style: buttonStyle
                     },
