@@ -334,10 +334,10 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             React.createElement(
                 'div',
                 { className: 'flex mb-4 space-x-4' },
-                // Zmenený popisok a placeholder pre IČO
+                // IČO
                 React.createElement(
                     'div',
-                    { className: 'w-1/2' },
+                    { className: 'w-1/3' },
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' },
@@ -347,17 +347,16 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'ico',
                         value: ico,
-                        // Validácia: iba číslice
                         onChange: (e) => setIco(e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.ico || '',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
                 ),
-                // Zmenený popisok a placeholder pre DIČ
+                // DIČ
                 React.createElement(
                     'div',
-                    { className: 'w-1/2' },
+                    { className: 'w-1/3' },
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' },
@@ -367,33 +366,31 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'dic',
                         value: dic,
-                        // Validácia: iba číslice
                         onChange: (e) => setDic(e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.dic || '',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
                     })
-                )
-            ),
-            // Zmenený popisok a placeholder pre IČ DPH
-            React.createElement(
-                'div',
-                { className: 'mb-4' },
-                React.createElement(
-                    'label',
-                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icdph' },
-                    'IČ DPH'
                 ),
-                React.createElement('input', {
-                    type: 'text',
-                    id: 'icdph',
-                    value: icdph,
-                    // Použitie novej funkcie na formátovanie IČ DPH
-                    onChange: handleIcdphChange,
-                    placeholder: userProfileData.billing?.icdph || 'SK1234567890',
-                    className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
-                    style: { borderColor: roleColor, boxShadow: 'none' }
-                })
+                // IČ DPH
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icdph' },
+                        'IČ DPH'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'icdph',
+                        value: icdph,
+                        onChange: handleIcdphChange,
+                        placeholder: userProfileData.billing?.icdph || 'SK1234567890',
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
             ),
              React.createElement(
                 'div',
