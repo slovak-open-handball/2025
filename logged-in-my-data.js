@@ -1,7 +1,7 @@
 // Importy pre Firebase funkcie
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getFirestore, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getFirestore, getDoc, onSnapshot, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
@@ -78,62 +78,101 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     const deadlineTimerRef = useRef(null); // Ref pre uloženie ID časovača
 
     const db = getFirestore();
+    const auth = getAuth();
 
     // Načítanie dátumu uzávierky úprav z databázy pomocou onSnapshot pre real-time aktualizácie
     useEffect(() => {
         // Ak je používateľ admin, povolia sa úpravy okamžite a ignoruje sa uzávierka
         if (userProfileData.role === 'admin') {
             setIsEditingAllowed(true);
-            return;
-        }
-
-        // Vytvorenie referencie na dokument aktuálneho používateľa
-        const userDocRef = doc(db, 'users', userProfileData.id);
-
-        const unsubscribe = onSnapshot(userDocRef, (userSnap) => {
-            // Vyčistíme predchádzajúci časovač, ak existuje
-            if (deadlineTimerRef.current) {
-                clearTimeout(deadlineTimerRef.current);
-            }
-
-            if (userSnap.exists()) {
-                const data = userSnap.data();
-                if (data.dataEditDeadline) {
-                    const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
-                    const now = new Date();
-                    const isAllowed = now < deadline;
-                    setIsEditingAllowed(isAllowed); // Nastavíme stav podľa porovnania
-
-                    // Ak sú úpravy povolené, nastavíme časovač, aby sa automaticky zakázali po uplynutí termínu
-                    if (isAllowed) {
-                        const timeRemaining = deadline.getTime() - now.getTime();
-                        deadlineTimerRef.current = setTimeout(() => {
-                            setIsEditingAllowed(false);
-                            window.showGlobalNotification("Termín pre úpravu dát vypršal.", "error");
-                        }, timeRemaining);
+        } else {
+             // Vytvorenie referencie na dokument aktuálneho používateľa
+             const userDocRef = doc(db, 'users', userProfileData.id);
+            const unsubscribe = onSnapshot(userDocRef, (userSnap) => {
+                // Vyčistíme predchádzajúci časovač, ak existuje
+                if (deadlineTimerRef.current) {
+                    clearTimeout(deadlineTimerRef.current);
+                }
+    
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    if (data.dataEditDeadline) {
+                        const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
+                        const now = new Date();
+                        const isAllowed = now < deadline;
+                        setIsEditingAllowed(isAllowed); // Nastavíme stav podľa porovnania
+    
+                        // Ak sú úpravy povolené, nastavíme časovač, aby sa automaticky zakázali po uplynutí termínu
+                        if (isAllowed) {
+                            const timeRemaining = deadline.getTime() - now.getTime();
+                            deadlineTimerRef.current = setTimeout(() => {
+                                setIsEditingAllowed(false);
+                                window.showGlobalNotification("Termín pre úpravu dát vypršal.", "error");
+                            }, timeRemaining);
+                        }
+                    } else {
+                        // Ak hodnota dataEditDeadline neexistuje, zakážeme úpravy
+                        setIsEditingAllowed(false);
                     }
                 } else {
-                    // Ak hodnota dataEditDeadline neexistuje, zakážeme úpravy
+                    // Ak dokument neexistuje, taktiež zakážeme úpravy
                     setIsEditingAllowed(false);
                 }
-            } else {
-                // Ak dokument neexistuje, taktiež zakážeme úpravy
+            }, (error) => {
+                console.error("Error fetching dataEditDeadline:", error);
+                // V prípade chyby tiež zakážeme úpravy
                 setIsEditingAllowed(false);
+            });
+    
+            // Funkcia na vyčistenie časovača a odhlásenie odberu
+            return () => {
+                if (deadlineTimerRef.current) {
+                    clearTimeout(deadlineTimerRef.current);
+                }
+                unsubscribe();
+            };
+        }
+    }, [db, userProfileData.id, userProfileData.role]);
+
+    // Nový useEffect na synchronizáciu e-mailu z Authentication s Firestore
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (user && localProfileData) {
+                // Vytvorenie referencie na dokument aktuálneho používateľa
+                const userDocRef = doc(db, 'users', user.uid);
+                
+                try {
+                    const userSnap = await getDoc(userDocRef);
+                    if (userSnap.exists()) {
+                        const firestoreEmail = userSnap.data().email;
+                        const authEmail = user.email;
+
+                        if (firestoreEmail !== authEmail) {
+                            // Ak sa e-maily nezhodujú, aktualizujeme Firestore
+                            await updateDoc(userDocRef, {
+                                email: authEmail,
+                            });
+                            
+                            // Vytvoríme notifikáciu v databáze
+                            await addDoc(collection(db, 'notifications'), {
+                                userId: user.uid,
+                                message: `E-mailová adresa používateľa ${user.uid} bola aktualizovaná z "${firestoreEmail}" na "${authEmail}".`,
+                                timestamp: new Date(),
+                                type: 'email_update',
+                            });
+
+                            console.log("E-mailová adresa v databáze Firestore bola aktualizovaná.");
+                        }
+                    }
+                } catch (error) {
+                    console.error("Chyba pri aktualizácii e-mailu alebo vytváraní notifikácie:", error);
+                }
             }
-        }, (error) => {
-            console.error("Error fetching dataEditDeadline:", error);
-            // V prípade chyby tiež zakážeme úpravy
-            setIsEditingAllowed(false);
         });
 
-        // Funkcia na vyčistenie časovača a odhlásenie odberu
-        return () => {
-            if (deadlineTimerRef.current) {
-                clearTimeout(deadlineTimerRef.current);
-            }
-            unsubscribe();
-        };
-    }, [db, userProfileData.id, userProfileData.role]); // Pridáme db, userProfileData.id a userProfileData.role do dependency array
+        return () => unsubscribeAuth();
+    }, [auth, db, localProfileData]);
+
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
