@@ -478,6 +478,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             window.showGlobalNotification('Na zmenenú e-mailovú adresu bol odoslaný potvrdzovací e-mail. Pre dokončenie zmeny kliknite na odkaz v e-maile. Z bezpečnostných dôvodov budete teraz automaticky odhlásený.', 'success');
             setTimeout(async () => {
                 await signOut(auth);
+                window.location.href = 'login.html';
             }, 10000); 
             return true;
         } catch (error) {
