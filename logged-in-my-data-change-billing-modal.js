@@ -151,7 +151,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                 'billing.dic': 'DIČ',
                 'billing.icdph': 'IČ DPH',
                 'street': 'Ulica',
-                'houseNumber': 'Popisné číslo',
+                'houseNumber': 'Číslo domu',
                 'city': 'Mesto',
                 'postalCode': 'PSČ',
                 'country': 'Krajina',
@@ -252,6 +252,14 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
         setIcdph(formatted);
     };
+
+    // Handler na zatvorenie modalu s kontrolou zmien
+    const handleCloseWithCheck = () => {
+        if (isFormChanged()) {
+            window.showGlobalNotification('Fakturačné údaje neboli aktualizované!', 'error');
+        }
+        onClose();
+    };
     
     // Nadpis modálneho okna
     const ModalHeader = React.createElement(
@@ -261,7 +269,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         React.createElement(
             'button',
             {
-                onClick: onClose,
+                onClick: handleCloseWithCheck, // Používame nový handler
                 className: 'text-white hover:text-gray-200'
             },
             React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
@@ -338,7 +346,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Popisné číslo'
+                        'Číslo domu'
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -497,7 +505,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
             onClick: (e) => {
                 if (e.target === e.currentTarget) {
-                    onClose();
+                    handleCloseWithCheck(); // Používame nový handler
                 }
             }
         },
