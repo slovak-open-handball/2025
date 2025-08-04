@@ -154,11 +154,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'w-full lg:w-1/2 bg-white rounded-xl shadow-xl' },
+                // Upravená hlavička s farebným okrajom
                 React.createElement(
                     'div',
                     {
                         className: 'flex justify-between items-center px-6 py-4 rounded-t-xl',
-                        style: { borderTop: `4px solid ${roleColor}` }
+                        style: { borderTop: `4px solid ${roleColor}`, borderBottom: `2px solid ${roleColor}`, paddingBottom: '16px' }
                     },
                     React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, profileSectionTitle),
                     React.createElement(
@@ -185,11 +186,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             localProfileData.role !== 'admin' && React.createElement(
                 'div',
                 { className: 'w-full lg:w-1/2 bg-white rounded-xl shadow-xl mt-8 lg:mt-0' },
+                // Upravená hlavička s farebným okrajom
                 React.createElement(
                     'div',
                     {
                         className: 'flex justify-between items-center px-6 py-4 rounded-t-xl',
-                        style: { borderTop: `4px solid ${roleColor}` }
+                        style: { borderTop: `4px solid ${roleColor}`, borderBottom: `2px solid ${roleColor}`, paddingBottom: '16px' }
                     },
                     React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, 'Fakturačné údaje'),
                     React.createElement(
