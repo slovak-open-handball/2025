@@ -150,57 +150,71 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             // Ľavý stĺpec pre osobné údaje
             React.createElement(
                 'div',
-                { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl' },
+                { className: 'w-full lg:w-1/2 bg-white rounded-xl shadow-xl' },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center mb-6' },
+                    {
+                        className: 'flex justify-between items-center px-6 py-4 rounded-t-xl',
+                        style: { borderTop: `4px solid ${roleColor}` }
+                    },
                     React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, profileSectionTitle),
                     React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeProfileModal(true),
-                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
-                            style: { backgroundColor: roleColor }
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            style: { color: roleColor, backgroundColor: 'white', border: `2px solid ${roleColor}` }
                         },
                         React.createElement(PencilIcon),
                         'Upraviť'
                     )
                 ),
-                React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
-                React.createElement(DataRow, { label: 'E-mailová adresa', value: localProfileData.email }),
-                // Zobrazíme telefónne číslo len ak používateľ nie je admin
-                localProfileData.role !== 'admin' && React.createElement(DataRow, { label: 'Telefónne číslo', value: phoneNumber }),
+                React.createElement(
+                    'div',
+                    { className: 'p-6' },
+                    React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
+                    React.createElement(DataRow, { label: 'E-mailová adresa', value: localProfileData.email }),
+                    // Zobrazíme telefónne číslo len ak používateľ nie je admin
+                    localProfileData.role !== 'admin' && React.createElement(DataRow, { label: 'Telefónne číslo', value: phoneNumber }),
+                )
             ),
             // Pravý stĺpec pre fakturačné údaje - nezobrazí sa, ak je používateľ admin
             localProfileData.role !== 'admin' && React.createElement(
                 'div',
-                { className: 'w-full lg:w-1/2 p-6 bg-white rounded-xl shadow-xl mt-8 lg:mt-0' },
+                { className: 'w-full lg:w-1/2 bg-white rounded-xl shadow-xl mt-8 lg:mt-0' },
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center mb-6' },
+                    {
+                        className: 'flex justify-between items-center px-6 py-4 rounded-t-xl',
+                        style: { borderTop: `4px solid ${roleColor}` }
+                    },
                     React.createElement('h4', { className: 'text-2xl font-bold text-gray-900' }, 'Fakturačné údaje'),
                     React.createElement(
                         'button',
                         {
                             onClick: () => setShowChangeBillingModal(true),
-                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm text-white transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
-                            style: { backgroundColor: roleColor }
+                            className: `flex items-center px-4 py-2 rounded-full font-bold text-sm transition-all duration-300 hover:scale-105 focus:outline-none shadow-lg`,
+                            style: { color: roleColor, backgroundColor: 'white', border: `2px solid ${roleColor}` }
                         },
                         React.createElement(PencilIcon),
                         'Upraviť'
                     )
                 ),
-                billingInfoExists ?
-                [
-                    // Upravené pre získanie údajov z billing objektu
-                    React.createElement(DataRow, { key: 'clubName', label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
-                    React.createElement(DataRow, { key: 'address', label: 'Adresa', value: formattedAddress }),
-                    React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.billing?.ico }),
-                    React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.billing?.dic }),
-                    React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.billing?.icdph }),
-                ]
-                :
-                React.createElement('p', { className: 'text-lg text-gray-500' }, 'Fakturačné údaje neboli zadané.')
+                React.createElement(
+                    'div',
+                    { className: 'p-6' },
+                    billingInfoExists ?
+                    [
+                        // Upravené pre získanie údajov z billing objektu
+                        React.createElement(DataRow, { key: 'clubName', label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
+                        React.createElement(DataRow, { key: 'address', label: 'Adresa', value: formattedAddress }),
+                        React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.billing?.ico }),
+                        React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.billing?.dic }),
+                        React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.billing?.icdph }),
+                    ]
+                    :
+                    React.createElement('p', { className: 'text-lg text-gray-500' }, 'Fakturačné údaje neboli zadané.')
+                )
             )
         ),
 
