@@ -45,7 +45,8 @@ const MyDataApp = ({ userProfileData, onUpdate }) => {
     const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
 
     // Načítame a sledujeme dáta používateľa v reálnom čase
-    const [profileData, setProfileData] = useState(userProfileData);
+    // Inicializujeme stav s prázdnym objektom, aby sa predišlo chybe "undefined"
+    const [profileData, setProfileData] = useState(userProfileData || {});
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -104,13 +105,13 @@ const MyDataApp = ({ userProfileData, onUpdate }) => {
         }
     };
 
-    if (!profileData) {
+    // Zobrazí loader, kým sa nenačítajú dáta
+    if (Object.keys(profileData).length === 0) {
         return React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
             React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
         );
     }
     
-    // Konverzia JSX na React.createElement volania
     return React.createElement('div', { className: 'max-w-4xl mx-auto py-8 px-4' },
         React.createElement('h1', { className: 'text-3xl font-bold text-gray-900 mb-8' }, 'Môj profil'),
 
