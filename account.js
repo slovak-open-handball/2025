@@ -219,7 +219,7 @@ function ResetPasswordApp() {
                     authInstance.applyActionCode(currentOobCode)
                         .then(() => {
                             console.log("z-account.js: applyActionCode úspešné pre recoverEmail. Pôvodný e-mail bol obnovený.");
-                            setSuccessMessage("Vaša pôvodná e-mailová adresa bola úspešne obnovená. Budete presmerovaní na prihlasovaciu stránku.");
+                            setSuccessMessage("Vaša pôvodná e-mailová adresa bola obnovená. Budete presmerovaný na prihlasovaciu stránku.");
                             setLoading(false);
                             setTimeout(() => {
                                 window.location.href = 'login.html';
