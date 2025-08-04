@@ -7,10 +7,13 @@
 // Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
 // Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
 // Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
+// Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Import zoznamu predvolieb
+import { countryDialCodes } from "./countryDialCodes.js";
 
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
@@ -62,6 +65,50 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 /**
+ * NOVÁ FUNKCIA: Formátuje telefónne číslo na základe predvolieb.
+ * @param {string} phoneNumber - Neformátované telefónne číslo.
+ * @returns {string} Naformátované telefónne číslo.
+ */
+const formatPhoneNumber = (phoneNumber) => {
+    // Odstránime všetky nečíslicové znaky, okrem '+' na začiatku
+    const cleaned = phoneNumber.replace(/[^+\d]/g, '');
+    let number = cleaned;
+
+    // Nájdeme predvoľbu
+    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa našla najpresnejšia zhoda
+    const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
+    let dialCode = '';
+
+    for (const code of sortedDialCodes) {
+        if (number.startsWith(code.dialCode)) {
+            dialCode = code.dialCode;
+            number = number.substring(dialCode.length);
+            break;
+        }
+    }
+
+    // Ak sa nenašla žiadna predvoľba, vrátime pôvodné číslo
+    if (!dialCode) {
+        return phoneNumber;
+    }
+
+    // Odstránime medzery, ktoré tam mohli zostať
+    number = number.replace(/\s/g, '');
+
+    // Rozdelíme zvyšok čísla do skupín po troch čísliciach
+    let formattedNumber = '';
+    while (number.length > 0) {
+        formattedNumber += number.substring(0, 3);
+        number = number.substring(3);
+        if (number.length > 0) {
+            formattedNumber += ' ';
+        }
+    }
+
+    return `${dialCode} ${formattedNumber}`.trim();
+};
+
+/**
  * Nová funkcia na formátovanie reťazca notifikácie s bold a italic textom.
  * Hľadá štyri apostrofy a formátuje text medzi nimi.
  * @param {string} text - Pôvodný reťazec.
@@ -76,8 +123,14 @@ const formatNotificationMessage = (text) => {
 
     // Ak nájdeme všetky štyri apostrofy, naformátujeme text
     if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
-        const oldText = text.substring(firstApostrophe + 1, secondApostrophe);
-        const newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
+        let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
+        let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
+
+        // Skontrolujeme, či ide o telefónne číslo a naformátujeme ho
+        if (oldText.startsWith('+') && newText.startsWith('+')) {
+            oldText = formatPhoneNumber(oldText);
+            newText = formatPhoneNumber(newText);
+        }
 
         // Nahradíme pôvodné časti novými s HTML tagmi
         let formattedText = text.substring(0, firstApostrophe);
@@ -122,7 +175,7 @@ const showDatabaseNotification = (message, type = 'info') => {
         flex items-center space-x-2
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '�';
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
