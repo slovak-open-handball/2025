@@ -186,9 +186,9 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 React.createElement(
                     'div',
                     { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                    React.createElement(DataRow, { label: 'Názov klubu', value: localProfileData.billing?.clubName }),
+                    React.createElement(DataRow, { label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
                     // Zobrazenie spojeného adresného riadku
-                    React.createElement(DataRow, { label: 'Adresa', value: formattedAddress }),
+                    React.createElement(DataRow, { label: 'Fakturačná adresa', value: formattedAddress }),
                     React.createElement(DataRow, { label: 'IČO', value: localProfileData.billing?.ico }),
                     React.createElement(DataRow, { label: 'DIČ', value: localProfileData.billing?.dic }),
                     React.createElement(DataRow, { label: 'IČ DPH', value: localProfileData.billing?.icdph })
