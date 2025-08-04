@@ -175,7 +175,7 @@ const showDatabaseNotification = (message, type = 'info') => {
         flex items-center space-x-2
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '�';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
