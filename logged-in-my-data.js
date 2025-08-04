@@ -63,69 +63,6 @@ const MyDataApp = ({ userProfileData, userId }) => {
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [billingModalVisible, setBillingModalVisible] = useState(false);
 
-    // Načítanie a správa dát o registrácii
-    const [registrationData, setRegistrationData] = useState([]);
-    const [registrationLoading, setRegistrationLoading] = useState(true);
-
-    // Načítanie notifikácií
-    const [notifications, setNotifications] = useState([]);
-    const [notificationsLoading, setNotificationsLoading] = useState(true);
-
-    const isMounted = useRef(true);
-
-    useEffect(() => {
-        isMounted.current = true;
-        
-        // Listener pre registráciu
-        let unsubscribeRegistration = null;
-        if (db && userId) {
-            const registrationsCollectionRef = collection(db, 'registrations');
-            const q = query(registrationsCollectionRef, where("userId", "==", userId));
-            unsubscribeRegistration = onSnapshot(q, (snapshot) => {
-                const fetchedRegistrations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (isMounted.current) {
-                    setRegistrationData(fetchedRegistrations);
-                    setRegistrationLoading(false);
-                    console.log("MyDataApp: Dáta registrácie boli úspešne načítané.");
-                }
-            }, (error) => {
-                if (isMounted.current) {
-                    console.error("MyDataApp: Chyba pri načítaní registrácií:", error);
-                    setRegistrationLoading(false);
-                }
-            });
-        }
-        
-        // Listener pre notifikácie
-        let unsubscribeNotifications = null;
-        if (db && userId) {
-            const notificationsCollectionRef = collection(db, `users/${userId}/notifications`);
-            unsubscribeNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
-                const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (isMounted.current) {
-                    setNotifications(fetchedNotifications);
-                    setNotificationsLoading(false);
-                    console.log("MyDataApp: Notifikácie boli úspešne načítané.");
-                }
-            }, (error) => {
-                if (isMounted.current) {
-                    console.error("MyDataApp: Chyba pri načítaní notifikácií:", error);
-                    setNotificationsLoading(false);
-                }
-            });
-        }
-
-        // Clean-up funkcia
-        return () => {
-            isMounted.current = false;
-            if (unsubscribeRegistration) unsubscribeRegistration();
-            if (unsubscribeNotifications) unsubscribeNotifications();
-        };
-    }, [db, userId]);
-
-    // Získanie farby roly pre UI prvky
-    const roleColor = userProfileData?.roleColor || '#5a67d8';
-
     // Pridaná funkcia pre zmenu stavu menu
     const updateMenuMargin = () => {
         const leftMenu = document.getElementById('left-menu');
@@ -235,49 +172,15 @@ const MyDataApp = ({ userProfileData, userId }) => {
                 React.createElement('strong', { className: 'w-40 text-gray-600' }, 'IČ DPH:'),
                 React.createElement('span', null, userProfileData.icdph)
             )
-        ),
-
-        // Zobrazovanie registrácií
-        React.createElement('h3', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje Registrácie'),
-        registrationLoading ? (
-            React.createElement('div', { className: 'flex justify-center' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500' })
-            )
-        ) : registrationData.length > 0 ? (
-            React.createElement('ul', { className: 'list-disc list-inside space-y-2' },
-                registrationData.map(reg => React.createElement('li', { key: reg.id, className: 'text-gray-700' },
-                    `Registrácia do kategórie "${reg.categoryName}" pre turnaj "${reg.tournamentName}"`
-                ))
-            )
-        ) : (
-            React.createElement('p', { className: 'text-gray-500' }, 'Zatiaľ nemáte žiadne registrácie.')
-        ),
-
-        // Zobrazovanie notifikácií
-        React.createElement('h3', { className: 'text-2xl font-bold text-gray-800 mt-8 mb-4' }, 'Moje Notifikácie'),
-        notificationsLoading ? (
-            React.createElement('div', { className: 'flex justify-center' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500' })
-            )
-        ) : notifications.length > 0 ? (
-            React.createElement('div', { className: 'space-y-4' },
-                notifications.map(notif => React.createElement('div', { key: notif.id, className: 'p-4 bg-gray-100 rounded-lg shadow' },
-                    React.createElement('div', { className: 'font-bold' }, notif.title),
-                    React.createElement('div', { className: 'text-sm text-gray-600 mt-1' }, notif.message),
-                    React.createElement('div', { className: 'text-xs text-gray-400 mt-2' }, new Date(notif.timestamp.seconds * 1000).toLocaleString())
-                ))
-            )
-        ) : (
-            React.createElement('p', { className: 'text-gray-500' }, 'Nemáte žiadne notifikácie.')
-        ),
+        )
     );
 
     return React.createElement(
         'div',
         { className: 'min-h-screen' },
         (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') && userUI,
-        React.createElement(ChangeProfileModal, { show: profileModalVisible, onClose: () => setProfileModalVisible(false), userProfileData: userProfileData, roleColor: roleColor }),
-        React.createElement(ChangeBillingModal, { show: billingModalVisible, onClose: () => setBillingModalVisible(false), userProfileData: userProfileData, roleColor: roleColor })
+        React.createElement(ChangeProfileModal, { show: profileModalVisible, onClose: () => setProfileModalVisible(false), userProfileData: userProfileData, roleColor: userProfileData?.roleColor || '#5a67d8' }),
+        React.createElement(ChangeBillingModal, { show: billingModalVisible, onClose: () => setBillingModalVisible(false), userProfileData: userProfileData, roleColor: userProfileData?.roleColor || '#5a67d8' })
     );
 };
 
