@@ -63,7 +63,7 @@ const MyDataApp = ({ userProfileData, userId }) => {
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [billingModalVisible, setBillingModalVisible] = useState(false);
 
-    // Listener pre menu, ktorý spúšťa zmenu okraja pri nabehnutí myšou/odídení myši
+    // Listener pre menu, ktorý spúšťa zmenu okraja a šírky obsahu pri nabehnutí myšou/odídení myši
     useEffect(() => {
         const leftMenu = document.getElementById('left-menu');
         const mainContent = document.getElementById('main-content-area');
@@ -71,19 +71,24 @@ const MyDataApp = ({ userProfileData, userId }) => {
         if (leftMenu && mainContent) {
             // Funkcia na obsluhu nabehnutia myšou
             const handleMouseEnter = () => {
+                // Keď sa menu rozbalí (256px), posunieme obsah a zmenšíme jeho šírku
                 mainContent.style.marginLeft = '256px';
+                mainContent.style.width = 'calc(100% - 256px)';
             };
             // Funkcia na obsluhu odídenia myši
             const handleMouseLeave = () => {
+                // Keď sa menu zbalí (64px), posunieme obsah späť a zväčšíme jeho šírku
                 mainContent.style.marginLeft = '64px';
+                mainContent.style.width = 'calc(100% - 64px)';
             };
     
             // Pridanie event listenerov
             leftMenu.addEventListener('mouseenter', handleMouseEnter);
             leftMenu.addEventListener('mouseleave', handleMouseLeave);
             
-            // Počiatočné nastavenie okraja
+            // Počiatočné nastavenie okraja a šírky
             mainContent.style.marginLeft = '64px';
+            mainContent.style.width = 'calc(100% - 64px)';
     
             // Cleanup funkcia pre odstránenie listenerov
             return () => {
