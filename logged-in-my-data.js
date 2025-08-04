@@ -129,6 +129,22 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Telefón'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.contactPhoneNumber)
             ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
+                React.createElement('div', { className: 'font-normal' }, `${userProfileData.billing?.street || '-'} ${userProfileData.billing?.houseNumber || '-'}`)
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Mesto'),
+                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.city || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'PSČ'),
+                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.postalCode || '-')
+            ),
+            React.createElement('div', null,
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Krajina'),
+                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.country || '-')
+            ),
             userProfileData.role === 'referee' &&
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Licencia Rozhodcu'),
@@ -171,22 +187,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Názov klubu'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
-                React.createElement('div', { className: 'font-normal' }, `${userProfileData.billing?.street || '-'} ${userProfileData.billing?.houseNumber || '-'}`)
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Mesto'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.city || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'PSČ'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.postalCode || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Krajina'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.country || '-')
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČO'),
