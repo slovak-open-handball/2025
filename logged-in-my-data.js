@@ -90,6 +90,10 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
     
     // Nová podmienka na skrytie fakturačných údajov pre admin a hall role
     const hideBillingSection = localProfileData.role === 'admin' || localProfileData.role === 'hall';
+    
+    // Spojenie krstného mena a priezviska do jedného reťazca pre zobrazenie
+    const fullName = `${localProfileData.firstName || ''} ${localProfileData.lastName || ''}`.trim();
+
 
     // Komponent pre zobrazenie jedného riadku údajov
     const DataRow = ({ label, value }) => {
@@ -137,7 +141,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
-                React.createElement(DataRow, { label: 'Meno a priezvisko', value: localProfileData.full_name }),
+                // Upravený riadok pre meno a priezvisko
+                React.createElement(DataRow, { label: 'Meno a priezvisko', value: fullName }),
                 React.createElement(DataRow, { label: 'Rola', value: localProfileData.role }),
                 React.createElement(DataRow, { label: 'E-mail', value: localProfileData.email }),
                 // Podmienka na zobrazenie telefónneho čísla
