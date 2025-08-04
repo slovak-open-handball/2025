@@ -764,8 +764,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                       'span',
                       { className: 'text-red-500' },
                       ' (chybný formát)'
+                     )
                     )
-                  )
+                   )
                 )
                 React.createElement('input', {
                     type: 'email',
