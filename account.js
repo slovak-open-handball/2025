@@ -201,7 +201,7 @@ function ResetPasswordApp() {
                             console.log("z-account.js: applyActionCode úspešné. E-mail bol overený v Authentication.");
                             
                             // NOVINKA: Zobrazenie novej správy o úspechu
-                            setSuccessMessage("Vaša e-mailová adresa bola úspešne overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
+                            setSuccessMessage("Vaša e-mailová adresa bola overená. Na jej aktualizáciu sa, prosím, prihláste. Budete presmerovaný na prihlasovaciu stránku.");
                             
                             setLoading(false);
                             // Presmerovanie na prihlasovaciu stránku po krátkom oneskorení
