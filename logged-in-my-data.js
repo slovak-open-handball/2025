@@ -78,23 +78,33 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 
     const db = getFirestore();
 
-    // Načítanie dátumu uzávierky úprav z databázy
+    // Načítanie dátumu uzávierky úprav z databázy pomocou onSnapshot pre real-time aktualizácie
     useEffect(() => {
-        const fetchEditDeadline = async () => {
-            const settingsDocRef = doc(db, 'settings', 'registration');
-            const settingsSnap = await getDoc(settingsDocRef);
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
             if (settingsSnap.exists()) {
                 const data = settingsSnap.data();
                 if (data.dataEditDeadline) {
                     const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
                     const now = new Date();
                     setIsEditingAllowed(now < deadline); // Nastavíme stav podľa porovnania
+                } else {
+                    // Ak hodnota dataEditDeadline neexistuje, zakážeme úpravy
+                    setIsEditingAllowed(false);
                 }
+            } else {
+                // Ak dokument neexistuje, taktiež zakážeme úpravy
+                setIsEditingAllowed(false);
             }
-        };
+        }, (error) => {
+            console.error("Error fetching dataEditDeadline:", error);
+            // V prípade chyby tiež zakážeme úpravy
+            setIsEditingAllowed(false);
+        });
 
-        fetchEditDeadline();
-    }, [db]); // Pridáme db do dependency array
+        // Vrátime funkciu na odhlásenie odberu, aby sa listener správne vyčistil
+        return () => unsubscribe();
+    }, [db]);
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
