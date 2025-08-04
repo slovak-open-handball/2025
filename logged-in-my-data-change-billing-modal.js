@@ -9,28 +9,47 @@ const { useState, useEffect } = React;
 export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }) => {
     const db = window.db;
 
-    const [billingAddress, setBillingAddress] = useState(userProfileData.billing_address || '');
-    const [billingCity, setBillingCity] = useState(userProfileData.billing_city || '');
-    const [billingZip, setBillingZip] = useState(userProfileData.billing_zip || '');
-    const [billingCountry, setBillingCountry] = useState(userProfileData.billing_country || '');
+    // Stavy pre formulár
+    const [companyName, setCompanyName] = useState('');
+    const [street, setStreet] = useState('');
+    const [houseNumber, setHouseNumber] = useState('');
+    const [city, setCity] = useState('');
+    const [postalCode, setPostalCode] = useState('');
+    const [country, setCountry] = useState('');
+    const [ico, setIco] = useState('');
+    const [dic, setDic] = useState('');
+    const [icdph, setIcdph] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Synchronizácia lokálneho stavu s globálnymi dátami
+    // Načítanie počiatočných hodnôt z `userProfileData` do stavu pri zobrazení modálu
     useEffect(() => {
-        setBillingAddress(userProfileData.billing_address || '');
-        setBillingCity(userProfileData.billing_city || '');
-        setBillingZip(userProfileData.billing_zip || '');
-        setBillingCountry(userProfileData.billing_country || '');
-        setError(null);
-    }, [userProfileData]);
+        if (show && userProfileData) {
+            setCompanyName(userProfileData.companyName || '');
+            setStreet(userProfileData.street || '');
+            setHouseNumber(userProfileData.houseNumber || '');
+            setCity(userProfileData.city || '');
+            setPostalCode(userProfileData.postalCode || '');
+            setCountry(userProfileData.country || '');
+            setIco(userProfileData.ico || '');
+            setDic(userProfileData.dic || '');
+            setIcdph(userProfileData.icdph || '');
+            setError(null);
+        }
+    }, [show, userProfileData]);
 
+    // Kontrola, či sa zmenil formulár
     const isFormChanged = () => {
         return (
-            billingAddress !== userProfileData.billing_address ||
-            billingCity !== userProfileData.billing_city ||
-            billingZip !== userProfileData.billing_zip ||
-            billingCountry !== userProfileData.billing_country
+            companyName !== userProfileData.companyName ||
+            street !== userProfileData.street ||
+            houseNumber !== userProfileData.houseNumber ||
+            city !== userProfileData.city ||
+            postalCode !== userProfileData.postalCode ||
+            country !== userProfileData.country ||
+            ico !== userProfileData.ico ||
+            dic !== userProfileData.dic ||
+            icdph !== userProfileData.icdph
         );
     };
 
@@ -46,12 +65,24 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             return;
         }
 
+        if (!isFormChanged()) {
+             window.showGlobalNotification('Žiadne zmeny na uloženie.', 'info');
+             setLoading(false);
+             onClose();
+             return;
+        }
+
         try {
             const updatedData = {
-                billing_address: billingAddress,
-                billing_city: billingCity,
-                billing_zip: billingZip,
-                billing_country: billingCountry
+                companyName: companyName,
+                street: street,
+                houseNumber: houseNumber,
+                city: city,
+                postalCode: postalCode,
+                country: country,
+                ico: ico,
+                dic: dic,
+                icdph: icdph
             };
             
             await updateDoc(doc(db, "users", user.uid), updatedData);
@@ -61,68 +92,237 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         } catch (e) {
             console.error("Chyba pri aktualizácii fakturačných údajov:", e);
             setError('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.');
+            window.showGlobalNotification('Nepodarilo sa aktualizovať fakturačné údaje. Skúste to prosím neskôr.', 'error');
         } finally {
             setLoading(false);
         }
     };
-
-    const ModalHeader = React.createElement('div', {
-        className: `flex items-center justify-between p-4 sm:p-6 border-b`,
-        style: { borderColor: roleColor, backgroundColor: '#F9FAFB' }
-    },
-        React.createElement('h3', { className: 'text-2xl font-semibold text-gray-900' }, 'Upraviť fakturačné údaje'),
-        React.createElement('button', {
-            type: 'button',
-            className: `text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center`,
-            onClick: onClose
-        },
-            React.createElement('svg', { className: 'w-5 h-5', fill: 'currentColor', viewBox: '0 0 20 20' },
-                React.createElement('path', { fillRule: 'evenodd', d: 'M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z', clipRule: 'evenodd' })
+    
+    // Nadpis modálneho okna
+    const ModalHeader = React.createElement(
+        'div',
+        { className: 'flex justify-between items-center px-6 py-4 border-b rounded-t-xl sticky top-0 z-10', style: { backgroundColor: roleColor } },
+        React.createElement('h3', { className: 'text-2xl font-bold text-white' }, 'Upraviť fakturačné údaje'),
+        React.createElement(
+            'button',
+            {
+                onClick: onClose,
+                className: 'text-white hover:text-gray-200'
+            },
+            React.createElement('svg', { className: 'h-6 w-6', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M6 18L18 6M6 6l12 12' })
             )
         )
     );
 
-    const ModalContent = React.createElement('div', { className: 'p-4 sm:p-6' },
-        error && React.createElement('div', { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
-            React.createElement('strong', { className: 'font-bold' }, 'Chyba! '),
-            React.createElement('span', { className: 'block sm:inline' }, error)
+    // Tlačidlo na uloženie zmien
+    const isButtonEnabled = isFormChanged();
+    const buttonStyle = {
+        backgroundColor: isButtonEnabled ? roleColor : 'white',
+        color: isButtonEnabled ? 'white' : roleColor,
+        border: isButtonEnabled ? 'none' : `2px solid ${roleColor}`,
+        cursor: isButtonEnabled && !loading ? 'pointer' : 'not-allowed',
+        boxShadow: isButtonEnabled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
+    };
+
+    const ModalContent = React.createElement(
+        'div',
+        { className: 'p-6 h-full overflow-y-auto' }, // Pridaná trieda 'h-full' a 'overflow-y-auto'
+        error && React.createElement(
+            'div',
+            { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4', role: 'alert' },
+            error
         ),
-        React.createElement('form', { onSubmit: handleUpdateBilling },
-            React.createElement('div', { className: 'space-y-4' },
-                React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'billing_address', className: 'block text-sm font-medium text-gray-700' }, 'Adresa'),
-                    React.createElement('input', { type: 'text', id: 'billing_address', value: billingAddress, onChange: (e) => setBillingAddress(e.target.value), className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm p-2` })
+        React.createElement(
+            'form',
+            {
+                onSubmit: handleUpdateBilling
+            },
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement(
+                    'label',
+                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'companyName' },
+                    'Názov spoločnosti'
                 ),
-                React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'billing_city', className: 'block text-sm font-medium text-gray-700' }, 'Mesto'),
-                    React.createElement('input', { type: 'text', id: 'billing_city', value: billingCity, onChange: (e) => setBillingCity(e.target.value), className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm p-2` })
+                React.createElement('input', {
+                    type: 'text',
+                    id: 'companyName',
+                    value: companyName,
+                    onChange: (e) => setCompanyName(e.target.value),
+                    placeholder: userProfileData.companyName,
+                    className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                    style: { borderColor: roleColor, boxShadow: 'none' }
+                })
+            ),
+             React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                React.createElement(
+                    'div',
+                    { className: 'w-2/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'street' },
+                        'Ulica'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'street',
+                        value: street,
+                        onChange: (e) => setStreet(e.target.value),
+                        placeholder: userProfileData.street,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
                 ),
-                React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'billing_zip', className: 'block text-sm font-medium text-gray-700' }, 'PSČ'),
-                    React.createElement('input', { type: 'text', id: 'billing_zip', value: billingZip, onChange: (e) => setBillingZip(e.target.value), className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm p-2` })
-                ),
-                React.createElement('div', null,
-                    React.createElement('label', { htmlFor: 'billing_country', className: 'block text-sm font-medium text-gray-700' }, 'Krajina'),
-                    React.createElement('input', { type: 'text', id: 'billing_country', value: billingCountry, onChange: (e) => setBillingCountry(e.target.value), className: `mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-${roleColor}-500 focus:ring-${roleColor}-500 sm:text-sm p-2` })
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
+                        'Číslo'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'houseNumber',
+                        value: houseNumber,
+                        onChange: (e) => setHouseNumber(e.target.value),
+                        placeholder: userProfileData.houseNumber,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
                 )
             ),
-            React.createElement('div', { className: 'mt-6 flex justify-end' },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'mr-3 inline-flex justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2',
-                    onClick: onClose
-                }, 'Zrušiť'),
-                React.createElement('button', {
-                    type: 'submit',
-                    disabled: loading || !isFormChanged(),
-                    className: `inline-flex justify-center rounded-md py-2 px-4 text-sm font-medium shadow-sm focus:outline-none`,
-                    style: {
-                        backgroundColor: (loading || !isFormChanged()) ? '#E5E7EB' : roleColor,
-                        color: (loading || !isFormChanged()) ? '#9CA3AF' : 'white',
-                        border: 'none',
-                        cursor: (loading || !isFormChanged()) ? 'not-allowed' : 'pointer',
-                    }
-                },
+            React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                React.createElement(
+                    'div',
+                    { className: 'w-2/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'city' },
+                        'Mesto'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'city',
+                        value: city,
+                        onChange: (e) => setCity(e.target.value),
+                        placeholder: userProfileData.city,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'postalCode' },
+                        'PSČ'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'postalCode',
+                        value: postalCode,
+                        onChange: (e) => setPostalCode(e.target.value),
+                        placeholder: userProfileData.postalCode,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
+            ),
+             React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement(
+                    'label',
+                    { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'country' },
+                    'Krajina'
+                ),
+                React.createElement('input', {
+                    type: 'text',
+                    id: 'country',
+                    value: country,
+                    onChange: (e) => setCountry(e.target.value),
+                    placeholder: userProfileData.country,
+                    className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                    style: { borderColor: roleColor, boxShadow: 'none' }
+                })
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex mb-4 space-x-4' },
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' },
+                        'IČO'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'ico',
+                        value: ico,
+                        onChange: (e) => setIco(e.target.value),
+                        placeholder: userProfileData.ico,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                 React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' },
+                        'DIČ'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'dic',
+                        value: dic,
+                        onChange: (e) => setDic(e.target.value),
+                        placeholder: userProfileData.dic,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'w-1/3' },
+                    React.createElement(
+                        'label',
+                        { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icdph' },
+                        'IČ DPH'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        id: 'icdph',
+                        value: icdph,
+                        onChange: (e) => setIcdph(e.target.value),
+                        placeholder: userProfileData.icdph,
+                        className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
+                        style: { borderColor: roleColor, boxShadow: 'none' }
+                    })
+                )
+            ),
+             React.createElement(
+                'div',
+                { className: 'flex justify-end mt-6' },
+                React.createElement(
+                    'button',
+                    {
+                        type: 'submit',
+                        className: `px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 ${isButtonEnabled ? 'hover:scale-105' : ''} focus:outline-none`,
+                        disabled: !isButtonEnabled || loading,
+                        style: buttonStyle
+                    },
                     loading ? 'Ukladám...' : 'Uložiť zmeny'
                 )
             )
@@ -130,8 +330,9 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
     );
 
     const modal = show ? React.createElement(
-        'div', {
-            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000]',
+        'div',
+        {
+            className: 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[10000] p-4',
             onClick: (e) => {
                 if (e.target === e.currentTarget) {
                     onClose();
@@ -139,9 +340,12 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             }
         },
         React.createElement(
-            'div', { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto overflow-hidden' },
+            'div',
+            { className: 'bg-white rounded-xl shadow-xl w-full max-w-lg mx-auto flex flex-col max-h-[90vh]' },
             ModalHeader,
-            ModalContent
+            React.createElement('div', { className: 'flex-grow overflow-y-auto' },
+                ModalContent
+            )
         )
     ) : null;
 
