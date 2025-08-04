@@ -828,8 +828,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 'button',
                 {
                     type: 'submit',
-                    className: `font-bold py-2 px-4 rounded-full transition-all duration-300 ${isButtonEnabled && !loading ? 'hover:scale-105' : ''} focus:outline-none`,
-                    disabled: !isButtonEnabled || loading,
+                    className: `px-6 py-2 rounded-lg font-semibold shadow-md transition-all duration-150 border-2 ${isButtonEnabled() ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-white cursor-not-allowed'}`,                    disabled: !isButtonEnabled || loading,
                     style: buttonStyle,
                 },
                 loading ? 'Ukladám...' : 'Uložiť zmeny'
