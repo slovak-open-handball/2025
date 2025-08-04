@@ -140,6 +140,10 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     const emailLabel = userProfileData?.role === 'user' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
     const phoneLabel = userProfileData?.role === 'user' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
 
+    // Logika pre zobrazenie ceruzky na základe roly
+    const showProfilePencil = canEdit || userProfileData?.role === 'admin';
+    const showBillingPencil = canEdit || userProfileData?.role === 'admin';
+
 
     const profileContent = React.createElement(
         'div',
@@ -148,8 +152,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
-            // Ceruzka sa zobrazí len ak je `canEdit` true
-            canEdit && React.createElement(
+            // Ceruzka sa zobrazí len ak je canEdit true, alebo ak je rola 'admin'
+            showProfilePencil && React.createElement(
                 'button',
                 {
                     onClick: onOpenProfileModal,
@@ -201,8 +205,8 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            // Ceruzka sa zobrazí len ak je `canEdit` true
-            canEdit && React.createElement(
+            // Ceruzka sa zobrazí len ak je canEdit true, alebo ak je rola 'admin'
+            showBillingPencil && React.createElement(
                 'button',
                 {
                     onClick: onOpenBillingModal,
@@ -271,6 +275,12 @@ const MyDataApp = ({ userProfileData }) => {
 
     // Časovač na automatické skrytie ceruziek
     useEffect(() => {
+        // Logika pre admina
+        if (userProfileData?.role === 'admin') {
+            setCanEdit(true);
+            return; // Ukončíme useEffect, aby sa nespúšťal časovač
+        }
+        
         if (userProfileData?.dataEditDeadline) {
             const deadlineMillis = userProfileData.dataEditDeadline.toMillis();
             const nowMillis = Date.now();
