@@ -754,7 +754,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 React.createElement(
                     'label',
                     { className: `block text-sm font-bold mb-2 ${isEmailValid ? 'text-gray-700' : 'text-red-500'}`, htmlFor: 'email' },
-                    'E-mailová adresa'
+                    isEmailValid ? 'E-mailová adresa' : 'E-mailová adresa (chybný formát)'
                 ),
                 React.createElement('input', {
                     type: 'email',
