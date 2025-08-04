@@ -313,16 +313,16 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
 };
 
 const getRoleColor = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#0D9488'; // teal-600
-        case 'user':
-            return '#1D4ED8'; // blue-700
-        case 'hall':
-            return '#9D174D'; // pink-800
-        default:
-            return '#4B5563'; // gray-600
-    }
+ switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'user':
+            return '#9333EA';
+        default:
+            return '#1D4ED8';
+    }
 };
 
 const handleDataUpdateAndRender = (event) => {
