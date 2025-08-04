@@ -76,9 +76,27 @@ window.loadLeftMenu = async () => {
     }
 };
 
-// Spustenie načítania ľavého menu po načítaní DOM
-if (document.readyState === 'loading') {
-    window.addEventListener('DOMContentLoaded', window.loadLeftMenu);
-} else {
-    window.loadLeftMenu();
+// Počúvanie udalosti globalDataUpdated, ktorá je odoslaná, keď sú dáta používateľa k dispozícii
+window.addEventListener('globalDataUpdated', (event) => {
+    console.log('left-menu.js: Prijatá udalosť "globalDataUpdated". Kontrolujem dáta...');
+    if (event.detail) {
+        console.log('left-menu.js: Dáta používateľa sú dostupné. Načítavam menu...');
+        loadLeftMenu();
+        const leftMenuElement = document.getElementById('left-menu');
+        if (leftMenuElement) {
+            leftMenuElement.classList.remove('hidden');
+        }
+    } else {
+        console.log('left-menu.js: Používateľ odhlásený. Skrývam menu.');
+        const leftMenuElement = document.getElementById('left-menu');
+        if (leftMenuElement) {
+            leftMenuElement.classList.add('hidden');
+        }
+    }
+});
+
+// Kontrola pri prvom načítaní pre prípad, že event už prebehol
+if (window.globalUserProfileData) {
+    console.log('left-menu.js: Globálne dáta už existujú. Načítavam menu pri štarte.');
+    loadLeftMenu();
 }
