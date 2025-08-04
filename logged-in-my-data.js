@@ -381,12 +381,11 @@ const handleDataUpdateAndRender = (event) => {
                                     email: user.email
                                 });
             
-                                // Vytvorenie notifikácie v databáze
+                                // Vytvorenie notifikácie v databáze s novou štruktúrou
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userId: user.uid,
-                                    message: `E-mailová adresa bola automaticky aktualizovaná z ${firestoreEmail} na ${user.email}.`,
-                                    type: 'info',
+                                    userEmail: user.email,
+                                    changes: `E-mailová adresa bola automaticky aktualizovaná z '${firestoreEmail}' na '${user.email}'.`,
                                     timestamp: new Date()
                                 });
                                 
