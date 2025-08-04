@@ -86,20 +86,16 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             setIsEditingAllowed(true);
             return;
         }
-        
-        // Získame referenciu na dokument aktuálneho používateľa
-        // Predpokladá sa, že userProfileData obsahuje `uid` používateľa,
-        // čo sa používa ako ID dokumentu v kolekcii 'users'.
-        const userDocRef = doc(db, 'users', userProfileData.uid);
 
-        const unsubscribe = onSnapshot(userDocRef, (userSnap) => {
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        const unsubscribe = onSnapshot(settingsDocRef, (settingsSnap) => {
             // Vyčistíme predchádzajúci časovač, ak existuje
             if (deadlineTimerRef.current) {
                 clearTimeout(deadlineTimerRef.current);
             }
 
-            if (userSnap.exists()) {
-                const data = userSnap.data();
+            if (settingsSnap.exists()) {
+                const data = settingsSnap.data();
                 if (data.dataEditDeadline) {
                     const deadline = data.dataEditDeadline.toDate(); // Konvertujeme Firestore Timestamp na JavaScript Date objekt
                     const now = new Date();
@@ -123,7 +119,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 setIsEditingAllowed(false);
             }
         }, (error) => {
-            console.error("Error fetching user dataEditDeadline:", error);
+            console.error("Error fetching dataEditDeadline:", error);
             // V prípade chyby tiež zakážeme úpravy
             setIsEditingAllowed(false);
         });
@@ -135,7 +131,7 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
             }
             unsubscribe();
         };
-    }, [db, userProfileData.role, userProfileData.uid]); // Pridáme db, role a uid do dependency array
+    }, [db, userProfileData.role]); // Pridáme db a userProfileData.role do dependency array
 
     // Synchronizácia lokálnych dát, ak sa zmenia globálne dáta
     useEffect(() => {
@@ -205,17 +201,12 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         const cleanNumber = phoneNumber.replace(/[\s-]/g, '');
 
         // Získame a zoradíme predvoľby zostupne podľa dĺžky, aby sme našli najdlhšiu možnú zhodu
-        const sortedDialCodes = countryDialCodes.sort((a, b) => {
-            const aLength = a?.dialCode?.length || 0;
-            const bLength = b?.dialCode?.length || 0;
-            return bLength - aLength;
-        });
+        const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
 
         // Hľadáme zhodu predvoľby v čísle
         let dialCodeMatch = null;
         for (const country of sortedDialCodes) {
-            // Pridaná kontrola, či country.dialCode existuje a je reťazec
-            if (country.dialCode && typeof country.dialCode === 'string' && cleanNumber.startsWith(country.dialCode)) {
+            if (cleanNumber.startsWith(country.dialCode)) {
                 dialCodeMatch = country.dialCode;
                 break;
             }
