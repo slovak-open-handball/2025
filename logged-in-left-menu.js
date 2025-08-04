@@ -55,7 +55,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
         if (myDataLinkSpan) {
             if (userProfileData.role === 'user') {
-                myDataLinkSpan.textContent = 'Údaje kontaktnej osoby';
+                myDataLinkSpan.textContent = 'Kontaktná osoba';
             } else {
                 myDataLinkSpan.textContent = 'Moje údaje';
             }
