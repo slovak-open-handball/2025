@@ -29,6 +29,8 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
     // Ref pre uloženie pôvodných hodnôt pre porovnanie
     const originalDataRef = useRef({});
+    // Ref pre sledovanie, či ide o počiatočné načítanie formulára
+    const isInitialLoad = useRef(true);
 
     // Načítanie počiatočných hodnôt z `userProfileData` do ref a vyčistenie formulára
     useEffect(() => {
@@ -58,6 +60,9 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             setDic('');
             setIcdph('');
             setError(null);
+            
+            // Nastavíme, že sa jedná o počiatočné načítanie.
+            isInitialLoad.current = true;
         }
     }, [show, userProfileData]);
 
@@ -69,6 +74,11 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
     // Kontrola, či sa zmenil formulár
     const isFormChanged = () => {
+        // Ak je to počiatočné načítanie modalu, neboli vykonané žiadne zmeny.
+        if (isInitialLoad.current) {
+            return false;
+        }
+        
         const originalData = originalDataRef.current;
         
         // Ak ešte nie sú načítané pôvodné dáta, nedá sa porovnávať.
@@ -204,8 +214,15 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
         return sanitized;
     };
 
+    // Nový handler, ktorý zruší počiatočný stav načítania
+    const handleValueChange = (setter, value) => {
+        isInitialLoad.current = false;
+        setter(value);
+    };
+
     // Funkcia pre formátovanie PSČ (pre input)
     const handlePostalCodeChange = (e) => {
+        isInitialLoad.current = false;
         const input = e.target.value.replace(/\s/g, ''); // Odstránime medzery
         const sanitized = input.replace(/[^0-9]/g, ''); // Ponecháme len číslice
         
@@ -221,6 +238,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
 
     // Nová funkcia pre formátovanie IČ DPH počas zadávania
     const handleIcdphChange = (e) => {
+        isInitialLoad.current = false;
         const input = e.target.value;
         const sanitized = input.replace(/[^a-zA-Z0-9]/g, ''); // Odstránime všetko okrem písmen a číslic
         let formatted = '';
@@ -287,7 +305,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'clubName',
                     value: clubName,
-                    onChange: (e) => setClubName(e.target.value),
+                    onChange: (e) => handleValueChange(setClubName, e.target.value),
                     placeholder: userProfileData.billing?.clubName || '-',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
@@ -308,7 +326,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'street',
                         value: street,
-                        onChange: (e) => setStreet(e.target.value),
+                        onChange: (e) => handleValueChange(setStreet, e.target.value),
                         placeholder: userProfileData.street || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -326,7 +344,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'houseNumber',
                         value: houseNumber,
-                        onChange: (e) => setHouseNumber(e.target.value),
+                        onChange: (e) => handleValueChange(setHouseNumber, e.target.value),
                         placeholder: userProfileData.houseNumber || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -348,7 +366,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'city',
                         value: city,
-                        onChange: (e) => setCity(e.target.value),
+                        onChange: (e) => handleValueChange(setCity, e.target.value),
                         placeholder: userProfileData.city || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -389,7 +407,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     type: 'text',
                     id: 'country',
                     value: country,
-                    onChange: (e) => setCountry(e.target.value),
+                    onChange: (e) => handleValueChange(setCountry, e.target.value),
                     placeholder: userProfileData.country || '-',
                     className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                     style: { borderColor: roleColor, boxShadow: 'none' }
@@ -411,7 +429,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'ico',
                         value: ico,
-                        onChange: (e) => setIco(e.target.value.replace(/[^0-9]/g, '')),
+                        onChange: (e) => handleValueChange(setIco, e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.ico || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
@@ -430,7 +448,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                         type: 'text',
                         id: 'dic',
                         value: dic,
-                        onChange: (e) => setDic(e.target.value.replace(/[^0-9]/g, '')),
+                        onChange: (e) => handleValueChange(setDic, e.target.value.replace(/[^0-9]/g, '')),
                         placeholder: userProfileData.billing?.dic || '-',
                         className: 'focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight',
                         style: { borderColor: roleColor, boxShadow: 'none' }
