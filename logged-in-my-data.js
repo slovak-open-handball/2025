@@ -87,6 +87,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 return 'Používateľ';
         }
     };
+
     // Skontrolujeme, či je aktuálny čas menší ako uzávierka pre úpravu dát
     const canEdit = userProfileData?.dataEditDeadline?.toMillis() > Date.now();
 
@@ -132,7 +133,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            React.createElement(
+            canEdit && React.createElement( // podmienka pre zobrazenie ceruzky
                 'button',
                 {
                     onClick: onOpenBillingModal,
