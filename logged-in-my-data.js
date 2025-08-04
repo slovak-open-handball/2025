@@ -132,7 +132,7 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
     };
 
     // Dynamicky nastavíme názov karty podľa roly
-    const profileCardTitle = userProfileData?.role === 'user' ? 'Údaje kontaktnej osoby' : 'Moje údaje';
+    const profileCardTitle = userProfileData?.role === 'user' ? 'Kontaktná osoba' : 'Moje údaje';
 
     // Dynamicky nastavíme popisky polí
     const nameLabel = userProfileData?.role === 'user' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
