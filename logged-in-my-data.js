@@ -88,7 +88,8 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
         );
     }
 
-    const billingInfoExists = localProfileData.companyName || localProfileData.street || localProfileData.ico;
+    // Upravená podmienka na zistenie, či existujú fakturačné údaje, s ohľadom na billing:clubName
+    const billingInfoExists = localProfileData.billing?.clubName || localProfileData.street || localProfileData.ico;
 
     // Komponent pre zobrazenie jedného riadku údajov
     const DataRow = ({ label, value }) => {
@@ -164,12 +165,13 @@ const MyDataApp = ({ userProfileData, roleColor }) => {
                 ),
                 billingInfoExists ?
                 [
-                    React.createElement(DataRow, { key: 'companyName', label: 'Názov spoločnosti', value: localProfileData.companyName }),
+                    // Upravené pre získanie údajov z billing objektu
+                    React.createElement(DataRow, { key: 'clubName', label: 'Oficiálny názov klubu', value: localProfileData.billing?.clubName }),
                     React.createElement(DataRow, { key: 'address', label: 'Adresa', value: `${localProfileData.street} ${localProfileData.houseNumber}, ${localProfileData.city}, ${localProfileData.postalCode}` }),
                     React.createElement(DataRow, { key: 'country', label: 'Krajina', value: localProfileData.country }),
-                    React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.ico }),
-                    React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.dic }),
-                    React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.icdph }),
+                    React.createElement(DataRow, { key: 'ico', label: 'IČO', value: localProfileData.billing?.ico }),
+                    React.createElement(DataRow, { key: 'dic', label: 'DIČ', value: localProfileData.billing?.dic }),
+                    React.createElement(DataRow, { key: 'icdph', label: 'IČ DPH', value: localProfileData.billing?.icdph }),
                 ]
                 :
                 React.createElement('p', { className: 'text-lg text-gray-500' }, 'Fakturačné údaje neboli zadané.')
