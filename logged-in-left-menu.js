@@ -4,7 +4,7 @@
 // Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
 
 // Importy pre potrebné Firebase funkcie
-import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia, ktorá sa spustí po načítaní HTML obsahu menu
 const setupMenuListeners = (userProfileData) => {
@@ -56,9 +56,13 @@ const setupMenuListeners = (userProfileData) => {
         try {
             if (db && userId) {
                 const userDocRef = doc(db, 'users', userId);
-                await updateDoc(userDocRef, {
-                    'uiSettings.isMenuToggled': isMenuToggled
-                });
+                // Používame setDoc s merge: true, aby sme vytvorili pole uiSettings,
+                // ak ešte neexistuje, a aktualizovali iba isMenuToggled.
+                await setDoc(userDocRef, {
+                    uiSettings: {
+                        isMenuToggled: isMenuToggled
+                    }
+                }, { merge: true });
                 console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
             }
         } catch (error) {
