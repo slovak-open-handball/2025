@@ -171,24 +171,15 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: 'space-y-6 text-gray-700 text-lg' },
             React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
-                React.createElement('div', { className: 'font-normal' }, `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}`)
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Mesto'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.city || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'PSČ'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.postalCode || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Krajina'),
-                React.createElement('div', { className: 'font-normal' }, userProfileData.country || '-')
-            ),
-            React.createElement('div', null,
-                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Názov klubu'),
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Oficiálny názov klubu'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
+            ),
+            // Zlúčená adresa do jedného riadku
+            React.createElement('div', null,
+                React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
+                React.createElement('div', { className: 'font-normal' },
+                    `${userProfileData.street || '-'} ${userProfileData.houseNumber || '-'}, ${userProfileData.postalCode ? userProfileData.postalCode.slice(0, 3) + ' ' + userProfileData.postalCode.slice(3) : '-'} ${userProfileData.city || '-'}, ${userProfileData.country || '-'}`
+                )
             ),
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'IČO'),
