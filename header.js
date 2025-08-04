@@ -61,7 +61,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
-    }, 5000);
+    }, 7500);
 };
 
 /**
