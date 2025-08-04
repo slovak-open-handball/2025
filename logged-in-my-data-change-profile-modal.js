@@ -621,12 +621,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
         'div',
         { className: 'p-6 h-full overflow-y-auto' }, // Pridaná trieda 'h-full' a 'overflow-y-auto'
         // Zobrazenie chybovej správy, ak je e-mail neplatný
-        !isEmailValid && React.createElement(
-            'div',
-            { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
-            React.createElement('p', { className: 'font-bold' }, 'Chybný formát e-mailu!'),
-            React.createElement('p', null, 'Prosím, zadajte platnú e-mailovú adresu.')
-        ),
+//        !isEmailValid && React.createElement(
+//            'div',
+//            { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
+//            React.createElement('p', { className: 'font-bold' }, 'Chybný formát e-mailu!'),
+//            React.createElement('p', null, 'Prosím, zadajte platnú e-mailovú adresu.')
+//        ),
         // Formulár
         React.createElement(
             'form',
