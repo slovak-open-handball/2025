@@ -63,34 +63,34 @@ const MyDataApp = ({ userProfileData, userId }) => {
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [billingModalVisible, setBillingModalVisible] = useState(false);
 
-    // Pridaná funkcia pre zmenu stavu menu
-    const updateMenuMargin = () => {
+    // Listener pre menu, ktorý spúšťa zmenu okraja pri nabehnutí myšou/odídení myši
+    useEffect(() => {
         const leftMenu = document.getElementById('left-menu');
         const mainContent = document.getElementById('main-content-area');
-
+    
         if (leftMenu && mainContent) {
-            // Kontrola, či je menu rozbalené (podľa prítomnosti triedy 'is-toggled')
-            if (leftMenu.classList.contains('is-toggled')) {
+            // Funkcia na obsluhu nabehnutia myšou
+            const handleMouseEnter = () => {
                 mainContent.style.marginLeft = '256px';
-            } else {
+            };
+            // Funkcia na obsluhu odídenia myši
+            const handleMouseLeave = () => {
                 mainContent.style.marginLeft = '64px';
-            }
+            };
+    
+            // Pridanie event listenerov
+            leftMenu.addEventListener('mouseenter', handleMouseEnter);
+            leftMenu.addEventListener('mouseleave', handleMouseLeave);
+            
+            // Počiatočné nastavenie okraja
+            mainContent.style.marginLeft = '64px';
+    
+            // Cleanup funkcia pre odstránenie listenerov
+            return () => {
+                leftMenu.removeEventListener('mouseenter', handleMouseEnter);
+                leftMenu.removeEventListener('mouseleave', handleMouseLeave);
+            };
         }
-    };
-
-    // Listener pre menu, ktorý spúšťa zmenu okraja pri rozbalení/zbalení
-    useEffect(() => {
-        const menuObserver = new MutationObserver(updateMenuMargin);
-        const leftMenu = document.getElementById('left-menu');
-
-        if (leftMenu) {
-            menuObserver.observe(leftMenu, { attributes: true, attributeFilter: ['class'] });
-            updateMenuMargin(); // Aplikujeme počiatočný stav
-        }
-
-        return () => {
-            if (menuObserver) menuObserver.disconnect();
-        };
     }, []);
 
     if (!userProfileData) {
