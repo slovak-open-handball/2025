@@ -308,7 +308,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
                     React.createElement(
                         'label',
                         { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'houseNumber' },
-                        'Číslo domu'
+                        'Popisné číslo'
                     ),
                     React.createElement('input', {
                         type: 'text',
