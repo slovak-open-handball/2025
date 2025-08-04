@@ -46,16 +46,17 @@ const setupMenuListeners = (userProfileData) => {
 
     // Funkcia na uloženie stavu do databázy
     const saveMenuState = async (state) => {
-        if (db && userId) {
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : null;
+        if (db && userId && appId) {
             try {
-                const userDocRef = doc(db, 'artifacts', window.__app_id, 'users', userId);
+                const userDocRef = doc(db, 'artifacts', appId, 'users', userId);
                 await updateDoc(userDocRef, { isMenuToggled: state });
                 console.log("Stav menu bol úspešne uložený do databázy.");
             } catch (e) {
                 console.error("Chyba pri ukladaní stavu menu: ", e);
             }
         } else {
-            console.error("DB alebo userId nie sú dostupné pre uloženie stavu menu.");
+            console.error("DB, userId alebo appId nie sú dostupné pre uloženie stavu menu.");
         }
     };
 
