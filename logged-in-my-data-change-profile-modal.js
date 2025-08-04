@@ -1,8 +1,6 @@
-// Importy pre Firebase funkcie, aby sa dali použiť v modálnom okne
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getFirestore, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
 
 const { useState, useEffect, useRef } = React;
@@ -521,8 +519,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
             changes.push(`Zmena priezviska: z '${originalData.current.lastName}' na '${lastName}'`);
         }
 
-        // Logika pre telefónne číslo platí len pre ne-adminov
-        if (userProfileData.role !== 'admin') {
+        // Upravená logika pre telefónne číslo: platí len pre roly, ktoré nie sú 'admin' ani 'hall'.
+        if (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') {
             const currentPhoneNumberWithoutDialCode = phoneNumber === '' ? originalData.current.phoneNumberWithoutDialCode : phoneNumber.replace(/\s/g, '');
             const fullPhoneNumber = selectedDialCode + currentPhoneNumberWithoutDialCode;
             if (fullPhoneNumber !== originalData.current.contactPhoneNumber) {
@@ -676,7 +674,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 })
             ),
             // Telefónne číslo
-            userProfileData.role !== 'admin' && React.createElement(
+            (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') && React.createElement(
                 'div',
                 { className: 'mb-4' },
                 React.createElement(
@@ -862,8 +860,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor }
                 )
             )
         ),
-        // Podmienene zobrazenie DialCodeModal pre iné roly ako 'admin'
-        userProfileData.role !== 'admin' && React.createElement(DialCodeModal, {
+        // Podmienene zobrazenie DialCodeModal pre iné roly ako 'admin' alebo 'hall'
+        (userProfileData.role !== 'admin' && userProfileData.role !== 'hall') && React.createElement(DialCodeModal, {
             show: showDialCodeModal,
             onClose: () => setShowDialCodeModal(false),
             onSelect: (dialCode) => {
