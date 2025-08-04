@@ -193,7 +193,7 @@ const MyDataApp = ({ userProfileData }) => {
 
     return React.createElement(
         'div',
-        { className: 'flex-grow' },
+        { className: 'flex-grow pt-20' },
         React.createElement(
             ProfileSection,
             {
