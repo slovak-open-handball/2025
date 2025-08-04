@@ -157,14 +157,16 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 'button',
                 {
                     onClick: onOpenProfileModal,
-                    className: 'p-2 rounded-full text-white hover:bg-white hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white',
-                    'aria-label': 'Upraviť profil'
+                    className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
+                    'aria-label': 'Upraviť profil',
+                    style: { color: roleColor }
                 },
                 React.createElement(
                     'svg',
                     { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
                     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                )
+                ),
+                React.createElement('span', { className: 'font-medium' }, 'Upraviť')
             )
         ),
         // Zmena rozloženia údajov
@@ -210,14 +212,16 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 'button',
                 {
                     onClick: onOpenBillingModal,
-                    className: 'p-2 rounded-full text-white hover:bg-white hover:text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white',
-                    'aria-label': 'Upraviť fakturačné údaje'
+                    className: 'flex items-center space-x-2 px-4 py-2 rounded-full bg-white text-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-100',
+                    'aria-label': 'Upraviť fakturačné údaje',
+                    style: { color: roleColor }
                 },
                 React.createElement(
                     'svg',
                     { className: 'w-6 h-6', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', xmlns: 'http://www.w3.org/2000/svg' },
                     React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
-                )
+                ),
+                React.createElement('span', { className: 'font-medium' }, 'Upraviť')
             )
         ),
         // Zmena rozloženia údajov
