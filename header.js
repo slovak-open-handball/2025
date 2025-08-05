@@ -21,6 +21,7 @@ let unsubscribeFromNotifications = null; // Nová globálna premenná pre listen
 // Nové premenné na sledovanie stavu načítania dát
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
+let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú listenery Firestore nastavené
 
 
 // Globálna funkcia pre zobrazenie notifikácií
@@ -120,7 +121,7 @@ const formatNotificationMessage = (text) => {
     // Nájdeme indexy apostrofov
     const firstApostrophe = text.indexOf("'");
     const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
-    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
+    const thirdApostrophe = text.indexOf("'", secondAostrophe + 1);
     const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
 
     // Ak nájdeme všetky štyri apostrofy, naformátujeme text
@@ -388,12 +389,19 @@ const setupNotificationListenerForAdmin = () => {
 
 // Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
 const setupFirestoreListeners = () => {
-    try {
-        if (!window.db) {
-            console.warn("header.js: Firestore databáza nie je inicializovaná.");
-            return;
-        }
+    // Kontrolujeme, či je window.db už inicializované
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
+        return; // Ak window.db nie je dostupné, ukončíme funkciu
+    }
 
+    // Ak už sú listenery nastavené, nebudeme ich nastavovať znova
+    if (isFirestoreListenersSetup) {
+        console.log("header.js: Listenery Firestore sú už nastavené.");
+        return;
+    }
+
+    try {
         // Listener pre registračné dáta
         const registrationDocRef = doc(window.db, "settings", "registration");
         onSnapshot(registrationDocRef, (docSnap) => {
@@ -451,6 +459,9 @@ const setupFirestoreListeners = () => {
             }
         });
 
+        isFirestoreListenersSetup = true; // Označíme, že listenery sú nastavené
+        console.log("header.js: Firestore listenery boli úspešne nastavené.");
+
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
     }
@@ -484,14 +495,14 @@ window.loadHeaderAndScripts = async () => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             // Nastavíme, že autentifikačné dáta sú načítané
             window.isGlobalAuthReady = true; 
+            // Teraz, keď je window.db (a ostatné globálne premenné) inicializované,
+            // môžeme nastaviť Firestore listenery.
+            setupFirestoreListeners(); // Voláme tu
             updateHeaderLinks(event.detail); // Použijeme dáta z udalosti
         });
 
-        // Nastavíme listenery pre Firestore hneď po inicializácii
-        setupFirestoreListeners();
+        // Pôvodné volanie setupFirestoreListeners() bolo odstránené odtiaľto
 
-        // TENTO RIADOK BOL ODSTRÁNENÝ, ABY SA ZABRÁNILO PREDČASNÉMU ZOBRAZENIU HLAVIČKY
-        // updateHeaderLinks(window.globalUserProfileData); 
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
