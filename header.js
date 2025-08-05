@@ -306,15 +306,21 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
+    // Ak je používateľ prihlásený (userProfileData existuje), skryjeme odkaz "Registrácia na turnaj"
+    if (userProfileData) {
+        registerLink.classList.add('hidden');
+        return; // Ukončíme funkciu, aby sa neriešili ďalšie podmienky
+    }
+
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
     const hasCategories = window.hasCategories;
 
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
-        if (userProfileData) {
+        if (userProfileData) { // Táto podmienka je teraz redundantná, ale ponechávam pre istotu
             registerLink.href = 'logged-in-registration.html';
         } else {
-        registerLink.href = 'register.html';
+            registerLink.href = 'register.html';
         }
     } else {
         registerLink.classList.add('hidden');
