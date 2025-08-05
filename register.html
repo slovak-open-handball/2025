@@ -66,53 +66,21 @@
     <!-- Hlavný obsah React aplikácie -->
     <div id="root"></div>
 
-    <!-- Firebase SDKs (Compat mode pre header.js a register.js) -->
-    <!-- Tieto musia byť načítané pred header.js a register.js -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-    <!-- React a ReactDOM - ZMENENÉ PORADIE A VERZIA -->
+    <!-- React a ReactDOM -->
     <script src="https://unpkg.com/react@18.2.0/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js" crossorigin></script>
     
     <!-- reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"></script>
 
-    <!-- Global Firebase config and initialization - MUST BE DEFINED BEFORE OTHER SCRIPTS THAT USE THEM -->
+    <!-- Global Firebase config and initialization variables for authentication.js -->
     <script type="text/javascript">
-        // Tieto premenné sú definované globálne a budú použité v header.js a register.js
-        const __app_id = '1:572988314768:web:781e27eb035179fe34b415';
-        const __firebase_config_string = JSON.stringify({ // Zmenený názov premennej
-          apiKey: "AIzaSyAhFyOppjWDY_zkJcuWJ2ALpb5Z1alZYy4",
-          authDomain: "soh2025-2s0o2h5.firebaseapp.com",
-          projectId: "soh2025-2s0o2h5",
-          storageBucket: "soh2025-2s0o2h5.firebasestorage.app",
-          messagingSenderId: "572988314768",
-          appId: "1:572988314768:web:781e27eb035179fe34b415"
-        });
+        // Tieto premenné sú definované globálne a budú použité v authentication.js
+        // __app_id a __firebase_config_string sú teraz definované výlučne v authentication.js
         const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
-        const __firebase_app_name = 'headerApp'; // Názov Firebase aplikácie pre hlavičku
-
-        // Parsujeme konfiguráciu na objekt
-        const firebaseConfig = JSON.parse(__firebase_config_string);
-
-        // Inicializácia Firebase aplikácie
-        if (firebase.apps.length === 0) {
-            window.firebaseApp = firebase.initializeApp(firebaseConfig);
-            console.log("register.html: Firebase aplikácia inicializovaná s konfiguráciou:", firebaseConfig);
-        } else {
-            window.firebaseApp = firebase.app();
-            console.log("register.html: Používam existujúcu Firebase App inštanciu.");
-        }
-
-        // Získanie inštancií Auth a Firestore a ich sprístupnenie globálne
-        window.auth = window.firebaseApp.auth();
-        window.db = window.firebaseApp.firestore();
-        console.log("register.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
     </script>
 
-    <!-- Vlastné skripty - authentication.js musí byť načítaný PRED header.js -->
+    <!-- Vlastné skripty - authentication.js musí byť načítaný PRED header.js a register.js -->
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     
@@ -123,28 +91,10 @@
     <script type="module" src="register.js"></script>
 
     <script type="text/javascript">
-        // Funkcia na načítanie hlavičky (ponechaná pre referenciu, ale bude volaná)
-        // Táto funkcia je teraz volaná z header.js, takže ju tu už nepotrebujeme explicitne volať.
-        // Pôvodná logika bola presunutá do header.js
-        // async function loadHeader() {
-        //     try {
-        //         const response = await fetch('header.html');
-        //         if (!response.ok) {
-        //             throw new Error(`HTTP error! status: ${response.status}`);
-        //         }
-        //         const headerHtml = await response.text();
-        //         document.getElementById('header-placeholder').innerHTML = headerHtml;
-        //     } catch (error) {
-        //         console.error("Chyba pri načítaní hlavičky:", error);
-        //         document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-        //     }
-        // }
-
-        // Spustí sa po načítaní DOM a všetkých skriptov
-        // window.onload už nie je potrebné, pretože header.js sa sám inicializuje
-        // pomocou DOMContentLoaded listenera alebo okamžite, ak je DOM už načítaný.
-        // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
-        // (Žiadna ďalšia logika tu nie je potrebná, pretože register.js sa načíta ako modul a spustí App)
+        // Pôvodná logika inicializácie Firebase a načítania hlavičky bola presunutá
+        // do authentication.js a header.js.
+        // Tieto skripty sa teraz spoliehajú na udalosť 'DOMContentLoaded' alebo na to,
+        // že sa spúšťajú ako moduly, ktoré si samy inicializujú svoju logiku.
     </script>
 </body>
 </html>
