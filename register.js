@@ -267,7 +267,7 @@ function App() {
     // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
-      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+      if (docSnap.exists && Object.keys(docSnap.data()).length > 0) {
         setCategoriesExist(true);
       } else {
         setCategoriesExist(false);
@@ -663,11 +663,11 @@ function App() {
   };
 
   // Effect to ensure header visibility once main app content is ready
+  // Táto logika bola presunutá do header.js, ktorý sa stará o viditeľnosť hlavičky.
+  // Odstránené, aby sa predišlo duplicitnej logike a pretekovým podmienkam.
   React.useEffect(() => {
-    // This effect runs when settingsLoaded or isAuthReady change
-    // and if the component is rendering the main form (not loading or success).
-    // Removed this logic as header.js now handles its own visibility based on global flags.
-  }, [settingsLoaded, isAuthReady]); // Depend on these states
+    // Táto funkcia je prázdna, pretože logiku viditeľnosti hlavičky spravuje header.js
+  }, [settingsLoaded, isAuthReady]); 
 
   return React.createElement(
     'div',
