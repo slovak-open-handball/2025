@@ -121,7 +121,7 @@ const formatNotificationMessage = (text) => {
     // Nájdeme indexy apostrofov
     const firstApostrophe = text.indexOf("'");
     const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
-    const thirdApostrophe = text.indexOf("'", secondAostrophe + 1);
+    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
     const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
 
     // Ak nájdeme všetky štyri apostrofy, naformátujeme text
