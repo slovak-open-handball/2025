@@ -481,7 +481,7 @@ window.loadHeaderAndScripts = async () => {
 
         // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
         // Týmto sa vyrieši problém s prvým načítaním
-        updateHeaderLinks(window.globalUserProfileData);
+        // updateHeaderLinks(window.globalUserProfileData);
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
