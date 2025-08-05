@@ -9,6 +9,11 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
 
+// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
+import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+
 // Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
@@ -104,8 +109,6 @@ function App() {
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // Nový stav pre úspešnú registráciu
 
   // Firebase stav - už nie sú potrebné useState, pristupujeme ku globálnym inštanciám
-  // const [db, setDb] = React.useState(null);
-  // const [auth, setAuth] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false); // Stále potrebné pre sledovanie pripravenosti autentifikácie
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
@@ -196,7 +199,8 @@ function App() {
         return;
       }
 
-      const unsubscribe = authInstance.onAuthStateChanged(async (currentUser) => {
+      // Používame onAuthStateChanged z globálneho window.auth
+      const unsubscribe = window.auth.onAuthStateChanged(async (currentUser) => {
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
       });
 
@@ -217,8 +221,8 @@ function App() {
     }
 
     // Načítanie nastavení registrácie
-    const settingsDocRef = firestoreDb.collection('settings').doc('registration');
-    const unsubscribeSettings = settingsDocRef.onSnapshot(docSnapshot => {
+    const settingsDocRef = doc(collection(firestoreDb, 'settings'), 'registration');
+    const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists) {
           const data = docSnapshot.data();
           setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
@@ -238,8 +242,8 @@ function App() {
     });
 
     // Načítanie kategórií
-    const categoriesDocRef = firestoreDb.collection('settings').doc('categories');
-    const unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => {
+    const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
+    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
       if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
       } else {
@@ -485,7 +489,7 @@ function App() {
       console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
       // 1. Vytvorenie používateľa vo Firebase Authentication
-      const userCredential = await authInstance.createUserWithEmailAndPassword(formData.email, formData.password);
+      const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       const user = userCredential.user;
 
       if (!user || !user.uid) {
@@ -503,10 +507,10 @@ function App() {
 
       // 2. Uloženie používateľských údajov do Firestore
       // Zmenená cesta pre zápis do databázy na /users/{userId}
-      const userDocRef = firestoreDb.collection('users').doc(user.uid);
+      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
 
       console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
-      await userDocRef.set({
+      await setDoc(userDocRef, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -519,8 +523,8 @@ function App() {
         billing: formData.billing,
         role: userRole, // Predvolená rola 'user'
         approved: true,
-        registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
-        passwordLastChanged: firebase.firestore.FieldValue.serverTimestamp(),
+        registrationDate: serverTimestamp(),
+        passwordLastChanged: serverTimestamp(),
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
@@ -580,7 +584,7 @@ function App() {
 
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
       try {
-        await authInstance.signOut();
+        await signOut(authInstance);
         console.log("Používateľ úspešne odhlásený po registrácii.");
       } catch (signOutError) {
         console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
@@ -656,7 +660,7 @@ function App() {
       // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
         'div',
-        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
+        { className: 'bg-green-700', text: 'white', p: '8', rounded: 'lg', shadow: 'md', w: 'full', maxW: 'md', text: 'center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
         React.createElement(
           'h2',
           { className: 'text-2xl font-bold mb-4 text-black' }, // Zmenená farba textu nadpisu na čiernu
