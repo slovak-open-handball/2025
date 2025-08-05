@@ -124,7 +124,7 @@ function App() {
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
   // Nový stav na indikáciu prebiehajúcej registrácie (používa sa aj ref pre okamžitý prístup)
-  const [isRegistering, setIsRegistering] = React.useState(false);
+  const [isRegistering, setIsRegistering] = React.useRef(false); // Zmenené na useRef
   const isRegisteringRef = React.useRef(false); // Ref pre okamžitý prístup v onAuthStateChanged
 
   const countdownIntervalRef = React.useRef(null);
@@ -266,8 +266,8 @@ function App() {
 
     // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
-    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
-      if (docSnap.exists && Object.keys(docSnap.data()).length > 0) {
+    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { // Zmenené docSnap na docSnapshot
+      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
       } else {
         setCategoriesExist(false);
@@ -433,7 +433,6 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
-    setIsRegistering(true); // Nastavenie stavu pre re-render
     isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
     // Validácia fakturačných údajov
@@ -444,7 +443,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        setIsRegistering(false);
         isRegisteringRef.current = false;
         return;
     }
@@ -454,7 +452,6 @@ function App() {
       setShowNotification(true);
       setNotificationType('error');
       setLoading(false);
-      setIsRegistering(false);
       isRegisteringRef.current = false;
       return;
     }
@@ -466,7 +463,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        setIsRegistering(false);
         isRegisteringRef.current = false;
         return;
       }
@@ -478,7 +474,6 @@ function App() {
       setShowNotification(true);
       setNotificationType('error');
       setLoading(false);
-      setIsRegistering(false);
       isRegisteringRef.current = false;
       return;
     }
@@ -496,7 +491,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        setIsRegistering(false);
         isRegisteringRef.current = false;
         return;
       }
@@ -505,7 +499,6 @@ function App() {
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         setLoading(false);
-        setIsRegistering(false);
         isRegisteringRef.current = false;
         return; // Zastav, ak token nebol získaný
       }
@@ -521,7 +514,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        setIsRegistering(false);
         isRegisteringRef.current = false;
         return;
       }
@@ -657,7 +649,6 @@ function App() {
       setNotificationType('error');
     } finally {
       setLoading(false);
-      setIsRegistering(false); // Ukončenie procesu registrácie
       isRegisteringRef.current = false; // Reset referencie
     }
   };
