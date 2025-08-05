@@ -136,7 +136,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                 React.createElement(
                     'label',
                     { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email-reset' },
-                    'E-mail'
+                    'E-mailová adresa'
                 ),
                 React.createElement(
                     'input',
@@ -144,7 +144,7 @@ const ResetPasswordForm = ({ onCancel }) => {
                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-colors duration-200',
                         id: 'email-reset',
                         type: 'email',
-                        placeholder: 'Zadajte Váš e-mail',
+                        placeholder: 'Zadajte e-mailovú adresu',
                         value: email,
                         onChange: (e) => setEmail(e.target.value),
                         disabled: loading,
@@ -311,7 +311,7 @@ const App = () => {
                         label: 'Heslo',
                         value: password,
                         onChange: (e) => setPassword(e.target.value),
-                        placeholder: 'Zadajte Vaše heslo',
+                        placeholder: 'Zadajte heslo',
                         autoComplete: 'current-password',
                         showPassword: showPassword,
                         toggleShowPassword: toggleShowPassword,
