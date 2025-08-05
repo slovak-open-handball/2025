@@ -186,6 +186,11 @@ function App() {
 
   // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
+    // Zobrazenie globálneho loaderu pri načítavaní
+    if (window.showGlobalLoader) {
+      window.showGlobalLoader();
+    }
+
     try {
       // Prístup ku globálnym inštanciám Firebase Auth a Firestore
       const authInstance = window.auth;
@@ -196,20 +201,38 @@ function App() {
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
         setShowNotification(true);
         setNotificationType('error');
+        // Skrytie loaderu aj pri chybe
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         return;
       }
 
       // Používame onAuthStateChanged z globálneho window.auth
       const unsubscribe = window.auth.onAuthStateChanged(async (currentUser) => {
         setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
+        // Skrytie loaderu po pripravenosti autentifikácie
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
       });
 
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+        // Zabezpečenie skrytia loaderu pri odmontovaní komponentu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
+      };
     } catch (error) {
       console.error("Chyba pri inicializácii Firebase v register.js:", error);
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
       setNotificationType('error');
+      // Skrytie loaderu aj pri chybe
+      if (window.hideGlobalLoader) {
+        window.hideGlobalLoader();
+      }
     }
   }, []); // Odstránená závislosť isRegistering, pretože ref je okamžitý
 
@@ -646,16 +669,9 @@ function App() {
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     // Podmienečné renderovanie formulára alebo správy o úspechu
+    // Používame globálny loader namiesto lokálneho spinneru
     !settingsLoaded || !isAuthReady ? (
-      React.createElement(
-        'div',
-        { className: 'flex items-center justify-center py-8' },
-        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
-          React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
-          React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
-        ),
-        'Načítavam stav registrácie...'
-      )
+      null // Loader je spravovaný globálne cez showGlobalLoader/hideGlobalLoader
     ) : registrationSuccess ? (
       // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
