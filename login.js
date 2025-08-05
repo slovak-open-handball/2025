@@ -289,7 +289,7 @@ const App = () => {
                         React.createElement(
                             'label',
                             { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'email' },
-                            'E-mail'
+                            'E-mailová adresa'
                         ),
                         React.createElement(
                             'input',
@@ -297,7 +297,7 @@ const App = () => {
                                 className: 'shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline transition-colors duration-200',
                                 id: 'email',
                                 type: 'email',
-                                placeholder: 'Zadajte Váš e-mail',
+                                placeholder: 'Zadajte e-mailovú adresu',
                                 value: email,
                                 onChange: (e) => setEmail(e.target.value),
                                 disabled: loading,
