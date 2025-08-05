@@ -18,7 +18,9 @@ import { countryDialCodes } from "./countryDialCodes.js";
 // Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
-let isAuthenticationDataLoaded = false; // Nová premenná na sledovanie stavu načítania
+// Nové premenné na sledovanie stavu načítania dát
+window.isRegistrationDataLoaded = false;
+window.isCategoriesDataLoaded = false;
 
 
 // Globálna funkcia pre zobrazenie notifikácií
@@ -255,7 +257,8 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    if (window.isGlobalAuthReady && window.registrationDates && window.hasCategories !== null) {
+    // Podmienka pre zobrazenie hlavičky
+    if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
         if (userProfileData) {
             authLink.classList.add('hidden');
             profileLink.classList.remove('hidden');
@@ -288,7 +291,7 @@ const updateHeaderLinks = (userProfileData) => {
         updateRegistrationLinkVisibility(userProfileData);
 
         headerElement.classList.remove('invisible');
-        isAuthenticationDataLoaded = true;
+        // isAuthenticationDataLoaded = true; // Táto premenná už nie je potrebná, keďže máme presnejšie flagy
     }
 };
 
@@ -401,9 +404,12 @@ const setupFirestoreListeners = () => {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
+            window.isRegistrationDataLoaded = true; // Dáta o registrácii sú načítané
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+            window.isRegistrationDataLoaded = true; // Označíme ako načítané aj pri chybe, aby sa hlavička mohla zobraziť
+            updateHeaderLinks(window.globalUserProfileData);
         });
 
         // Listener pre kategórie
@@ -417,9 +423,12 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
+            window.isCategoriesDataLoaded = true; // Dáta o kategóriách sú načítané
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+            window.isCategoriesDataLoaded = true; // Označíme ako načítané aj pri chybe
+            updateHeaderLinks(window.globalUserProfileData);
         });
 
         // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
@@ -473,15 +482,16 @@ window.loadHeaderAndScripts = async () => {
         // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
+            // Nastavíme, že autentifikačné dáta sú načítané
+            window.isGlobalAuthReady = true; 
             updateHeaderLinks(event.detail); // Použijeme dáta z udalosti
         });
 
         // Nastavíme listenery pre Firestore hneď po inicializácii
         setupFirestoreListeners();
 
-        // Zavoláme funkciu raz hneď po načítaní pre prípad, že authentication.js už vyslalo udalosť
-        // Týmto sa vyrieši problém s prvým načítaním
-        // updateHeaderLinks(window.globalUserProfileData);
+        // TENTO RIADOK BOL ODSTRÁNENÝ, ABY SA ZABRÁNILO PREDČASNÉMU ZOBRAZENIU HLAVIČKY
+        // updateHeaderLinks(window.globalUserProfileData); 
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
