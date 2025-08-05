@@ -744,5 +744,36 @@ function App() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App, null));
+// Premenná na sledovanie, či už bola aplikácia inicializovaná
+let appInitialized = false;
+
+// Funkcia na inicializáciu a renderovanie React aplikácie
+function initializeRegistrationApp() {
+  if (appInitialized) {
+    console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
+    return;
+  }
+
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(React.createElement(App, null));
+    appInitialized = true;
+    console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+  } else {
+    console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
+  }
+}
+
+// Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
+window.addEventListener('globalDataUpdated', () => {
+  console.log("register.js: Prijatá udalosť 'globalDataUpdated'. Inicializujem React aplikáciu.");
+  initializeRegistrationApp();
+});
+
+// Ak sa stránka načíta po tom, čo už bola udalosť 'globalDataUpdated' odoslaná (napr. pri rýchlom načítaní),
+// a window.isGlobalAuthReady je už true, inicializujeme aplikáciu okamžite.
+if (window.isGlobalAuthReady) {
+  console.log("register.js: authentication.js už inicializoval globálne dáta. Inicializujem React aplikáciu okamžite.");
+  initializeRegistrationApp();
+}
