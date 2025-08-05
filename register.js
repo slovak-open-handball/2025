@@ -666,13 +666,7 @@ function App() {
   React.useEffect(() => {
     // This effect runs when settingsLoaded or isAuthReady change
     // and if the component is rendering the main form (not loading or success).
-    if (settingsLoaded && isAuthReady) {
-      const headerElement = document.querySelector('header');
-      if (headerElement && headerElement.classList.contains('invisible')) {
-        headerElement.classList.remove('invisible');
-        console.log("register.js: Header made visible by App component.");
-      }
-    }
+    // Removed this logic as header.js now handles its own visibility based on global flags.
   }, [settingsLoaded, isAuthReady]); // Depend on these states
 
   return React.createElement(
