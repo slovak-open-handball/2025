@@ -6,7 +6,7 @@
 import { countryDialCodes as countryCodes } from './countryDialCodes.js';
 
 // PasswordInput Component pre polia hesla s prepínačom viditeľnosti
-export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex, showValidationList = true, onFocus }) { // Pridaný onFocus prop
+export function PasswordInput({ id, label, value, onChange, placeholder, autoComplete, showPassword, toggleShowPassword, onCopy, onPaste, onCut, disabled, preDescription, validationRules, tabIndex, onFocus }) { // Pridaný onFocus prop
   // SVG ikony pre oko (zobraziť heslo) a preškrtnuté oko (skryť heslo)
   const EyeIcon = React.createElement(
     'svg',
@@ -62,7 +62,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
         showPassword ? EyeIcon : EyeOffIcon
       )
     ),
-    showValidationList && validationRules && React.createElement( // Podmienené zobrazenie zoznamu
+    validationRules && React.createElement( // Podmienené zobrazenie zoznamu
       'div',
       { className: 'text-gray-600 text-xs italic mt-1' },
       React.createElement('p', { className: 'font-semibold mb-1' }, 'Heslo musí obsahovať:'),
@@ -82,7 +82,7 @@ export function PasswordInput({ id, label, value, onChange, placeholder, autoCom
   );
 }
 
-// CountryCodeModal Component pre výber predvoľby telefónneho čísla
+// CountryCodeModal Component pre výber predvolby telefónneho čísla
 export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disabled }) {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
@@ -135,16 +135,16 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
     country.dialCode.includes(searchTerm)
   );
 
-  // Zabezpečíme, že vybraná krajina je vždy na začiatku zoznamu, ak je vo vyhľadávaní
   // Zmenená logika triedenia: Vždy abecedne podľa názvu krajiny
   const sortedFilteredCountries = [...filteredCountries].sort((a, b) => {
     return a.name.localeCompare(b.name);
   });
 
-  const handleConfirm = () => {
-    onSelect(tempSelectedCode);
-    onClose();
-  };
+  // Odstránené tlačidlo Potvrdiť, takže táto funkcia už nie je potrebná
+  // const handleConfirm = () => {
+  //   onSelect(tempSelectedCode);
+  //   onClose();
+  // };
 
   return React.createElement(
     'div',
@@ -190,9 +190,8 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
                           ${tempSelectedCode === country.dialCode ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-50 text-gray-800'}
                           border-b border-gray-200 last:border-b-0 focus:outline-none focus:ring-2 focus:ring-blue-500`,
               onClick: () => {
-                setTempSelectedCode(country.dialCode);
-                // Automatické zatvorenie po výbere, ak nechceme tlačidlo OK
-                // onClose(); 
+                onSelect(country.dialCode); // Nastaví vybranú predvoľbu
+                onClose(); // Okamžité zatvorenie modálneho okna
               },
               disabled: disabled,
             },
@@ -204,29 +203,8 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
             )
           )
         )
-      ),
-      React.createElement(
-        'div',
-        { className: 'flex justify-end space-x-4 mt-6' },
-        React.createElement(
-          'button',
-          {
-            onClick: onClose,
-            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: disabled,
-          },
-          'Zrušiť'
-        ),
-        React.createElement(
-          'button',
-          {
-            onClick: handleConfirm,
-            className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
-            disabled: disabled,
-          },
-          'Potvrdiť'
-        )
       )
+      // Odstránený div s tlačidlami "Zrušiť" a "Potvrdiť"
     )
   );
 }
@@ -521,12 +499,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             placeholder: 'Zadajte heslo',
             autoComplete: 'new-password',
             preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.',
-            validationRules: passwordValidationRules,
+            validationRules: getPasswordValidationRules(formData.password), // Používame priamo funkciu
             tabIndex: 6,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showPassword,
             toggleShowPassword: toggleShowPassword,
-            showValidationList: true // Zobrazovať zoznam pre toto pole
           }),
           React.createElement(PasswordInput, {
             id: 'confirmPassword',
@@ -542,7 +519,6 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             onCut: (e) => e.preventDefault(),
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
-            // validationRules: confirmPasswordValidationRules, // Už sa nepoužíva pre zobrazenie
             tabIndex: 7,
             disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
             showPassword: showConfirmPassword,
