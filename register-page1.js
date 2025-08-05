@@ -136,10 +136,9 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
   );
 
   // Zabezpečíme, že vybraná krajina je vždy na začiatku zoznamu, ak je vo vyhľadávaní
+  // Zmenená logika triedenia: Vždy abecedne podľa názvu krajiny
   const sortedFilteredCountries = [...filteredCountries].sort((a, b) => {
-    if (a.dialCode === tempSelectedCode) return -1;
-    if (b.dialCode === tempSelectedCode) return 1;
-    return 0;
+    return a.name.localeCompare(b.name);
   });
 
   const handleConfirm = () => {
