@@ -87,11 +87,16 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
   const [searchTerm, setSearchTerm] = React.useState('');
   const [tempSelectedCode, setTempSelectedCode] = React.useState(selectedCode);
   const modalRef = React.useRef(null);
+  const inputRef = React.useRef(null); // Ref pre input pole
 
   React.useEffect(() => {
     if (isOpen) {
       setTempSelectedCode(selectedCode);
       setSearchTerm(''); 
+      // Automatické zaostrenie na input pole pri otvorení modalu
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   }, [isOpen, selectedCode]);
 
@@ -102,23 +107,40 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
       }
     };
 
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleEscapeKey);
     } else {
       document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
 
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const filteredCountries = countryCodes.filter(country =>
+    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     country.dialCode.includes(searchTerm)
   );
+
+  // Zabezpečíme, že vybraná krajina je vždy na začiatku zoznamu, ak je vo vyhľadávaní
+  const sortedFilteredCountries = [...filteredCountries].sort((a, b) => {
+    if (a.dialCode === tempSelectedCode) return -1;
+    if (b.dialCode === tempSelectedCode) return 1;
+    return 0;
+  });
 
   const handleConfirm = () => {
     onSelect(tempSelectedCode);
@@ -131,37 +153,56 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
     React.createElement(
       'div',
       {
-        className: 'modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md mx-auto',
+        className: 'modal-content bg-white p-6 rounded-lg shadow-xl w-11/12 max-w-md mx-auto relative', // Pridané 'relative' pre tlačidlo zatvoriť
         ref: modalRef
       },
       React.createElement(
+        'button',
+        {
+          onClick: onClose,
+          className: 'absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl font-bold focus:outline-none',
+          'aria-label': 'Zatvoriť modálne okno'
+        },
+        '×'
+      ),
+      React.createElement(
         'h3',
-        { className: 'text-xl font-bold mb-4 text-center' },
-        'Vyberte predvoľbu krajiny'
+        { className: 'text-xl font-bold mb-4 text-center text-gray-800' },
+        'Vybrať predvoľbu'
       ),
       React.createElement('input', {
         type: 'text',
-        placeholder: 'Hľadať podľa kódu alebo predvoľby...',
-        className: 'w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500',
+        placeholder: 'Hľadať krajinu alebo kód...',
+        className: 'w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700',
         value: searchTerm,
         onChange: (e) => setSearchTerm(e.target.value),
+        ref: inputRef // Priradenie ref k inputu
       }),
       React.createElement(
         'div',
-        { className: 'grid grid-cols-4 gap-2 max-h-60 overflow-y-auto p-2' },
-        filteredCountries.map((country) =>
+        { className: 'max-h-80 overflow-y-auto border border-gray-200 rounded-lg' }, // Zmenené triedy pre lepší vzhľad
+        sortedFilteredCountries.map((country) =>
           React.createElement(
             'button',
             {
-              key: country.code,
-              className: `p-2 text-sm rounded-lg border transition-colors duration-200
-                          ${tempSelectedCode === country.dialCode ? 'bg-blue-500 text-white border-blue-600' : 'bg-gray-100 hover:bg-blue-200 text-gray-800 border-gray-300'}`,
+              // Opravený kľúč pre jedinečnosť
+              key: `${country.code}-${country.name}`, 
+              className: `w-full text-left p-3 text-base flex justify-between items-center
+                          ${tempSelectedCode === country.dialCode ? 'bg-blue-100 text-blue-800 font-semibold' : 'hover:bg-gray-50 text-gray-800'}
+                          border-b border-gray-200 last:border-b-0 focus:outline-none focus:ring-2 focus:ring-blue-500`,
               onClick: () => {
                 setTempSelectedCode(country.dialCode);
+                // Automatické zatvorenie po výbere, ak nechceme tlačidlo OK
+                // onClose(); 
               },
               disabled: disabled,
             },
-            `${country.code} ${country.dialCode}`
+            React.createElement('span', null, `${country.name} (${country.dialCode})`),
+            tempSelectedCode === country.dialCode && React.createElement(
+              'svg',
+              { className: 'h-5 w-5 text-blue-600', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+              React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M5 13l4 4L19 7' })
+            )
           )
         )
       ),
@@ -172,19 +213,19 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
           'button',
           {
             onClick: onClose,
-            className: 'bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
-          'Zatvoriť'
+          'Zrušiť'
         ),
         React.createElement(
           'button',
           {
             onClick: handleConfirm,
-            className: 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
+            className: 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200',
             disabled: disabled,
           },
-          'OK'
+          'Potvrdiť'
         )
       )
     )
