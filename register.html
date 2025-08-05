@@ -112,8 +112,9 @@
         console.log("register.html: Firebase Auth a Firestore inštancie sú globálne dostupné.");
     </script>
 
-    <!-- Vlastné skripty - header.js musí byť type="text/javascript" pre globálne Firebase -->
-    <script src="header.js"></script>
+    <!-- Vlastné skripty - authentication.js musí byť načítaný PRED header.js -->
+    <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
     
     <!-- Načítanie komponentov stránok formulára a hlavného App komponentu.
          Používame type="module" pre React súbory, aby podporovali import/export -->
@@ -123,38 +124,27 @@
 
     <script type="text/javascript">
         // Funkcia na načítanie hlavičky (ponechaná pre referenciu, ale bude volaná)
-        async function loadHeader() {
-            try {
-                const response = await fetch('header.html');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const headerHtml = await response.text();
-                document.getElementById('header-placeholder').innerHTML = headerHtml;
-            } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
-                document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
-            }
-        }
+        // Táto funkcia je teraz volaná z header.js, takže ju tu už nepotrebujeme explicitne volať.
+        // Pôvodná logika bola presunutá do header.js
+        // async function loadHeader() {
+        //     try {
+        //         const response = await fetch('header.html');
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP error! status: ${response.status}`);
+        //         }
+        //         const headerHtml = await response.text();
+        //         document.getElementById('header-placeholder').innerHTML = headerHtml;
+        //     } catch (error) {
+        //         console.error("Chyba pri načítaní hlavičky:", error);
+        //         document.getElementById('header-placeholder').innerHTML = '<div style="color: red; text-align: center; padding: 10px;">Chyba pri načítaní hlavičky.</div>';
+        //     }
+        // }
 
         // Spustí sa po načítaní DOM a všetkých skriptov
-        window.onload = function() {
-            // Načítať hlavičku ako prvú
-            loadHeader().then(() => {
-                // Po načítaní hlavičky inicializovať jej logiku
-                // Predpokladáme, že initializeHeaderLogic je definovaná v header.js
-                if (typeof initializeHeaderLogic === 'function') {
-                    initializeHeaderLogic();
-                } else {
-                    console.warn("Funkcia initializeHeaderLogic nie je definovaná v header.js. Uistite sa, že header.js obsahuje túto funkciu.");
-                }
-            }).catch(error => {
-                console.error("Chyba pri inicializácii hlavičky na stránke registrácie:", error);
-            });
-
-            // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
-            // (Žiadna ďalšia logika tu nie je potrebná, pretože register.js sa načíta ako modul a spustí App)
-        };
+        // window.onload už nie je potrebné, pretože header.js sa sám inicializuje
+        // pomocou DOMContentLoaded listenera alebo okamžite, ak je DOM už načítaný.
+        // React aplikácia sa teraz renderuje priamo v register.js po jeho preložení.
+        // (Žiadna ďalšia logika tu nie je potrebná, pretože register.js sa načíta ako modul a spustí App)
     </script>
 </body>
 </html>
