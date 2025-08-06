@@ -606,7 +606,7 @@ function App() {
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
-        billing: { clubName: '', ico: '', '', icDph: '' }
+        billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
       setPage(1); // Reset na prvú stránku formulára
 
