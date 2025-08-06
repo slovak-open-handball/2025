@@ -258,7 +258,19 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    // Podmienka pre zobrazenie hlavičky
+    // NOVINKA: Špeciálna logika pre stránku register.html
+    const isRegisterPage = window.location.pathname.includes('register.html');
+    if (isRegisterPage) {
+        headerElement.classList.remove('invisible'); // Vždy zobraziť hlavičku na registračnej stránke
+        authLink.classList.remove('hidden'); // Zobraziť prihlasovací odkaz
+        profileLink.classList.add('hidden'); // Skryť odkaz na profil
+        logoutButton.classList.add('hidden'); // Skryť tlačidlo odhlásenia
+        headerElement.style.backgroundColor = getHeaderColorByRole(null); // Predvolená farba
+        console.log("header.js: Hlavička nastavená pre registračnú stránku.");
+        return; // Ukončíme funkciu, aby sa nespúšťala ďalšia logika
+    }
+
+    // Pôvodná logika pre ostatné stránky
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
         if (userProfileData) {
             authLink.classList.add('hidden');
@@ -455,7 +467,6 @@ const setupFirestoreListeners = () => {
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
         }, 1000); // 1000 ms = 1 sekunda
-        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
         // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
         window.addEventListener('beforeunload', () => {
