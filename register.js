@@ -660,6 +660,16 @@ function App() {
     // Táto funkcia je prázdna, pretože logiku viditeľnosti hlavičky spravuje header.js
   }, [settingsLoaded, isAuthReady]); 
 
+  // NOVÝ useEffect na odstránenie triedy 'invisible' z hlavičky po načítaní React aplikácie
+  React.useEffect(() => {
+    const headerElement = document.querySelector('header');
+    // Skontrolujeme, či element hlavičky existuje a či obsahuje triedu 'invisible'
+    if (headerElement && headerElement.classList.contains('invisible')) {
+      headerElement.classList.remove('invisible');
+      console.log("register.js: Trieda 'invisible' bola odstránená z hlavičky.");
+    }
+  }, []); // Prázdne pole závislostí zabezpečuje, že sa tento efekt spustí iba raz po prvom vykreslení
+  
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
