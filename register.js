@@ -779,7 +779,7 @@ function initializeRegistrationApp() {
         // Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
         if (typeof window.loadHeaderAndScripts === 'function') {
             console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
-            window.loadHeaderAndScripts();
+//            window.loadHeaderAndScripts();
         }
       }
     }, 500); // Zvýšené oneskorenie na 500 ms
