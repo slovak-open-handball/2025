@@ -60,7 +60,7 @@
     </style>
 </head>
 <body>
-    <!-- Hlavička - bude načítaná dynamicky -->
+    <!-- Zástupný element, kam header.js načíta obsah header.html -->
     <div id="header-placeholder"></div>
 
     <!-- Hlavný obsah React aplikácie -->
@@ -80,9 +80,10 @@
         const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
     </script>
 
-    <!-- Vlastné skripty - authentication.js musí byť načítaný PRED header.js a register.js -->
+    <!-- Vlastné skripty - Dôležité: header.js sa musí načítať PRED authentication.js! -->
+    <script type="module" src="header.js"></script> <!-- PRESUNUTÉ SEM -->
     <script type="module" src="authentication.js"></script>
-    <script type="module" src="header.js"></script> <!-- TENTO RIADOK SA PRESÚVA -->
+    <script type="module" src="loader.js"></script>
     
     <!-- Načítanie komponentov stránok formulára a hlavného App komponentu.
          Používame type="module" pre React súbory, aby podporovali import/export -->
