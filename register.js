@@ -1,5 +1,6 @@
 // register.js
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
+// Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated z header.js.
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -751,11 +752,18 @@ function App() {
 
 // Premenná na sledovanie, či už bola aplikácia inicializovaná
 let appInitialized = false;
+// Premenná na sledovanie, či už bola udalosť globalDataUpdated prijatá
+let globalDataUpdatedReceived = false;
 
 // Funkcia na inicializáciu a renderovanie React aplikácie
 function initializeRegistrationApp() {
   if (appInitialized) {
     console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
+    return;
+  }
+  
+  if (!globalDataUpdatedReceived) {
+    console.log("register.js: Čakám na udalosť 'globalDataUpdated'...");
     return;
   }
 
@@ -764,25 +772,9 @@ function initializeRegistrationApp() {
     const root = ReactDOM.createRoot(rootElement);
     appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
 
-    // NOVINKA: Priame vykreslenie React aplikácie
-    // Logika čakania na hlavičku je teraz v React.useEffect v komponente App.
+    // Priame vykreslenie React aplikácie
     root.render(React.createElement(App, null));
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
-
-    // NOVINKA: Opätovné odoslanie 'globalDataUpdated' s oneskorením
-    // Toto je záložný mechanizmus pre prípad, že header.js zmeškal pôvodnú udalosť.
-    // A zároveň vynúti opätovné spustenie logiky v header.js.
-//    setTimeout(() => {
-//      if (window.isGlobalAuthReady) {
-//        console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
-//        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-        // Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
-//        if (typeof window.loadHeaderAndScripts === 'function') {
-//            console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
-//            window.loadHeaderAndScripts();
-//        }
-//      }
-//    }, 500); // Zvýšené oneskorenie na 500 ms
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
@@ -792,6 +784,7 @@ function initializeRegistrationApp() {
 // Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
 window.addEventListener('globalDataUpdated', () => {
   console.log("register.js: Prijatá udalosť 'globalDataUpdated'. Inicializujem React aplikáciu.");
+  globalDataUpdatedReceived = true; // Označíme, že udalosť bola prijatá
   initializeRegistrationApp();
 });
 
@@ -799,5 +792,6 @@ window.addEventListener('globalDataUpdated', () => {
 // a window.isGlobalAuthReady je už true, inicializujeme aplikáciu okamžite.
 if (window.isGlobalAuthReady) {
   console.log("register.js: authentication.js už inicializoval globálne dáta. Inicializujem React aplikáciu okamžite.");
+  globalDataUpdatedReceived = true;
   initializeRegistrationApp();
 }
