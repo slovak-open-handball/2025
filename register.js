@@ -777,10 +777,10 @@ function initializeRegistrationApp() {
         console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
         // Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
-        if (typeof window.loadHeaderAndScripts === 'function') {
-            console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
+//        if (typeof window.loadHeaderAndScripts === 'function') {
+//            console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
 //            window.loadHeaderAndScripts();
-        }
+//        }
       }
     }, 500); // Zvýšené oneskorenie na 500 ms
 
