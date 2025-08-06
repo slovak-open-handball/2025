@@ -80,22 +80,14 @@
         const __initial_auth_token = null; // Pre túto aplikáciu nie je potrebný počiatočný auth token
     </script>
 
-    <!-- Vlastné skripty - Dôležité: header.js sa musí načítať PRED authentication.js! -->
-    <script type="module" src="header.js"></script> <!-- PRESUNUTÉ SEM -->
     <script type="module" src="authentication.js"></script>
+    <script type="module" src="header.js"></script>
     <script type="module" src="loader.js"></script>
-    
-    <!-- Načítanie komponentov stránok formulára a hlavného App komponentu.
-         Používame type="module" pre React súbory, aby podporovali import/export -->
     <script type="module" src="register-page1.js"></script>
     <script type="module" src="register-page2.js"></script>
     <script type="module" src="register.js"></script>
 
     <script type="text/javascript">
-        // Pôvodná logika inicializácie Firebase a načítania hlavičky bola presunutá
-        // do authentication.js a header.js.
-        // Tieto skripty sa teraz spoliehajú na udalosť 'DOMContentLoaded' alebo na to,
-        // že sa spúšťajú ako moduly, ktoré si samy inicializujú svoju logiku.
     </script>
 </body>
 </html>
