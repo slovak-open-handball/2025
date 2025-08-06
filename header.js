@@ -22,6 +22,8 @@ let unsubscribeFromNotifications = null; // Nová globálna premenná pre listen
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú listenery Firestore nastavené
+// NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
+window.areCategoriesLoaded = false;
 
 
 // Globálna funkcia pre zobrazenie notifikácií
@@ -438,10 +440,17 @@ const setupFirestoreListeners = () => {
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
             window.isCategoriesDataLoaded = true; // Dáta o kategóriách sú načítané
+            // NOVINKA: Odoslanie udalosti, že kategórie boli načítané
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
             window.isCategoriesDataLoaded = true; // Označíme ako načítané aj pri chybe
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
             updateHeaderLinks(window.globalUserProfileData);
         });
 
