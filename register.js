@@ -1,6 +1,7 @@
 // register.js
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
 // Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated a categoriesLoaded.
+// NOVINKA: Pridaná logika pre automatické zatvorenie registrácie bez zobrazenia odpočtu.
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -121,6 +122,10 @@ function App() {
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
+  // NOVINKA: Stav pre odpočet do konca registrácie
+  const [countdownEnd, setCountdownEnd] = React.useState(null);
+  const countdownEndIntervalRef = React.useRef(null);
+
   // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
@@ -182,6 +187,29 @@ function App() {
 
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }, [registrationStartDate]);
+  
+  // NOVÁ FUNKCIA: na výpočet zostávajúceho času do konca registrácie
+  const calculateTimeLeftToEnd = React.useCallback(() => {
+      const now = new Date();
+      const endDate = registrationEndDate ? new Date(registrationEndDate) : null;
+
+      if (!endDate || isNaN(endDate) || now >= endDate) {
+          return null;
+      }
+
+      const difference = endDate.getTime() - now.getTime();
+
+      if (difference <= 0) {
+          return null;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }, [registrationEndDate]);
 
 
   // Inicializácia Firebase a autentifikácie
@@ -285,33 +313,73 @@ function App() {
     };
   }, [isAuthReady]); // Zmenená závislosť na isAuthReady
 
-  // Effect pre odpočet
+  // Effect pre odpočet do začiatku registrácie
   React.useEffect(() => {
-    let timer;
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
         setCountdown(timeLeft);
         if (timeLeft === null) {
-            clearInterval(timer);
-            setForceRegistrationCheck(prev => prev + 1);
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+            }
+            // Vynútime prepočet stavu, aby sa aplikácia okamžite aktualizovala
+            setForceRegistrationCheck(prev => prev + 1); 
         }
     };
 
     if (registrationStartDate && new Date(registrationStartDate) > new Date()) {
         updateCountdown();
-        timer = setInterval(updateCountdown, 1000);
+        countdownIntervalRef.current = setInterval(updateCountdown, 1000);
     } else {
         setCountdown(null);
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+        }
     }
 
-    return () => clearInterval(timer);
+    return () => {
+        if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+        }
+    };
   }, [registrationStartDate, calculateTimeLeft]);
 
-  // Nový useEffect pre periodickú aktualizáciu isRegistrationOpen
+  // NOVINKA: Effect pre odpočet do konca registrácie
+  React.useEffect(() => {
+    const updateCountdownEnd = () => {
+      const timeLeft = calculateTimeLeftToEnd();
+      setCountdownEnd(timeLeft);
+      if (timeLeft === null) {
+          if (countdownEndIntervalRef.current) {
+              clearInterval(countdownEndIntervalRef.current);
+          }
+          // Vynútime prepočet stavu, aby sa aplikácia okamžite aktualizovala
+          setPeriodicRefreshKey(prev => prev + 1);
+      }
+    };
+
+    if (registrationEndDate && new Date(registrationEndDate) > new Date()) {
+        updateCountdownEnd();
+        countdownEndIntervalRef.current = setInterval(updateCountdownEnd, 1000);
+    } else {
+        setCountdownEnd(null);
+        if (countdownEndIntervalRef.current) {
+            clearInterval(countdownEndIntervalRef.current);
+        }
+    }
+
+    return () => {
+        if (countdownEndIntervalRef.current) {
+            clearInterval(countdownEndIntervalRef.current);
+        }
+    };
+  }, [registrationEndDate, calculateTimeLeftToEnd]);
+
+  // NOVINKA: Upravený useEffect pre periodickú aktualizáciu, teraz už je to len pre fallback
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000);
+    }, 60 * 1000); // Každú minútu
 
     return () => clearInterval(interval);
   }, []);
