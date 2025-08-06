@@ -78,6 +78,12 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   );
 }
 
+
+// Globálne stavy na sledovanie pripravenosti pre initializáciu
+let globalDataUpdatedReceived = false;
+let categoriesLoadedReceived = false;
+let appInitialized = false;
+
 // Hlavný App komponent
 function App() {
   const [page, setPage] = React.useState(1);
@@ -682,4 +688,50 @@ function App() {
       )}
     </div>
   );
+}
+
+// Funkcia, ktorá spravuje inicializáciu aplikácie.
+const initializeRegistrationApp = () => {
+  // Ak už bola aplikácia inicializovaná alebo sa neobdržali všetky potrebné dáta, nič nerobíme.
+  if (appInitialized) {
+    console.log("register.js: Aplikácia už bola inicializovaná, ignorujem ďalšie volanie.");
+    return;
+  }
+
+  // Ak sme prijali obe udalosti, môžeme inicializovať React aplikáciu
+  if (globalDataUpdatedReceived && categoriesLoadedReceived) {
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(React.createElement(App, null));
+      console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+      appInitialized = true; // Označíme ako inicializované
+    } else {
+      console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
+    }
+  } else {
+    console.log("register.js: Čakám na 'globalDataUpdated' a 'categoriesLoaded'. Zatiaľ neinicializujem aplikáciu.");
+  }
+};
+
+// Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
+window.addEventListener('globalDataUpdated', () => {
+  console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
+  globalDataUpdatedReceived = true; // Označíme, že udalosť bola prijatá
+  initializeRegistrationApp();
+});
+
+// Počúvame na udalosť 'categoriesLoaded', ktorá je odoslaná z header.js
+window.addEventListener('categoriesLoaded', () => {
+  console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
+  categoriesLoadedReceived = true; // Označíme, že kategórie boli prijaté
+  initializeRegistrationApp();
+});
+
+// Ak sa stránka načíta po tom, čo už boli odoslané obe udalosti, inicializujeme aplikáciu okamžite.
+if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
+  console.log("register.js: Obe udalosti už boli spracované pred DOMContentLoaded, inicializujem okamžite.");
+  globalDataUpdatedReceived = true;
+  categoriesLoadedReceived = true;
+  initializeRegistrationApp();
 }
