@@ -778,11 +778,14 @@ function initializeRegistrationApp() {
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
 
     // NOVINKA: Odstránenie triedy 'invisible' z hlavičky po načítaní React aplikácie
-    const headerElement = document.querySelector('header');
-    if (headerElement && headerElement.classList.contains('invisible')) {
-      headerElement.classList.remove('invisible');
-      console.log("register.js: Trieda 'invisible' bola odstránená z hlavičky po inicializácii React app.");
-    }
+    // Používame setTimeout, aby sme dali šancu header.js dokončiť svoju inicializáciu
+    setTimeout(() => {
+      const headerElement = document.querySelector('header');
+      if (headerElement && headerElement.classList.contains('invisible')) {
+        headerElement.classList.remove('invisible');
+        console.log("register.js: Trieda 'invisible' bola odstránená z hlavičky s oneskorením.");
+      }
+    }, 500); // Malé oneskorenie 500 ms
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
