@@ -319,11 +319,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         React.createElement(
           'p',
           { className: 'text-md text-gray-700 mt-2' },
-          'Registrácia bola ukončená', // Zmenený text
+          'Registrácia bola ukončená ', // Zmenený text
           registrationEndDateObj && React.createElement(
             'span',
             { style: { whiteSpace: 'nowrap' } },
-            ' dňa ',
+            'dňa ',
             registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
             ' o ',
             registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
