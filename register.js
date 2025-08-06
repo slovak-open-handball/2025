@@ -784,7 +784,7 @@ function initializeRegistrationApp() {
         console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
       }
-    }, 1000); // Malé oneskorenie 100 ms
+    }, 100); // Malé oneskorenie 100 ms
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
