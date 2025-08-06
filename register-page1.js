@@ -302,8 +302,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   `;
 
   return React.createElement(
-    'div',
-    { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+    React.Fragment, // Používame React.Fragment namiesto div, aby sa zabránilo extra obdĺžniku
+    null,
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
 
     // NOVINKA: Podmienené zobrazenie na základe stavu registrácie
@@ -319,11 +319,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         React.createElement(
           'p',
           { className: 'text-md text-gray-700 mt-2' },
-          'Registrácia bola ukončená ', // Zmenený text
+          'Registrácia bola ukončená', // Zmenený text
           registrationEndDateObj && React.createElement(
             'span',
             { style: { whiteSpace: 'nowrap' } },
-            'dňa ',
+            ' dňa ',
             registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
             ' o ',
             registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
@@ -335,7 +335,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
-        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
+        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'), // Zmenený text
         registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
           React.createElement(
             React.Fragment,
@@ -343,11 +343,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement(
               'p',
               { className: 'text-md text-gray-700 mt-2' }, // Odstránená trieda whitespace-nowrap z <p>
-              'Registrácia sa spustí ', // Zmenený text
+              'Registrácia sa spustí', // Zmenený text
               React.createElement(
                 'span',
                 { style: { whiteSpace: 'nowrap' } }, // span pre nezalamovanie dátumu a času
-                'dňa ', // Pridané ' dňa '
+                ' dňa ', // Pridané ' dňa '
                 registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }), // Formát dátumu
                 ' o ', // Pridané ' o '
                 registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }), // Formát času
@@ -371,8 +371,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         'Načítavam stav registrácie...'
       )
     ) : (
+      // Toto je pôvodný obsah formulára, ktorý sa zobrazí iba ak je registrácia otvorená
+      // Odstránený vonkajší div, ktorý spôsoboval duplicitný obdĺžnik.
       React.createElement(
-        React.Fragment,
+        React.Fragment, // Používame React.Fragment, aby sme nepridávali ďalší zbytočný div
         null,
         React.createElement(
           'h2',
