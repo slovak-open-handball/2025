@@ -386,7 +386,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           { onSubmit: handleNext, className: 'space-y-4' },
           React.createElement(
             'div',
-            { className: 'mb-4' },
+            { className: 'border-t border-gray-200 pt-4 mt-4' },
             React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'),
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 
               'Meno kontaktnej osoby',
