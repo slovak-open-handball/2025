@@ -776,6 +776,14 @@ function initializeRegistrationApp() {
     root.render(React.createElement(App, null));
     appInitialized = true;
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+
+    // NOVINKA: Odstránenie triedy 'invisible' z hlavičky po načítaní React aplikácie
+    const headerElement = document.querySelector('header');
+    if (headerElement && headerElement.classList.contains('invisible')) {
+      headerElement.classList.remove('invisible');
+      console.log("register.js: Trieda 'invisible' bola odstránená z hlavičky po inicializácii React app.");
+    }
+
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
   }
