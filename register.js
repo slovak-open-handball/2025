@@ -266,7 +266,7 @@ function App() {
     // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
-      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) { // OPRAVENÉ: docSnap -> docSnapshot
         setCategoriesExist(true);
       } else {
         setCategoriesExist(false);
@@ -341,11 +341,8 @@ function App() {
     const { id, value } = e.target;
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
       setFormData(prev => ({
-        ...prev,
-        billing: {
-          ...prev.billing,
-          [id]: value
-        }
+        ...prev.billing,
+        [id]: value
       }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
@@ -609,7 +606,7 @@ function App() {
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
-        billing: { clubName: '', ico: '', dic: '', icDph: '' }
+        billing: { clubName: '', ico: '', '', icDph: '' }
       });
       setPage(1); // Reset na prvú stránku formulára
 
@@ -764,7 +761,7 @@ function initializeRegistrationApp() {
     const root = ReactDOM.createRoot(rootElement);
     appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
 
-    const headerElement = document.querySelector('header');
+    const headerPlaceholder = document.getElementById('header-placeholder'); // Získame placeholder
     let headerCheckInterval;
     let headerCheckTimeout;
 
@@ -779,6 +776,9 @@ function initializeRegistrationApp() {
 
     // Funkcia na kontrolu viditeľnosti hlavičky a následné vykreslenie React aplikácie
     const checkHeaderVisibilityAndRender = () => {
+      // Získame referenciu na header element VO VNÚTRI placeholderu
+      const headerElement = headerPlaceholder ? headerPlaceholder.querySelector('header') : null;
+
       // Hlavička je viditeľná, ak existuje a neobsahuje triedu 'invisible'
       if (headerElement && !headerElement.classList.contains('invisible')) {
         console.log("register.js: Hlavička je viditeľná. Vykresľujem React aplikáciu.");
