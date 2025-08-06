@@ -335,7 +335,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
-        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár nie je prístupný.'),
+        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
         registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
           React.createElement(
             React.Fragment,
