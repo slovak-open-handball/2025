@@ -334,14 +334,15 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement(
               'p',
               { className: 'text-md text-gray-700 mt-2' },
-              'Registrácia bude možná od:',
+              'Registrácia sa spustí dňa',
               ' ',
               React.createElement('span', { style: { whiteSpace: 'nowrap' } }, registrationStartDateObj.toLocaleDateString('sk-SK')),
-              ' ',
-              React.createElement('span', { style: { whiteSpace: 'nowrap' } }, registrationStartDateObj.toLocaleTimeString('sk-SK'))
+              ' o ',
+              React.createElement('span', { style: { whiteSpace: 'nowrap' } }, registrationStartDateObj.toLocaleTimeString('sk-SK')),
+              ' hod.',
             ),
             countdownMessage && (
-                React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, `Registrácia začne o: ${countdownMessage}`)
+                React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdownMessage}`)) // Zmenené tu
             )
           )
         )
