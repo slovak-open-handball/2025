@@ -508,16 +508,17 @@ window.loadHeaderAndScripts = async () => {
         // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
-            // Nastavíme, že autentifikačné dáta sú načítané
             window.isGlobalAuthReady = true; 
-            // Teraz, keď je window.db (a ostatné globálne premenné) inicializované,
-            // môžeme nastaviť Firestore listenery.
-            setupFirestoreListeners(); // Voláme tu
-            updateHeaderLinks(event.detail); // Použijeme dáta z udalosti
+            setupFirestoreListeners();
+            updateHeaderLinks(event.detail);
         });
 
-        // Pôvodné volanie setupFirestoreListeners() bolo odstránené odtiaľto
-
+        // Ak už je autentifikácia pripravená pri načítaní tohto skriptu, spustíme listenery manuálne.
+        if (window.isGlobalAuthReady) {
+             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+             setupFirestoreListeners();
+             updateHeaderLinks(window.globalUserProfileData);
+        }
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
