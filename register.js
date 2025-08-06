@@ -341,8 +341,11 @@ function App() {
     const { id, value } = e.target;
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
       setFormData(prev => ({
-        ...prev.billing,
-        [id]: value
+        ...prev, // Zachovať ostatné polia formData
+        billing: { // Aktualizovať iba billing objekt
+          ...prev.billing,
+          [id]: value
+        }
       }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
@@ -761,54 +764,19 @@ function initializeRegistrationApp() {
     const root = ReactDOM.createRoot(rootElement);
     appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
 
-    const headerPlaceholder = document.getElementById('header-placeholder'); // Získame placeholder
-    let headerCheckInterval;
-    let headerCheckTimeout;
-
-    // NOVINKA: Explicitne zavoláme window.loadHeaderAndScripts()
-    // Toto vynúti opätovné načítanie hlavičky a nastavenie všetkých jej listenerov.
-    if (typeof window.loadHeaderAndScripts === 'function') {
-        console.log("register.js: Explicitne volám window.loadHeaderAndScripts() pre zobrazenie hlavičky.");
-        window.loadHeaderAndScripts();
-    } else {
-        console.warn("register.js: window.loadHeaderAndScripts() nie je funkcia. Hlavička sa nemusí zobraziť správne.");
-    }
-
-    // Funkcia na kontrolu viditeľnosti hlavičky a následné vykreslenie React aplikácie
-    const checkHeaderVisibilityAndRender = () => {
-      // Získame referenciu na header element VO VNÚTRI placeholderu
-      const headerElement = headerPlaceholder ? headerPlaceholder.querySelector('header') : null;
-
-      // Hlavička je viditeľná, ak existuje a neobsahuje triedu 'invisible'
-      if (headerElement && !headerElement.classList.contains('invisible')) {
-        console.log("register.js: Hlavička je viditeľná. Vykresľujem React aplikáciu.");
-        clearInterval(headerCheckInterval); // Zastavíme interval
-        clearTimeout(headerCheckTimeout); // Zrušíme timeout
-        root.render(React.createElement(App, null)); // Vykreslíme React aplikáciu
-      } else {
-        console.log("register.js: Hlavička ešte nie je viditeľná, čakám...");
-      }
-    };
-
-    // Začneme kontrolovať viditeľnosť hlavičky každých 50 ms
-    headerCheckInterval = setInterval(checkHeaderVisibilityAndRender, 50);
-
-    // Nastavíme časový limit na zastavenie kontroly po určitom čase (napr. 5 sekúnd)
-    // a vykreslíme aplikáciu aj tak, aby sa predišlo nekonečnému načítavaniu,
-    // ak hlavička z nejakého dôvodu nikdy nebude viditeľná.
-    headerCheckTimeout = setTimeout(() => {
-      clearInterval(headerCheckInterval);
-      console.warn("register.js: Časový limit pre zobrazenie hlavičky vypršal. Vykresľujem React aplikáciu aj tak.");
-      root.render(React.createElement(App, null));
-    }, 5000); // 5 sekúnd časový limit
+    // NOVINKA: Priame vykreslenie React aplikácie
+    // Logika čakania na hlavičku je teraz v React.useEffect v komponente App.
+    root.render(React.createElement(App, null));
+    console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
 
     // NOVINKA: Opätovné odoslanie 'globalDataUpdated' s oneskorením
     // Toto je záložný mechanizmus pre prípad, že header.js zmeškal pôvodnú udalosť.
+    // A zároveň vynúti opätovné spustenie logiky v header.js.
     setTimeout(() => {
       if (window.isGlobalAuthReady) {
         console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-        // NOVINKA: Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
+        // Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
         if (typeof window.loadHeaderAndScripts === 'function') {
             console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
             window.loadHeaderAndScripts();
