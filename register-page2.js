@@ -28,7 +28,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
 
     // Ak je pole súčasťou billing objektu
     if (['clubName', 'ico', 'dic', 'icDph'].includes(id)) {
-      handleChange({ target: { id: 'billing', value: { ...formData.billing, [id]: newValue } } });
+      // Predpokladáme, že formData.billing je už inicializované ako objekt
+      handleChange({ target: { id: 'billing', value: { ...(formData.billing || {}), [id]: newValue } } });
     } else {
       // Pre ostatné polia (ulica, popisné číslo, mesto, PSČ, štát)
       handleChange({ target: { id: id, value: newValue } });
@@ -40,11 +41,11 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
                            (formData.billing?.ico.trim() !== '' ||
                             formData.billing?.dic.trim() !== '' ||
                             formData.billing?.icDph.trim() !== '') &&
-                           formData.street.trim() !== '' &&
-                           formData.houseNumber.trim() !== '' &&
-                           formData.city.trim() !== '' &&
-                           formData.postalCode.replace(/\s/g, '').length === 5 &&
-                           formData.country.trim() !== '';
+                           formData.street?.trim() !== '' && // Pridaná bezpečná navigácia
+                           formData.houseNumber?.trim() !== '' && // Pridaná bezpečná navigácia
+                           formData.city?.trim() !== '' && // Pridaná bezpečná navigácia
+                           formData.postalCode?.replace(/\s/g, '').length === 5 && // Pridaná bezpečná navigácia
+                           formData.country?.trim() !== ''; // Pridaná bezpečná navigácia
 
   // Dynamické triedy pre tlačidlo "Registrovať sa"
   const registerButtonClasses = `
@@ -56,8 +57,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
   `;
 
   return React.createElement(
-    'div',
-    { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+    React.Fragment, // Používame React.Fragment namiesto div
+    null,
     React.createElement(
       'h2',
       { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
@@ -164,7 +165,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             type: 'text',
             id: 'street',
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: formData.street, // This is a direct formData field
+            value: formData.street || '', // This is a direct formData field
             onChange: handleChange, // Use general handleChange
             required: true,
             placeholder: 'Zadajte ulicu',
@@ -202,7 +203,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             type: 'text',
             id: 'city',
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: formData.city, // This is a direct formData field
+            value: formData.city || '', // This is a direct formData field
             onChange: handleChange, // Use general handleChange
             required: true,
             placeholder: 'Zadajte mesto',
@@ -221,7 +222,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             type: 'text',
             id: 'postalCode',
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: formData.postalCode, // This is a direct formData field
+            value: formData.postalCode || '', // This is a direct formData field
             onChange: handleBillingChange, // Use handleBillingChange for PSČ formatting
             required: true,
             placeholder: 'Zadajte PSČ (napr. 123 45)',
@@ -241,7 +242,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             type: 'text',
             id: 'country',
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: formData.country, // This is a direct formData field
+            value: formData.country || '', // This is a direct formData field
             onChange: handleChange, // Use general handleChange
             required: true,
             placeholder: 'Zadajte štát',
