@@ -325,7 +325,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
     ) : (isRegistrationOpen === false && countdownMessage) ? (
       React.createElement(
         'div',
-        { className: 'text-center text-gray-800 text-lg py-4' },
+        { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
         React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár nie je prístupný.'),
         registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
           React.createElement(
