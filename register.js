@@ -777,13 +777,13 @@ function initializeRegistrationApp() {
     appInitialized = true;
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
 
-    // NOVINKA: Explicitne odoslať udalosť globalDataUpdated znova,
-    // aby sa zabezpečilo, že header.js ju zachytí, ak ju predtým zmeškal.
-    // Robíme to len vtedy, ak je už autentifikácia pripravená.
-    if (window.isGlobalAuthReady) {
-      console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js.");
-      window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-    }
+    // ODSTRÁNENÁ NOVINKA: Explicitne odoslať udalosť globalDataUpdated znova.
+    // Táto logika je teraz riadená poradím načítania skriptov v register.html
+    // a logikou v header.js.
+    // if (window.isGlobalAuthReady) {
+    //   console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js.");
+    //   window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+    // }
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
