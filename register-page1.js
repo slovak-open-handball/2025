@@ -313,8 +313,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-2 text-red-500' }, // Farba textu zmenená na červenú
-          'Registrácia na turnaj je už ukončená.' // Zmenený text
+          { className: 'text-2xl font-bold mb-2 text-red-600' }, 
+          'Registrácia na turnaj je už ukončená.'
         ),
         React.createElement(
           'p',
