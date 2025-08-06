@@ -772,17 +772,17 @@ function initializeRegistrationApp() {
     // NOVINKA: Opätovné odoslanie 'globalDataUpdated' s oneskorením
     // Toto je záložný mechanizmus pre prípad, že header.js zmeškal pôvodnú udalosť.
     // A zároveň vynúti opätovné spustenie logiky v header.js.
-    setTimeout(() => {
-      if (window.isGlobalAuthReady) {
-        console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
-        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+//    setTimeout(() => {
+//      if (window.isGlobalAuthReady) {
+//        console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
+//        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
         // Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
 //        if (typeof window.loadHeaderAndScripts === 'function') {
 //            console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
 //            window.loadHeaderAndScripts();
 //        }
-      }
-    }, 500); // Zvýšené oneskorenie na 500 ms
+//      }
+//    }, 500); // Zvýšené oneskorenie na 500 ms
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
