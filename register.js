@@ -1,6 +1,6 @@
 // register.js
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
-// Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated z header.js.
+// Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated a categoriesLoaded.
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
@@ -754,6 +754,8 @@ function App() {
 let appInitialized = false;
 // Premenná na sledovanie, či už bola udalosť globalDataUpdated prijatá
 let globalDataUpdatedReceived = false;
+// NOVINKA: Premenná na sledovanie, či už bola udalosť categoriesLoaded prijatá
+let categoriesLoadedReceived = false;
 
 // Funkcia na inicializáciu a renderovanie React aplikácie
 function initializeRegistrationApp() {
@@ -762,8 +764,9 @@ function initializeRegistrationApp() {
     return;
   }
   
-  if (!globalDataUpdatedReceived) {
-    console.log("register.js: Čakám na udalosť 'globalDataUpdated'...");
+  // NOVINKA: Kombinovaná kontrola pre obe udalosti
+  if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
+    console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
     return;
   }
 
@@ -783,15 +786,23 @@ function initializeRegistrationApp() {
 
 // Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
 window.addEventListener('globalDataUpdated', () => {
-  console.log("register.js: Prijatá udalosť 'globalDataUpdated'. Inicializujem React aplikáciu.");
+  console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
   globalDataUpdatedReceived = true; // Označíme, že udalosť bola prijatá
   initializeRegistrationApp();
 });
 
-// Ak sa stránka načíta po tom, čo už bola udalosť 'globalDataUpdated' odoslaná (napr. pri rýchlom načítaní),
-// a window.isGlobalAuthReady je už true, inicializujeme aplikáciu okamžite.
-if (window.isGlobalAuthReady) {
-  console.log("register.js: authentication.js už inicializoval globálne dáta. Inicializujem React aplikáciu okamžite.");
+// NOVINKA: Počúvame na udalosť 'categoriesLoaded', ktorá je odoslaná z header.js
+window.addEventListener('categoriesLoaded', () => {
+  console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
+  categoriesLoadedReceived = true; // Označíme, že kategórie boli prijaté
+  initializeRegistrationApp();
+});
+
+
+// NOVINKA: Ak sa stránka načíta po tom, čo už boli odoslané obe udalosti, inicializujeme aplikáciu okamžite.
+if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
+  console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
   globalDataUpdatedReceived = true;
+  categoriesLoadedReceived = true;
   initializeRegistrationApp();
 }
