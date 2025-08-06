@@ -266,7 +266,7 @@ function App() {
     // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
-      if (docSnap.exists && Object.keys(docSnap.data()).length > 0) {
+      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
       } else {
         setCategoriesExist(false);
