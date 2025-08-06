@@ -338,7 +338,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
               React.createElement(
                 'span',
                 { style: { whiteSpace: 'nowrap' } }, // span pre nezalamovanie dátumu a času
-                'dňa ',
+                ' dňa ', // Pridané ' dňa '
                 registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }), // Formát dátumu
                 ' o ', // Pridané ' o '
                 registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }), // Formát času
@@ -536,11 +536,6 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             'p',
             { className: 'text-red-500 text-xs italic mt-1' },
             'Heslá sa nezhodujú'
-          ),
-          React.createElement(
-            'div',
-            { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlom
-            React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '*'), ' Povinné pole'),
           ),
           React.createElement(
             'button',
