@@ -588,7 +588,7 @@ function App() {
                 onSelectCountryDialCode={(code) => setSelectedCountryDialCode(code)}
                 selectedCountryDialCode={selectedCountryDialCode}
                 setIsCountryCodeModalOpen={setIsCountryCodeModalOpen}
-            />
+            >
         )}
         {page === 2 && (
             <Page2Form
