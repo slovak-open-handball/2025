@@ -777,6 +777,7 @@ function initializeRegistrationApp() {
         clearTimeout(headerCheckTimeout); // Zrušíme timeout
         root.render(React.createElement(App, null)); // Vykreslíme React aplikáciu
       } else {
+        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
         console.log("register.js: Hlavička ešte nie je viditeľná, čakám...");
       }
     };
