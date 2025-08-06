@@ -333,12 +333,16 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             null,
             React.createElement(
               'p',
-              { className: 'text-md text-gray-700 mt-2 whitespace-nowrap' }, // Pridaná trieda whitespace-nowrap
+              { className: 'text-md text-gray-700 mt-2' }, // Odstránená trieda whitespace-nowrap z <p>
               'Registrácia sa spustí dňa ', // Zmenený text
-              React.createElement('span', { style: { whiteSpace: 'nowrap' } }, registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })), // Formát dátumu
-              ' o ', // Pridané ' o '
-              React.createElement('span', { style: { whiteSpace: 'nowrap' } }, registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })), // Formát času
-              ' hod.' // Pridané ' hod.'
+              React.createElement(
+                'span',
+                { style: { whiteSpace: 'nowrap' } }, // span pre nezalamovanie dátumu a času
+                registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }), // Formát dátumu
+                ' o ', // Pridané ' o '
+                registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }), // Formát času
+                ' hod.' // Pridané ' hod.'
+              )
             ),
             countdownMessage && (
                 React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdownMessage}`))
