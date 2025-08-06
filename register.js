@@ -706,37 +706,45 @@ function App() {
       ) : (
         // Zobrazenie formulára, ak registrácia nebola úspešná
         page === 1 ?
-          React.createElement(Page1Form, {
-            formData: formData,
-            handleChange: handleChange,
-            handleNext: handleNext,
-            loading: loading,
-            notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
-            closeNotification: closeNotification,
-            isCountryCodeModalOpen: isCountryCodeModalOpen,
-            setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
-            setSelectedCountryDialCode: setSelectedCountryDialCode,
-            selectedCountryDialCode: selectedCountryDialCode,
-            NotificationModal: NotificationModal,
-            isRegistrationOpen: isRegistrationOpen,
-            countdownMessage: countdown,
-            registrationStartDate: registrationStartDate,
-            isRecaptchaReady: isRecaptchaReady,
-            isRegistrationClosed: isRegistrationClosed, // Odovzdávame stav registrácie
-            registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
-          }) :
-          React.createElement(Page2Form, {
-            formData: formData,
-            handleChange: handleChange,
-            handlePrev: handlePrev,
-            handleSubmit: handleSubmit,
-            loading: loading,
-            notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
-            closeNotification: closeNotification,
-            userRole: userRole,
-            handleRoleChange: handleRoleChange,
-            NotificationModal: NotificationModal,
-          })
+          React.createElement(
+            'div', // Obalový div pre Page1Form
+            { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+            React.createElement(Page1Form, {
+              formData: formData,
+              handleChange: handleChange,
+              handleNext: handleNext,
+              loading: loading,
+              notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+              closeNotification: closeNotification,
+              isCountryCodeModalOpen: isCountryCodeModalOpen,
+              setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
+              setSelectedCountryDialCode: setSelectedCountryDialCode,
+              selectedCountryDialCode: selectedCountryDialCode,
+              NotificationModal: NotificationModal,
+              isRegistrationOpen: isRegistrationOpen,
+              countdownMessage: countdown,
+              registrationStartDate: registrationStartDate,
+              isRecaptchaReady: isRecaptchaReady,
+              isRegistrationClosed: isRegistrationClosed, // Odovzdávame stav registrácie
+              registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
+            })
+          ) :
+          React.createElement(
+            'div', // Obalový div pre Page2Form
+            { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+            React.createElement(Page2Form, {
+              formData: formData,
+              handleChange: handleChange,
+              handlePrev: handlePrev,
+              handleSubmit: handleSubmit,
+              loading: loading,
+              notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+              closeNotification: closeNotification,
+              userRole: userRole,
+              handleRoleChange: handleRoleChange,
+              NotificationModal: NotificationModal,
+            })
+          )
       )
     )
   );
