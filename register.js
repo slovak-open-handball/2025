@@ -124,7 +124,6 @@ function App() {
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
   // Nový stav na indikáciu prebiehajúcej registrácie (používa sa aj ref pre okamžitý prístup)
-  // const [isRegistering, setIsRegistering] = React.useRef(false); // Zmenené na useRef - TENTO RIADOK BOL ODSTRÁNENÝ
   const isRegisteringRef = React.useRef(false); // Ref pre okamžitý prístup v onAuthStateChanged
 
   const countdownIntervalRef = React.useRef(null);
@@ -267,7 +266,7 @@ function App() {
     // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
-      if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) {
+      if (docSnap.exists && Object.keys(docSnap.data()).length > 0) {
         setCategoriesExist(true);
       } else {
         setCategoriesExist(false);
@@ -660,16 +659,6 @@ function App() {
     // Táto funkcia je prázdna, pretože logiku viditeľnosti hlavičky spravuje header.js
   }, [settingsLoaded, isAuthReady]); 
 
-  // NOVÝ useEffect na odstránenie triedy 'invisible' z hlavičky po načítaní React aplikácie
-//  React.useEffect(() => {
-//    const headerElement = document.querySelector('header');
-//    // Skontrolujeme, či element hlavičky existuje a či obsahuje triedu 'invisible'
-//    if (headerElement && headerElement.classList.contains('invisible')) {
-//      headerElement.classList.remove('invisible');
-//      console.log("register.js: Trieda 'invisible' bola odstránená z hlavičky.");
-//    }
-//  }, []); // Prázdne pole závislostí zabezpečuje, že sa tento efekt spustí iba raz po prvom vykreslení
-  
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
@@ -773,18 +762,36 @@ function initializeRegistrationApp() {
   const rootElement = document.getElementById('root');
   if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
-    root.render(React.createElement(App, null));
-    appInitialized = true;
-    console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+    appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
 
-    // NOVINKA: Opätovné odoslanie 'globalDataUpdated' s oneskorením
-    // Toto je záložný mechanizmus pre prípad, že header.js zmeškal pôvodnú udalosť.
-    setTimeout(() => {
-      if (window.isGlobalAuthReady) {
-        console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
-        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+    const headerElement = document.querySelector('header');
+    let headerCheckInterval;
+    let headerCheckTimeout;
+
+    // Funkcia na kontrolu viditeľnosti hlavičky a následné vykreslenie React aplikácie
+    const checkHeaderVisibilityAndRender = () => {
+      // Hlavička je viditeľná, ak existuje a neobsahuje triedu 'invisible'
+      if (headerElement && !headerElement.classList.contains('invisible')) {
+        console.log("register.js: Hlavička je viditeľná. Vykresľujem React aplikáciu.");
+        clearInterval(headerCheckInterval); // Zastavíme interval
+        clearTimeout(headerCheckTimeout); // Zrušíme timeout
+        root.render(React.createElement(App, null)); // Vykreslíme React aplikáciu
+      } else {
+        console.log("register.js: Hlavička ešte nie je viditeľná, čakám...");
       }
-    }, 100); // Malé oneskorenie 100 ms
+    };
+
+    // Začneme kontrolovať viditeľnosť hlavičky každých 50 ms
+    headerCheckInterval = setInterval(checkHeaderVisibilityAndRender, 50);
+
+    // Nastavíme časový limit na zastavenie kontroly po určitom čase (napr. 5 sekúnd)
+    // a vykreslíme aplikáciu aj tak, aby sa predišlo nekonečnému načítavaniu,
+    // ak hlavička z nejakého dôvodu nikdy nebude viditeľná.
+    headerCheckTimeout = setTimeout(() => {
+      clearInterval(headerCheckInterval);
+      console.warn("register.js: Časový limit pre zobrazenie hlavičky vypršal. Vykresľujem React aplikáciu aj tak.");
+      root.render(React.createElement(App, null));
+    }, 5000); // 5 sekúnd časový limit
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
