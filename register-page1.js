@@ -311,11 +311,15 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
-        React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár nie je prístupný.'),
+        React.createElement(
+          'h2',
+          { className: 'text-2xl font-bold mb-2 text-red-500' }, // Farba textu zmenená na červenú
+          'Registrácia na turnaj je už ukončená.' // Zmenený text
+        ),
         React.createElement(
           'p',
           { className: 'text-md text-gray-700 mt-2' },
-          'Registrácia bola ukončená - ', // Zmenený text
+          'Registrácia bola ukončená ', // Zmenený text
           registrationEndDateObj && React.createElement(
             'span',
             { style: { whiteSpace: 'nowrap' } },
@@ -339,11 +343,11 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             React.createElement(
               'p',
               { className: 'text-md text-gray-700 mt-2' }, // Odstránená trieda whitespace-nowrap z <p>
-              'Registrácia sa spustí', // Zmenený text
+              'Registrácia sa spustí ', // Zmenený text
               React.createElement(
                 'span',
                 { style: { whiteSpace: 'nowrap' } }, // span pre nezalamovanie dátumu a času
-                ' dňa ', // Pridané ' dňa '
+                'dňa ', // Pridané ' dňa '
                 registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }), // Formát dátumu
                 ' o ', // Pridané ' o '
                 registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }), // Formát času
