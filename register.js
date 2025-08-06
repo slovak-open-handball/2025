@@ -768,6 +768,15 @@ function initializeRegistrationApp() {
     let headerCheckInterval;
     let headerCheckTimeout;
 
+    // NOVINKA: Explicitne zavoláme window.loadHeaderAndScripts()
+    // Toto vynúti opätovné načítanie hlavičky a nastavenie všetkých jej listenerov.
+    if (typeof window.loadHeaderAndScripts === 'function') {
+        console.log("register.js: Explicitne volám window.loadHeaderAndScripts() pre zobrazenie hlavičky.");
+        window.loadHeaderAndScripts();
+    } else {
+        console.warn("register.js: window.loadHeaderAndScripts() nie je funkcia. Hlavička sa nemusí zobraziť správne.");
+    }
+
     // Funkcia na kontrolu viditeľnosti hlavičky a následné vykreslenie React aplikácie
     const checkHeaderVisibilityAndRender = () => {
       // Hlavička je viditeľná, ak existuje a neobsahuje triedu 'invisible'
@@ -777,8 +786,6 @@ function initializeRegistrationApp() {
         clearTimeout(headerCheckTimeout); // Zrušíme timeout
         root.render(React.createElement(App, null)); // Vykreslíme React aplikáciu
       } else {
-        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-        window.loadHeaderAndScripts();
         console.log("register.js: Hlavička ešte nie je viditeľná, čakám...");
       }
     };
@@ -794,6 +801,20 @@ function initializeRegistrationApp() {
       console.warn("register.js: Časový limit pre zobrazenie hlavičky vypršal. Vykresľujem React aplikáciu aj tak.");
       root.render(React.createElement(App, null));
     }, 5000); // 5 sekúnd časový limit
+
+    // NOVINKA: Opätovné odoslanie 'globalDataUpdated' s oneskorením
+    // Toto je záložný mechanizmus pre prípad, že header.js zmeškal pôvodnú udalosť.
+    setTimeout(() => {
+      if (window.isGlobalAuthReady) {
+        console.log("register.js: Vynucujem opätovné odoslanie 'globalDataUpdated' pre header.js s oneskorením.");
+        window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+        // NOVINKA: Znovu spustíme window.loadHeaderAndScripts() po dispatche udalosti
+        if (typeof window.loadHeaderAndScripts === 'function') {
+            console.log("register.js: Znovu volám window.loadHeaderAndScripts() po opätovnom odoslaní udalosti.");
+            window.loadHeaderAndScripts();
+        }
+      }
+    }, 500); // Zvýšené oneskorenie na 500 ms
 
   } else {
     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
