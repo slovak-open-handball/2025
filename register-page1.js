@@ -384,10 +384,6 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         React.createElement(
           'form',
           { onSubmit: handleNext, className: 'space-y-4' },
-        ),
-        React.createElement(
-          'form',
-          { onSubmit: handleNext, className: 'space-y-4' },
           React.createElement(
             'div',
             { className: 'mb-4' },
