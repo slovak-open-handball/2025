@@ -778,6 +778,7 @@ function initializeRegistrationApp() {
         root.render(React.createElement(App, null)); // Vykreslíme React aplikáciu
       } else {
         window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+        window.loadHeaderAndScripts();
         console.log("register.js: Hlavička ešte nie je viditeľná, čakám...");
       }
     };
