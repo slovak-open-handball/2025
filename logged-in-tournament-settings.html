@@ -63,7 +63,7 @@
     <div id="header-placeholder"></div>
 
     <main id="main-content-area" class="flex-grow flex">
-        <!-- Sem sme pridali triedu pre plynulú animáciu a placeholder pre ľavé menu -->
+        <!-- Sem sme pridali triedu pre plynulú animáciu -->
         <div class="flex-shrink-0 w-16 transition-all duration-300" id="menu-placeholder-spacer"></div>
         <div id="menu-placeholder"></div>
         
@@ -76,14 +76,14 @@
         </div>
     </main>
 
-    <!-- Globálny element pre notifikácie (ak ho header.js nenačíta) -->
-    <div id="global-notification"></div>
+    <!-- Globálny element pre notifikácie - ODSTRÁNENÝ Z TOHTO SÚBORU. 
+         Bude vytvorený a spravovaný globálnou funkciou window.showGlobalNotification. -->
 
     <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
     <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
-    <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
+    <script type="module" src="loader.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
     <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="logged-in-tournament-settings.js"></script>
