@@ -296,7 +296,7 @@ function TournamentSettingsApp() {
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
     React.createElement(
       'div',
-      { className: 'w-full max-w-2xl mt-20 mb-10 p-4' }, // Zmenené z max-w-4xl na max-w-2xl
+      { className: 'w-full max-w-2xl p-4' }, // Zmenené: odstránené mt-20 a mb-10
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
