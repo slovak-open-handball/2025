@@ -115,11 +115,39 @@
     </header>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky do tohto placeholderu -->
-        <div id="menu-placeholder"></div>
+        <!-- Ľavé menu sa načíta priamo -->
+        <div id="left-menu" class="fixed top-0 left-0 h-full w-16 z-10 bg-gray-800 text-white shadow-xl transition-all duration-300 group overflow-hidden flex flex-col hidden" style="padding-top: 64px;">
+            <!-- Tlačidlo pre rozbalenie/zbalenie menu -->
+            <button id="menu-toggle-button" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
+                <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Menu</span>
+            </button>
+
+            <!-- Navigačné položky -->
+            <nav class="flex-grow">
+                <a href="logged-in-my-data.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
+                    <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje údaje</span>
+                </a>
+                <!-- Položka "Vytvorenie kategórií" - bude podmienene zobrazená pomocou JS -->
+                <a id="add-categories-link" href="logged-in-add-categories.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
+                    <!-- Ikona priečinka s plusom pre "Vytvorenie kategórií" -->
+                    <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Vytvorenie kategórií</span>
+                </a>
+            </nav>
+        </div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <div id="main-content-area" class="flex-1 p-4">
+            <!-- NOVINKA: Pridaný div element pre menuSpacer, ktorý očakáva logged-in-left-menu.js -->
+            <div class="flex-shrink-0 w-0 md:w-0 transition-all duration-300"></div> 
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
