@@ -161,7 +161,7 @@ function TournamentSettingsApp() {
         }, error => {
           console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); // Používame lokálnu showNotification
-          setLoading(false); // Zastavíme načítavanie pri chybe
+          setLoading(false); // Zastavíme načítavanie pri chybu
           auth.signOut();
           setUser(null);
           setUserProfileData(null);
@@ -309,6 +309,7 @@ function TournamentSettingsApp() {
     { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' },
     // Zobrazíme formulár iba ak nie je stav načítavania a používateľ je admin
     (!loading && userProfileData && userProfileData.role === 'admin') ? (
+      React.createElement(React.Fragment, null, // Nahradené <> za React.createElement(React.Fragment, null, ...)
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
@@ -377,7 +378,7 @@ function TournamentSettingsApp() {
             loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
           )
         )
-      </>
+      ) // Nahradené </>
     ) : null // Ak sa načítava alebo používateľ nie je admin, nevykresľujeme žiadny obsah vo vnútri tohto divu.
              // Globálny loader (z loader.js) zostane viditeľný.
   );
