@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný import deleteField
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -385,19 +385,30 @@ function AddCategoriesApp() {
   }, [db, userProfileData, getCategoriesDocRef]);
 
   // Funkcia na odoslanie notifikácie administrátorom
-  const sendAdminNotification = async (message) => {
+  const sendAdminNotification = async (notificationData) => { // Zmenený parameter na objekt
     if (!db) { 
       console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
-      // Firebase v9 syntax: addDoc(collection(db, 'notifications'), ...)
       const notificationsCollectionRef = collection(db, 'notifications');
+      let changesArray = [];
+      let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
+
+      if (notificationData.type === 'create') {
+        changesArray = ['Vytvorenie novej kategórie: ', notificationData.data.newCategoryName];
+      } else if (notificationData.type === 'edit') {
+        changesArray = ['Zmena názvu kategórie z: ', notificationData.data.originalCategoryName, ' na ', notificationData.data.newCategoryName];
+      } else if (notificationData.type === 'delete') {
+        changesArray = ['Zmazanie kategórie: ', notificationData.data.categoryName];
+      }
+
       await addDoc(notificationsCollectionRef, {
-        message: message,
+        userEmail: userEmail, // Pridané pole userEmail
+        changes: changesArray, // Zmenené 'message' na 'changes' a je to pole
         timestamp: new Date(), 
-        recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
-        read: false
+        recipientId: 'all_admins'
+        // Odstránené pole 'read: false'
       });
       console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
     } catch (e) {
@@ -459,7 +470,7 @@ function AddCategoriesApp() {
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification(`Používateľ ${userEmail} vytvoril kategóriu "${trimmedCategoryName}".`);
+      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, userEmail: userEmail } }); // Upravené volanie
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
@@ -522,7 +533,7 @@ function AddCategoriesApp() {
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification(`Používateľ ${userEmail} upravil názov kategórie "${originalCategoryName}" na nový názov kategórie "${trimmedNewName}".`);
+      await sendAdminNotification({ type: 'edit', data: { originalCategoryName: originalCategoryName, newCategoryName: trimmedNewName, userEmail: userEmail } }); // Upravené volanie
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
@@ -558,7 +569,7 @@ function AddCategoriesApp() {
 
       // Odstránime konkrétne pole z dokumentu pomocou FieldValue.delete() pre Firebase v9
       await setDoc(categoriesDocRef, {
-        [categoryToDelete.id]: FieldValue.delete() // OPRAVENÉ: Používame FieldValue.delete() pre v9
+        [categoryToDelete.id]: FieldValue.delete() // Používame FieldValue.delete() pre v9
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof window.showGlobalNotification === 'function') {
@@ -568,7 +579,7 @@ function AddCategoriesApp() {
 
       // Odoslanie notifikácie administrátorom s e-mailovou adresou používateľa
       const userEmail = user.email;
-      await sendAdminNotification(`Kategória "${categoryToDelete.name}" bola zmazaná používateľom ${userEmail}.`);
+      await sendAdminNotification({ type: 'delete', data: { categoryName: categoryToDelete.name, userEmail: userEmail } }); // Upravené volanie
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
