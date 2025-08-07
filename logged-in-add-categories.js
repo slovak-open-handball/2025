@@ -1,9 +1,11 @@
 // logged-in-add-categories.js
-// Tento súbor predpokladá, že Firebase SDK verzie 7.x.x je inicializovaný v authentication.js
+// Tento súbor predpokladá, že Firebase SDK verzie 9.x.x je inicializovaný v authentication.js
 // a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
 
-// Všetky importy pre Firebase v9 boli odstránené, pretože sa predpokladá globálna dostupnosť Firebase v7.
-// Ak tento súbor nie je načítaný po Firebase v7 SDK, nebude fungovať.
+// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 
 // AddCategoryModal Component
 function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCategories }) {
@@ -179,9 +181,9 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
   // Získame referencie na Firebase služby z globálnych premenných
-  // Pre Firebase v7 pristupujeme k inštanciám priamo cez window.firebase
-  const auth = window.auth; // Predpokladá sa, že window.auth je nastavené v authentication.js
-  const db = window.db;     // Predpokladá sa, že window.db je nastavené v authentication.js
+  // Pre Firebase v9 pristupujeme k inštanciám cez getAuth() a getFirestore()
+  const auth = getAuth(); 
+  const db = getFirestore();     
 
   // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
@@ -248,10 +250,10 @@ function AddCategoriesApp() {
       setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
       try {
-        // Firebase v7 syntax: db.collection('users').doc(user.uid)
-        const userDocRef = db.collection('users').doc(user.uid);
-        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => { // Firebase v7 syntax: docRef.onSnapshot
-          if (docSnapshot.exists) { // Firebase v7 syntax: docSnapshot.exists
+        // Firebase v9 syntax: doc(db, 'users', user.uid)
+        const userDocRef = doc(db, 'users', user.uid);
+        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => { // Firebase v9 syntax: onSnapshot
+          if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
             const userData = docSnapshot.data();
             console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", userData);
 
@@ -311,8 +313,8 @@ function AddCategoriesApp() {
   // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
     if (!db) return null; 
-    // Firebase v7 syntax: db.collection('settings').doc('categories')
-    return db.collection('settings').doc('categories');
+    // Firebase v9 syntax: doc(db, 'settings', 'categories')
+    return doc(db, 'settings', 'categories');
   }, [db]);
 
   // Effect for fetching categories
@@ -324,9 +326,9 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie z dokumentu 'categories'.");
       setLoading(true);
       try {
-        unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => { // Firebase v7 syntax: docRef.onSnapshot
+        unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { // Firebase v9 syntax: onSnapshot
           console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
-          if (docSnapshot.exists) { // Firebase v7 syntax: docSnapshot.exists
+          if (docSnapshot.exists()) { // Firebase v9 syntax: docSnapshot.exists()
             const data = docSnapshot.data();
             // Konvertujeme objekt polí na pole objektov { id, name }
             let fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
@@ -389,9 +391,9 @@ function AddCategoriesApp() {
       return;
     }
     try {
-      // Firebase v7 syntax: db.collection('notifications').add()
-      const notificationsCollectionRef = db.collection('notifications');
-      await notificationsCollectionRef.add({
+      // Firebase v9 syntax: addDoc(collection(db, 'notifications'), ...)
+      const notificationsCollectionRef = collection(db, 'notifications');
+      await addDoc(notificationsCollectionRef, {
         message: message,
         timestamp: new Date(), 
         recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
@@ -429,9 +431,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Firebase v7 syntax: docRef.get()
-      const docSnapshot = await categoriesDocRef.get(); 
-      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {}; // Firebase v7 syntax: docSnapshot.exists
+      // Firebase v9 syntax: getDoc(docRef)
+      const docSnapshot = await getDoc(categoriesDocRef); 
+      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
@@ -442,11 +444,11 @@ function AddCategoriesApp() {
         return;
       }
 
-      // Generujeme náhodné ID pre názov poľa (Firebase v7 way to get a new doc ID)
-      const newFieldId = db.collection('settings').doc().id; 
+      // Generujeme náhodné ID pre názov poľa (Firebase v9 way to get a new doc ID)
+      const newFieldId = doc(collection(db, 'settings')).id; 
 
-      // Firebase v7 syntax: docRef.set()
-      await categoriesDocRef.set({
+      // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
+      await setDoc(categoriesDocRef, {
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
@@ -491,9 +493,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Firebase v7 syntax: docRef.get()
-      const docSnapshot = await categoriesDocRef.get(); 
-      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {}; // Firebase v7 syntax: docSnapshot.exists
+      // Firebase v9 syntax: getDoc(docRef)
+      const docSnapshot = await getDoc(categoriesDocRef); 
+      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {}; // Firebase v9 syntax: docSnapshot.exists()
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
@@ -507,8 +509,8 @@ function AddCategoriesApp() {
       // Získame pôvodný názov kategórie pre notifikáciu
       const originalCategoryName = currentCategoriesData[categoryId];
 
-      // Firebase v7 syntax: docRef.set()
-      await categoriesDocRef.set({
+      // Firebase v9 syntax: setDoc(docRef, data, { merge: true })
+      await setDoc(categoriesDocRef, {
         [categoryId]: trimmedNewName
       }, { merge: true });
 
@@ -554,9 +556,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Odstránime konkrétne pole z dokumentu pomocou FieldValue.delete() pre Firebase v7
-      await categoriesDocRef.set({
-        [categoryToDelete.id]: firebase.firestore.FieldValue.delete() // OPRAVENÉ: Používame firebase.firestore.FieldValue.delete()
+      // Odstránime konkrétne pole z dokumentu pomocou FieldValue.delete() pre Firebase v9
+      await setDoc(categoriesDocRef, {
+        [categoryToDelete.id]: FieldValue.delete() // OPRAVENÉ: Používame FieldValue.delete() pre v9
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof window.showGlobalNotification === 'function') {
