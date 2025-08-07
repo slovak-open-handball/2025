@@ -1,6 +1,6 @@
 // logged-in-tournament-settings.js
 // Tento súbor predpokladá, že Firebase SDK verzie 9.x.x je inicializovaný v authentication.js
-// a globálne funkcie ako window.auth, window.db, window.showGlobalNotification a window.showGlobalLoader sú dostupné.
+// a globálne funkcie ako window.auth, window.db, window.showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -18,6 +18,53 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+/**
+ * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
+ * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách.
+ * Presunutá sem pre nezávislosť od authentication.js.
+ */
+const showLocalNotification = (message, type = 'success') => {
+    let notificationElement = document.getElementById('global-notification'); // Používame rovnaké ID ako globálna notifikácia
+    
+    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
+        notificationElement.className = `
+            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+            flex items-center space-x-2
+            opacity-0 pointer-events-none
+        `;
+        document.body.appendChild(notificationElement);
+    }
+
+    // Nastavíme obsah a farbu na základe typu notifikácie
+    // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
+    const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
+    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor); // Odstráni starú farbu pozadia
+    notificationElement.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ${type === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'}
+        </svg>
+        <span>${message}</span>
+    `;
+
+    // Zobrazenie notifikácie
+    setTimeout(() => {
+        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
+    }, 10);
+
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
+    }, 7500);
+};
+
+
 // Main React component for the logged-in-tournament-settings.html page
 function TournamentSettingsApp() {
   // Získame referencie na Firebase služby z globálnych premenných
@@ -30,7 +77,6 @@ function TournamentSettingsApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); 
 
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v TournamentSettingsApp
-  const [error, setError] = React.useState('');
 
   // States for date and time settings
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
@@ -94,13 +140,10 @@ function TournamentSettingsApp() {
 
             setUserProfileData(userData); // Update userProfileData state
             setLoading(false); // Stop loading after user data is loaded
-            setError(''); // Clear errors after successful load
 
           } else {
             console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            if (typeof window.showGlobalNotification === 'function') {
-                window.showGlobalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
-            }
+            showLocalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
             setLoading(false);
             auth.signOut(); // Odhlásiť používateľa
             setUser(null);
@@ -108,9 +151,7 @@ function TournamentSettingsApp() {
           }
         }, error => {
           console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          if (typeof window.showGlobalNotification === 'function') {
-            window.showGlobalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
-          }
+          showLocalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
           setLoading(false);
           auth.signOut();
           setUser(null);
@@ -118,9 +159,7 @@ function TournamentSettingsApp() {
         });
       } catch (e) {
         console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        if (typeof window.showGlobalNotification === 'function') {
-            window.showGlobalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
-        }
+        showLocalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
         setLoading(false);
         auth.signOut();
         setUser(null);
@@ -169,7 +208,7 @@ function TournamentSettingsApp() {
             console.log("TournamentSettingsApp: Načítanie nastavení dokončené, settingsLoaded: true.");
           }, error => {
             console.error("TournamentSettingsApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
-            setError(`Chyba pri načítaní nastavení: ${error.message}`);
+            showLocalNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error');
             setSettingsLoaded(true); 
             setLoading(false);
           });
@@ -182,7 +221,7 @@ function TournamentSettingsApp() {
           };
       } catch (e) {
           console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
-          setError(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`);
+          showLocalNotification(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`, 'error');
           setSettingsLoaded(true);
           setLoading(false);
       }
@@ -195,13 +234,10 @@ function TournamentSettingsApp() {
   const handleUpdateRegistrationSettings = async (e) => {
     e.preventDefault();
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na zmenu nastavení registrácie.", 'error');
-      }
+      showLocalNotification("Nemáte oprávnenie na zmenu nastavení registrácie.", 'error');
       return;
     }
     setLoading(true);
-    setError('');
     
     try {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -209,12 +245,12 @@ function TournamentSettingsApp() {
       const dataEditDead = dataEditDeadline ? new Date(dataEditDeadline) : null; 
 
       if (regStart && regEnd && regStart >= regEnd) {
-        setError("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.");
+        showLocalNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error');
         setLoading(false);
         return;
       }
       if (dataEditDead && regEnd && dataEditDead < regEnd) {
-        setError("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.");
+        showLocalNotification("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.", 'error');
         setLoading(false);
         return;
       }
@@ -226,16 +262,11 @@ function TournamentSettingsApp() {
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
       });
       
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nastavenia registrácie úspešne aktualizované!", 'success');
-      }
+      showLocalNotification("Nastavenia registrácie úspešne aktualizované!", 'success');
 
     } catch (e) {
       console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
-      setError(`Chyba pri aktualizácii nastavenia: ${e.message}`);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error');
-      }
+      showLocalNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -253,11 +284,6 @@ function TournamentSettingsApp() {
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    error && React.createElement(
-      'div',
-      { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
-      error
-    ),
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
