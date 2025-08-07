@@ -302,15 +302,12 @@ function TournamentSettingsApp() {
     }
   };
 
-  // Odstránený blok pre zobrazenie textu "Načítavam nastavenia...",
-  // pretože globálny loader teraz spravuje vizuál načítavania.
-  // if (!isAuthReady || loading || !userProfileData) {
-  //   return React.createElement(
-  //     'div',
-  //     { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-  //     React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
-  //   );
-  // }
+  // Podmienené renderovanie obsahu stránky
+  if (loading || !userProfileData || userProfileData.role !== 'admin') {
+    // Ak je loading true, alebo userProfileData ešte nie je načítané, alebo používateľ nie je admin,
+    // vrátime null, aby sa obsah stránky nezobrazil. Loader sa spravuje cez useEffect.
+    return null; 
+  }
 
   return React.createElement(
     'div',
