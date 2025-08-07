@@ -100,12 +100,49 @@
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička sa načíta dynamicky -->
-    <div id="header-placeholder"></div>
+    <!-- Hlavička sa načíta priamo -->
+    <header class="w-full text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center transition-colors duration-300 invisible">
+        <div class="flex items-center space-x-6">
+            <!-- Všetky odkazy sú predvolene skryté, JS ich zobrazí -->
+            <a id="home-link" href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
+            <a id="register-link" href="logged-in-registration.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Registrácia na turnaj</a>
+        </div>
+        <div class="flex items-center space-x-6">
+            <a id="profile-link" href="logged-in-my-data.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Moja zóna</a>
+            <a id="auth-link" href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Prihlásenie</a>
+            <button id="logout-button" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Odhlásenie</button>
+        </div>
+    </header>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu sa načíta dynamicky -->
-        <div id="left-menu-placeholder"></div>
+        <!-- Ľavé menu sa načíta priamo -->
+        <div id="left-menu" class="fixed top-0 left-0 h-full w-16 z-10 bg-gray-800 text-white shadow-xl transition-all duration-300 group overflow-hidden flex flex-col hidden" style="padding-top: 64px;">
+            <!-- Tlačidlo pre rozbalenie/zbalenie menu -->
+            <button id="menu-toggle-button" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
+                <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Menu</span>
+            </button>
+
+            <!-- Navigačné položky -->
+            <nav class="flex-grow">
+                <a href="logged-in-my-data.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200">
+                    <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Moje údaje</span>
+                </a>
+                <!-- Položka "Vytvorenie kategórií" - bude podmienene zobrazená pomocou JS -->
+                <a id="add-categories-link" href="logged-in-add-categories.html" class="flex items-center p-4 hover:bg-gray-700 transition-colors duration-200 hidden">
+                    <!-- Ikona priečinka s plusom pre "Vytvorenie kategórií" -->
+                    <svg class="h-6 w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <span class="ml-4 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Vytvorenie kategórií</span>
+                </a>
+            </nav>
+        </div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <div id="main-content-area" class="flex-1 p-4">
@@ -115,7 +152,7 @@
     </div>
 
     <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
-    <div id="authentication-root" style="display: none;"></div
+    <div id="authentication-root" style="display: none;"></div>
 
     <!-- Načítanie globálnych skriptov -->
     <script type="module" src="loader.js"></script>
