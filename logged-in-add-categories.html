@@ -84,7 +84,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách 
+    <!-- Globálne konštanty pre Firebase, ktoré sa použijú v React aplikáciách -->
     <script>
         // Tieto premenné sú definované v hlavnom HTML súbore alebo v authentication.js
         const __app_id = 'soh2025-2s0o2h5'; // Príklad, reálne by sa malo načítať z prostredia
@@ -96,7 +96,7 @@
             messagingSenderId: "367316414164",
             appId: "1:367316414164:web:fce079e1c7f4223292490b"
         });
-        const __initial_auth_token = null; // Bude nastavené v runtime prostredí -->
+        const __initial_auth_token = null; // Bude nastavené v runtime prostredí
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -114,15 +114,15 @@
         </div>
     </div>
 
-    <!-- Skrytý div pre načítanie authentication.js -->
-    <div id="authentication-root" style="display: none;"></div>
+    <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
+    <div id="authentication-root" style="display: none;"></div
 
     <!-- Načítanie globálnych skriptov -->
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
-
+    
     <!-- Načítanie hlavného skriptu pre túto stránku (AddCategoriesApp) -->
     <script type="module" src="logged-in-add-categories.js"></script>
 
