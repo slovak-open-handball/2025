@@ -305,11 +305,11 @@ function TournamentSettingsApp() {
   // Namiesto vrátenia null na najvyššej úrovni, vždy vrátime kontajner.
   // Obsah vo vnútri kontajnera je podmienený.
   return React.createElement(
-    'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' },
+    React.Fragment, // Používame React.Fragment ako hlavný kontajner, aby sme nepridávali zbytočné divy
+    null,
     // Zobrazíme formulár iba ak nie je stav načítavania a používateľ je admin
     (!loading && userProfileData && userProfileData.role === 'admin') ? (
-      React.createElement(React.Fragment, null, // Nahradené <> za React.createElement(React.Fragment, null, ...)
+      React.createElement('div', { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' }, // Tieto štýly sú teraz tu
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
@@ -378,9 +378,8 @@ function TournamentSettingsApp() {
             loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
           )
         )
-      ) // Nahradené </>
-    ) : null // Ak sa načítava alebo používateľ nie je admin, nevykresľujeme žiadny obsah vo vnútri tohto divu.
-             // Globálny loader (z loader.js) zostane viditeľný.
+      )
+    ) : null // Ak sa načítava alebo používateľ nie je admin, nevykresľujeme žiadny obsah.
   );
 }
 
