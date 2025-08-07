@@ -670,7 +670,7 @@ function AddCategoriesApp() {
     }),
     React.createElement(
       'div',
-      { className: 'w-full max-w-md p-4' }, {/* Zmenené z max-w-4xl na max-w-md pre užší obdĺžnik */}
+      { className: 'w-full max-w-md p-4' },
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
