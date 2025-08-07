@@ -575,6 +575,7 @@ function AddCategoriesApp() {
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
+      // Zobrazenie chyby pomocou globálnej notifikácie
       if (typeof window.showGlobalNotification === 'function') {
         window.showGlobalNotification(`Chyba pri mazaní kategórie: ${e.message}`, 'error');
       }
