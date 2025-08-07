@@ -392,20 +392,20 @@ function AddCategoriesApp() {
     }
     try {
       const notificationsCollectionRef = collection(db, 'notifications');
-      let changesArray = [];
+      let changesMessage = ''; // Zmenené na reťazec
       let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
 
       if (notificationData.type === 'create') {
-        changesArray = ['Vytvorenie novej kategórie: ', notificationData.data.newCategoryName];
+        changesMessage = `Vytvorenie novej kategórie: '${notificationData.data.newCategoryName}'`;
       } else if (notificationData.type === 'edit') {
-        changesArray = ['Zmena názvu kategórie z: ', notificationData.data.originalCategoryName, ' na ', notificationData.data.newCategoryName];
+        changesMessage = `Zmena názvu kategórie z: '${notificationData.data.originalCategoryName}' na '${notificationData.data.newCategoryName}'`;
       } else if (notificationData.type === 'delete') {
-        changesArray = ['Zmazanie kategórie: ', notificationData.data.categoryName];
+        changesMessage = `Zmazanie kategórie: '${notificationData.data.categoryName}'`;
       }
 
       await addDoc(notificationsCollectionRef, {
         userEmail: userEmail, // Pridané pole userEmail
-        changes: changesArray, // Zmenené 'message' na 'changes' a je to pole
+        changes: changesMessage, // Zmenené 'message' na 'changes' a je to jeden reťazec
         timestamp: new Date(), 
         recipientId: 'all_admins'
         // Odstránené pole 'read: false'
