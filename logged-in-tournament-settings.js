@@ -349,7 +349,7 @@ function TournamentSettingsApp() {
 
   return React.createElement(
     'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' },
+    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto pt-10' }, // Pridané pt-10 pre konzistentnú medzeru
     React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
       'Nastavenia turnaja'
     ),
