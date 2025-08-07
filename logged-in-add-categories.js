@@ -3,7 +3,8 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Zmenený import FieldValue na deleteField pre správne odstránenie poľa
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -567,9 +568,9 @@ function AddCategoriesApp() {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Odstránime konkrétne pole z dokumentu pomocou FieldValue.delete() pre Firebase v9
+      // Odstránime konkrétne pole z dokumentu pomocou deleteField() pre Firebase v9
       await setDoc(categoriesDocRef, {
-        [categoryToDelete.id]: FieldValue.delete() // Používame FieldValue.delete() pre v9
+        [categoryToDelete.id]: deleteField() // OPRAVENÉ: Používame deleteField() pre v9
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof window.showGlobalNotification === 'function') {
