@@ -21,29 +21,33 @@ const formatToDatetimeLocal = (date) => {
 /**
  * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
  * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách.
- * Presunutá sem pre nezávislosť od authentication.js.
+ * Používa rovnaké štýly ako globálna notifikácia v logged-in-my-data.js.
  */
 const showLocalNotification = (message, type = 'success') => {
-    let notificationElement = document.getElementById('global-notification'); // Používame rovnaké ID ako globálna notifikácia
+    let notificationElement = document.getElementById('global-notification'); 
     
     // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        // Používame Tailwind CSS triedy pre štýlovanie a pozicovanie
-        notificationElement.className = `
-            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-            flex items-center space-x-2
-            opacity-0 pointer-events-none
-        `;
         document.body.appendChild(notificationElement);
     }
 
-    // Nastavíme obsah a farbu na základe typu notifikácie
-    // Pre úspech použijeme farbu #3A8D41, pre chybu červenú
-    const bgColor = type === 'success' ? 'bg-[#3A8D41]' : 'bg-red-600';
-    notificationElement.className = notificationElement.className.replace(/bg-[\w-]+/, bgColor); // Odstráni starú farbu pozadia
+    // Základné triedy pre pozíciu a prechod, rovnaké ako v logged-in-my-data.js
+    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform flex items-center space-x-2';
+    let typeClasses = '';
+
+    // Nastavíme farbu pozadia na základe typu notifikácie
+    if (type === 'success') {
+        typeClasses = 'bg-[#3A8D41] text-white'; // Zelená pre úspech
+    } else if (type === 'error') {
+        typeClasses = 'bg-red-600 text-white'; // Červená pre chybu
+    } else {
+        typeClasses = 'bg-blue-500 text-white'; // Predvolená modrá pre info
+    }
+
+    // Nastavíme triedy elementu
+    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             ${type === 'success' 
@@ -55,12 +59,12 @@ const showLocalNotification = (message, type = 'success') => {
 
     // Zobrazenie notifikácie
     setTimeout(() => {
-        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
+        notificationElement.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
     }, 10);
 
-    // Skrytie notifikácie po 5 sekundách
+    // Skrytie notifikácie po 7.5 sekundách (aby sa zhodovalo s globálnou)
     setTimeout(() => {
-        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
+        notificationElement.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
     }, 7500);
 };
 
