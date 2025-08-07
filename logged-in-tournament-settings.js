@@ -83,10 +83,19 @@ function TournamentSettingsApp() {
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav súpisiek
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
+  // Ref na sledovanie, či je komponent pripojený (mounted)
+  const isMounted = React.useRef(true);
+
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
+    // Zobrazenie globálneho loaderu pri načítavaní
+    if (window.showGlobalLoader) {
+      window.showGlobalLoader();
+    }
+
     // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
+      if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
       setUser(auth.currentUser); // Aktualizujeme user state
       setUserProfileData(event.detail);
       setIsAuthReady(true); // Auth je pripravené
@@ -110,6 +119,7 @@ function TournamentSettingsApp() {
     }
 
     return () => {
+      isMounted.current = false; // Nastavíme na false pri odpojení komponentu
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, [auth]); // Závisí od auth inštancie
@@ -129,6 +139,7 @@ function TournamentSettingsApp() {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
+          if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
           console.log("TournamentSettingsApp: onSnapshot pre používateľský dokument spustený.");
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
@@ -165,6 +176,7 @@ function TournamentSettingsApp() {
             setUserProfileData(null);
           }
         }, error => {
+          if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
           console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); // Používame lokálnu showNotification
           setLoading(false);
@@ -177,6 +189,7 @@ function TournamentSettingsApp() {
           setUserProfileData(null);
         });
       } catch (e) {
+        if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
         console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); // Používame lokálnu showNotification
         setLoading(false);
@@ -189,6 +202,7 @@ function TournamentSettingsApp() {
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
+        if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
         setLoading(false);
         // Skrytie globálneho loaderu
         if (window.hideGlobalLoader) {
@@ -217,6 +231,7 @@ function TournamentSettingsApp() {
           console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia registrácie.");
           const settingsDocRef = doc(db, 'settings', 'registration');
           unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
+            if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
             console.log("TournamentSettingsApp: onSnapshot pre nastavenia registrácie spustený.");
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
@@ -236,6 +251,7 @@ function TournamentSettingsApp() {
             setLoading(false); // Nastavenia sú načítané, aj keď prázdne
             console.log("TournamentSettingsApp: Načítanie nastavení dokončené, settingsLoaded: true.");
           }, error => {
+            if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
             console.error("TournamentSettingsApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
             showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); // Používame lokálnu showNotification
             setSettingsLoaded(true); 
@@ -249,6 +265,7 @@ function TournamentSettingsApp() {
             }
           };
       } catch (e) {
+          if (!isMounted.current) return; // Zastav, ak komponent nie je pripojený
           console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
           showNotification(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
           setSettingsLoaded(true);
@@ -322,10 +339,12 @@ function TournamentSettingsApp() {
       console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
       showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
     } finally {
-      setLoading(false);
-      // Skrytie globálneho loaderu
-      if (window.hideGlobalLoader) {
-        window.hideGlobalLoader();
+      if (isMounted.current) { // Kontrola, či je komponent stále pripojený
+        setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
       }
     }
   };
