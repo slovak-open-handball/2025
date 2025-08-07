@@ -5,75 +5,17 @@
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // Tieto importy sú potrebné, aby sa zabezpečilo, že funkcie sú dostupné pre volania
 // aj keď sú inštancie auth a db globálne.
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
-// NotificationModal Component (už sa nepoužíva pre globálne notifikácie, ale môže zostať pre lokálne modály)
-// Ponechané pre zobrazovanie správ o spätnej väzbe pre používateľa v tomto module.
-// Ak sa v tomto súbore používa len window.showGlobalNotification, tento komponent môže byť odstránený.
-function NotificationModal({ message, onClose, type = 'info' }) {
-  const [show, setShow] = React.useState(false);
-  const timerRef = React.useRef(null);
+// NotificationModal Component (bol odstránený, pretože sa používa globálny window.showGlobalNotification)
+// Ak by bol v budúcnosti potrebný pre špecifické modálne okná, môže byť vrátený.
 
-  React.useEffect(() => {
-    if (message) {
-      setShow(true);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        setShow(false);
-        setTimeout(onClose, 500);
-      }, 10000);
-    } else {
-      setShow(false);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, [message, onClose]);
-
-  if (!show && !message) return null;
-
-  let bgColorClass;
-  if (type === 'success') {
-    bgColorClass = 'bg-[#3A8D41]'; // Zelená
-  } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Červená
-  } else {
-    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
-  }
-
-  return React.createElement(
-    'div',
-    {
-      className: `fixed top-0 left-0 right-0 z-50 flex justify-center p-4 transition-transform duration-500 ease-out ${
-        show ? 'translate-y-0' : '-translate-y-full'
-      }`,
-      style: { pointerEvents: 'none' }
-    },
-    React.createElement(
-      'div',
-      {
-        className: `${bgColorClass} text-white px-6 py-3 rounded-lg shadow-lg max-w-md w-full text-center`,
-        style: { pointerEvents: 'auto' }
-      },
-      React.createElement('p', { className: 'font-semibold' }, message)
-    )
-  );
-}
 
 // AddCategoryModal Component
-function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notificationMessage, setNotificationMessage, existingCategories }) {
+function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCategories }) {
   const [newCategoryName, setNewCategoryName] = React.useState('');
 
   // Kontrola, či názov kategórie už existuje (case-insensitive)
@@ -96,12 +38,6 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Pridať novú kategóriu'),
-      // Ponechané pre zobrazenie notifikácií v rámci modálneho okna
-      notificationMessage && React.createElement(NotificationModal, {
-        message: notificationMessage,
-        onClose: () => setNotificationMessage(''),
-        type: error ? 'error' : 'success'
-      }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -115,7 +51,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
           required: true,
           disabled: loading,
         }),
-        categoryExists && React.createElement( // NOVINKA: Zobrazenie chybovej správy
+        categoryExists && React.createElement( // Zobrazenie chybovej správy
           'p',
           { className: 'text-red-500 text-xs italic mt-2' },
           `Kategória s názvom "${newCategoryName.trim()}" už existuje. Zvoľte iný názov.`
@@ -148,7 +84,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading, error, notifi
 }
 
 // EditCategoryModal Component
-function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, error, notificationMessage, setNotificationMessage }) {
+function EditCategoryModal({ show, onClose, onSaveCategory, loading, category }) {
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
 
   React.useEffect(() => {
@@ -170,12 +106,6 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
       'div',
       { className: 'bg-white p-6 rounded-lg shadow-xl max-w-sm w-full' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, `Upraviť kategóriu: ${category.name}`),
-      // Ponechané pre zobrazenie notifikácií v rámci modálneho okna
-      notificationMessage && React.createElement(NotificationModal, {
-        message: notificationMessage,
-        onClose: () => setNotificationMessage(''),
-        type: error ? 'error' : 'success'
-      }),
       React.createElement(
         'div',
         { className: 'mb-4' },
@@ -281,9 +211,8 @@ function AddCategoriesApp() {
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
     // Zobrazenie globálneho loaderu pri načítavaní
-    if (window.showGlobalLoader) {
-      window.showGlobalLoader();
-    }
+    // Táto časť bola odstránená, pretože sa spoliehame na loader.js pre počiatočné zobrazenie
+    // a React komponenty už len riadia svoje vlastné stavy načítavania.
 
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
@@ -297,6 +226,7 @@ function AddCategoriesApp() {
     // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
       setUserProfileData(event.detail);
+      // Skrytie globálneho loaderu po načítaní profilových dát
       if (window.hideGlobalLoader) {
         window.hideGlobalLoader();
       }
@@ -408,7 +338,7 @@ function AddCategoriesApp() {
             // Konvertujeme objekt polí na pole objektov { id, name }
             let fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
             
-            // NOVINKA: Triedenie kategórií podľa názvu (abecedne/číselne)
+            // Triedenie kategórií podľa názvu (abecedne/číselne)
             fetchedCategories.sort((a, b) => {
               const nameA = a.name.toLowerCase();
               const nameB = b.name.toLowerCase();
@@ -502,7 +432,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await categoriesDocRef.get();
+      const docSnapshot = await doc(db, 'settings', 'categories').get(); // Používame getDoc
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
@@ -566,7 +496,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await categoriesDocRef.get();
+      const docSnapshot = await doc(db, 'settings', 'categories').get(); // Používame getDoc
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
@@ -654,34 +584,21 @@ function AddCategoriesApp() {
   };
 
   // Display loading state
-  if (!isAuthReady || loading || !userProfileData) { // Pridaná kontrola userProfileData
-    let loadingMessage = 'Načítavam...';
-    // Ak userProfileData chýba, ale auth je ready a user je null, znamená to, že bol odhlásený
-    if (isAuthReady && user === null) {
-        loadingMessage = 'Pre prístup k tejto stránke sa musíte prihlásiť.';
-    } else if (isAuthReady && userProfileData && userProfileData.role !== 'admin') {
-        // Toto by sa nemalo stať, lebo presmerovanie je už vyššie, ale pre istotu
-        loadingMessage = 'Nemáte oprávnenie na prístup k tejto stránke.';
-    }
-    
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, loadingMessage)
-    );
+  // Táto časť bola odstránená, pretože globálny loader.js sa stará o zobrazenie počas počiatočného načítavania.
+  // Lokálny stav 'loading' sa stále používa na riadenie interakcií v rámci komponentu (napr. disabled tlačidlá).
+  if (!isAuthReady || !userProfileData) { // Pridaná kontrola userProfileData
+    return null; // Návrat null, ak nie je pripravené, loader.js sa postará o zobrazenie
   }
 
   // Ak sa dostaneme sem, user je prihlásený, userProfileData sú načítané a rola je admin.
   return React.createElement(
     'div',
     { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
-    // NotificationModal už nie je potrebný pre globálne správy, ale môže zostať pre modály
     React.createElement(AddCategoryModal, {
         show: showAddCategoryModal,
         onClose: () => { setShowAddCategoryModal(false); }, 
         onAddCategory: handleAddCategorySubmit,
         loading: loading,
-        error: error,
         existingCategories: categories 
     }),
     React.createElement(EditCategoryModal, {
@@ -690,7 +607,6 @@ function AddCategoriesApp() {
         onSaveCategory: handleEditCategorySubmit,
         loading: loading,
         category: categoryToEdit,
-        error: error,
     }),
     React.createElement(ConfirmationModal, { 
         show: showConfirmDeleteModal,
