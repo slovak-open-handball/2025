@@ -94,19 +94,8 @@
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <!-- Hlavička sa načíta priamo -->
-    <header class="w-full text-white p-4 shadow-md fixed top-0 left-0 right-0 z-20 flex justify-between items-center transition-colors duration-300 invisible">
-        <div class="flex items-center space-x-6">
-            <!-- Všetky odkazy sú predvolene skryté, JS ich zobrazí -->
-            <a id="home-link" href="index.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200">Domov</a>
-            <a id="register-link" href="logged-in-registration.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Registrácia na turnaj</a>
-        </div>
-        <div class="flex items-center space-x-6">
-            <a id="profile-link" href="logged-in-my-data.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Moja zóna</a>
-            <a id="auth-link" href="login.html" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-200 hidden">Prihlásenie</a>
-            <button id="logout-button" class="text-lg font-semibold hover:text-blue-200 transition-colors duration-300 hidden">Odhlásenie</button>
-        </div>
-    </header>
+    <!-- Hlavička sa načíta dynamicky -->
+    <div id="header-placeholder"></div>
 
     <div class="flex flex-1">
         <!-- Placeholder pre ľavé menu, ktoré bude načítané pomocou logged-in-left-menu.js -->
