@@ -293,81 +293,73 @@ function TournamentSettingsApp() {
 
   return React.createElement(
     'div',
-    { className: 'bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' }, // Odstránené min-h-screen
+    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' }, // Zmenená štruktúra
+    React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
+      'Nastavenia turnaja'
+    ),
     React.createElement(
-      'div',
-      { className: 'w-full max-w-2xl' }, // Odstránené p-4
+      'form',
+      { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4' },
       React.createElement(
         'div',
-        { className: 'bg-white p-6 rounded-lg shadow-xl w-full' }, // Zmenené p-8 na p-6
-        React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-          'Nastavenia turnaja'
-        ),
-        React.createElement(
-          'form',
-          { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4' },
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-start-date' }, 'Dátum a čas začiatku registrácie'),
-            React.createElement('input', {
-              type: 'datetime-local',
-              id: 'reg-start-date',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: registrationStartDate,
-              onChange: (e) => setRegistrationStartDate(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-end-date' }, 'Dátum a čas konca registrácie'),
-            React.createElement('input', {
-              type: 'datetime-local',
-              id: 'reg-end-date',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: registrationEndDate,
-              onChange: (e) => setRegistrationEndDate(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-deadline' }, 'Dátum a čas uzávierky úprav používateľských dát'),
-            React.createElement('input', {
-              type: 'datetime-local',
-              id: 'data-edit-deadline',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: dataEditDeadline,
-              onChange: (e) => setDataEditDeadline(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'div',
-            null,
-            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'roster-edit-deadline' }, 'Dátum a čas uzávierky úprav súpisiek klubov/tímov'),
-            React.createElement('input', {
-              type: 'datetime-local',
-              id: 'roster-edit-deadline',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-              value: rosterEditDeadline,
-              onChange: (e) => setRosterEditDeadline(e.target.value),
-              disabled: loading,
-            })
-          ),
-          React.createElement(
-            'button',
-            {
-              type: 'submit',
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
-              disabled: loading,
-            },
-            loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
-          )
-        )
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-start-date' }, 'Dátum a čas začiatku registrácie'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'reg-start-date',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: registrationStartDate,
+          onChange: (e) => setRegistrationStartDate(e.target.value),
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'reg-end-date' }, 'Dátum a čas konca registrácie'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'reg-end-date',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: registrationEndDate,
+          onChange: (e) => setRegistrationEndDate(e.target.value),
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-deadline' }, 'Dátum a čas uzávierky úprav používateľských dát'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'data-edit-deadline',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: dataEditDeadline,
+          onChange: (e) => setDataEditDeadline(e.target.value),
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'roster-edit-deadline' }, 'Dátum a čas uzávierky úprav súpisiek klubov/tímov'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'roster-edit-deadline',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: rosterEditDeadline,
+          onChange: (e) => setRosterEditDeadline(e.target.value),
+          disabled: loading,
+        })
+      ),
+      React.createElement(
+        'button',
+        {
+          type: 'submit',
+          className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
+          disabled: loading,
+        },
+        loading ? 'Ukladám...' : 'Aktualizovať nastavenia'
       )
     )
   );
