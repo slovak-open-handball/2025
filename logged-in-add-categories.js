@@ -440,11 +440,11 @@ function AddCategoriesApp() {
       let userEmail = notificationData.data.userEmail; // Získanie userEmail z dát
 
       if (notificationData.type === 'create') {
-        changesMessage = `Vytvorenie novej kategórie: '${notificationData.data.newCategoryName}'`; // Upravené na jeden reťazec
+        changesMessage = `Vytvorenie novej kategórie: '''${notificationData.data.newCategoryName}'`; // Upravené na jeden reťazec
       } else if (notificationData.type === 'edit') {
         changesMessage = `Zmena názvu kategórie z: '${notificationData.data.originalCategoryName}' na '${notificationData.data.newCategoryName}'`;
       } else if (notificationData.type === 'delete') {
-        changesMessage = `Zmazanie kategórie: '${notificationData.data.categoryName}'`;
+        changesMessage = `Zmazanie kategórie: '''${notificationData.data.categoryName}'`;
       }
 
       await addDoc(notificationsCollectionRef, {
