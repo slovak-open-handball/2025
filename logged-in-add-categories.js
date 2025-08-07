@@ -1,18 +1,9 @@
 // logged-in-add-categories.js
-// Tento súbor predpokladá, že Firebase SDK je inicializovaný v authentication.js
-// a globálne funkcie ako showGlobalNotification a showGlobalLoader sú dostupné.
+// Tento súbor predpokladá, že Firebase SDK verzie 7.x.x je inicializovaný v authentication.js
+// a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
 
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-// Tieto importy sú potrebné, aby sa zabezpečilo, že funkcie sú dostupné pre volania
-// aj keď sú inštancie auth a db globálne.
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Zabezpečenie správneho importu FieldValue
-
-
-// NotificationModal Component (bol odstránený, pretože sa používa globálny window.showGlobalNotification)
-// Ak by bol v budúcnosti potrebný pre špecifické modálne okná, môže byť vrátený.
-
+// Všetky importy pre Firebase v9 boli odstránené, pretože sa predpokladá globálna dostupnosť Firebase v7.
+// Ak tento súbor nie je načítaný po Firebase v7 SDK, nebude fungovať.
 
 // AddCategoryModal Component
 function AddCategoryModal({ show, onClose, onAddCategory, loading, existingCategories }) {
@@ -188,8 +179,9 @@ function ConfirmationModal({ show, message, onConfirm, onCancel, loading }) {
 // Main React component for the logged-in-add-categories.html page
 function AddCategoriesApp() {
   // Získame referencie na Firebase služby z globálnych premenných
-  const auth = getAuth(); // Používame getAuth() na získanie inštancie
-  const db = getFirestore(); // Používame getFirestore() na získanie inštancie
+  // Pre Firebase v7 pristupujeme k inštanciám priamo cez window.firebase
+  const auth = window.auth; // Predpokladá sa, že window.auth je nastavené v authentication.js
+  const db = window.db;     // Predpokladá sa, že window.db je nastavené v authentication.js
 
   // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
@@ -197,7 +189,6 @@ function AddCategoriesApp() {
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v AddCategoriesApp
-  const [error, setError] = React.useState('');
   const [categories, setCategories] = React.useState([]); // Stav pre zoznam kategórií
   const [showAddCategoryModal, setShowAddCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna pridania
   const [showEditCategoryModal, setShowEditCategoryModal] = React.useState(false); // Stav pre zobrazenie modálneho okna úpravy
@@ -210,10 +201,6 @@ function AddCategoriesApp() {
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
-    // Zobrazenie globálneho loaderu pri načítavaní
-    // Táto časť bola odstránená, pretože sa spoliehame na loader.js pre počiatočné zobrazenie
-    // a React komponenty už len riadia svoje vlastné stavy načítavania.
-
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
       setIsAuthReady(true); // Auth je pripravené
@@ -261,15 +248,15 @@ function AddCategoriesApp() {
       setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
 
       try {
-        const userDocRef = doc(db, `users/${user.uid}`);
-        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
-          if (docSnapshot.exists()) {
+        // Firebase v7 syntax: db.collection('users').doc(user.uid)
+        const userDocRef = db.collection('users').doc(user.uid);
+        unsubscribeUserDoc = userDocRef.onSnapshot(docSnapshot => { // Firebase v7 syntax: docRef.onSnapshot
+          if (docSnapshot.exists) { // Firebase v7 syntax: docSnapshot.exists
             const userData = docSnapshot.data();
             console.log("AddCategoriesApp: Používateľský dokument existuje, dáta:", userData);
 
             setUserProfileData(userData);
             setLoading(false);
-            setError('');
 
             // Ak používateľ nie je admin, presmerujeme ho
             if (userData.role !== 'admin') {
@@ -279,7 +266,9 @@ function AddCategoriesApp() {
 
           } else {
             console.warn("AddCategoriesApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            setError("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.");
+            if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+                window.showGlobalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
+            }
             setLoading(false);
             auth.signOut(); // Odhlásiť používateľa
             setUser(null);
@@ -287,7 +276,9 @@ function AddCategoriesApp() {
           }
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní používateľských dát: ${error.message}`);
+          if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+            window.showGlobalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
+          }
           setLoading(false);
           auth.signOut();
           setUser(null);
@@ -295,7 +286,9 @@ function AddCategoriesApp() {
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`);
+        if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+            window.showGlobalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
+        }
         setLoading(false);
         auth.signOut();
         setUser(null);
@@ -318,8 +311,8 @@ function AddCategoriesApp() {
   // Callback funkcia pre získanie referencie na dokument kategórií
   const getCategoriesDocRef = React.useCallback(() => {
     if (!db) return null; 
-    // Správna cesta: db.collection('settings').doc('categories')
-    return doc(db, 'settings', 'categories');
+    // Firebase v7 syntax: db.collection('settings').doc('categories')
+    return db.collection('settings').doc('categories');
   }, [db]);
 
   // Effect for fetching categories
@@ -331,9 +324,9 @@ function AddCategoriesApp() {
       console.log("AddCategoriesApp: Prihlásený používateľ je admin. Načítavam kategórie z dokumentu 'categories'.");
       setLoading(true);
       try {
-        unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
+        unsubscribeCategories = categoriesDocRef.onSnapshot(docSnapshot => { // Firebase v7 syntax: docRef.onSnapshot
           console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
-          if (docSnapshot.exists()) {
+          if (docSnapshot.exists) { // Firebase v7 syntax: docSnapshot.exists
             const data = docSnapshot.data();
             // Konvertujeme objekt polí na pole objektov { id, name }
             let fetchedCategories = Object.entries(data).map(([id, name]) => ({ id, name }));
@@ -363,15 +356,18 @@ function AddCategoriesApp() {
             setCategories([]); // Dokument kategórií zatiaľ neexistuje, takže prázdny zoznam
           }
           setLoading(false);
-          setError('');
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní dokumentu 'categories' z Firestore (onSnapshot error):", error);
-          setError(`Chyba pri načítaní kategórií: ${error.message}`);
+          if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+            window.showGlobalNotification(`Chyba pri načítaní kategórií: ${error.message}`, 'error');
+          }
           setLoading(false);
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre dokument 'categories' (try-catch):", e);
-        setError(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`);
+        if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+            window.showGlobalNotification(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`, 'error');
+        }
         setLoading(false);
       }
     } else {
@@ -388,14 +384,14 @@ function AddCategoriesApp() {
 
   // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (message) => {
-    if (!db) { // Odstránené appId, pretože sa nepoužíva v novej ceste
+    if (!db) { 
       console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
-      // OPRAVENÉ: Používame kolekciu "notifications" ako na logged-in-my-data.js
-      const notificationsCollectionRef = collection(db, 'notifications');
-      await addDoc(notificationsCollectionRef, {
+      // Firebase v7 syntax: db.collection('notifications').add()
+      const notificationsCollectionRef = db.collection('notifications');
+      await notificationsCollectionRef.add({
         message: message,
         timestamp: new Date(), 
         recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
@@ -404,6 +400,9 @@ function AddCategoriesApp() {
       console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
+      if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
+        window.showGlobalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
+      }
     }
   };
 
@@ -425,15 +424,14 @@ function AddCategoriesApp() {
     }
 
     setLoading(true);
-    setError('');
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await getDoc(categoriesDocRef); 
-      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
+      // Firebase v7 syntax: docRef.get()
+      const docSnapshot = await categoriesDocRef.get(); 
+      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {}; // Firebase v7 syntax: docSnapshot.exists
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
@@ -444,12 +442,11 @@ function AddCategoriesApp() {
         return;
       }
 
-      // Generujeme náhodné ID pre názov poľa
-      const newFieldId = doc(collection(db, 'settings')).id; 
+      // Generujeme náhodné ID pre názov poľa (Firebase v7 way to get a new doc ID)
+      const newFieldId = db.collection('settings').doc().id; 
 
-      // Používame set s merge: true, aby sa dokument vytvoril, ak neexistuje, alebo aktualizoval
-      // a pridalo sa nové pole s náhodným ID ako názvom a názvom kategórie ako hodnotou
-      await setDoc(categoriesDocRef, {
+      // Firebase v7 syntax: docRef.set()
+      await categoriesDocRef.set({
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
@@ -489,15 +486,14 @@ function AddCategoriesApp() {
     }
 
     setLoading(true);
-    setError('');
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await getDoc(categoriesDocRef); 
-      const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
+      // Firebase v7 syntax: docRef.get()
+      const docSnapshot = await categoriesDocRef.get(); 
+      const currentCategoriesData = docSnapshot.exists ? docSnapshot.data() : {}; // Firebase v7 syntax: docSnapshot.exists
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
@@ -511,8 +507,8 @@ function AddCategoriesApp() {
       // Získame pôvodný názov kategórie pre notifikáciu
       const originalCategoryName = currentCategoriesData[categoryId];
 
-      // Aktualizujeme konkrétne pole v dokumente
-      await setDoc(categoriesDocRef, {
+      // Firebase v7 syntax: docRef.set()
+      await categoriesDocRef.set({
         [categoryId]: trimmedNewName
       }, { merge: true });
 
@@ -552,16 +548,15 @@ function AddCategoriesApp() {
     }
 
     setLoading(true);
-    setError('');
     setShowConfirmDeleteModal(false); // Zatvorí potvrdzovací modál
 
     try {
       const categoriesDocRef = getCategoriesDocRef();
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
-      // Odstránime konkrétne pole z dokumentu
-      await setDoc(categoriesDocRef, {
-        [categoryToDelete.id]: FieldValue.delete() // Používame FieldValue.delete()
+      // Odstránime konkrétne pole z dokumentu pomocou FieldValue.delete() pre Firebase v7
+      await categoriesDocRef.set({
+        [categoryToDelete.id]: firebase.firestore.FieldValue.delete() // OPRAVENÉ: Používame firebase.firestore.FieldValue.delete()
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
       if (typeof window.showGlobalNotification === 'function') {
@@ -619,11 +614,6 @@ function AddCategoriesApp() {
     React.createElement(
       'div',
       { className: 'w-full max-w-4xl mt-20 mb-10 p-4' },
-      error && React.createElement(
-        'div',
-        { className: 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 whitespace-pre-wrap', role: 'alert' },
-        error
-      ),
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
