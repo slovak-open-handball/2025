@@ -2,6 +2,7 @@
 // Tento súbor spravuje logiku pre ľavé menu, vrátane jeho rozbalenia/zbalenia
 // a obsluhy udalostí pri kliknutí a prechode myšou.
 // Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
+// NOVINKA: Položka "Vytvorenie kategórií" sa zobrazuje len pre administrátorov.
 
 // Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -17,9 +18,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
-    
-    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
+    const addCategoriesLink = document.getElementById('add-categories-link'); // NOVINKA: Získanie odkazu na kategórie
+
+    if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer || !addCategoriesLink) {
+        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy, menu spacer alebo odkaz na kategórie po vložení HTML.");
         return;
     }
 
@@ -62,6 +64,15 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
 
+    // NOVINKA: Funkcia na podmienené zobrazenie odkazu na kategórie
+    const showAdminLinks = () => {
+        if (userProfileData.role === 'admin') {
+            addCategoriesLink.classList.remove('hidden');
+        } else {
+            addCategoriesLink.classList.add('hidden');
+        }
+    };
+
     /**
      * Funkcia na uloženie stavu menu do databázy.
      */
@@ -88,6 +99,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     applyMenuState();
     // Aplikujeme dynamický text menu
     updateMenuText();
+    // NOVINKA: Zobrazíme admin odkazy na základe roly
+    showAdminLinks();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
