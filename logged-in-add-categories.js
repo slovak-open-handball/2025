@@ -1,11 +1,54 @@
 // logged-in-add-categories.js
 // Tento súbor predpokladá, že Firebase SDK verzie 9.x.x je inicializovaný v authentication.js
-// a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
+// a globálne funkcie ako window.auth, window.db, showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-// Zmenený import FieldValue na deleteField pre správne odstránenie poľa
 import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+
+/**
+ * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
+ * Presunutá sem z logged-in-my-data.js pre nezávislosť štýlovania.
+ */
+function showLocalNotification(message, type = 'success') {
+    let notificationElement = document.getElementById('local-notification');
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'local-notification';
+        notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+        document.body.appendChild(notificationElement);
+    }
+
+    const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
+    let typeClasses = '';
+    switch (type) {
+        case 'success':
+            typeClasses = 'bg-green-500 text-white';
+            break;
+        case 'error':
+            typeClasses = 'bg-red-500 text-white';
+            break;
+        case 'info':
+            typeClasses = 'bg-blue-500 text-white';
+            break;
+        default:
+            typeClasses = 'bg-gray-700 text-white';
+    }
+
+    notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+    notificationElement.textContent = message;
+
+    // Zobrazenie notifikácie
+    setTimeout(() => {
+        notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
+    }, 10);
+
+    // Skrytie notifikácie po 5 sekundách
+    setTimeout(() => {
+        notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
+    }, 5000);
+}
 
 
 // AddCategoryModal Component
@@ -269,8 +312,8 @@ function AddCategoriesApp() {
 
           } else {
             console.warn("AddCategoriesApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-                window.showGlobalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
+            if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+                showLocalNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error');
             }
             setLoading(false);
             auth.signOut(); // Odhlásiť používateľa
@@ -279,8 +322,8 @@ function AddCategoriesApp() {
           }
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-            window.showGlobalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
+          if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+            showLocalNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error');
           }
           setLoading(false);
           auth.signOut();
@@ -289,8 +332,8 @@ function AddCategoriesApp() {
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-            window.showGlobalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
+        if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+            showLocalNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error');
         }
         setLoading(false);
         auth.signOut();
@@ -361,15 +404,15 @@ function AddCategoriesApp() {
           setLoading(false);
         }, error => {
           console.error("AddCategoriesApp: Chyba pri načítaní dokumentu 'categories' z Firestore (onSnapshot error):", error);
-          if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-            window.showGlobalNotification(`Chyba pri načítaní kategórií: ${error.message}`, 'error');
+          if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+            showLocalNotification(`Chyba pri načítaní kategórií: ${error.message}`, 'error');
           }
           setLoading(false);
         });
       } catch (e) {
         console.error("AddCategoriesApp: Chyba pri nastavovaní onSnapshot pre dokument 'categories' (try-catch):", e);
-        if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-            window.showGlobalNotification(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`, 'error');
+        if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+            showLocalNotification(`Chyba pri nastavovaní poslucháča pre kategórie: ${e.message}`, 'error');
         }
         setLoading(false);
       }
@@ -414,8 +457,8 @@ function AddCategoriesApp() {
       console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
-      if (typeof window.showGlobalNotification === 'function') { // Použitie globálnej notifikácie
-        window.showGlobalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
+      if (typeof showLocalNotification === 'function') { // Použitie lokálnej notifikácie
+        showLocalNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
       }
     }
   };
@@ -424,15 +467,15 @@ function AddCategoriesApp() {
   // Funkcia na pridanie novej kategórie
   const handleAddCategorySubmit = async (categoryName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Nemáte oprávnenie na pridanie kategórie.", 'error');
       }
       return;
     }
     const trimmedCategoryName = categoryName.trim();
     if (trimmedCategoryName === '') {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.", 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
       return;
     }
@@ -449,8 +492,8 @@ function AddCategoriesApp() {
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
       if (Object.values(currentCategoriesData).some(name => name.toLowerCase() === trimmedCategoryName.toLowerCase())) {
-        if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
+        if (typeof showLocalNotification === 'function') {
+          showLocalNotification(`Kategória s názvom "${trimmedCategoryName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
@@ -464,8 +507,8 @@ function AddCategoriesApp() {
         [newFieldId]: trimmedCategoryName
       }, { merge: true });
 
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Kategória úspešne pridaná!", 'success');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Kategória úspešne pridaná!", 'success');
       }
       setShowAddCategoryModal(false); // Zatvorí modálne okno po úspešnom pridaní
 
@@ -475,8 +518,8 @@ function AddCategoriesApp() {
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri pridávaní kategórie:", e);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri pridávaní kategórie: ${e.message}`, 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification(`Chyba pri pridávaní kategórie: ${e.message}`, 'error');
       }
     } finally {
       setLoading(false);
@@ -486,15 +529,15 @@ function AddCategoriesApp() {
   // Funkcia na úpravu kategórie
   const handleEditCategorySubmit = async (categoryId, newName) => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na úpravu kategórie.", 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Nemáte oprávnenie na úpravu kategórie.", 'error');
       }
       return;
     }
     const trimmedNewName = newName.trim();
     if (trimmedNewName === '') {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Názov kategórie nemôže byť prázdny.", 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
       return;
     }
@@ -511,8 +554,8 @@ function AddCategoriesApp() {
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
       if (Object.entries(currentCategoriesData).some(([id, name]) => name.toLowerCase() === trimmedNewName.toLowerCase() && id !== categoryId)) {
-        if (typeof window.showGlobalNotification === 'function') {
-          window.showGlobalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
+        if (typeof showLocalNotification === 'function') {
+          showLocalNotification(`Kategória s názvom "${trimmedNewName}" už existuje. Zvoľte iný názov.`, 'error');
         }
         setLoading(false);
         return;
@@ -526,8 +569,8 @@ function AddCategoriesApp() {
         [categoryId]: trimmedNewName
       }, { merge: true });
 
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Kategória úspešne aktualizovaná!", 'success');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Kategória úspešne aktualizovaná!", 'success');
       }
       setShowEditCategoryModal(false); // Zatvorí modálne okno po úspešnej úprave
       setCategoryToEdit(null);
@@ -538,8 +581,8 @@ function AddCategoriesApp() {
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri aktualizácii kategórie:", e);
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri aktualizácii kategórie: ${e.message}`, 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification(`Chyba pri aktualizácii kategórie: ${e.message}`, 'error');
       }
     } finally {
       setLoading(false);
@@ -555,8 +598,8 @@ function AddCategoriesApp() {
   // Funkcia na zmazanie kategórie (volaná z potvrdzovacieho modálu)
   const handleDeleteCategory = async () => {
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin' || !categoryToDelete) {
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.", 'error');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification("Nemáte oprávnenie na zmazanie kategórie alebo kategória nie je vybraná.", 'error');
       }
       return;
     }
@@ -570,11 +613,11 @@ function AddCategoriesApp() {
 
       // Odstránime konkrétne pole z dokumentu pomocou deleteField() pre Firebase v9
       await setDoc(categoriesDocRef, {
-        [categoryToDelete.id]: deleteField() // OPRAVENÉ: Používame deleteField() pre v9
+        [categoryToDelete.id]: deleteField() // Používame deleteField() pre v9
       }, { merge: true }); // Používame merge: true pre bezpečné odstránenie poľa
 
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`, 'success');
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification(`Kategória "${categoryToDelete.name}" bola úspešne zmazaná!`, 'success');
       }
       setCategoryToDelete(null); // Vyčistí kategóriu na zmazanie
 
@@ -584,9 +627,9 @@ function AddCategoriesApp() {
 
     } catch (e) {
       console.error("AddCategoriesApp: Chyba pri mazaní kategórie:", e);
-      // Zobrazenie chyby pomocou globálnej notifikácie
-      if (typeof window.showGlobalNotification === 'function') {
-        window.showGlobalNotification(`Chyba pri mazaní kategórie: ${e.message}`, 'error');
+      // Zobrazenie chyby pomocou lokálnej notifikácie
+      if (typeof showLocalNotification === 'function') {
+        showLocalNotification(`Chyba pri mazaní kategórie: ${e.message}`, 'error');
       }
     } finally {
       setLoading(false);
