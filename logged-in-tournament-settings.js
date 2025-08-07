@@ -80,6 +80,7 @@ function TournamentSettingsApp() {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav dát
+  const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav súpisiek
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
@@ -195,11 +196,13 @@ function TournamentSettingsApp() {
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
                 setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
+                setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); // Načítanie nového dátumu
             } else {
                 console.log("TournamentSettingsApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
                 setDataEditDeadline(''); 
+                setRosterEditDeadline(''); // Predvolená prázdna hodnota pre nový dátum
             }
             setSettingsLoaded(true);
             setLoading(false); // Nastavenia sú načítané, aj keď prázdne
@@ -241,6 +244,7 @@ function TournamentSettingsApp() {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
       const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
       const dataEditDead = dataEditDeadline ? new Date(dataEditDeadline) : null; 
+      const rosterEditDead = rosterEditDeadline ? new Date(rosterEditDeadline) : null; // Nový dátum
 
       if (regStart && regEnd && regStart >= regEnd) {
         showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
@@ -252,12 +256,20 @@ function TournamentSettingsApp() {
         setLoading(false);
         return;
       }
+      // NOVINKA: Validácia pre rosterEditDeadline
+      if (rosterEditDead && dataEditDead && rosterEditDead < dataEditDead) {
+        showNotification("Dátum uzávierky úprav súpisiek nemôže byť pred dátumom uzávierky úprav používateľských dát.", 'error');
+        setLoading(false);
+        return;
+      }
+
 
       const settingsDocRef = doc(db, 'settings', 'registration');
       await setDoc(settingsDocRef, {
         registrationStartDate: regStart ? Timestamp.fromDate(regStart) : null,
         registrationEndDate: regEnd ? Timestamp.fromDate(regEnd) : null,
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
+        rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, // Uloženie nového dátumu
       });
       
       showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); // Používame lokálnu showNotification
@@ -330,6 +342,19 @@ function TournamentSettingsApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
               value: dataEditDeadline,
               onChange: (e) => setDataEditDeadline(e.target.value),
+              disabled: loading,
+            })
+          ),
+          React.createElement(
+            'div',
+            null,
+            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'roster-edit-deadline' }, 'Dátum a čas uzávierky úprav súpisiek klubov/tímov'),
+            React.createElement('input', {
+              type: 'datetime-local',
+              id: 'roster-edit-deadline',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+              value: rosterEditDeadline,
+              onChange: (e) => setRosterEditDeadline(e.target.value),
               disabled: loading,
             })
           ),
