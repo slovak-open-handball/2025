@@ -309,7 +309,6 @@ function TournamentSettingsApp() {
     { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' },
     // Zobrazíme formulár iba ak nie je stav načítavania a používateľ je admin
     (!loading && userProfileData && userProfileData.role === 'admin') ? (
-      <>
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
