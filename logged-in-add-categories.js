@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, showGlobalNotification a showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc, FieldValue, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Pridaný import deleteField
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
