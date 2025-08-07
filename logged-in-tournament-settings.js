@@ -7,7 +7,7 @@ import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, Timestamp } 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
-// Helper function to format a Date object into 'YYYY-MM-DDTHH:mm' local string
+// Helper funkcia pre formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -63,7 +63,7 @@ const showNotification = (message, type = 'success') => {
 };
 
 
-// Main React component for the logged-in-tournament-settings.html page
+// Main React komponent pre stránku nastavení turnaja
 function TournamentSettingsApp() {
   // Získame referencie na Firebase služby pomocou getAuth() a getFirestore()
   const auth = getAuth(); 
@@ -74,14 +74,16 @@ function TournamentSettingsApp() {
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
-  const [loading, setLoading] = React.useState(true); // Loading pre dáta v TournamentSettingsApp
+  // Loading stav pre dáta v TournamentSettingsApp
+  // Nastavené na true na začiatku, aby sa zobrazil loader
+  const [loading, setLoading] = React.useState(true); 
 
-  // States for date and time settings
+  // Stavy pre nastavenia dátumu a času
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [dataEditDeadline, setDataEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav dát
-  const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav súpisiek
-  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+  const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
+  const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false); // Nový stav pre indikáciu načítania nastavení
 
   // Effect pre zobrazenie/skrytie globálneho loaderu na základe stavu 'loading'
   React.useEffect(() => {
@@ -112,8 +114,6 @@ function TournamentSettingsApp() {
     // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
       setUserProfileData(event.detail);
-      // Skrytie globálneho loaderu po načítaní profilových dát
-      // Toto sa už spravuje cez useEffect pre 'loading' stav
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
@@ -138,7 +138,7 @@ function TournamentSettingsApp() {
 
     if (user && db && isAuthReady) {
       console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      setLoading(true); // Zabezpečí, že loader je zobrazený počas načítavania profilu
+      // setLoading(true) je už nastavené na začiatku komponentu
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -157,7 +157,7 @@ function TournamentSettingsApp() {
             }
 
             setUserProfileData(userData); // Update userProfileData state
-            // Nastavenie loading na false sa spravuje v kombinovanej logike nižšie
+            // setLoading(false) sa spravuje v kombinovanej logike nižšie
           } else {
             console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); // Používame lokálnu showNotification
@@ -185,10 +185,9 @@ function TournamentSettingsApp() {
     } 
     // Ak je autentifikácia pripravená, ale používateľ je null (nie je prihlásený),
     // loader zostane viditeľný, kým neprebehne presmerovanie v onAuthStateChanged.
-    // setLoading(false) sa tu nevolá.
     else if (isAuthReady && user === null) {
-        // Tu sa nič nedeje, loader zostáva zobrazený
         console.log("TournamentSettingsApp: Auth je pripravené, ale používateľ nie je prihlásený. Loader zostáva zobrazený.");
+        // Tu sa nič nedeje, loader zostáva zobrazený, kým sa nevykoná presmerovanie.
     }
 
     return () => {
