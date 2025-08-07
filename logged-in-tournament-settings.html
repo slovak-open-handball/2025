@@ -111,6 +111,11 @@
                     typeof window.auth !== 'undefined' && typeof window.db !== 'undefined' &&
                     typeof TournamentSettingsApp !== 'undefined') {
                     
+                    // Skryjeme globálny loader, ak je zobrazený - toto sa už spravuje v komponente
+                    // if (window.hideGlobalLoader) {
+                    //     window.hideGlobalLoader();
+                    // }
+
                     const root = ReactDOM.createRoot(rootElement);
                     root.render(React.createElement(TournamentSettingsApp, null));
                     console.log("logged-in-tournament-settings.html: React App vykreslená.");
@@ -124,6 +129,7 @@
         };
 
         // Spustenie globálneho loaderu hneď na začiatku
+        // Toto sa spustí okamžite, nezávisle od Reactu a Firebase
         if (typeof window.showGlobalLoader === 'function') {
             window.showGlobalLoader();
         } else {
