@@ -65,14 +65,14 @@ const showNotification = (message, type = 'success') => {
 
 // Main React component for the logged-in-tournament-settings.html page
 function TournamentSettingsApp() {
-  // Získame referencie na Firebase služby z globálnych premenných
-  const auth = window.auth; 
-  const db = window.db;     
+  // Získame referencie na Firebase služby pomocou getAuth() a getFirestore()
+  const auth = getAuth(); 
+  const db = getFirestore();     
 
   // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
-  const [user, setUser] = React.useState(auth ? auth.currentUser : null); 
-  const [userProfileData, setUserProfileData] = React.useState(window.globalUserProfileData); 
-  const [isAuthReady, setIsAuthReady] = React.useState(window.isGlobalAuthReady); 
+  const [user, setUser] = React.useState(null); 
+  const [userProfileData, setUserProfileData] = React.useState(null); 
+  const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
   const [loading, setLoading] = React.useState(true); // Loading pre dáta v TournamentSettingsApp
 
@@ -98,12 +98,20 @@ function TournamentSettingsApp() {
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+      setIsAuthReady(true); // Auth je pripravené
+      if (!currentUser) {
+        console.log("TournamentSettingsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        window.location.href = 'login.html';
+      }
+    });
+
     // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
-      setUser(auth.currentUser); // Aktualizujeme user state
       setUserProfileData(event.detail);
-      setIsAuthReady(true); // Auth je pripravené
-      // show/hide globálneho loaderu je teraz riadené samostatným useEffect hookom na základe stavu `loading`
+      // Skrytie globálneho loaderu po načítaní profilových dát
+      // Toto sa už spravuje cez useEffect pre 'loading' stav
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
@@ -113,11 +121,11 @@ function TournamentSettingsApp() {
         setUser(auth.currentUser);
         if (window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
-            // show/hide globálneho loaderu je teraz riadené samostatným useEffect hookom na základe stavu `loading`
         }
     }
 
     return () => {
+      unsubscribeAuth();
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
   }, [auth]); // Závisí od auth inštancie
@@ -174,10 +182,13 @@ function TournamentSettingsApp() {
         setUser(null);
         setUserProfileData(null);
       }
-    } else if (isAuthReady && user === null) {
-        setLoading(false); // Ak je autentifikácia pripravená, ale žiadny používateľ, zastavíme načítavanie.
-        setUserProfileData(null);
-    }
+    } 
+    // DÔLEŽITÁ ZMENA: Ak je autentifikácia pripravená, ale používateľ je null (nie je prihlásený),
+    // NEBUDEME nastavovať loading na false. Loader by mal zostať viditeľný, kým neprebehne presmerovanie.
+    // else if (isAuthReady && user === null) {
+    //     setLoading(false); // Toto odstránime
+    //     setUserProfileData(null);
+    // }
 
     return () => {
       if (unsubscribeUserDoc) {
@@ -191,10 +202,11 @@ function TournamentSettingsApp() {
   React.useEffect(() => {
     let unsubscribeSettings;
     const fetchSettings = async () => {
+      // DÔLEŽITÁ ZMENA: Načítavanie nastavení spustíme len vtedy, ak je používateľ admin.
+      // Ak userProfileData ešte nie je k dispozícii alebo používateľ nie je admin,
+      // loader zostane viditeľný vďaka hlavnému loading stavu a podmienke vykresľovania.
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
         console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie nastavení.");
-        // Ak userProfileData ešte nie je k dispozícii alebo používateľ nie je admin, sme stále v stave načítavania
-        // alebo dôjde k presmerovaniu. Nie je potrebné tu skrývať loader.
         return; 
       }
       try {
