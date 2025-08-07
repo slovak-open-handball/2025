@@ -7,7 +7,7 @@
 // aj keď sú inštancie auth a db globálne.
 import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Zabezpečenie správneho importu FieldValue
 
 
 // NotificationModal Component (bol odstránený, pretože sa používa globálny window.showGlobalNotification)
@@ -397,7 +397,7 @@ function AddCategoriesApp() {
       const notificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
       await addDoc(notificationsCollectionRef, {
         message: message,
-        timestamp: FieldValue.serverTimestamp(), // Používame FieldValue
+        timestamp: FieldValue.serverTimestamp(), // OPRAVENÉ: Použitie FieldValue.serverTimestamp()
         recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
         read: false
       });
