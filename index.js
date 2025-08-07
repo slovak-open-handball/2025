@@ -12,6 +12,7 @@ import { doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6
 window.registrationDates = null;
 let timerId = null; // ID pre časovač, aby sme ho mohli zrušiť
 let countdownIntervalId = null; // ID pre interval odpočtu
+let hasCategories = false; // Nová globálna premenná pre stav kategórií
 
 /**
  * Pomocná funkcia na formátovanie objektu Timestamp do čitateľného reťazca "dňa dd. mm. yyyy o hh:mm hod.".
@@ -35,21 +36,39 @@ const formatDate = (timestamp) => {
  * @param {object} dates - Objekt s dátumami začiatku a konca registrácie.
  */
 const updateRegistrationStatusText = (dates) => {
-    // Upravená podmienka na kontrolu existencie správne pomenovaných polí.
-    if (!dates || !dates.registrationStartDate || !dates.registrationEndDate) {
-        console.warn("Dáta o registrácii (registrationStartDate alebo registrationEndDate) nie sú k dispozícii alebo sú neúplné.");
-        return;
-    }
-
-    const now = new Date();
-    const registrationStart = dates.registrationStartDate.toDate();
-    const registrationEnd = dates.registrationEndDate.toDate();
     const messageElement = document.getElementById('registration-status-message');
 
     if (!messageElement) {
         console.warn("Element #registration-status-message nebol nájdený.");
         return;
     }
+
+    // Prioritná kontrola: Ak nie sú kategórie, zobrazíme špecifickú správu
+    if (!hasCategories) {
+        messageElement.innerHTML = `
+            <p class="text-red-600 font-semibold">Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.</p>
+        `;
+        toggleRegistrationButton(false, 'no-categories');
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId); // Zastavíme odpočet, ak beží
+        }
+        return; // Ukončíme funkciu, ak nie sú kategórie
+    }
+
+    // Ak sú kategórie, pokračujeme s logikou dátumov registrácie
+    if (!dates || !dates.registrationStartDate || !dates.registrationEndDate) {
+        console.warn("Dáta o registrácii (registrationStartDate alebo registrationEndDate) nie sú k dispozícii alebo sú neúplné.");
+        messageElement.innerHTML = `<p class="text-gray-600">Informácie o registrácii nie sú momentálne dostupné.</p>`;
+        toggleRegistrationButton(false);
+        if (countdownIntervalId) {
+            clearInterval(countdownIntervalId);
+        }
+        return;
+    }
+
+    const now = new Date();
+    const registrationStart = dates.registrationStartDate.toDate();
+    const registrationEnd = dates.registrationEndDate.toDate();
 
     if (now < registrationStart) {
         // Registrácia sa ešte nezačala
@@ -217,62 +236,41 @@ const setupRegistrationDataListener = () => {
             return;
         }
 
-        // Vytvorenie referencie na dokument
-        const registrationDocRef = doc(window.db, "settings", "registration");
-
-        // Počúvanie zmien v dokumente v reálnom čase
-        onSnapshot(registrationDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                window.registrationDates = docSnap.data();
-                console.log("Dáta o registrácii boli aktualizované:", window.registrationDates);
-                
-                // Zobrazíme hlavičku, pretože už máme dáta o používateľovi a registrácii
-                const mainHeader = document.getElementById('header-placeholder')?.querySelector('header');
-                if (mainHeader) {
-                    mainHeader.classList.remove('invisible');
-                    console.log("Hlavička bola zobrazená po načítaní dát.");
-                }
-                const isLoggedIn = !!window.globalUserProfileData;
-
-                // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
-                if (isLoggedIn) {
-                    toggleLoggedInMessage(true, window.globalUserProfileData);
-                    toggleRegistrationButton(false);
-                } else {
-                    // Ak nie je prihlásený, zobrazíme mu stav registrácie
-                    toggleLoggedInMessage(false);
-                    updateRegistrationStatusText(window.registrationDates);
-                }
-
-                // Po nastavení celého UI aktualizujeme aj tlačidlo prihlásenia
-                updateLoginButton(isLoggedIn);
-            } else {
-                console.log("Dokument 'settings/registration' nebol nájdený!");
-                window.registrationDates = null;
-                const isLoggedIn = !!window.globalUserProfileData;
-                toggleRegistrationButton(false);
-                updateLoginButton(isLoggedIn);
-            }
-        }, (error) => {
-            console.error("Chyba pri počúvaní dát o registrácii:", error);
-        });
-
-        // Kontrola, či existujú kategórie (môže byť oddelená od registračných dátumov)
+        // Počúvanie zmien v dokumente kategórií
         const categoriesDocRef = doc(window.db, "settings", "categories");
         onSnapshot(categoriesDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const categories = docSnap.data();
-                const hasCategories = Object.keys(categories).length > 0;
-                console.log(`Dáta kategórií boli aktualizované. Počet kategórií: ${Object.keys(categories).length}`);
-                
-                // Ak nie sú kategórie, skryjeme tlačidlo na registráciu
-                if (!hasCategories) {
-                    toggleRegistrationButton(false, 'no-categories');
-                }
+                hasCategories = Object.keys(categories).length > 0; // Aktualizujeme globálny stav kategórií
+                console.log(`Dáta kategórií boli aktualizované. Počet kategórií: ${Object.keys(categories).length}. Has categories: ${hasCategories}`);
             } else {
                 console.warn("Dokument 'settings/categories' nebol nájdený!");
-                toggleRegistrationButton(false, 'no-categories');
+                hasCategories = false; // Ak dokument neexistuje, kategórie nie sú
             }
+            // Po aktualizácii stavu kategórií, znovu vyhodnotíme stav registrácie
+            updateRegistrationStatusAndButtons();
+        }, (error) => {
+            console.error("Chyba pri počúvaní dát o kategóriách:", error);
+            hasCategories = false; // V prípade chyby predpokladáme, že kategórie nie sú
+            updateRegistrationStatusAndButtons();
+        });
+
+        // Počúvanie zmien v dokumente registrácie
+        const registrationDocRef = doc(window.db, "settings", "registration");
+        onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.registrationDates = docSnap.data();
+                console.log("Dáta o registrácii boli aktualizované:", window.registrationDates);
+            } else {
+                console.log("Dokument 'settings/registration' nebol nájdený!");
+                window.registrationDates = null;
+            }
+            // Po aktualizácii stavu registrácie, znovu vyhodnotíme stav registrácie
+            updateRegistrationStatusAndButtons();
+        }, (error) => {
+            console.error("Chyba pri počúvaní dát o registrácii:", error);
+            window.registrationDates = null;
+            updateRegistrationStatusAndButtons();
         });
 
     } catch (error) {
@@ -280,11 +278,39 @@ const setupRegistrationDataListener = () => {
     }
 };
 
+/**
+ * Hlavná funkcia na aktualizáciu stavu registrácie a tlačidiel na základe globálnych dát.
+ * Volá sa vždy, keď sa zmenia dáta o používateľovi, registrácii alebo kategóriách.
+ */
+const updateRegistrationStatusAndButtons = () => {
+    // Zobrazíme hlavičku, pretože už máme dáta o používateľovi a registrácii
+    const mainHeader = document.getElementById('header-placeholder')?.querySelector('header');
+    if (mainHeader) {
+        mainHeader.classList.remove('invisible');
+        console.log("Hlavička bola zobrazená po načítaní dát.");
+    }
+
+    const isLoggedIn = !!window.globalUserProfileData;
+
+    // Ak je používateľ prihlásený, zobrazí sa mu len uvítacia správa a Moja zóna
+    if (isLoggedIn) {
+        toggleLoggedInMessage(true, window.globalUserProfileData);
+        toggleRegistrationButton(false); // Skryjeme registráciu
+    } else {
+        // Ak nie je prihlásený, zobrazíme mu stav registrácie s prioritou kategórií
+        toggleLoggedInMessage(false);
+        updateRegistrationStatusText(window.registrationDates); // Táto funkcia už zohľadňuje hasCategories
+    }
+
+    // Po nastavení celého UI aktualizujeme aj tlačidlo prihlásenia
+    updateLoginButton(isLoggedIn);
+};
+
+
 // Počúvame na udalosť 'globalDataUpdated', ktorá je vysielaná z authentication.js
 // a signalizuje, že autentifikácia a načítanie profilu sú dokončené.
 window.addEventListener('globalDataUpdated', () => {
     console.log("Udalosť 'globalDataUpdated' bola prijatá.");
-    // Spustíme listener pre registračné dáta, ktorý sa postará o celú logiku zobrazenia
-    // registračného UI.
+    // Spustíme listener pre registračné dáta a kategórie, ktorý sa postará o celú logiku zobrazenia
     setupRegistrationDataListener();
 });
