@@ -397,7 +397,7 @@ function AddCategoriesApp() {
       const notificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
       await addDoc(notificationsCollectionRef, {
         message: message,
-        timestamp: FieldValue.serverTimestamp(), // OPRAVENÉ: Použitie FieldValue.serverTimestamp()
+        timestamp: new Date(), // OPRAVENÉ: Použitie new Date() pre konzistenciu s logged-in-my-data.js
         recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
         read: false
       });
