@@ -388,16 +388,16 @@ function AddCategoriesApp() {
 
   // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (message) => {
-    if (!db || !appId) {
-      console.error("Chyba: Databáza alebo ID aplikácie nie je k dispozícii pre odoslanie notifikácie.");
+    if (!db) { // Odstránené appId, pretože sa nepoužíva v novej ceste
+      console.error("Chyba: Databáza nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
-      // Používame collection() a addDoc() pre pridanie dokumentu
-      const notificationsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'adminNotifications');
+      // OPRAVENÉ: Používame kolekciu "notifications" ako na logged-in-my-data.js
+      const notificationsCollectionRef = collection(db, 'notifications');
       await addDoc(notificationsCollectionRef, {
         message: message,
-        timestamp: new Date(), // OPRAVENÉ: Použitie new Date() pre konzistenciu s logged-in-my-data.js
+        timestamp: new Date(), 
         recipientId: 'all_admins', // Notifikácia pre všetkých administrátorov
         read: false
       });
@@ -432,7 +432,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await getDoc(categoriesDocRef); // OPRAVENÉ: Použitie getDoc()
+      const docSnapshot = await getDoc(categoriesDocRef); 
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
@@ -496,7 +496,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await getDoc(categoriesDocRef); // OPRAVENÉ: Použitie getDoc()
+      const docSnapshot = await getDoc(categoriesDocRef); 
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
