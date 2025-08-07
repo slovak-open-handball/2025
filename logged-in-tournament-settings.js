@@ -121,6 +121,10 @@ function TournamentSettingsApp() {
     if (user && db && isAuthReady) {
       console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
       setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
+      // Zobrazenie globálneho loaderu
+      if (window.showGlobalLoader) {
+        window.showGlobalLoader();
+      }
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -134,16 +138,28 @@ function TournamentSettingsApp() {
             if (userData.role !== 'admin') {
                 console.log("TournamentSettingsApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
                 window.location.href = 'logged-in-my-data.html';
+                // Skrytie globálneho loaderu
+                if (window.hideGlobalLoader) {
+                  window.hideGlobalLoader();
+                }
                 return; // Ukončíme funkciu po presmerovaní
             }
 
             setUserProfileData(userData); // Update userProfileData state
             setLoading(false); // Stop loading after user data is loaded
+            // Skrytie globálneho loaderu
+            if (window.hideGlobalLoader) {
+              window.hideGlobalLoader();
+            }
 
           } else {
             console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); // Používame lokálnu showNotification
             setLoading(false);
+            // Skrytie globálneho loaderu
+            if (window.hideGlobalLoader) {
+              window.hideGlobalLoader();
+            }
             auth.signOut(); // Odhlásiť používateľa
             setUser(null);
             setUserProfileData(null);
@@ -152,6 +168,10 @@ function TournamentSettingsApp() {
           console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); // Používame lokálnu showNotification
           setLoading(false);
+          // Skrytie globálneho loaderu
+          if (window.hideGlobalLoader) {
+            window.hideGlobalLoader();
+          }
           auth.signOut();
           setUser(null);
           setUserProfileData(null);
@@ -160,12 +180,20 @@ function TournamentSettingsApp() {
         console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); // Používame lokálnu showNotification
         setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         auth.signOut();
         setUser(null);
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
         setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         setUserProfileData(null);
     }
 
@@ -239,6 +267,10 @@ function TournamentSettingsApp() {
       return;
     }
     setLoading(true);
+    // Zobrazenie globálneho loaderu
+    if (window.showGlobalLoader) {
+      window.showGlobalLoader();
+    }
     
     try {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -249,17 +281,29 @@ function TournamentSettingsApp() {
       if (regStart && regEnd && regStart >= regEnd) {
         showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
         setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         return;
       }
       if (dataEditDead && regEnd && dataEditDead < regEnd) {
         showNotification("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
         setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         return;
       }
       // NOVINKA: Validácia pre rosterEditDeadline
       if (rosterEditDead && dataEditDead && rosterEditDead < dataEditDead) {
         showNotification("Dátum uzávierky úprav súpisiek nemôže byť pred dátumom uzávierky úprav používateľských dát.", 'error');
         setLoading(false);
+        // Skrytie globálneho loaderu
+        if (window.hideGlobalLoader) {
+          window.hideGlobalLoader();
+        }
         return;
       }
 
@@ -279,21 +323,33 @@ function TournamentSettingsApp() {
       showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
     } finally {
       setLoading(false);
+      // Skrytie globálneho loaderu
+      if (window.hideGlobalLoader) {
+        window.hideGlobalLoader();
+      }
     }
   };
 
   // Display loading state
   if (!isAuthReady || loading || !userProfileData) {
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
-    );
+    // Používame globálny loader namiesto lokálneho spinneru
+    if (window.showGlobalLoader) {
+      window.showGlobalLoader();
+    }
+    return null; // Návrat null, aby sa nič nevykreslilo, kým je loader aktívny
   }
+
+  // Skrytie globálneho loaderu, ak je komponent pripravený a nie je v stave loading
+  React.useEffect(() => {
+    if (window.hideGlobalLoader) {
+      window.hideGlobalLoader();
+    }
+  }, [isAuthReady, loading, userProfileData]);
+
 
   return React.createElement(
     'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' }, // Odstránené pt-16
+    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' },
     React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
       'Nastavenia turnaja'
     ),
