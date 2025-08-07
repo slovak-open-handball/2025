@@ -17,6 +17,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuToggleButton = document.getElementById('menu-toggle-button');
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
+    const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -61,6 +62,15 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             }
         }
     };
+    
+    // Funkcia na podmienené zobrazenie odkazu na kategórie
+    const showAdminLinks = () => {
+        if (userProfileData.role === 'admin') {
+            addCategoriesLink.classList.remove('hidden');
+        } else {
+            addCategoriesLink.classList.add('hidden');
+        }
+    };    
 
     /**
      * Funkcia na uloženie stavu menu do databázy.
@@ -88,6 +98,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     applyMenuState();
     // Aplikujeme dynamický text menu
     updateMenuText();
+    // Zobrazíme admin odkazy na základe roly
+    showAdminLinks();
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
