@@ -293,13 +293,13 @@ function TournamentSettingsApp() {
 
   return React.createElement(
     'div',
-    { className: 'min-h-screen bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' },
+    { className: 'bg-gray-100 flex flex-col items-center font-inter overflow-y-auto' }, // Odstránené min-h-screen
     React.createElement(
       'div',
-      { className: 'w-full max-w-2xl p-4' }, 
+      { className: 'w-full max-w-2xl' }, // Odstránené p-4
       React.createElement(
         'div',
-        { className: 'bg-white p-8 rounded-lg shadow-xl w-full' },
+        { className: 'bg-white p-6 rounded-lg shadow-xl w-full' }, // Zmenené p-8 na p-6
         React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
           'Nastavenia turnaja'
         ),
