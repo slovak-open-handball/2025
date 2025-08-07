@@ -40,14 +40,14 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            /* margin-left: 256px; */ /* Táto hodnota už nebude potrebná, ak sa menu nenačítava priamo */
+            margin-left: 0; /* Predvolene 0, menu-spacer to upraví dynamicky */
             padding: 1rem;
             flex-grow: 1;
             /* NOVÉ ŠTÝLY PRE CENTROVANIE */
             display: flex;
             justify-content: center; /* Centrovanie horizontálne */
             align-items: flex-start; /* Zarovnanie na začiatok vertikálne (aby nebolo v strede obrazovky) */
-            width: 100%; /* Zaberá celú šírku, ak menu nie je pevné */
+            width: 100%; /* Zabezpečíme, aby zaberala zvyšnú šírku */
         }
         @media (max-width: 768px) {
             #main-content-area {
@@ -109,10 +109,13 @@
     </header>
 
     <div class="flex flex-1">
-        <!-- Ľavé menu (obsah z logged-in-left-menu.html) a jeho spacer boli odstránené z tohto súboru -->
+        <!-- Placeholder pre ľavé menu, ktoré bude načítané pomocou logged-in-left-menu.js -->
+        <div id="menu-placeholder"></div>
         
         <!-- Hlavná oblasť pre obsah React aplikácie -->
         <div id="main-content-area" class="flex-1 p-4">
+            <!-- Prázdny div pre menuSpacer, ktorý bude riadený logged-in-left-menu.js -->
+            <div class="flex-shrink-0 w-0 md:w-0 transition-all duration-300"></div> 
             <!-- React aplikácia sa vykreslí sem -->
             <div id="root"></div>
         </div>
@@ -125,7 +128,7 @@
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
-    <!-- logged-in-left-menu.js bol odstránený, pretože jeho HTML už nie je priamo v tomto súbore -->
+    <script type="module" src="logged-in-left-menu.js"></script>
     
     <!-- Načítanie hlavného skriptu pre túto stránku (AddCategoriesApp) -->
     <script type="module" src="logged-in-add-categories.js"></script>
