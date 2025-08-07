@@ -96,19 +96,18 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
     <!-- Hlavička sa načíta dynamicky -->
     <div id="header-placeholder"></div>
-
-    <div class="flex flex-1">
-        <!-- Placeholder pre ľavé menu, ktoré bude načítané pomocou logged-in-left-menu.js -->
-        <div id="menu-placeholder"></div>
-        
-        <!-- Hlavná oblasť pre obsah React aplikácie -->
-        <div id="main-content-area" class="flex-1 p-4">
-            <!-- Prázdny div pre menuSpacer, ktorý bude riadený logged-in-left-menu.js -->
-            <div class="flex-shrink-0 w-0 md:w-0 transition-all duration-300"></div> 
-            <!-- React aplikácia sa vykreslí sem -->
-            <div id="root"></div>
+    <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
+    <div id="menu-placeholder"></div>
+    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
+        <!-- Sem sme pridali triedu pre plynulú animáciu -->
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+        <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Obsah aplikácie bude vykreslený tu -->
+            <div class="flex justify-center pt-16">
+                <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <!-- Skrytý div pre načítanie authentication.js (zabezpečuje inicializáciu Firebase) -->
     <div id="authentication-root" style="display: none;"></div>
