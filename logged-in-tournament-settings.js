@@ -83,6 +83,19 @@ function TournamentSettingsApp() {
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); // NOVÝ STAV: Dátum uzávierky úprav súpisiek
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
+  // Effect pre zobrazenie/skrytie globálneho loaderu na základe stavu 'loading'
+  React.useEffect(() => {
+    if (loading) {
+      window.showGlobalLoader();
+    } else {
+      window.hideGlobalLoader();
+    }
+    // Clean up funkcia: zabezpečuje, že loader je skrytý, ak sa komponent odpojí počas načítavania
+    return () => {
+      window.hideGlobalLoader();
+    };
+  }, [loading]); // Závisí od stavu `loading`
+
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
     // Listener pre globalDataUpdated z authentication.js
@@ -90,10 +103,7 @@ function TournamentSettingsApp() {
       setUser(auth.currentUser); // Aktualizujeme user state
       setUserProfileData(event.detail);
       setIsAuthReady(true); // Auth je pripravené
-      // Skrytie globálneho loaderu po načítaní profilových dát
-      if (window.hideGlobalLoader) {
-        window.hideGlobalLoader();
-      }
+      // show/hide globálneho loaderu je teraz riadené samostatným useEffect hookom na základe stavu `loading`
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
@@ -103,9 +113,7 @@ function TournamentSettingsApp() {
         setUser(auth.currentUser);
         if (window.globalUserProfileData) {
             setUserProfileData(window.globalUserProfileData);
-            if (window.hideGlobalLoader) {
-                window.hideGlobalLoader();
-            }
+            // show/hide globálneho loaderu je teraz riadené samostatným useEffect hookom na základe stavu `loading`
         }
     }
 
@@ -120,7 +128,8 @@ function TournamentSettingsApp() {
 
     if (user && db && isAuthReady) {
       console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      setLoading(true); // Nastavíme loading na true, kým sa načítajú dáta profilu
+      // setLoading(true) je už nastavené na začiatku komponentu a riadené kombinovanou logikou načítania.
+      // Ak by sme ho nastavili tu, mohlo by to spôsobiť blikanie alebo zbytočné zobrazenie/skrytie loaderu.
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -138,12 +147,13 @@ function TournamentSettingsApp() {
             }
 
             setUserProfileData(userData); // Update userProfileData state
-            setLoading(false); // Stop loading after user data is loaded
+            // setLoading(false) sa nevolá tu, pretože nastavenia sa stále musia načítať.
+            // Kombinovaný stav načítania sa nastaví na false, keď sú načítané userProfileData aj settingsLoaded.
 
           } else {
             console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); // Používame lokálnu showNotification
-            setLoading(false);
+            setLoading(false); // Zastavíme načítavanie pri chybe
             auth.signOut(); // Odhlásiť používateľa
             setUser(null);
             setUserProfileData(null);
@@ -151,7 +161,7 @@ function TournamentSettingsApp() {
         }, error => {
           console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); // Používame lokálnu showNotification
-          setLoading(false);
+          setLoading(false); // Zastavíme načítavanie pri chybe
           auth.signOut();
           setUser(null);
           setUserProfileData(null);
@@ -159,13 +169,13 @@ function TournamentSettingsApp() {
       } catch (e) {
         console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
         showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); // Používame lokálnu showNotification
-        setLoading(false);
+        setLoading(false); // Zastavíme načítavanie pri chybe
         auth.signOut();
         setUser(null);
         setUserProfileData(null);
       }
     } else if (isAuthReady && user === null) {
-        setLoading(false);
+        setLoading(false); // Ak je autentifikácia pripravená, ale žiadny používateľ, zastavíme načítavanie.
         setUserProfileData(null);
     }
 
@@ -177,12 +187,14 @@ function TournamentSettingsApp() {
     };
   }, [user, db, isAuthReady, auth]);
 
-  // Effect for loading settings (runs after DB and Auth are initialized and user is admin)
+  // Effect pre načítanie nastavení (spustí sa po inicializácii DB a Auth a ak je používateľ admin)
   React.useEffect(() => {
     let unsubscribeSettings;
     const fetchSettings = async () => {
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
         console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie nastavení.");
+        // Ak userProfileData ešte nie je k dispozícii alebo používateľ nie je admin, sme stále v stave načítavania
+        // alebo dôjde k presmerovaniu. Nie je potrebné tu skrývať loader.
         return; 
       }
       try {
@@ -204,14 +216,13 @@ function TournamentSettingsApp() {
                 setDataEditDeadline(''); 
                 setRosterEditDeadline(''); // Predvolená prázdna hodnota pre nový dátum
             }
-            setSettingsLoaded(true);
-            setLoading(false); // Nastavenia sú načítané, aj keď prázdne
-            console.log("TournamentSettingsApp: Načítanie nastavení dokončené, settingsLoaded: true.");
+            setSettingsLoaded(true); // Nastavenia sú teraz načítané.
+            // setLoading(false) sa nevolá tu, pretože sa spravuje kombinovanou logikou načítania nižšie.
           }, error => {
             console.error("TournamentSettingsApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
             showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); // Používame lokálnu showNotification
-            setSettingsLoaded(true); 
-            setLoading(false);
+            setSettingsLoaded(true); // Aj pri chybe je pokus o načítanie nastavení dokončený.
+            setLoading(false); // Zastavíme načítavanie pri chybe
           });
 
           return () => {
@@ -224,12 +235,21 @@ function TournamentSettingsApp() {
           console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
           showNotification(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
           setSettingsLoaded(true);
-          setLoading(false);
+          setLoading(false); // Zastavíme načítavanie pri chybe
       }
     };
 
     fetchSettings();
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu)
+
+  // Kombinovaná logika načítania: Nastaví loading na false len vtedy, keď je autentifikácia pripravená,
+  // profil používateľa je načítaný a nastavenia sú načítané.
+  React.useEffect(() => {
+    if (isAuthReady && userProfileData && settingsLoaded) {
+      setLoading(false);
+      console.log("TournamentSettingsApp: Všetky dáta načítané, loading: false.");
+    }
+  }, [isAuthReady, userProfileData, settingsLoaded]);
 
 
   const handleUpdateRegistrationSettings = async (e) => {
@@ -238,7 +258,7 @@ function TournamentSettingsApp() {
       showNotification("Nemáte oprávnenie na zmenu nastavení registrácie.", 'error'); // Používame lokálnu showNotification
       return;
     }
-    setLoading(true);
+    setLoading(true); // Zobraziť loader počas operácie ukladania
     
     try {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -278,18 +298,19 @@ function TournamentSettingsApp() {
       console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
       showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
     } finally {
-      setLoading(false);
+      setLoading(false); // Skryť loader po dokončení operácie ukladania alebo chybe
     }
   };
 
-  // Display loading state
-  if (!isAuthReady || loading || !userProfileData) {
-    return React.createElement(
-      'div',
-      { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
-      React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
-    );
-  }
+  // Odstránený blok pre zobrazenie textu "Načítavam nastavenia...",
+  // pretože globálny loader teraz spravuje vizuál načítavania.
+  // if (!isAuthReady || loading || !userProfileData) {
+  //   return React.createElement(
+  //     'div',
+  //     { className: 'flex items-center justify-center min-h-screen bg-gray-100' },
+  //     React.createElement('div', { className: 'text-xl font-semibold text-gray-700' }, 'Načítavam nastavenia...')
+  //   );
+  // }
 
   return React.createElement(
     'div',
