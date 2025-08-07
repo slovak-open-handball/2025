@@ -103,6 +103,8 @@ function TournamentSettingsApp() {
       setIsAuthReady(true); // Auth je pripravené
       if (!currentUser) {
         console.log("TournamentSettingsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
+        // Ak používateľ nie je prihlásený, loader by mal zostať viditeľný až do presmerovania.
+        // setLoading(false) sa tu nevolá.
         window.location.href = 'login.html';
       }
     });
@@ -136,8 +138,7 @@ function TournamentSettingsApp() {
 
     if (user && db && isAuthReady) {
       console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
-      // setLoading(true) je už nastavené na začiatku komponentu a riadené kombinovanou logikou načítania.
-      // Ak by sme ho nastavili tu, mohlo by to spôsobiť blikanie alebo zbytočné zobrazenie/skrytie loaderu.
+      setLoading(true); // Zabezpečí, že loader je zobrazený počas načítavania profilu
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
@@ -151,13 +152,12 @@ function TournamentSettingsApp() {
             if (userData.role !== 'admin') {
                 console.log("TournamentSettingsApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
                 window.location.href = 'logged-in-my-data.html';
-                return; // Ukončíme funkciu po presmerovaní
+                // Loader zostane viditeľný až do presmerovania
+                return; 
             }
 
             setUserProfileData(userData); // Update userProfileData state
-            // setLoading(false) sa nevolá tu, pretože nastavenia sa stále musia načítať.
-            // Kombinovaný stav načítania sa nastaví na false, keď sú načítané userProfileData aj settingsLoaded.
-
+            // Nastavenie loading na false sa spravuje v kombinovanej logike nižšie
           } else {
             console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
             showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); // Používame lokálnu showNotification
@@ -183,12 +183,13 @@ function TournamentSettingsApp() {
         setUserProfileData(null);
       }
     } 
-    // DÔLEŽITÁ ZMENA: Ak je autentifikácia pripravená, ale používateľ je null (nie je prihlásený),
-    // NEBUDEME nastavovať loading na false. Loader by mal zostať viditeľný, kým neprebehne presmerovanie.
-    // else if (isAuthReady && user === null) {
-    //     setLoading(false); // Toto odstránime
-    //     setUserProfileData(null);
-    // }
+    // Ak je autentifikácia pripravená, ale používateľ je null (nie je prihlásený),
+    // loader zostane viditeľný, kým neprebehne presmerovanie v onAuthStateChanged.
+    // setLoading(false) sa tu nevolá.
+    else if (isAuthReady && user === null) {
+        // Tu sa nič nedeje, loader zostáva zobrazený
+        console.log("TournamentSettingsApp: Auth je pripravené, ale používateľ nie je prihlásený. Loader zostáva zobrazený.");
+    }
 
     return () => {
       if (unsubscribeUserDoc) {
@@ -202,7 +203,7 @@ function TournamentSettingsApp() {
   React.useEffect(() => {
     let unsubscribeSettings;
     const fetchSettings = async () => {
-      // DÔLEŽITÁ ZMENA: Načítavanie nastavení spustíme len vtedy, ak je používateľ admin.
+      // Načítavanie nastavení spustíme len vtedy, ak je používateľ admin.
       // Ak userProfileData ešte nie je k dispozícii alebo používateľ nie je admin,
       // loader zostane viditeľný vďaka hlavnému loading stavu a podmienke vykresľovania.
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
