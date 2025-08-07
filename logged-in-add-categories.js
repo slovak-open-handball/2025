@@ -5,7 +5,7 @@
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // Tieto importy sú potrebné, aby sa zabezpečilo, že funkcie sú dostupné pre volania
 // aj keď sú inštancie auth a db globálne.
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { FieldValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -432,7 +432,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await doc(db, 'settings', 'categories').get(); // Používame getDoc
+      const docSnapshot = await getDoc(categoriesDocRef); // OPRAVENÉ: Použitie getDoc()
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie (case-insensitive)
@@ -496,7 +496,7 @@ function AddCategoriesApp() {
       if (!categoriesDocRef) { throw new Error("Referencia na dokument kategórií nie je k dispozícii."); }
 
       // Načítanie aktuálneho stavu dokumentu
-      const docSnapshot = await doc(db, 'settings', 'categories').get(); // Používame getDoc
+      const docSnapshot = await getDoc(categoriesDocRef); // OPRAVENÉ: Použitie getDoc()
       const currentCategoriesData = docSnapshot.exists() ? docSnapshot.data() : {};
 
       // Kontrola duplicity názvu kategórie pri úprave (okrem samotnej upravovanej kategórie)
