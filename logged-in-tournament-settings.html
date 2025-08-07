@@ -80,16 +80,29 @@
 
     <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
     <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
+    <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="loader.js"></script>
-    <script type="module" src="authentication.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
     <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="logged-in-tournament-settings.js"></script>
 
     <script>
-        // Funkcia, ktorá sa spustí po načítaní DOM a inicializácii Firebase
-        const initializeTournamentSettingsApp = () => {
+        // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
+        const checkReadyAndRender = () => {
+            // Kontrola, či sú React a ReactDOM načítané
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
+                return;
+            }
+            // Kontrola, či je komponent TournamentSettingsApp definovaný
+            if (typeof TournamentSettingsApp === 'undefined') {
+                console.error("Chyba: Komponent TournamentSettingsApp nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
+                document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
+                return;
+            }
+
             const rootElement = document.getElementById('root');
             if (rootElement) {
                 // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
@@ -103,24 +116,27 @@
                     console.log("logged-in-tournament-settings.html: React App vykreslená.");
                 } else {
                     // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
-                    setTimeout(initializeTournamentSettingsApp, 100);
+                    setTimeout(checkReadyAndRender, 100);
                 }
             } else {
                 console.error("logged-in-tournament-settings.html: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
             }
         };
 
-        // Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
-        window.addEventListener('globalDataUpdated', () => {
-            console.log("logged-in-tournament-settings.html: Prijatá udalosť 'globalDataUpdated'.");
-            initializeTournamentSettingsApp();
-        });
-
-        // Kontrola pri prvom načítaní pre prípad, že event už prebehol
-        if (window.isGlobalAuthReady && window.globalUserProfileData) {
-            console.log("logged-in-tournament-settings.html: Globálne dáta už existujú. Inicializujem aplikáciu okamžite.");
-            initializeTournamentSettingsApp();
+        // Spustenie globálneho loaderu hneď na začiatku
+        if (typeof window.showGlobalLoader === 'function') {
+            window.showGlobalLoader();
+        } else {
+            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof window.showGlobalLoader === 'function') {
+                    window.showGlobalLoader();
+                }
+            });
         }
+        
+        // Spustíme kontrolu a renderovanie po načítaní DOM
+        document.addEventListener('DOMContentLoaded', checkReadyAndRender);
     </script>
 </body>
 </html>
