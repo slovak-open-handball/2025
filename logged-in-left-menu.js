@@ -18,6 +18,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
     const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
     const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
+    const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -63,12 +64,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
     
-    // Funkcia na podmienené zobrazenie odkazu na kategórie
+    // Funkcia na podmienené zobrazenie odkazov pre admina
     const showAdminLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
+            tournamentSettingsLink.classList.remove('hidden'); // NOVINKA: Zobrazenie odkazu na nastavenia turnaja
         } else {
             addCategoriesLink.classList.add('hidden');
+            tournamentSettingsLink.classList.add('hidden'); // NOVINKA: Skrytie odkazu na nastavenia turnaja
         }
     };    
 
