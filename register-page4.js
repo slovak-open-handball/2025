@@ -392,7 +392,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         disabled: loading,
                                     }),
                                     // Nový text pod inputboxom pre počet mužov
-                                    React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, `Maximálny počet členov realizačného tímu je ${numberOfTeamMembersLimit}`)
+                                    React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, `Maximálny počet členov realizačného tímu je ${numberOfTeamMembersLimit}.`)
                                 ),
                                 
                                 // Sekcia pre účastnícke tričká
