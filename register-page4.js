@@ -1,9 +1,9 @@
 // register-page4.js
 // Obsahuje komponenty a logiku pre štvrtú (finálnu) stránku registračného formulára - detaily tímov.
 
-import React from 'react'; // DÔLEŽITÁ OPRAVA: Import Reactu
+// import React from 'react'; // DÔLEŽITÁ OPRAVA: ODSTRÁNENÝ import Reactu, pretože je načítaný globálne cez CDN v register.html
 
-export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) { // OPRAVA PREKLEPU: Zmenené 'setTeamsDataFromFromPage4' na 'setTeamsDataFromPage4'
+export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
     // formData.categories obsahuje štruktúru: { 'Kategória Názov': { numberOfTeams: X }, ... }
     // Vytvoríme počiatočný stav pre tímy na základe formData.categories a numberOfTeamsFromPage3
     const [teamDetails, setTeamDetails] = React.useState(() => {
