@@ -2,6 +2,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const TSHIRT_SIZES = ['134 - 140', '146 - 152', '158 - 164', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
+    const classNames = (...classes) => {
+        return classes.filter(Boolean).join(' ');
+    };
+
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         let newValue;
 
@@ -193,13 +197,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return allTshirtsMatch;
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
-    const registerButtonClasses = `
-    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-    ${loading || !isRecaptchaReady || !isFormValidPage4
-      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-      : 'bg-green-500 hover:bg-green-700 text-white'
-    }
-  `;
+    const registerButtonClasses = classNames(
+        'font-bold', 'py-2', 'px-4', 'rounded-lg', 'focus:outline-none', 'focus:shadow-outline', 'transition-colors', 'duration-200',
+        loading || !isRecaptchaReady || !isFormValidPage4
+            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
+            : 'bg-green-500 hover:bg-green-700 text-white'
+    );
 
     const handleFinalSubmit = async (e) => {
         e.preventDefault();
@@ -353,16 +356,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         );
                                         const isAddButtonTrulyDisabled = loading || hasInvalidTshirtFields || getAvailableTshirtSizeOptions(team.tshirts).length === 0;
 
-                                        const addButtonClassesArray = [
+                                        const addButtonClassName = classNames(
                                             'font-bold', 'w-10', 'h-10', 'rounded-full', 'flex', 'items-center', 'justify-center', 'mx-auto', 'mt-4',
-                                            'transition-colors', 'duration-200', 'focus:outline-none', 'focus:shadow-outline'
-                                        ];
-                                        if (isAddButtonTrulyDisabled) {
-                                            addButtonClassesArray.push('bg-white', 'text-blue-500', 'border', 'border-blue-500', 'cursor-not-allowed');
-                                        } else {
-                                            addButtonClassesArray.push('bg-blue-500', 'hover:bg-blue-700', 'text-white');
-                                        }
-                                        const addButtonClassName = addButtonClassesArray.join(' ');
+                                            'transition-colors', 'duration-200', 'focus:outline-none', 'focus:shadow-outline',
+                                            isAddButtonTrulyDisabled
+                                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                                                : 'bg-blue-500 hover:bg-blue-700 text-white'
+                                        );
 
                                         const addButtonDisabled = isAddButtonTrulyDisabled;
 
@@ -398,7 +398,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 {
                                                     type: 'button',
                                                     onClick: () => handleRemoveTshirtRow(categoryName, teamIndex, tshirtIndex),
-                                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${team.tshirts.length === 1 ? 'invisible' : ''}`,
+                                                    className: classNames(
+                                                        'bg-red-500', 'hover:bg-red-700', 'text-white', 'font-bold', 'w-8', 'h-8', 'rounded-full',
+                                                        'flex', 'items-center', 'justify-center', 'transition-colors', 'duration-200',
+                                                        'focus:outline-none', 'focus:shadow-outline',
+                                                        team.tshirts.length === 1 ? 'invisible' : ''
+                                                    ),
                                                     disabled: loading || team.tshirts.length === 1,
                                                 },
                                                 '-'
@@ -414,12 +419,15 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: addButtonDisabled,
                                         },
                                         '+'
-                                    ),
-                                    teamTshirtDifference !== 0 && React.createElement(
-                                        'div',
-                                        { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
-                                        getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                     )
+                                ),
+                                teamTshirtDifference !== 0 && React.createElement(
+                                    'div',
+                                    { className: classNames(`mt-2 p-2 rounded-lg text-center font-bold`,
+                                        teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700') // Conditional class for validation message
+                                    },
+                                    getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
+                                )
                             );
                         })
                     )
@@ -456,7 +464,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať'
+                    ) : 'Registrovať sa'
                 )
             )
         )
