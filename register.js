@@ -9,8 +9,9 @@ import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 
-import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 const formatToDatetimeLocal = (date) => {
@@ -106,7 +107,12 @@ function App() {
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
   const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
 
+  // Firebase instances and auth state
+  const [db, setDb] = React.useState(null);
+  const [auth, setAuth] = React.useState(null);
+  const [userId, setUserId] = React.useState(null);
   const [isAuthReady, setIsAuthReady] = React.useState(false);
+
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
@@ -126,9 +132,6 @@ function App() {
   const countdownEndIntervalRef = React.useRef(null);
 
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
-
-  // Removed isRegisteringRef as it's not strictly necessary for this flow and can sometimes obscure errors.
-  // const isRegisteringRef = React.useRef(false); 
 
   const countdownIntervalRef = React.useRef(null);
 
@@ -208,17 +211,19 @@ function App() {
 
 
   React.useEffect(() => {
+    // Show global loader while Firebase is initializing
     if (window.showGlobalLoader) {
       window.showGlobalLoader();
     }
 
     try {
-      const authInstance = window.auth;
-      const firestoreDb = window.db;
+      // Access global Firebase config
+      const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+      const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-      if (!authInstance || !firestoreDb) {
-        console.error("register.js: Firebase Auth alebo Firestore nie sú globálne dostupné. Skontrolujte register.html.");
-        setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
+      if (!firebaseConfig) {
+        console.error("register.js: Firebase config nie je dostupný.");
+        setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase konfigurácia chýba.');
         setShowNotification(true);
         setNotificationType('error');
         if (window.hideGlobalLoader) {
@@ -227,21 +232,70 @@ function App() {
         return;
       }
 
-      const unsubscribe = window.auth.onAuthStateChanged(async (currentUser) => {
-        setIsAuthReady(true);
+      const app = initializeApp(firebaseConfig);
+      const authInstance = getAuth(app);
+      const firestoreDb = getFirestore(app);
+
+      setAuth(authInstance);
+      setDb(firestoreDb);
+
+      // Listen for auth state changes
+      const unsubscribeAuth = onAuthStateChanged(authInstance, async (currentUser) => {
+        if (currentUser) {
+          setUserId(currentUser.uid);
+          console.log("register.js: Používateľ je prihlásený, UID:", currentUser.uid);
+        } else {
+          // Attempt to sign in with custom token if available, otherwise anonymously
+          if (initialAuthToken) {
+            try {
+              console.log("register.js: Pokúšam sa prihlásiť s vlastným tokenom...");
+              await signInWithCustomToken(authInstance, initialAuthToken);
+              console.log("register.js: Prihlásenie s vlastným tokenom úspešné.");
+            } catch (error) {
+              console.error("register.js: Chyba pri prihlásení s vlastným tokenom:", error);
+              setNotificationMessage(`Chyba pri prihlásení: ${error.message}`);
+              setShowNotification(true);
+              setNotificationType('error');
+              // Fallback to anonymous if custom token fails
+              try {
+                console.log("register.js: Prihlasujem sa anonymne ako záloha...");
+                await signInAnonymously(authInstance);
+                console.log("register.js: Anonymné prihlásenie úspešné.");
+              } catch (anonError) {
+                console.error("register.js: Chyba pri anonymnom prihlásení:", anonError);
+                setNotificationMessage(`Chyba pri anonymnom prihlásení: ${anonError.message}`);
+                setShowNotification(true);
+                setNotificationType('error');
+              }
+            }
+          } else {
+            // Sign in anonymously if no custom token
+            try {
+              console.log("register.js: Pokúšam sa prihlásiť anonymne...");
+              await signInAnonymously(authInstance);
+              console.log("register.js: Anonymné prihlásenie úspešné.");
+            } catch (anonError) {
+              console.error("register.js: Chyba pri anonymnom prihlásení:", anonError);
+              setNotificationMessage(`Chyba pri anonymnom prihlásení: ${anonError.message}`);
+              setShowNotification(true);
+              setNotificationType('error');
+            }
+          }
+        }
+        setIsAuthReady(true); // Set auth ready after initial check/sign-in attempt
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
       });
 
       return () => {
-        unsubscribe();
+        unsubscribeAuth();
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
       };
     } catch (error) {
-      console.error("Chyba pri inicializácii Firebase v register.js:", error);
+      console.error("register.js: Chyba pri inicializácii Firebase v register.js:", error);
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
       setNotificationType('error');
@@ -249,15 +303,16 @@ function App() {
         window.hideGlobalLoader();
       }
     }
-  }, []);
+  }, []); // Run only once on component mount
 
   React.useEffect(() => {
-    const firestoreDb = window.db;
-    if (!firestoreDb || !isAuthReady) {
+    if (!db || !isAuthReady) {
+      console.log("register.js: Firestore DB alebo Auth nie sú pripravené, nenačítavam nastavenia/kategórie.");
       return;
     }
+    console.log("register.js: Načítavam nastavenia a kategórie z Firestore.");
 
-    const settingsDocRef = doc(collection(firestoreDb, 'settings'), 'registration');
+    const settingsDocRef = doc(collection(db, 'settings'), 'registration');
     const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists()) {
           const data = docSnapshot.data();
@@ -267,8 +322,9 @@ function App() {
           setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
           setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
           setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
+          console.log("register.js: Nastavenia registrácie úspešne načítané.");
       } else {
-          console.log("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
+          console.warn("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
           setRegistrationStartDate('');
           setRegistrationEndDate('');
           setDataEditDeadline('');
@@ -285,19 +341,24 @@ function App() {
       setSettingsLoaded(true);
     });
 
-    const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
+    const categoriesDocRef = doc(collection(db, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
       if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
         setCategoriesDataFromFirestore(docSnapshot.data());
+        console.log("register.js: Kategórie úspešne načítané.");
       } else {
         setCategoriesExist(false);
         setCategoriesDataFromFirestore({});
+        console.warn("register.js: Kategórie sa nenašli v Firestore.");
       }
     }, error => {
       console.error("register.js: Chyba pri načítaní kategórií (onSnapshot):", error);
       setCategoriesExist(false); 
       setCategoriesDataFromFirestore({});
+      setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
+      setShowNotification(true);
+      setNotificationType('error');
     });
 
 
@@ -305,7 +366,7 @@ function App() {
       unsubscribeSettings();
       unsubscribeCategories();
     };
-  }, [isAuthReady]);
+  }, [db, isAuthReady]); // Depend on db and isAuthReady
 
   React.useEffect(() => {
     const updateCountdown = () => {
@@ -589,8 +650,6 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
-    // Removed isRegisteringRef as it's not strictly necessary for this flow and can sometimes obscure errors.
-    // isRegisteringRef.current = true; 
     console.log("App.js: handleFinalSubmit started.");
 
 
@@ -598,17 +657,12 @@ function App() {
     console.log("App.js: Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber);
 
     try {
-      const authInstance = window.auth;
-      const firestoreDb = window.db;
-
-      if (!authInstance || !firestoreDb) {
-        console.error("App.js: Firebase Auth alebo Firestore nie sú globálne dostupné. Zastavujem registráciu.");
+      if (!auth || !db) { // Use state variables auth and db
+        console.error("App.js: Firebase Auth alebo Firestore nie sú pripravené. Zastavujem registráciu.");
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
-        setLoading(false);
-        // isRegisteringRef.current = false; // Moved to finally block
-        return;
+        return; // Early return to prevent further execution
       }
       console.log("App.js: Firebase Auth a Firestore sú dostupné.");
 
@@ -616,14 +670,12 @@ function App() {
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         console.warn("App.js: reCAPTCHA Token nebol získaný. Zastavujem registráciu.");
-        setLoading(false);
-        // isRegisteringRef.current = false; // Moved to finally block
-        return;
+        return; // Early return
       }
       console.log("App.js: reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
       console.log("App.js: Pokúšam sa vytvoriť používateľa v Authentication...");
-      const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password); // Use state auth
       const user = userCredential.user;
 
       if (!user || !user.uid) {
@@ -631,14 +683,12 @@ function App() {
         setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
-        setLoading(false);
-        // isRegisteringRef.current = false; // Moved to finally block
-        return;
+        return; // Early return
       }
       console.log("App.js: Používateľ vytvorený v Auth s UID:", user.uid);
 
 
-      const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
+      const userDocRef = doc(collection(db, 'users'), user.uid); // Use state db
 
       console.log("App.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       await setDoc(userDocRef, {
@@ -696,24 +746,22 @@ function App() {
             body: JSON.stringify(payload)
           });
           console.log("App.js: Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
-          // With 'no-cors' mode, response.text() or response.json() might fail due to opaque response.
-          // We can only check if the fetch operation itself didn't throw an error.
           console.log("App.js: Ak je 'no-cors' režim, výsledok fetchu nemusí byť dostupný. Pokračujem.");
       } catch (emailError) {
           console.error("App.js: Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
-          // Do not re-throw, email sending is secondary
       }
 
-      await new Promise(resolve => setTimeout(resolve, 200)); // Short delay for notification to show
+      await new Promise(resolve => setTimeout(resolve, 200)); 
 
       setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
       setNotificationType('success');
-      setRegistrationSuccess(true); // Triggers success state and conditional rendering
+      setRegistrationSuccess(true); 
 
       console.log("App.js: Registrácia úspešná, pokúšam sa odhlásiť používateľa.");
       try {
-        await signOut(authInstance);
+        // Ensure signOut uses the 'auth' state variable
+        await signOut(auth); 
         console.log("App.js: Používateľ úspešne odhlásený po registrácii.");
       } catch (signOutError) {
         console.error("App.js: Chyba pri odhlasovaní po registrácii:", signOutError);
@@ -728,9 +776,8 @@ function App() {
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
       setTeamsDataFromPage4({});
-      setPage(1); // Set page to 1, which corresponds to register.html initial view
+      setPage(1); 
 
-      // Redirect after a delay to allow success message to be seen
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 5000);
@@ -765,13 +812,67 @@ function App() {
       setNotificationType('error');
     } finally {
       setLoading(false);
-      // isRegisteringRef.current = false; // Reset outside try-catch
       console.log("App.js: handleFinalSubmit finished.");
     }
   };
 
   React.useEffect(() => {
-  }, [settingsLoaded, isAuthReady]); 
+    // This useEffect ensures that settings and categories are only loaded once 'db' and 'isAuthReady' are true.
+    // This helps avoid race conditions where Firestore calls are made before the DB instance is ready.
+    if (!db || !isAuthReady) {
+      return;
+    }
+    console.log("App.js: Db a Auth sú pripravené, načítavam nastavenia a kategórie...");
+
+    const settingsDocRef = doc(collection(db, 'settings'), 'registration');
+    const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
+      if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
+          setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
+          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
+          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
+          setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
+          setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
+          console.log("App.js: Nastavenia registrácie načítané.");
+      } else {
+          console.warn("App.js: Nastavenia registrácie sa nenašli v Firestore.");
+      }
+      setSettingsLoaded(true);
+    }, error => {
+      console.error("App.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+      setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
+      setShowNotification(true);
+      setNotificationType('error');
+      setSettingsLoaded(true);
+    });
+
+    const categoriesDocRef = doc(collection(db, 'settings'), 'categories');
+    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
+      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
+        setCategoriesExist(true);
+        setCategoriesDataFromFirestore(docSnapshot.data());
+        console.log("App.js: Kategórie načítané.");
+      } else {
+        setCategoriesExist(false);
+        setCategoriesDataFromFirestore({});
+        console.warn("App.js: Kategórie sa nenašli v Firestore.");
+      }
+    }, error => {
+      console.error("App.js: Chyba pri načítaní kategórií (onSnapshot):", error);
+      setCategoriesExist(false); 
+      setCategoriesDataFromFirestore({});
+      setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
+      setShowNotification(true);
+      setNotificationType('error');
+    });
+
+    return () => {
+      unsubscribeSettings();
+      unsubscribeCategories();
+    };
+  }, [db, isAuthReady]); // Dependencies: db and isAuthReady
+
 
   return React.createElement(
     'div',
@@ -779,14 +880,23 @@ function App() {
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     !settingsLoaded || !isAuthReady ? (
-      null
+      // Show a loading or initialization message
+      React.createElement(
+        'div',
+        { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+        React.createElement(
+          'p',
+          { className: 'text-gray-600 text-lg font-semibold' },
+          'Načítava sa aplikácia...'
+        )
+      )
     ) : registrationSuccess ? (
       React.createElement(
         'div',
-        { className: 'bg-green-700', text: 'white', p: '8', rounded: 'lg', shadow: 'md', w: 'full', maxW: 'md', text: 'center' },
+        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-4 text-black' },
+          { className: 'text-2xl font-bold mb-4 text-white' },
           'Registrácia úspešná!'
         ),
         React.createElement(
@@ -908,50 +1018,50 @@ function App() {
   );
 }
 
-let appInitialized = false;
-let globalDataUpdatedReceived = false;
-let categoriesLoadedReceived = false;
+// Global Firebase initialization should ideally be handled once in register.html,
+// but for this React component, we'll manage it internally for robustness.
+// Removed global initialization flags as React's useEffect handles lifecycle better.
+// let appInitialized = false;
+// let globalDataUpdatedReceived = false;
+// let categoriesLoadedReceived = false;
 
-function initializeRegistrationApp() {
-  if (appInitialized) {
-    console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
-    return;
-  }
-  
-  if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
-    console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
-    return;
-  }
+// Removed redundant initializeRegistrationApp as React's App component handles rendering.
+// function initializeRegistrationApp() {
+//   if (appInitialized) {
+//     console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
+//     return;
+//   }
+//   if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
+//     console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
+//     return;
+//   }
+//   const rootElement = document.getElementById('root');
+//   if (rootElement) {
+//     const root = ReactDOM.createRoot(rootElement);
+//     appInitialized = true;
+//     root.render(React.createElement(App, null));
+//     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+//   } else {
+//     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
+//   }
+// }
 
-  const rootElement = document.getElementById('root');
-  if (rootElement) {
-    const root = ReactDOM.createRoot(rootElement);
-    appInitialized = true;
+// Removed global event listeners as Firebase initialization is now handled in App's useEffect.
+// window.addEventListener('globalDataUpdated', () => {
+//   console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
+//   globalDataUpdatedReceived = true;
+//   initializeRegistrationApp();
+// });
+// window.addEventListener('categoriesLoaded', () => {
+//   console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
+//   categoriesLoadedReceived = true;
+//   initializeRegistrationApp();
+// });
 
-    root.render(React.createElement(App, null));
-    console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
-
-  } else {
-    console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
-  }
-}
-
-window.addEventListener('globalDataUpdated', () => {
-  console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
-  globalDataUpdatedReceived = true;
-  initializeRegistrationApp();
-});
-
-window.addEventListener('categoriesLoaded', () => {
-  console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
-  categoriesLoadedReceived = true;
-  initializeRegistrationApp();
-});
-
-
-if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
-  console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
-  globalDataUpdatedReceived = true;
-  categoriesLoadedReceived = true;
-  initializeRegistrationApp();
-}
+// Removed immediate initialization check. React's useEffect handles this.
+// if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
+//   console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
+//   globalDataUpdatedReceived = true;
+//   categoriesLoadedReceived = true;
+//   initializeRegistrationApp();
+// }
