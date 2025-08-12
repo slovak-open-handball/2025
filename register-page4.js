@@ -197,12 +197,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return allTshirtsMatch;
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
-    const registerButtonClasses = classNames(
-        'font-bold', 'py-2', 'px-4', 'rounded-lg', 'focus:outline-none', 'focus:shadow-outline', 'transition-colors', 'duration-200',
-        loading || !isRecaptchaReady || !isFormValidPage4
-            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-            : 'bg-green-500 hover:bg-green-700 text-white'
-    );
+    const registerButtonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
+    ${loading || !isRecaptchaReady || !isFormValidPage4
+      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
+      : 'bg-green-500 hover:bg-green-700 text-white'
+    }
+  `;
 
     const handleFinalSubmit = async (e) => {
         e.preventDefault();
@@ -274,8 +275,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             const teamTshirtDifference = teamRequiredTshirts - teamOrderedTshirts;
 
                             const validationMessageColorClass = teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
-                            const validationMessageClasses = `mt-2 p-2 rounded-lg text-center font-bold ${validationMessageColorClass}`;
-
 
                             return React.createElement(
                                 'div',
@@ -356,17 +355,18 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     ),
                                     (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => {
                                         const hasInvalidTshirtFields = team.tshirts.some(t => 
-                                            t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))
+                                            t.size === '' || tshirt.quantity === '' || isNaN(parseInt(tshirt.quantity, 10))
                                         );
                                         const isAddButtonTrulyDisabled = loading || hasInvalidTshirtFields || getAvailableTshirtSizeOptions(team.tshirts).length === 0;
 
-                                        const addButtonClassName = classNames(
-                                            'font-bold', 'w-10', 'h-10', 'rounded-full', 'flex', 'items-center', 'justify-center', 'mx-auto', 'mt-4',
-                                            'transition-colors', 'duration-200', 'focus:outline-none', 'focus:shadow-outline',
-                                            isAddButtonTrulyDisabled
+                                        const addButtonClassName = `
+                                            font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
+                                            transition-colors duration-200 focus:outline-none focus:shadow-outline
+                                            ${isAddButtonTrulyDisabled
                                                 ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
                                                 : 'bg-blue-500 hover:bg-blue-700 text-white'
-                                        );
+                                            }
+                                        `.trim();
 
                                         const addButtonDisabled = isAddButtonTrulyDisabled;
 
@@ -402,12 +402,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 {
                                                     type: 'button',
                                                     onClick: () => handleRemoveTshirtRow(categoryName, teamIndex, tshirtIndex),
-                                                    className: classNames(
-                                                        'bg-red-500', 'hover:bg-red-700', 'text-white', 'font-bold', 'w-8', 'h-8', 'rounded-full',
-                                                        'flex', 'items-center', 'justify-center', 'transition-colors', 'duration-200',
-                                                        'focus:outline-none', 'focus:shadow-outline',
-                                                        team.tshirts.length === 1 ? 'invisible' : ''
-                                                    ),
+                                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${team.tshirts.length === 1 ? 'invisible' : ''}`,
                                                     disabled: loading || team.tshirts.length === 1,
                                                 },
                                                 '-'
@@ -428,7 +423,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
                                     {
-                                        className: validationMessageClasses
+                                        className: `mt-2 p-2 rounded-lg text-center font-bold ${validationMessageColorClass}`
                                     },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
