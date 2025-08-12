@@ -83,6 +83,19 @@ function TournamentSettingsApp() {
   const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
   const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
 
+  // NOVINKA: Stav pre indikáciu, či je registrácia aktívna (na základe dátumov)
+  const isRegistrationOpen = React.useMemo(() => {
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
+
+    const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
+    const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
+
+    // Registrácia je otvorená, ak aktuálny čas je medzi dátumom začiatku a konca (vrátane, ak dátumy existujú)
+    return (isRegStartValid ? now >= regStart : true) && (isRegEndValid ? now <= regEnd : true);
+  }, [registrationStartDate, registrationEndDate]);
+
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
@@ -360,10 +373,11 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-players',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isRegistrationOpen ? 'bg-gray-200 cursor-not-allowed' : ''}`, // Podmienené triedy
           value: numberOfPlayers,
           onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
           min: 0, // Minimálna hodnota
+          disabled: isRegistrationOpen, // Zablokovanie inputu
         })
       ),
       React.createElement(
@@ -373,10 +387,11 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-implementation-team',
-          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isRegistrationOpen ? 'bg-gray-200 cursor-not-allowed' : ''}`, // Podmienené triedy
           value: numberOfImplementationTeam,
           onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
           min: 0, // Minimálna hodnota
+          disabled: isRegistrationOpen, // Zablokovanie inputu
         })
       ),
       React.createElement(
