@@ -353,7 +353,6 @@ function TournamentSettingsApp() {
           onChange: (e) => setRosterEditDeadline(e.target.value),
         })
       ),
-      {/* NOVINKA: Input box pre počet hráčov */}
       React.createElement(
         'div',
         null,
@@ -367,7 +366,6 @@ function TournamentSettingsApp() {
           min: 0, // Minimálna hodnota
         })
       ),
-      {/* NOVINKA: Input box pre počet členov realizačného tímu */}
       React.createElement(
         'div',
         null,
