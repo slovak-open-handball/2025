@@ -222,7 +222,7 @@ const validateEmail = (email) => {
 };
 
 // Page1Form Component
-export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady, isRegistrationClosed, registrationEndDate }) { // Pridaný registrationEndDate
+export function Page1Form({ formData, handleChange, handleNext, loading, notificationMessage, closeNotification, isCountryCodeModalOpen, setIsCountryCodeModalOpen, setSelectedCountryDialCode, selectedCountryDialCode, NotificationModal, isRegistrationOpen, countdownMessage, registrationStartDate, isRecaptchaReady, isRegistrationClosed, registrationEndDate, hasAnyPage1Data }) { // Pridaný registrationEndDate a hasAnyPage1Data
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   // NOVINKA: Stav pre sledovanie, či bol input "Potvrdiť heslo" aktivovaný
@@ -396,18 +396,22 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
 
 
   // Kontrola, či sú všetky povinné polia vyplnené
-  const isFormValid = formData.firstName.trim() !== '' &&
+  const areCoreFieldsValid = formData.firstName.trim() !== '' &&
                       formData.lastName.trim() !== '' &&
                       formData.email.trim() !== '' &&
-                      validateEmail(formData.email) && // NOVINKA: Kontrola formátu emailu
+                      validateEmail(formData.email) &&
                       formData.contactPhoneNumber.trim() !== '' &&
-                      formData.password.length >= 10 && // Základná kontrola dĺžky hesla
+                      formData.password.length >= 10 &&
                       /[a-z]/.test(formData.password) &&
                       /[A-Z]/.test(formData.password) &&
                       /\d/.test(formData.password) &&
-                      formData.password === formData.confirmPassword &&
-                      isRegistrationOpen && // Formulár je validný len ak je registrácia otvorená
-                      isRecaptchaReady;
+                      formData.password === formData.confirmPassword;
+
+  // NOVINKA: Upravená logika pre isFormValid
+  // Tlačidlo "Ďalej" je validné, ak sú core polia validné, reCAPTCHA pripravená,
+  // A (registrácia je otvorená ALEBO (registrácia je uzavretá a formulár NIE JE prázdny))
+  const isFormValid = areCoreFieldsValid && isRecaptchaReady && (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data));
+
 
   // Dynamické triedy pre tlačidlo "Ďalej"
   const nextButtonClasses = `
@@ -437,6 +441,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
     // React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
 
     // Podmienené zobrazenie na základe stavu registrácie a či sú polia prázdne
+    // Zobrazí správu o ukončení registrácie, LEN AK je registrácia ukončená A ZÁROVEŇ Page1 polia sú PRÁZDNE.
+    // Inak (ak sú dáta alebo je registrácia otvorená), zobrazí formulár.
     isRegistrationClosed && isPage1FieldsEmpty() ? (
       // Zobrazenie správy o ukončenej registrácii, AK je registrácia ukončená a Page1 polia sú PRÁZDNE
       React.createElement(
@@ -525,7 +531,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte vaše meno',
                 tabIndex: 1,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
+                // NOVINKA: inputy sú disabled len ak nie je registrácia otvorená A zároveň NIE sú žiadne dáta.
+                // Ak sú dáta (pre nedokončený formulár), inputy sú povolené na editáciu.
+                disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
               })
             )
           ),
@@ -548,7 +556,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte vaše priezvisko',
                 tabIndex: 2,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
+                disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
               })
             )
           ),
@@ -574,7 +582,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 placeholder: 'Zadajte svoju e-mailovú adresu',
                 autoComplete: 'email',
                 tabIndex: 3,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
+                disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
               })
             ),
             // NOVINKA: Zobrazenie správy pre neplatný email
@@ -602,7 +610,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                   className: 'bg-white text-gray-800 font-bold py-2 px-3 rounded-l-lg focus:outline-none flex-shrink-0 flex items-center',
                   onClick: () => setIsCountryCodeModalOpen(true),
                   tabIndex: 4,
-                  disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
+                  disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
                 },
                 selectedCountryDialCode || '+XXX',
                 ChevronDown
@@ -618,7 +626,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte telefónne číslo',
                 tabIndex: 5,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
+                disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady
               })
             )
           ),
@@ -635,7 +643,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.',
             validationRules: getPasswordValidationRules(formData.password), // Používame priamo funkciu
             tabIndex: 6,
-            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
+            disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady,
             showPassword: showPassword,
             toggleShowPassword: toggleShowPassword,
           }),
@@ -654,7 +662,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
             tabIndex: 7,
-            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
+            disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady,
             showPassword: showConfirmPassword,
             toggleShowPassword: toggleShowConfirmPassword,
             showValidationList: false // Nezobrazovať zoznam pre toto pole
@@ -692,7 +700,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
-      disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
+      disabled: loading || (!isRegistrationOpen && !hasAnyPage1Data) || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia a nie sú dáta
     })
   );
 }
