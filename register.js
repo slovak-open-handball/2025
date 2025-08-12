@@ -125,7 +125,7 @@ function App() {
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
-  // NOVINKA: Stavy pre počet hráčov a členov realizačného tímu načítané z nastavení
+  // NOVINKA: Stavy pre počet hráčov a členov realizačného tímu
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
@@ -228,7 +228,7 @@ function App() {
   }, [registrationEndDate]);
 
 
-  // Inicializácia autentifikácie (už sa nespúšťa initializeApp ani signIn, očakáva sa z globálu)
+  // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
     if (window.showGlobalLoader) {
       window.showGlobalLoader();
@@ -287,10 +287,11 @@ function App() {
     const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists()) {
           const data = docSnapshot.data();
+          console.log("register.js: Nastavenia registrácie existujú, dáta:", data);
           setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
           setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
-          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
+          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
+          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); // Načítanie nového dátumu
           // NOVINKA: Načítanie počtu hráčov a členov realizačného tímu
           setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
           setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
@@ -299,14 +300,15 @@ function App() {
           console.warn("register.js: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
           setRegistrationStartDate('');
           setRegistrationEndDate('');
-          setDataEditDeadline('');
-          setRosterEditDeadline('');
+          setDataEditDeadline(''); 
+          setRosterEditDeadline(''); // Predvolená prázdna hodnota pre nový dátum
+          // NOVINKA: Predvolené hodnoty pre počet hráčov a členov realizačného tímu
           setNumberOfPlayersInTeam(0);
           setNumberOfImplementationTeamMembers(0);
       }
       setSettingsLoaded(true);
     }, error => {
-      console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot):", error);
+      console.error("register.js: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
       setNotificationMessage(`Chyba pri načítaní nastavení: ${error.message}`);
       setShowNotification(true);
       setNotificationType('error');
@@ -648,7 +650,7 @@ function App() {
     setNotificationType('info');
     isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
-    const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
+    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
     console.log("App.js: Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
@@ -820,7 +822,7 @@ function App() {
       await new Promise(resolve => setTimeout(resolve, 200)); // Oneskorenie 200ms
 
       // Aktualizovaná správa po úspešnej registrácii
-      setNotificationMessage(`Ďakujeme za registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
+      setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
       setNotificationType('success'); // Nastavenie typu notifikácie na úspech
       setRegistrationSuccess(true); // Nastavenie stavu úspešnej registrácie
@@ -854,7 +856,7 @@ function App() {
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 20000); // 20 sekúnd na zobrazenie notifikácie
+      }, 5000); // 5 sekúnd na zobrazenie notifikácie
 
     } catch (globalError) { // Záchytný blok pre akékoľvek neočakávané chyby
       console.error('App.js: NEČAKANÁ CHYBA POČAS REGISTRÁCIE (pravdepodobne z chyby Promise mimo priameho await):', globalError);
@@ -870,13 +872,52 @@ function App() {
     }
   };
 
+  // NOVINKA: Funkcia na kontrolu, či sú nejaké polia formulára (Page1 relevantné) vyplnené
+  const isPage1FormDataEmpty = (data) => {
+    // Kontrola hlavných textových polí na Strane 1
+    if (data.firstName.trim() !== '' ||
+        data.lastName.trim() !== '' ||
+        data.email.trim() !== '' ||
+        data.contactPhoneNumber.trim() !== '' ||
+        data.password.trim() !== '' ||
+        data.confirmPassword.trim() !== '') {
+        return false;
+    }
+
+    // Kontrola polí adresy
+    if (data.houseNumber.trim() !== '' ||
+        data.country.trim() !== '' ||
+        data.city.trim() !== '' ||
+        data.postalCode.trim() !== '' ||
+        data.street.trim() !== '') {
+        return false;
+    }
+
+    // Kontrola fakturačných údajov (aj keď sú na Strane 2, sú súčasťou formData)
+    if (data.billing.clubName.trim() !== '' ||
+        data.billing.ico.trim() !== '' ||
+        data.billing.dic.trim() !== '' ||
+        data.billing.icDph.trim() !== '') {
+        return false;
+    }
+
+    return true; // Ak nič z vyššie uvedeného nie je vyplnené, formData je prázdne
+  };
+
+  const hasAnyPage1Data = !isPage1FormDataEmpty(formData);
+  const now = new Date(); // Potrebné pre zobrazenie dátumov
+
+  const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
+  const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
+
+
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
     // Notifikačné okno sa zobrazí LEN pre chyby alebo informačné správy, NIE pre úspešnú registráciu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
-    // Podmienečné renderovanie formulára alebo správy o úspechu
+    // Podmienené renderovanie formulára alebo správy o úspechu
     // Používame globálny loader namiesto lokálneho spinneru
     !settingsLoaded || !isAuthReady ? (
       // Zobrazenie správy o načítavaní, kým sa aplikácia nenačíta
@@ -886,7 +927,7 @@ function App() {
         React.createElement(
           'p',
           { className: 'text-gray-600 text-lg font-semibold' },
-          'Načítava sa aplikácia...'
+          'Načítavam aplikáciu...'
         )
       )
     ) : registrationSuccess ? (
@@ -907,27 +948,19 @@ function App() {
         React.createElement(
           'p',
           { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na tmavšom zelenom pozadí
-          'O pár sekúnd prebehne automatické presmerovanie na prihlasovaciu stránku.'
+          'Budete automaticky presmerovaní na prihlasovaciu stránku.'
         )
       )
     ) : (
-      // NOVINKA: Podmienené zobrazenie správy o kategóriách/registrácii
-      (!categoriesExist && (isBeforeRegistrationStart || isRegistrationOpen)) ? (
+      // Hlavná logika pre zobrazenie formulára alebo správ
+      // 1. Zobraziť formulár, ak je registrácia otvorená.
+      // 2. Zobraziť formulár, ak je registrácia UZAVRETÁ, ALE sú vyplnené nejaké dáta.
+      (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
+        // Zobrazenie formulára (bez ohľadu na aktuálnu stranu)
         React.createElement(
-          'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
-          React.createElement(
-            'p',
-            { className: 'text-red-600 text-lg font-semibold' },
-            'Nie je možné sa zaregistrovať na turnaj Slovak Open Handball, pretože v systéme nie sú definované žiadne kategórie.'
-          )
-        )
-      ) : (
-        // Zobrazenie formulára, ak registrácia nebola úspešná
-        page === 1 ?
-          React.createElement(
-            'div', // Obalový div pre Page1Form
-            { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+          'div', // Obalový div, ktorý bol predtým duplikovaný
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+          page === 1 ?
             React.createElement(Page1Form, {
               formData: formData,
               handleChange: handleChange,
@@ -940,79 +973,135 @@ function App() {
               setSelectedCountryDialCode: setSelectedCountryDialCode,
               selectedCountryDialCode: selectedCountryDialCode,
               NotificationModal: NotificationModal,
-              isRegistrationOpen: isRegistrationOpen,
+              isRegistrationOpen: isRegistrationOpen, // Odovzdávame isRegistrationOpen
               countdownMessage: countdown,
               registrationStartDate: registrationStartDate,
               isRecaptchaReady: isRecaptchaReady,
-              isRegistrationClosed: isRegistrationClosed, // Odovzdávame stav registrácie
-              registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
-            })
-          ) :
-        page === 2 ? // NOVINKA: Kontrola pre stranu 2
-          React.createElement(
-            'div', // Obalový div pre Page2Form
-            { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+              isRegistrationClosed: isRegistrationClosed, // Odovzdávame isRegistrationClosed
+              registrationEndDate: registrationEndDate // Odovzdávame registrationEndDate
+            }) :
+          page === 2 ?
             React.createElement(Page2Form, {
               formData: formData,
               handleChange: handleChange,
               handlePrev: handlePrev,
-              // NOVINKA: Zmena handleSubmit na handleNextPage2ToPage3 pre prechod na stranu 3
               handleSubmit: handleNextPage2ToPage3, 
               loading: loading,
-              notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+              notificationMessage: notificationMessage, 
               closeNotification: closeNotification,
               userRole: userRole,
               handleRoleChange: handleRoleChange,
               NotificationModal: NotificationModal,
-            })
-          ) :
-        page === 3 ? // NOVINKA: Zobrazenie Page3Form
+            }) :
+          page === 3 ?
+              React.createElement(Page3Form, {
+                  formData: formData,
+                  handlePrev: handlePrev,
+                  handleNextPage3: handleNextPage3ToPage4, 
+                  loading: loading,
+                  setLoading: setLoading, 
+                  notificationMessage: notificationMessage,
+                  setShowNotification: setShowNotification,
+                  setNotificationType: setNotificationType,
+                  setRegistrationSuccess: setRegistrationSuccess,
+                  isRecaptchaReady: isRecaptchaReady,
+                  selectedCountryDialCode: selectedCountryDialCode,
+                  NotificationModal: NotificationModal,
+                  availableCategoriesMap: categoriesDataFromFirestore, 
+                  selectedCategoryRows: selectedCategoryRows, 
+                  setSelectedCategoryRows: setSelectedCategoryRows, 
+              }) :
+          page === 4 ?
+              React.createElement(Page4Form, {
+                  formData: formData, 
+                  handlePrev: handlePrev,
+                  handleSubmit: handleFinalSubmit, 
+                  loading: loading,
+                  setLoading: setLoading,
+                  notificationMessage: notificationMessage,
+                  setShowNotification: setShowNotification,
+                  setNotificationType: setNotificationType,
+                  setRegistrationSuccess: setRegistrationSuccess,
+                  isRecaptchaReady: isRecaptchaReady,
+                  selectedCountryDialCode: selectedCountryDialCode,
+                  NotificationModal: NotificationModal,
+                  numberOfPlayersLimit: numberOfPlayersInTeam, 
+                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers, 
+                  teamsDataFromPage4: teamsDataFromPage4, 
+                  setTeamsDataFromPage4: setTeamsDataFromPage4, 
+                  closeNotification: closeNotification, 
+                  setNotificationMessage: setNotificationMessage, 
+                  setShowNotification: setShowNotification, 
+                  setNotificationType: setNotificationType,
+              }) : null
+        )
+      ) : isRegistrationClosed ? (
+        // Ak je registrácia ukončená a žiadne dáta nie sú vyplnené
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
+          React.createElement(
+            'h2',
+            { className: 'text-2xl font-bold mb-2 text-red-600' }, 
+            'Registrácia na turnaj je už ukončená.'
+          ),
+          React.createElement(
+            'p',
+            { className: 'text-md text-gray-700 mt-2' },
+            'Registrácia bola ukončená ',
+            registrationEndDateObj && React.createElement(
+              'span',
+              { style: { whiteSpace: 'nowrap' } },
+              'dňa ',
+              registrationEndDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+              ' o ',
+              registrationEndDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+              ' hod.'
+            )
+          )
+        )
+      ) : (isRegistrationOpen === false && countdownMessage) ? (
+        // Ak registrácia nie je otvorená, ale je aktívny odpočet
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
+          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'), // Zmenený text
+          registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
             React.createElement(
-                'div', // Obalový div pre Page3Form
-                { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
-                React.createElement(Page3Form, {
-                    formData: formData,
-                    handlePrev: handlePrev,
-                    handleNextPage3: handleNextPage3ToPage4, // NOVINKA: Prop pre prechod na stranu 4
-                    loading: loading,
-                    setLoading: setLoading, // Page3Form bude spravovať svoj loading stav
-                    notificationMessage: notificationMessage,
-                    setShowNotification: setShowNotification,
-                    setNotificationType: setNotificationType,
-                    setRegistrationSuccess: setRegistrationSuccess,
-                    isRecaptchaReady: isRecaptchaReady,
-                    selectedCountryDialCode: selectedCountryDialCode,
-                    NotificationModal: NotificationModal,
-                    availableCategoriesMap: categoriesDataFromFirestore, // Odovzdanie načítaných kategórií do Page3Form
-                    selectedCategoryRows: selectedCategoryRows, // NOVINKA: Odovzdanie stavu pre kategórie
-                    setSelectedCategoryRows: setSelectedCategoryRows, // NOVINKA: Odovzdanie setter funkcie
-                })
-            ) :
-        page === 4 ? // NOVINKA: Zobrazenie Page4Form
-            React.createElement(
-                'div', // Obalový div pre Page4Form
-                { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
-                React.createElement(Page4Form, {
-                    formData: formData, // formData obsahuje selectedCategoryRows ako formData.categories
-                    handlePrev: handlePrev,
-                    handleSubmit: handleFinalSubmit, // Finálne odoslanie formulára
-                    loading: loading,
-                    setLoading: setLoading,
-                    notificationMessage: notificationMessage,
-                    setShowNotification: setShowNotification,
-                    setNotificationType: setNotificationType,
-                    setRegistrationSuccess: setRegistrationSuccess,
-                    isRecaptchaReady: isRecaptchaReady,
-                    selectedCountryDialCode: selectedCountryDialCode,
-                    NotificationModal: NotificationModal,
-                    numberOfPlayersLimit: numberOfPlayersInTeam, // NOVINKA: Limit pre hráčov
-                    numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // NOVINKA: Limit pre členov realizačného tímu
-                    teamsDataFromPage4: teamsDataFromPage4, // DÔLEŽITÉ: Posielame aktuálny stav dát tímov
-                    setTeamsDataFromPage4: setTeamsDataFromPage4, // Setter pre dáta tímov
-                    closeNotification: closeNotification, // Odovzdanie closeNotification do Page4Form
-                })
-            ) : null
-      )
+              React.Fragment,
+              null,
+              React.createElement(
+                'p',
+                { className: 'text-md text-gray-700 mt-2' }, // Odstránená trieda whitespace-nowrap z <p>
+                'Registrácia sa spustí ', // Zmenený text
+                React.createElement(
+                  'span',
+                  { style: { whiteSpace: 'nowrap' } }, // span pre nezalamovanie dátumu a času
+                  'dňa ',
+                  registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                  ' o ',
+                  registrationStartDateObj.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }),
+                  ' hod.'
+                )
+              ),
+              countdownMessage && (
+                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdownMessage}`))
+              )
+            )
+          )
+        )
+      ) : (isRegistrationOpen === null) ? (
+        // Ak sa stav registrácie ešte načítava
+        React.createElement(
+          'div',
+          { className: 'flex items-center justify-center py-8' },
+          React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+            React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+            React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
+          ),
+          'Načítavam stav registrácie...'
+        )
+      ) : null // Tento prípad by nemal nastať pri správne spracovaných podmienkach
     )
   );
 }
