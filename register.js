@@ -127,7 +127,8 @@ function App() {
 
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
-  const isRegisteringRef = React.useRef(false);
+  // Removed isRegisteringRef as it's not strictly necessary for this flow and can sometimes obscure errors.
+  // const isRegisteringRef = React.useRef(false); 
 
   const countdownIntervalRef = React.useRef(null);
 
@@ -588,7 +589,8 @@ function App() {
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
-    isRegisteringRef.current = true;
+    // Removed isRegisteringRef as it's not strictly necessary for this flow and can sometimes obscure errors.
+    // isRegisteringRef.current = true; 
     console.log("App.js: handleFinalSubmit started.");
 
 
@@ -600,12 +602,12 @@ function App() {
       const firestoreDb = window.db;
 
       if (!authInstance || !firestoreDb) {
-        console.error("App.js: Firebase Auth alebo Firestore nie sú globálne dostupné.");
+        console.error("App.js: Firebase Auth alebo Firestore nie sú globálne dostupné. Zastavujem registráciu.");
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        isRegisteringRef.current = false;
+        // isRegisteringRef.current = false; // Moved to finally block
         return;
       }
       console.log("App.js: Firebase Auth a Firestore sú dostupné.");
@@ -613,9 +615,9 @@ function App() {
 
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
-        console.warn("App.js: reCAPTCHA Token nebol získaný.");
+        console.warn("App.js: reCAPTCHA Token nebol získaný. Zastavujem registráciu.");
         setLoading(false);
-        isRegisteringRef.current = false;
+        // isRegisteringRef.current = false; // Moved to finally block
         return;
       }
       console.log("App.js: reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
@@ -625,12 +627,12 @@ function App() {
       const user = userCredential.user;
 
       if (!user || !user.uid) {
-        console.error("App.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
+        console.error("App.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii. Zastavujem registráciu.");
         setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        isRegisteringRef.current = false;
+        // isRegisteringRef.current = false; // Moved to finally block
         return;
       }
       console.log("App.js: Používateľ vytvorený v Auth s UID:", user.uid);
@@ -734,7 +736,7 @@ function App() {
       }, 5000);
 
     } catch (error) {
-      console.error('App.js: Chyba počas registrácie alebo zápisu do Firestore:', error);
+      console.error('App.js: Vyskytla sa chyba počas registrácie alebo zápisu do Firestore:', error);
       let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
 
       if (error.code) {
@@ -763,7 +765,7 @@ function App() {
       setNotificationType('error');
     } finally {
       setLoading(false);
-      isRegisteringRef.current = false;
+      // isRegisteringRef.current = false; // Reset outside try-catch
       console.log("App.js: handleFinalSubmit finished.");
     }
   };
