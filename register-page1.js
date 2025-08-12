@@ -281,25 +281,30 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
   // Helper funkcia na mapovanie pozície kurzora z vyčistenej hodnoty na naformátovanú hodnotu
-  const getFormattedCursorPos = (rawPos, newCleanedValue, newFormattedValue) => {
-    let formattedPos = 0;
-    let currentCleanedCharCount = 0; 
-
-    for (let i = 0; i < newFormattedValue.length; i++) {
-        if (newFormattedValue[i] === ' ') {
-            if (currentCleanedCharCount >= rawPos) {
-                 return formattedPos; // Ak je kurzor pred touto medzerou, vrátiť pozíciu pred medzerou
-            }
-        } else {
-            currentCleanedCharCount++; 
-        }
-        formattedPos++; 
-
-        if (currentCleanedCharCount === rawPos) {
-            return formattedPos;
-        }
+  const getFormattedCursorPos = (rawCursorPos, newFormattedValue) => {
+    if (rawCursorPos === 0) {
+      return 0; // Kurzoru je na začiatku, vráti pozíciu 0
     }
-    return newFormattedValue.length; 
+
+    let currentRawDigits = 0;
+    let formattedPos = 0;
+    for (let i = 0; i < newFormattedValue.length; i++) {
+      if (newFormattedValue[i] !== ' ') {
+        currentRawDigits++;
+      }
+      formattedPos = i + 1; // Pozícia za aktuálnym znakom
+
+      if (currentRawDigits === rawCursorPos) {
+        // Ak sa naformátovaná pozícia +1 (teda pozícia za potenciálnou medzerou)
+        // delí 4 bezo zvyšku a ide o medzeru, posunieme kurzor za ňu.
+        // Tým sa zabezpečí, že kurzor je po medzere, ak tam medzera patrí.
+        if ((formattedPos < newFormattedValue.length) && (newFormattedValue[formattedPos] === ' ') && ((formattedPos + 1) % 4 === 0) ) {
+            return formattedPos + 1; // Kurzor za medzerou
+        }
+        return formattedPos; // Inak, kurzor za aktuálnou číslicou
+      }
+    }
+    return newFormattedValue.length; // Návrat na koniec reťazca ako fallback
   };
 
 
@@ -335,36 +340,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       setTimeout(() => {
           if (phoneInputRef.current) {
               // Pre vymazávanie a vkladanie musíme zistiť, kde sa kurzor nachádza v čistom reťazci
-              let actualCleanedCursorPos = 0;
-              let tempFormattedPos = 0;
-              for(let i = 0; i < originalCursorPos; i++) {
-                  if (originalValue[i] >= '0' && originalValue[i] <= '9') {
-                      actualCleanedCursorPos++;
-                  }
-                  // Ak je originálna pozícia kurzora na medzere, posunieme čistú pozíciu, aby sa zohľadnil posun v čistom reťazci
-                  if (originalValue[i] === ' ' && originalCursorPos === i + 1) {
-                      actualCleanedCursorPos++; // simulate passing a digit
-                  }
-              }
-
-              // Special handling for deletion when originalValue had a space just before cursor
-              if (e.nativeEvent && e.nativeEvent.inputType === 'deleteContentBackward') { // Backspace
-                // If the char before cursor in originalValue was a space, and the cursor was after it,
-                // and the char before that was a digit, this means we are deleting the digit after a space
-                if (originalCursorPos > 0 && originalValue.charAt(originalCursorPos - 1) === ' ' && originalValue.charAt(originalCursorPos - 2) !== ' ') {
-                    actualCleanedCursorPos--; // Adjust to account for the deleted digit before the space
-                }
-              } else if (e.nativeEvent && e.nativeEvent.inputType === 'deleteContentForward') { // Delete key
-                  // If the char at cursor in originalValue was a space, and the cursor was before it
-                  if (originalValue.charAt(originalCursorPos) === ' ' && originalValue.charAt(originalCursorPos -1) !== ' ') {
-                      // Do nothing, the originalCleanedCursorPos is already correct as we are deleting a non-digit
-                  } else if (originalValue.charAt(originalCursorPos) >= '0' && originalValue.charAt(originalCursorPos) <= '9') {
-                     // If we are deleting a digit, the cleaned cursor position should effectively stay where it is
-                     // The getFormattedCursorPos will then map it correctly
-                  }
-              }
+              // (táto časť už bola správne upravená v predchádzajúcej iterácii)
               
-              const newCursorFormattedPos = getFormattedCursorPos(actualCleanedCursorPos, newCleanedValue, newFormattedValue);
+              const newCursorFormattedPos = getFormattedCursorPos(originalCleanedCursorPos, newFormattedValue);
               phoneInputRef.current.setSelectionRange(newCursorFormattedPos, newCursorFormattedPos);
           }
       }, 0);
@@ -390,9 +368,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 target: {
                     id: 'contactPhoneNumber',
                     value: newValue,
-                    selectionStart: cursorPosition - 2, // Predpokladaná pozícia kurzora po vymazaní
+                    // SelectionStart necháme tak, ako ho určí browser pre Backspace,
+                    // handlePhoneNumberInputChange ho potom premapuje
+                    selectionStart: cursorPosition - 2, 
                     selectionEnd: cursorPosition - 2,
-                    // Pridáme inputType pre rozlíšenie v handlePhoneNumberInputChange
                     nativeEvent: { inputType: 'deleteContentBackward' } 
                 }
             };
@@ -411,7 +390,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 target: {
                     id: 'contactPhoneNumber',
                     value: newValue,
-                    selectionStart: cursorPosition, // Kurzor zostáva na pôvodnej pozícii
+                    // Pre Delete chceme, aby kurzor zostal na pôvodnej pozícii, pokiaľ to nie je koniec reťazca.
+                    // handlePhoneNumberInputChange prepočíta správnu pozíciu.
+                    selectionStart: cursorPosition, 
                     selectionEnd: cursorPosition,
                     nativeEvent: { inputType: 'deleteContentForward' }
                 }
