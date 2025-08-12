@@ -340,12 +340,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             className: `
                                                 font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
                                                 transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                                ${loading || team.tshirts.some(t => t.size === '') || getAvailableTshirtSizeOptions(team.tshirts).length === 0
+                                                ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
                                                     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
                                                     : 'bg-blue-500 hover:bg-blue-700 text-white'
                                                 }
                                             `.trim(),
-                                            disabled: loading || team.tshirts.some(t => t.size === '') || getAvailableTshirtSizeOptions(team.tshirts).length === 0,
+                                            disabled: loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0,
                                         },
                                         '+'
                                     )
