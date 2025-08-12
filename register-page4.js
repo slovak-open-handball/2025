@@ -287,6 +287,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             }
                             const teamTshirtDifference = teamRequiredTshirts - teamOrderedTshirts;
 
+                            // Nová premenná pre kontrolu, či je povolený vstup pre tričká
+                            const isTshirtInputEnabled = 
+                                (parseInt(team.players, 10) > 0) || 
+                                (parseInt(team.womenTeamMembers, 10) > 0) || 
+                                (parseInt(team.menTeamMembers, 10) > 0);
+
                             return React.createElement(
                                 'div',
                                 { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
@@ -326,10 +332,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `womenTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.womenTeamMembers || '', // Pridaná defenzívna inicializácia
+                                        value: team.womenTeamMembers || '', 
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'womenTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet žien',
-                                        min: 0, // Pridame min pre zeny
+                                        min: 0, 
                                         disabled: loading,
                                     })
                                 ),
@@ -342,10 +348,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `menTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.menTeamMembers || '', // Pridaná defenzívna inicializácia
+                                        value: team.menTeamMembers || '', 
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'menTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet mužov',
-                                        min: 0, // Pridame min pre muzov
+                                        min: 0, 
                                         disabled: loading,
                                     }),
                                     // Nový text pod inputboxom pre počet mužov
@@ -380,7 +386,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
-                                                    disabled: loading,
+                                                    // Zablokovanie na základe stavu isTshirtInputEnabled
+                                                    disabled: loading || !isTshirtInputEnabled, 
                                                 },
                                                 React.createElement('option', { value: '' }, 'Vyberte'), 
                                                 // Mapovanie dostupných veľkostí
@@ -396,7 +403,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 onChange: (e) => handleTshirtQuantityChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                 min: 0,
                                                 required: true,
-                                                disabled: loading,
+                                                // Zablokovanie na základe stavu isTshirtInputEnabled
+                                                disabled: loading || !isTshirtInputEnabled, 
                                                 placeholder: 'Zadajte počet', 
                                             }),
                                             // Tlačidlo na odstránenie riadku trička
@@ -406,7 +414,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                     type: 'button',
                                                     onClick: () => handleRemoveTshirtRow(categoryName, teamIndex, tshirtIndex),
                                                     className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${team.tshirts.length === 1 ? 'invisible' : ''}`,
-                                                    disabled: loading || team.tshirts.length === 1,
+                                                    // Tlačidlo na odstránenie tiež zablokované
+                                                    disabled: loading || team.tshirts.length === 1 || !isTshirtInputEnabled,
                                                 },
                                                 '-'
                                             )
@@ -421,12 +430,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             className: `
                                                 font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
                                                 transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                                ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
+                                                ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0 || !isTshirtInputEnabled // Tlačidlo na pridanie tiež zablokované
                                                     ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
                                                     : 'bg-blue-500 hover:bg-blue-700 text-white'
                                                 }
                                             `.trim(),
-                                            disabled: loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0,
+                                            disabled: loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0 || !isTshirtInputEnabled, // Tlačidlo na pridanie tiež zablokované
                                         },
                                         '+'
                                     )
