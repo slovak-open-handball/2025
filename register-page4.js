@@ -414,12 +414,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: addButtonDisabled,
                                         },
                                         '+'
-                                ),
-                                teamTshirtDifference !== 0 && React.createElement(
-                                    'div',
-                                    { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
-                                    getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
-                                )
+                                    ),
+                                    teamTshirtDifference !== 0 && React.createElement(
+                                        'div',
+                                        { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
+                                        getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
+                                    )
                             );
                         })
                     )
