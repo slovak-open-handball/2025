@@ -2,79 +2,75 @@
 // Obsahuje komponenty a logiku pre štvrtú (finálnu) stránku registračného formulára - detaily tímov.
 
 export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
-    // formData.categories obsahuje štruktúru: { 'Kategória Názov': { numberOfTeams: X }, ... }
-    // Vytvoríme počiatočný stav pre tímy na základe formData.categories a numberOfTeamsFromPage3
-    const [teamDetails, setTeamDetails] = React.useState(() => {
-        const initialDetails = {};
-        // Ak už máme dáta z Page4 (napr. pri návrate "Späť"), použijeme tie
-        if (Object.keys(teamsDataFromPage4).length > 0) {
-            return teamsDataFromPage4;
-        }
+    // teamDetails bude teraz lokálny stav, ktorý sa dynamicky inicializuje v useEffect
+    const [teamDetails, setTeamDetails] = React.useState({});
 
-        const clubName = formData.billing.clubName || ''; // Získame názov klubu z formData
+    // useEffect pre robustnú aktualizáciu teamDetails pri zmenách formData
+    React.useEffect(() => {
+        const clubName = formData.billing.clubName || '';
+        const newDetails = {};
 
         if (formData.categories) {
             Object.keys(formData.categories).forEach(categoryName => {
                 const numTeams = formData.categories[categoryName].numberOfTeams;
-                initialDetails[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
-                    // Generovanie názvu tímu: NázovKlubu A, NázovKlubu B, atď., ak je viac ako 1 tím
-                    const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+
+                // Zabezpečiť, že numTeams je platné číslo, inak predvolené na 0
+                const actualNumTeams = typeof numTeams === 'number' && !isNaN(numTeams) ? numTeams : 0;
+
+                // Pokúste sa zachovať existujúce názvy tímov/hráčov/členov, ak sú k dispozícii,
+                // ale názvy tímov pregenerujte na základe aktuálneho clubName
+                const existingTeams = teamDetails[categoryName] || []; // Získajte existujúce tímy z aktuálneho stavu
+
+                newDetails[categoryName] = Array.from({ length: actualNumTeams }).map((_, teamIndex) => {
+                    const suffix = actualNumTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+                    const generatedTeamName = `${clubName}${suffix}`;
+
+                    // Zachovať hráčov a členov realizačného tímu, ak existovali pre tento konkrétny index tímu a kategóriu
+                    const existingTeamData = existingTeams[teamIndex] || {};
+
                     return {
-                        teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
-                        players: 1, // Predvolené na 1
-                        teamMembers: 1, // Zmenené predvolené na 1
+                        teamName: generatedTeamName, // Vždy pregenerujte názov na základe aktuálneho clubName
+                        players: existingTeamData.players || 1, // Zachovať alebo predvolené na 1
+                        teamMembers: existingTeamData.teamMembers || 1, // Zachovať alebo predvolené na 1
                     };
                 });
             });
         }
-        return initialDetails;
-    });
 
-    // useEffect pre aktualizáciu teamDetails, ak sa zmenia formData.categories (napr. pri návrate z inej strany a zmene kategórií)
-    // ALEBO ak sa zmení názov klubu, pregenerujeme názvy tímov (ak už nie sú zadané z teamsDataFromPage4)
-    React.useEffect(() => {
-        // Ak sú už dáta teamsDataFromPage4 naplnené (napr. pri návrate na stranu 4), neprepisujeme ich automaticky
-        if (Object.keys(teamsDataFromPage4).length === 0) {
-            const newDetails = {};
-            const clubName = formData.billing.clubName || '';
-
-            if (formData.categories) {
-                Object.keys(formData.categories).forEach(categoryName => {
-                    const numTeams = formData.categories[categoryName].numberOfTeams;
-                    const existingTeams = teamDetails[categoryName] || [];
-                    const updatedTeams = Array.from({ length: numTeams }).map((_, teamIndex) => {
-                        const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
-                        return {
-                            ...existingTeams[teamIndex], // Zachovať existujúce dáta (napr. počet hráčov/členov tímu)
-                            teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
-                            players: existingTeams[teamIndex]?.players || 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
-                            teamMembers: existingTeams[teamIndex]?.teamMembers || 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
-                        };
-                    });
-                    newDetails[categoryName] = updatedTeams;
-                });
-            }
-            // Iba aktualizujeme stav, ak sa naozaj zmenil, aby sme predišli nekonečnej slučke
-            if (JSON.stringify(newDetails) !== JSON.stringify(teamDetails)) {
-                setTeamDetails(newDetails);
-                setTeamsDataFromPage4(newDetails); // Aktualizovať aj stav v App.js
-            }
+        // Iba aktualizujte stav, ak sa naozaj zmenil, aby ste predišli nekonečnej slučke
+        // JSON.stringify sa používa pre hĺbkové porovnanie objektov
+        if (JSON.stringify(newDetails) !== JSON.stringify(teamDetails)) {
+            setTeamDetails(newDetails);
+            // Ak chceme, aby sa zmeny v Page4Form prejavili aj v rodičovskom komponente (App.js) okamžite,
+            // môžeme tu zavolať setTeamsDataFromPage4. Avšak, je dôležité zvážiť, či to nespôsobí
+            // nekonečnú slučku, ak setTeamsDataFromPage4 tiež spustí tento useEffect.
+            // Pre tento prípad je lepšie nechať odovzdanie dát až pri finálnom handleSubmit.
+            // setTeamsDataFromPage4(newDetails); // Zakomentované, aby sa predišlo potenciálnej slučke
         }
-    }, [formData.categories, formData.billing.clubName, setTeamsDataFromPage4]); // Pridané formData.billing.clubName ako závislosť
+    }, [formData.categories, formData.billing.clubName, numberOfPlayersLimit, numberOfTeamMembersLimit]); // Závislosti: iba propy, ktoré ovplyvňujú štruktúru/obsah teamDetails
 
-    // Handler pre zmenu názvu tímu, počtu hráčov alebo členov tímu
-    // Poznámka: onChange pre názov tímu je teraz odstránený, pretože je automaticky generovaný a zablokovaný
+    // Tento useEffect slúži na jednorazovú hydratáciu lokálneho stavu z propu teamsDataFromPage4,
+    // ak rodičovský komponent (App.js) poskytuje predtým vyplnené dáta (napr. pri navigácii "späť").
+    // Zabezpečuje, aby sa to vykonalo len vtedy, ak sa dáta propu skutočne zmenili a nie sú prázdne.
+    React.useEffect(() => {
+        if (Object.keys(teamsDataFromPage4).length > 0 && JSON.stringify(teamsDataFromPage4) !== JSON.stringify(teamDetails)) {
+             setTeamDetails(teamsDataFromPage4);
+        }
+    }, [teamsDataFromPage4]); // Reaguje iba na zmeny propu teamsDataFromPage4
+
+
+    // Handler pre zmenu počtu hráčov alebo členov tímu
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         setTeamDetails(prevDetails => {
             const newDetails = { ...prevDetails };
-            newDetails[categoryName] = [...(newDetails[categoryName] || [])]; // Zabezpečiť, že je to pole
+            newDetails[categoryName] = [...(newDetails[categoryName] || [])];
             newDetails[categoryName][teamIndex] = {
                 ...(newDetails[categoryName][teamIndex] || {}),
-                [field]: parseInt(value, 10) || 0 // Prevod na číslo pre počty (názov tímu sa nemení cez tento handler)
+                [field]: parseInt(value, 10) || 0 // Prevod na číslo pre počty
             };
             return newDetails;
         });
-        // Aktualizovať aj stav v App.js
+        // Aktualizovať aj stav v App.js hneď pri zmene počtu hráčov/členov tímu
         setTeamsDataFromPage4(prevDetails => {
             const newDetails = { ...prevDetails };
             newDetails[categoryName] = [...(newDetails[categoryName] || [])];
@@ -91,10 +87,15 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (!teamDetails || Object.keys(teamDetails).length === 0) return false;
 
         for (const categoryName in teamDetails) {
-            for (const team of teamDetails[categoryName]) {
-                if (!team.teamName.trim()) return false; // Názov tímu je povinný (aj keď auto-generovaný)
+            // Zabezpečiť, že teamDetails[categoryName] je pole a iterovať cez jeho prvky
+            for (const team of (teamDetails[categoryName] || [])) {
+                // Obranná kontrola: zabezpečiť, že 'team' je objekt a 'team.teamName' je reťazec
+                if (!team || typeof team.teamName !== 'string' || !team.teamName.trim()) {
+                    console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
+                    return false;
+                }
                 if (team.players < 1 || team.players > numberOfPlayersLimit) return false; // Min 1, Max podľa nastavení
-                if (team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false; // Zmenené min: 1
+                if (team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false; // Min 1, Max podľa nastavení
             }
         }
         return true;
