@@ -186,12 +186,12 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
                 disabled: loading,
                 tabIndex: 23 + index * 2
               }),
-              selectedCategoryRows.length > 1 && React.createElement(
+              React.createElement(
                 'button',
                 {
                   type: 'button',
                   onClick: () => handleRemoveRow(index),
-                  className: 'bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline',
+                  className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`, // Podmienka pre neviditeľnosť
                   disabled: loading || selectedCategoryRows.length === 1,
                   tabIndex: 24 + index * 2
                 },
