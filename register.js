@@ -918,6 +918,7 @@ function App() {
                     numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // NOVINKA: Limit pre členov realizačného tímu
                     teamsDataFromPage4: teamsDataFromPage4, // Počiatočné dáta pre tímy (ak sa vrátim na stranu 4)
                     setTeamsDataFromPage4: setTeamsDataFromPage4, // Setter pre dáta tímov
+                    closeNotification: closeNotification, // DÔLEŽITÁ OPRAVA: Odovzdanie closeNotification do Page4Form
                 })
             ) : null
       )
