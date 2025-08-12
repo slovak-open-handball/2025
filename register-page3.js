@@ -183,10 +183,10 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
           // Pridanie popisku
           React.createElement(
             'div',
-            { className: 'flex items-center font-bold mb-2' }, {/* Changed justify-between to items-center and removed direct w-2/3 to let flex-1 take over for selectbox */}
-            React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'), {/* Used flex-1 for Category to take available space */}
-            React.createElement('span', { className: 'w-20 text-center text-gray-700' }, 'Počet tímov'), {/* Fixed width for Počet tímov */}
-            React.createElement('span', { className: 'w-8' }) // Miesto pre tlačidlo '-' (vždy renderované pre zarovnanie)
+            { className: 'flex items-center font-bold mb-2' },
+            React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'),
+            React.createElement('span', { className: 'w-20 text-center text-gray-700' }, 'Počet tímov'), 
+            React.createElement('span', { className: 'w-8' })
           ),
           selectedCategoryRows.map((row, index) => (
             React.createElement(
