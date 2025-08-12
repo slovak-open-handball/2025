@@ -15,7 +15,7 @@ import { Page4Form } from './register-page4.js'; // NOVINKA: Import pre Page4For
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
-import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
@@ -881,6 +881,7 @@ function App() {
         data.contactPhoneNumber.trim() !== '' ||
         data.password.trim() !== '' ||
         data.confirmPassword.trim() !== '') {
+        console.log("isPage1FormDataEmpty: Core fields are NOT empty.");
         return false;
     }
 
@@ -890,6 +891,7 @@ function App() {
         data.city.trim() !== '' ||
         data.postalCode.trim() !== '' ||
         data.street.trim() !== '') {
+        console.log("isPage1FormDataEmpty: Address fields are NOT empty.");
         return false;
     }
 
@@ -898,9 +900,41 @@ function App() {
         data.billing.ico.trim() !== '' ||
         data.billing.dic.trim() !== '' ||
         data.billing.icDph.trim() !== '') {
+        console.log("isPage1FormDataEmpty: Billing fields are NOT empty.");
+        return false;
+    }
+    
+    // Kontrola selectedCategoryRows - ak nejaká kategória má teams > 0
+    // Je dôležité, aby teamsDataFromPage4 nebolo prázdne len preto, že je na Page4.
+    // Toto je kľúčové pre tvoju požiadavku.
+    let hasSelectedCategories = false;
+    if (selectedCategoryRows && selectedCategoryRows.length > 0) {
+        // Skontroluj, či existuje aspoň jeden záznam, ktorý má categoryId a teams > 0
+        hasSelectedCategories = selectedCategoryRows.some(row => row.categoryId && row.teams > 0);
+    }
+    if (hasSelectedCategories) {
+        console.log("isPage1FormDataEmpty: Selected categories are NOT empty.");
         return false;
     }
 
+    // Kontrola teamsDataFromPage4 - ak existujú akékoľvek tímy
+    if (teamsDataFromPage4 && Object.keys(teamsDataFromPage4).length > 0) {
+        let hasTeamDetails = false;
+        for (const categoryName in teamsDataFromPage4) {
+            if (teamsDataFromPage4[categoryName] && teamsDataFromPage4[categoryName].length > 0) {
+                // Stačí, ak existuje aspoň jeden tím v akejkoľvek kategórii
+                hasTeamDetails = true;
+                break;
+            }
+        }
+        if (hasTeamDetails) {
+            console.log("isPage1FormDataEmpty: Team details are NOT empty.");
+            return false;
+        }
+    }
+
+
+    console.log("isPage1FormDataEmpty: ALL checked fields ARE empty.");
     return true; // Ak nič z vyššie uvedeného nie je vyplnené, formData je prázdne
   };
 
@@ -909,6 +943,19 @@ function App() {
 
   const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
   const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
+
+  // DEBUG LOGGING
+  console.log("--- DEBUG RENDER App ---");
+  console.log("formData:", formData);
+  console.log("selectedCategoryRows:", selectedCategoryRows);
+  console.log("teamsDataFromPage4:", teamsDataFromPage4);
+  console.log("isPage1FormDataEmpty(formData):", isPage1FormDataEmpty(formData)); // Call to see what it returns
+  console.log("hasAnyPage1Data:", hasAnyPage1Data);
+  console.log("isRegistrationOpen:", isRegistrationOpen);
+  console.log("isRegistrationClosed:", isRegistrationClosed);
+  console.log("isBeforeRegistrationStart:", isBeforeRegistrationStart);
+  console.log("Current page:", page);
+  console.log("--- END DEBUG ---");
 
 
   return React.createElement(
@@ -954,7 +1001,7 @@ function App() {
     ) : (
       // Hlavná logika pre zobrazenie formulára alebo správ
       // 1. Zobraziť formulár, ak je registrácia otvorená.
-      // 2. Zobraziť formulár, ak je registrácia UZAVRETÁ, ALE sú vyplnené nejaké dáta.
+      // 2. Zobraziť formulár, ak je registrácia UZAVRETÁ, ALE sú vyplnené nejaké dáta (vrátane dát z Page3/4).
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         // Zobrazenie formulára (bez ohľadu na aktuálnu stranu)
         React.createElement(
