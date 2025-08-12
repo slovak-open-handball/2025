@@ -455,7 +455,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 // Zobrazenie validačnej správy pre tričká, ak je rozdiel
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
-                                    { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
+                                    { className: `mt-2 p-2 rounded-lg text-center bg-red-100 text-red-700` }, // Odstránená trieda font-bold
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
                             );
