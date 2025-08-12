@@ -164,6 +164,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         let allTshirtsMatch = true; // Predpokladáme, že všetky tričká sedia
+        let allTeamMembersFilled = true; // Predpokladáme, že všetky tímy majú vyplnené realizacne teamy
 
         // Prechádzame všetky kategórie a tímy
         for (const categoryName in teamsDataFromPage4) {
@@ -181,21 +182,20 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
 
                 // Validácia počtu žien a mužov realizačného tímu
-                const womenTeamMembersValue = parseInt(team.womenTeamMembers, 10);
-                const menTeamMembersValue = parseInt(team.menTeamMembers, 10);
+                const womenTeamMembersValue = parseInt(team.womenTeamMembers, 10) || 0; // Prevod na 0 ak je NaN/prázdne
+                const menTeamMembersValue = parseInt(team.menTeamMembers, 10) || 0;     // Prevod na 0 ak je NaN/prázdne
 
-                if (isNaN(womenTeamMembersValue) || womenTeamMembersValue < 0) return false;
-                if (isNaN(menTeamMembersValue) || menTeamMembersValue < 0) return false;
+                if (womenTeamMembersValue < 0 || menTeamMembersValue < 0) return false;
 
                 // Súčet žien a mužov musí byť v rámci limitu
                 if ((womenTeamMembersValue + menTeamMembersValue) > numberOfTeamMembersLimit) {
                     return false;
                 }
-                // Pre kontrolu minimálneho počtu by sme mohli pridať:
-                // if ((womenTeamMembersValue + menTeamMembersValue) < 1 && (womenTeamMembersValue + menTeamMembersValue) !== '') {
-                //     return false; // Ak je súčet menší ako 1 (a nie je prázdny), je neplatný
-                // }
 
+                // Nová podmienka: aspoň jeden z realizačných tímov musí byť vyplnený
+                if (womenTeamMembersValue === 0 && menTeamMembersValue === 0) {
+                    allTeamMembersFilled = false; // Ak sú obidva 0, nie sú vyplnené
+                }
 
                 // Validácia detailov tričiek
                 for (const tshirt of (team.tshirts || [])) {
@@ -221,7 +221,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             }
         }
-        return allTshirtsMatch; // Vrátime výsledok validácie
+        return allTshirtsMatch && allTeamMembersFilled; // Vrátime výsledok validácie
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
     // CSS triedy pre tlačidlo registrácie
@@ -234,7 +234,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
   `;
 
     // Funkcia pre finálne odoslanie formulára
-    const handleFinalSubmit = async (e) => {
+    const handleFinalSubmit = async (teamsDataToSave) => {
         e.preventDefault();
         // Nastavenie stavov načítania a notifikácií
         if (typeof setLoading === 'function') setLoading(true);
@@ -245,7 +245,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Ak formulár nie je platný, zobrazíme chybovú správu
         if (!isFormValidPage4) {
             if (typeof setNotificationMessage === 'function') {
-                setNotificationMessage('Prosím, skontrolujte všetky polia tímu a objednávky tričiek. Všetky požiadavky musia byť splnené.');
+                setNotificationMessage('Prosím, skontrolujte všetky polia tímu a objednávky tričiek. Uistite sa, že pre každý tím je vyplnený aspoň jeden člen realizačného tímu.'); // Aktualizovaná správa
                 setShowNotification(true);
                 setNotificationType('error');
             }
@@ -254,9 +254,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         
         // Príprava dát pred odoslaním (konverzia prázdnych reťazcov na 0)
-        const teamsDataToSave = JSON.parse(JSON.stringify(teamsDataFromPage4));
-        for (const categoryName in teamsDataToSave) {
-            teamsDataToSave[categoryName] = teamsDataToSave[categoryName].map(team => ({
+        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataToSave)); // Používame teamsDataToSave z parametra
+        for (const categoryName in teamsDataToSaveFinal) {
+            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
                 ...team,
                 players: team.players === '' ? 0 : team.players,
                 womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers, // Konverzia
@@ -269,7 +269,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Odoslanie spracovaných dát
-        await handleSubmit(teamsDataToSave);
+        await handleSubmit(teamsDataToSaveFinal); // Odosielame upravené dáta
         if (typeof setLoading === 'function') setLoading(false);
     };
 
@@ -505,7 +505,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'submit',
                         className: registerButtonClasses,
-                        disabled: loading || !isRecaptchaReady || !isFormValidPage4,
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage4, // Aktualizovaná podmienka
                         tabIndex: 2
                     },
                     // Zobrazenie načítavacieho spinnera počas registrácie
@@ -517,7 +517,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať sa'
+                    ) : 'Registrovať'
                 )
             )
         )
