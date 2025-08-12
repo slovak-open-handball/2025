@@ -820,7 +820,7 @@ function App() {
       await new Promise(resolve => setTimeout(resolve, 200)); // Oneskorenie 200ms
 
       // Aktualizovaná správa po úspešnej registrácii
-      setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
+      setNotificationMessage(`Ďakujeme za registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
       setNotificationType('success'); // Nastavenie typu notifikácie na úspech
       setRegistrationSuccess(true); // Nastavenie stavu úspešnej registrácie
@@ -854,7 +854,7 @@ function App() {
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 5000); // 5 sekúnd na zobrazenie notifikácie
+      }, 13000); // 13 sekúnd na zobrazenie notifikácie
 
     } catch (globalError) { // Záchytný blok pre akékoľvek neočakávané chyby
       console.error('App.js: NEČAKANÁ CHYBA POČAS REGISTRÁCIE (pravdepodobne z chyby Promise mimo priameho await):', globalError);
@@ -907,7 +907,7 @@ function App() {
         React.createElement(
           'p',
           { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na tmavšom zelenom pozadí
-          'Budete automaticky presmerovaní na prihlasovaciu stránku.'
+          'O pár sekúnd prebehne automatické presmerovanie na prihlasovaciu stránku.'
         )
       )
     ) : (
