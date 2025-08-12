@@ -183,12 +183,10 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
           // Pridanie popisku
           React.createElement(
             'div',
-            { className: 'flex justify-between font-bold mb-2' },
-            // Použitie flex-grow pre kategóriu a pevná šírka pre počet tímov,
-            // aby boli nadpisy správne zarovnané s inputmi pod nimi.
-            React.createElement('span', { className: 'flex-grow' }, 'Kategória'),
-            React.createElement('span', { className: 'w-20 text-center' }, 'Počet tímov'),
-            selectedCategoryRows.length > 1 && React.createElement('span', { className: 'w-8' }) // Miesto pre tlačidlo '-'
+            { className: 'flex items-center font-bold mb-2' }, {/* Changed justify-between to items-center and removed direct w-2/3 to let flex-1 take over for selectbox */}
+            React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'), {/* Used flex-1 for Category to take available space */}
+            React.createElement('span', { className: 'w-20 text-center text-gray-700' }, 'Počet tímov'), {/* Fixed width for Počet tímov */}
+            React.createElement('span', { className: 'w-8' }) // Miesto pre tlačidlo '-' (vždy renderované pre zarovnanie)
           ),
           selectedCategoryRows.map((row, index) => (
             React.createElement(
@@ -197,7 +195,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
               React.createElement(
                 'select',
                 {
-                  className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-grow',
+                  className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1', {/* Changed flex-grow to flex-1 for consistency and better behavior */}
                   value: row.categoryId,
                   onChange: (e) => handleCategoryChange(index, e.target.value),
                   required: true,
@@ -219,13 +217,13 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
                 disabled: loading,
                 tabIndex: 23 + index * 2 // Dynamický tabIndex
               }),
-              selectedCategoryRows.length > 1 && React.createElement( // Zobraziť tlačidlo mínus len ak je viac ako jeden riadok
+              selectedCategoryRows.length > 0 && React.createElement( // Zobraziť tlačidlo mínus len ak je viac ako nula riadkov (t.j. aspoň jeden)
                 'button',
                 {
                   type: 'button',
                   onClick: () => handleRemoveRow(index),
                   className: 'bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline',
-                  disabled: loading,
+                  disabled: loading || selectedCategoryRows.length === 1, // Zakázať, ak je len jeden riadok
                   tabIndex: 24 + index * 2 // Dynamický tabIndex
                 },
                 '-'
