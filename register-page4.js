@@ -22,7 +22,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return {
                         teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
                         players: 1, // Predvolené na 1
-                        teamMembers: 0, // Predvolené na 0
+                        teamMembers: 1, // Zmenené predvolené na 1
                     };
                 });
             });
@@ -48,7 +48,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             ...existingTeams[teamIndex], // Zachovať existujúce dáta (napr. počet hráčov/členov tímu)
                             teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
                             players: existingTeams[teamIndex]?.players || 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
-                            teamMembers: existingTeams[teamIndex]?.teamMembers || 0, // Zachovať existujúci počet členov tímu, inak predvolené na 0
+                            teamMembers: existingTeams[teamIndex]?.teamMembers || 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
                         };
                     });
                     newDetails[categoryName] = updatedTeams;
@@ -94,7 +94,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             for (const team of teamDetails[categoryName]) {
                 if (!team.teamName.trim()) return false; // Názov tímu je povinný (aj keď auto-generovaný)
                 if (team.players < 1 || team.players > numberOfPlayersLimit) return false; // Min 1, Max podľa nastavení
-                if (team.teamMembers < 0 || team.teamMembers > numberOfTeamMembersLimit) return false; // Min 0, Max podľa nastavení
+                if (team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false; // Zmenené min: 1
             }
         }
         return true;
@@ -188,14 +188,14 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembers-${categoryName}-${teamIndex}` }, `Počet členov realizačného tímu (min: 0, max: ${numberOfTeamMembersLimit})`),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembers-${categoryName}-${teamIndex}` }, `Počet členov realizačného tímu (min: 1, max: ${numberOfTeamMembersLimit})`),
                                     React.createElement('input', {
                                         type: 'number',
                                         id: `teamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                         value: team.teamMembers,
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
-                                        min: 0,
+                                        min: 1, // Zmenené min na 1
                                         max: numberOfTeamMembersLimit,
                                         required: true, // Je nutné, aby pole existovalo pre validáciu
                                         disabled: loading,
