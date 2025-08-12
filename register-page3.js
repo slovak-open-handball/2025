@@ -180,6 +180,14 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
         React.createElement(
           'div',
           { className: 'space-y-4' },
+          // Pridanie popisku
+          React.createElement(
+            'div',
+            { className: 'flex justify-between font-bold mb-2' },
+            React.createElement('span', { className: 'flex-grow' }, 'Kategória'),
+            React.createElement('span', { className: 'w-20 text-center' }, 'Počet tímov'),
+            selectedCategoryRows.length > 1 && React.createElement('span', { className: 'w-8' }) // Miesto pre tlačidlo '-'
+          ),
           selectedCategoryRows.map((row, index) => (
             React.createElement(
               'div',
