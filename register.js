@@ -10,6 +10,7 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
+import { Page3Form } from './register-page3.js'; // NOVINKA: Import pre Page3Form
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -488,22 +489,15 @@ function App() {
     setLoading(false); // Ukončiť načítavanie po prechode na ďalšiu stránku
   };
 
-  const handlePrev = () => {
-    setPage(1);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
-  };
-
-  const handleSubmit = async (e) => {
+  // NOVINKA: Funkcia pre prechod z Page2 na Page3
+  const handleNextPage2ToPage3 = async (e) => {
     e.preventDefault();
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
-    isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
-    // Validácia fakturačných údajov
+    // Validácia fakturačných údajov (presunuté z handleFinalSubmit)
     const { clubName, ico, dic, icDph } = formData.billing;
 
     if (!clubName.trim()) {
@@ -511,7 +505,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        isRegisteringRef.current = false;
         return;
     }
 
@@ -520,7 +513,6 @@ function App() {
       setShowNotification(true);
       setNotificationType('error');
       setLoading(false);
-      isRegisteringRef.current = false;
       return;
     }
 
@@ -531,7 +523,6 @@ function App() {
         setShowNotification(true);
         setNotificationType('error');
         setLoading(false);
-        isRegisteringRef.current = false;
         return;
       }
     }
@@ -542,12 +533,32 @@ function App() {
       setShowNotification(true);
       setNotificationType('error');
       setLoading(false);
-      isRegisteringRef.current = false;
       return;
     }
 
+    // Ak prejde validácia, prejdeme na stranu 3
+    setPage(3);
+    setLoading(false);
+  };
+
+  const handlePrev = () => {
+    setPage(prevPage => prevPage - 1); // Upravené pre prechod na predchádzajúcu stránku
+    setNotificationMessage('');
+    setShowNotification(false);
+    setNotificationType('info');
+  };
+
+  // NOVINKA: Pôvodná handleSubmit premenovaná na handleFinalSubmit
+  const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setNotificationMessage('');
+    setShowNotification(false);
+    setNotificationType('info');
+    isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
+
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
-    console.log("Konštruované telefónne číslo pre odoslanie:", fullPhoneNumber); // Logovanie telefónneho čísla
+    console.log("Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
       // Prístup ku globálnym inštanciám Firebase Auth a Firestore
@@ -797,6 +808,7 @@ function App() {
               registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
             })
           ) :
+        page === 2 ? // NOVINKA: Kontrola pre stranu 2
           React.createElement(
             'div', // Obalový div pre Page2Form
             { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
@@ -804,7 +816,8 @@ function App() {
               formData: formData,
               handleChange: handleChange,
               handlePrev: handlePrev,
-              handleSubmit: handleSubmit,
+              // NOVINKA: Zmena handleSubmit na handleNextPage2ToPage3 pre prechod na stranu 3
+              handleSubmit: handleNextPage2ToPage3, 
               loading: loading,
               notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
               closeNotification: closeNotification,
@@ -812,7 +825,26 @@ function App() {
               handleRoleChange: handleRoleChange,
               NotificationModal: NotificationModal,
             })
-          )
+          ) :
+        page === 3 ? // NOVINKA: Zobrazenie Page3Form
+            React.createElement(
+                'div', // Obalový div pre Page3Form
+                { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+                React.createElement(Page3Form, {
+                    formData: formData,
+                    handlePrev: handlePrev,
+                    handleSubmit: handleFinalSubmit, // Finálne odoslanie formulára
+                    loading: loading,
+                    setLoading: setLoading, // Page3Form bude spravovať svoj loading stav
+                    notificationMessage: notificationMessage,
+                    setShowNotification: setShowNotification,
+                    setNotificationType: setNotificationType,
+                    setRegistrationSuccess: setRegistrationSuccess,
+                    isRecaptchaReady: isRecaptchaReady,
+                    selectedCountryDialCode: selectedCountryDialCode,
+                    NotificationModal: NotificationModal,
+                })
+            ) : null
       )
     )
   );
