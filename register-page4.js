@@ -1,6 +1,7 @@
 export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
 
-    const TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    // Aktualizovaný zoznam veľkostí tričiek
+    const TSHIRT_SIZES = ['134 - 140', '146 - 152', '158 - 164', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         let newValue;
@@ -17,7 +18,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     newValue = parsed;
                     if (newValue < 1 && newValue !== '') newValue = 1;
                     if (newValue > numberOfPlayersLimit) newValue = numberOfPlayersLimit;
-                } else if (field === 'teamMembers') {
+                } else if (field === 'teamMembersFemale' || field === 'teamMembersMale') { // Nové polia
+                    newValue = parsed;
+                    if (newValue < 0 && newValue !== '') newValue = 0; // Počet žien/mužov nemôže byť záporný
+                }
+                // Pre teamMembers (staré pole) je tu logika, ktorá sa už nepoužije pri priamom zadaní
+                // Ak sa však náhodou niekde použije, je dôležité, aby fungovala správne
+                else if (field === 'teamMembers') {
                     newValue = parsed;
                     if (newValue < 1 && newValue !== '') newValue = 1;
                     if (newValue > numberOfTeamMembersLimit) newValue = numberOfTeamMembersLimit;
@@ -36,7 +43,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 newDetails[categoryName][teamIndex] = {
                     teamName: '', 
                     players: '', 
-                    teamMembers: '',
+                    teamMembers: '', // Toto pole bude pre celkový súčet (pôvodné)
+                    teamMembersFemale: '', // Nové pole
+                    teamMembersMale: '',   // Nové pole
                     tshirts: [{ size: '', quantity: '' }]
                 };
             }
@@ -44,6 +53,27 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ...newDetails[categoryName][teamIndex],
                 [field]: newValue
             };
+
+            // Prepočet celkového počtu členov realizačného tímu na základe nových polí
+            const currentTeam = newDetails[categoryName][teamIndex];
+            const femaleMembers = parseInt(currentTeam.teamMembersFemale, 10);
+            const maleMembers = parseInt(currentTeam.teamMembersMale, 10);
+            currentTeam.teamMembers = (isNaN(femaleMembers) ? 0 : femaleMembers) + (isNaN(maleMembers) ? 0 : maleMembers);
+            
+            // Validácia celkového počtu členov realizačného tímu
+            if (currentTeam.teamMembers > numberOfTeamMembersLimit) {
+                // Ak prekročí limit, upozorníme a nastavíme na limit
+                // Poznámka: Toto nezabráni používateľovi zadať vyššie čísla do jednotlivých polí,
+                // ale celkový súčet sa bude tváriť, že je na limite.
+                // Ak chcete prísnejšiu validáciu, bude to vyžadovať komplexnejšiu logiku.
+                currentTeam.teamMembers = numberOfTeamMembersLimit;
+                if (!notificationMessage) { // Zobraz iba ak už nie je iná notifikácia
+                    setShowNotification(true);
+                    setNotificationType('error');
+                    setNotificationMessage(`Celkový počet členov realizačného tímu nemôže presiahnuť ${numberOfTeamMembersLimit}.`);
+                }
+            }
+
             return newDetails;
         });
     };
@@ -139,19 +169,27 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return false;
                 }
 
-                const teamMembersValue = parseInt(team.teamMembers, 10);
-                if (isNaN(teamMembersValue) || teamMembersValue < 1 || teamMembersValue > numberOfTeamMembersLimit) {
+                // Validácia pre počet žien a mužov realizačného tímu
+                const femaleMembersValue = parseInt(team.teamMembersFemale, 10);
+                const maleMembersValue = parseInt(team.teamMembersMale, 10);
+
+                if (isNaN(femaleMembersValue) || femaleMembersValue < 0) return false;
+                if (isNaN(maleMembersValue) || maleMembersValue < 0) return false;
+
+                // Celkový súčet členov realizačného tímu
+                const totalTeamMembers = femaleMembersValue + maleMembersValue;
+                if (totalTeamMembers < 1 || totalTeamMembers > numberOfTeamMembersLimit) {
                     return false;
                 }
 
                 for (const tshirt of (team.tshirts || [])) {
-                    if (tshirt.size === '' || isNaN(parseInt(tshirt.quantity, 10)) || parseInt(tshirt.quantity, 10) < 0) {
+                    if (tshirt.size === '' || tshirt.quantity === '' || isNaN(parseInt(tshirt.quantity, 10)) || parseInt(tshirt.quantity, 10) < 0) {
                         return false;
                     }
                 }
 
                 const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
-                                            (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
+                                            totalTeamMembers; // Používame totalTeamMembers
                 
                 let teamOrderedTshirts = 0;
                 for (const tshirt of (team.tshirts || [])) {
@@ -196,7 +234,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             teamsDataToSave[categoryName] = teamsDataToSave[categoryName].map(team => ({
                 ...team,
                 players: team.players === '' ? 0 : team.players,
-                teamMembers: team.teamMembers === '' ? 0 : team.teamMembers,
+                teamMembersFemale: team.teamMembersFemale === '' ? 0 : team.teamMembersFemale, // Uložiť nové pole
+                teamMembersMale: team.teamMembersMale === '' ? 0 : team.teamMembersMale,     // Uložiť nové pole
+                teamMembers: (parseInt(team.teamMembersFemale, 10) || 0) + (parseInt(team.teamMembersMale, 10) || 0), // Prepočítať celkový počet pre uloženie
                 tshirts: team.tshirts.map(tshirt => ({
                     ...tshirt,
                     quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
@@ -230,8 +270,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
                         (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => {
+                            // Výpočet potrebných a objednaných tričiek pre aktuálny tím
+                            // Celkový počet členov realizačného tímu sa teraz počíta zo žien a mužov
+                            const totalTeamMembersCalculated = (parseInt(team.teamMembersFemale, 10) || 0) + (parseInt(team.teamMembersMale, 10) || 0);
+
                             const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
-                                                        (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
+                                                        totalTeamMembersCalculated; // Používame vypočítaný súčet
                             
                             let teamOrderedTshirts = 0;
                             for (const tshirt of (team.tshirts || [])) {
@@ -267,25 +311,52 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         disabled: loading,
                                     })
                                 ),
+                                {/* NOVINKA: Input box pre počet žien realizačného tímu */}
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembers-${categoryName}-${teamIndex}` }, `Počet členov realizačného tímu (min: 1, max: ${numberOfTeamMembersLimit})`),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembersFemale-${categoryName}-${teamIndex}` }, `Počet žien (realizačný tím)`),
                                     React.createElement('input', {
                                         type: 'number',
-                                        id: `teamMembers-${categoryName}-${teamIndex}`,
+                                        id: `teamMembersFemale-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.teamMembers,
-                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
-                                        placeholder: 'Zadajte počet členov realizačného tímu',
+                                        value: team.teamMembersFemale,
+                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembersFemale', e.target.value),
+                                        placeholder: 'Zadajte počet žien',
                                         disabled: loading,
+                                        min: 0,
                                     })
+                                ),
+                                {/* NOVINKA: Input box pre počet mužov realizačného tímu */}
+                                React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembersMale-${categoryName}-${teamIndex}` }, `Počet mužov (realizačný tím)`),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        id: `teamMembersMale-${categoryName}-${teamIndex}`,
+                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        value: team.teamMembersMale,
+                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembersMale', e.target.value),
+                                        placeholder: 'Zadajte počet mužov',
+                                        disabled: loading,
+                                        min: 0,
+                                    })
+                                ),
+                                // Celkový počet členov realizačného tímu, len na zobrazenie
+                                React.createElement(
+                                    'div',
+                                    null,
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, `Celkový počet členov realizačného tímu (max: ${numberOfTeamMembersLimit})`),
+                                    React.createElement('p', { className: 'py-2 px-3 text-gray-700 bg-gray-100 rounded-lg' }, totalTeamMembersCalculated)
                                 ),
                                 
                                 React.createElement(
                                     'div',
                                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                                     React.createElement('h4', { className: 'text-base font-bold mb-2 text-gray-700' }, 'Účastnícke tričká'),
+                                    // Nový text pod nadpisom "Účastnícke tričká"
+                                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Všetky sú unisex.'),
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center font-bold mb-2 space-x-2' },
