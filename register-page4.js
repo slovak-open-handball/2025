@@ -141,8 +141,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         return React.createElement(React.Fragment, null,
             React.createElement('strong', null, 'Na pokračovanie'),
-            ' v registrácii na turnaj je ',
-            React.createElement('strong', null, 'potrebné'),
+            ' v registrácii na turnaj ',
+            React.createElement('strong', null, 'je\u00A0potrebné'),
             ` v kategórii ${currentCategoryName} pre tím ${currentTeamName} `,
             React.createElement('strong', null, `${actionText} ${countText}`)
         );
