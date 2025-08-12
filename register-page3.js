@@ -90,9 +90,11 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
       .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
       .map(row => row.categoryId);
 
+    // Filter a potom Sort podľa abecedy
     return allCategoryIds
       .filter(catId => !selectedIdsInOtherRows.includes(catId))
-      .map(catId => ({ id: catId, name: categoriesData[catId] })); // Predpokladáme, že categoriesData[catId] je názov
+      .map(catId => ({ id: catId, name: categoriesData[catId] })) // Predpokladáme, že categoriesData[catId] je názov
+      .sort((a, b) => a.name.localeCompare(b.name)); // NOVINKA: Zoradenie podľa názvu
   };
 
   // Overenie platnosti formulára pre stranu 3
