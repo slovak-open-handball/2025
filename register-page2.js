@@ -2,7 +2,7 @@
 // Obsahuje komponenty a logiku pre druhú stránku registračného formulára.
 
 // Page2Form Component
-export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, loading, notificationMessage, closeNotification, NotificationModal }) {
+export function Page2Form({ formData, handleChange, handlePrev, handleNextPage3, loading, notificationMessage, closeNotification, NotificationModal }) { // Zmenený prop handleSubmit na handleNextPage3
   // handleBillingChange pre vnorené fakturačné údaje a špecifické formátovanie
   const handleBillingChange = (e) => {
     const { id, value } = e.target;
@@ -47,12 +47,12 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
                            formData.postalCode?.replace(/\s/g, '').length === 5 && // Pridaná bezpečná navigácia
                            formData.country?.trim() !== ''; // Pridaná bezpečná navigácia
 
-  // Dynamické triedy pre tlačidlo "Registrovať sa"
-  const registerButtonClasses = `
+  // Dynamické triedy pre tlačidlo "Ďalej" (pôvodne "Registrovať sa")
+  const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
     ${!isFormValidPage2 || loading
-      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed' // Zakázaný stav
-      : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav (zmenené z zelenej na modrú, aby zodpovedala "Ďalej")
     }
   `;
 
@@ -62,12 +62,12 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
     React.createElement(
       'h2',
       { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-      'Registrácia - strana 2' // Zmenený nadpis
+      'Registrácia - strana 2'
     ),
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
     React.createElement(
       'form',
-      { onSubmit: handleSubmit, className: 'space-y-4' },
+      { onSubmit: handleNextPage3, className: 'space-y-4' }, {/* Zmenený onSubmit na handleNextPage3 */}
 
       // Fakturačné údaje
       React.createElement(
@@ -276,19 +276,19 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           'button',
           {
             type: 'submit',
-            className: registerButtonClasses, // Použitie dynamických tried
+            className: nextButtonClasses, // Použitie dynamických tried
             disabled: !isFormValidPage2 || loading, // Tlačidlo je zakázané, ak formulár nie je platný alebo sa načítava
             tabIndex: 19
           },
           loading ? React.createElement(
             'div',
             { className: 'flex items-center justify-center' },
-            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Farba spinneru zmenená na zelenú
+            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Farba spinneru zmenená na modrú
               React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
               React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
             ),
-            'Registrujem...'
-          ) : 'Registrovať sa'
+            'Ďalej...' // Zmenený text tlačidla
+          ) : 'Ďalej' // Zmenený text tlačidla
         )
       )
     )
