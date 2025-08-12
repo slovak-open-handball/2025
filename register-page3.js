@@ -178,7 +178,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
               ),
               React.createElement('input', {
                 type: 'number',
-                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left', {/* Changed w-20 to w-28, text-center to text-left */}
+                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
                 value: row.teams,
                 onChange: (e) => handleTeamsChange(index, e.target.value),
                 min: 1,
