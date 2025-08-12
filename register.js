@@ -607,8 +607,8 @@ function App() {
 
             return {
                 teamName: generatedTeamName, // Vždy pregenerujte názov
-                players: existingTeamData.players !== undefined ? existingTeamData.players : 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
-                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
+                players: existingTeamData.players !== undefined ? existingTeamData.players : '', // Inicializácia na prázdny reťazec
+                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '', // Inicializácia na prázdny reťazec
             };
         });
     });
