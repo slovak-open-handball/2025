@@ -116,33 +116,20 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (diff === 0) return '';
 
         const absDiff = Math.abs(diff);
-        let prefixPart;
-        let boldPartStart;
-        let messageSuffix;
+        const messagePrefix = diff > 0 
+            ? `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} objednať ešte `
+            : `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} zrušiť `;
 
-        if (diff > 0) {
-            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-            boldPartStart = `objednať ešte `;
-            if (absDiff === 1) {
-                messageSuffix = ' tričko.';
-            } else if (absDiff >= 2 && absDiff <= 4) {
-                messageSuffix = ' tričká.';
-            } else {
-                messageSuffix = ' tričiek.';
-            }
-        } else { // diff < 0
-            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-            boldPartStart = `zrušiť `;
-            if (absDiff === 1) {
-                messageSuffix = ' objednané tričko.';
-            } else if (absDiff >= 2 && absDiff <= 4) {
-                messageSuffix = ' objednané tričká.';
-            } else {
-                messageSuffix = ' objednaných tričiek.';
-            }
+        let messageSuffix;
+        if (absDiff === 1) {
+            messageSuffix = diff > 0 ? ' tričko.' : ' objednané tričko.';
+        } else if (absDiff >= 2 && absDiff <= 4) {
+            messageSuffix = diff > 0 ? ' tričká.' : ' objednané tričká.';
+        } else {
+            messageSuffix = diff > 0 ? ' tričiek.' : ' objednaných tričiek.';
         }
 
-        return `${prefixPart}<strong>${boldPartStart}${absDiff} ${messageSuffix}</strong>`;
+        return `${messagePrefix}${absDiff} ${messageSuffix}`;
     }, []);
 
     // Validácia celého formulára pre stránku 4
@@ -345,7 +332,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `womenTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.womenTeamMembers === 0 ? 0 : team.womenTeamMembers || '', 
+                                        value: team.womenTeamMembers === 0 ? 0 : team.womenTeamMembers || '', // Explicitné zachovanie 0
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'womenTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet žien',
                                         min: 0, 
@@ -361,7 +348,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `menTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.menTeamMembers === 0 ? 0 : team.menTeamMembers || '', 
+                                        value: team.menTeamMembers === 0 ? 0 : team.menTeamMembers || '', // Explicitné zachovanie 0
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'menTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet mužov',
                                         min: 0, 
@@ -497,7 +484,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať'
+                    ) : 'Registrovať sa'
                 )
             )
         )
