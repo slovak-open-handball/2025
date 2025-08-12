@@ -594,14 +594,20 @@ function App() {
     // NOVINKA: Inicializácia teamsDataFromPage4 (jediný zdroj pravdy) priamo tu v App komponente
     const initialTeamsDataForPage4 = {};
     const clubName = formData.billing.clubName || '';
+
     Object.keys(transformedCategories).forEach(categoryName => {
         const numTeams = transformedCategories[categoryName].numberOfTeams;
         initialTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+            const generatedTeamName = `${clubName}${suffix}`;
+            
+            // Zachovať existujúce dáta, ak už existujú pre túto kategóriu a index tímu
+            const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
+
             return {
-                teamName: `${clubName}${suffix}`,
-                players: 1,
-                teamMembers: 1,
+                teamName: generatedTeamName, // Vždy pregenerujte názov
+                players: existingTeamData.players || 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
+                teamMembers: existingTeamData.teamMembers || 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
             };
         });
     });
