@@ -102,6 +102,9 @@ function App() {
       icDph: '',
     }
   });
+  // NOVINKA: Stav pre dáta z Page3 (selectedCategoryRows)
+  const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
+
   const [userRole, setUserRole] = React.useState('user'); // Predvolená rola
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -696,6 +699,8 @@ function App() {
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
+      // NOVINKA: Vyčistenie stavu selectedCategoryRows
+      setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
       setPage(1); // Reset na prvú stránku formulára
 
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
@@ -848,8 +853,9 @@ function App() {
                     isRecaptchaReady: isRecaptchaReady,
                     selectedCountryDialCode: selectedCountryDialCode,
                     NotificationModal: NotificationModal,
-                    // NOVINKA: Odovzdanie načítaných kategórií do Page3Form
-                    availableCategoriesMap: categoriesDataFromFirestore
+                    availableCategoriesMap: categoriesDataFromFirestore, // Odovzdanie načítaných kategórií do Page3Form
+                    selectedCategoryRows: selectedCategoryRows, // NOVINKA: Odovzdanie stavu pre kategórie
+                    setSelectedCategoryRows: setSelectedCategoryRows, // NOVINKA: Odovzdanie setter funkcie
                 })
             ) : null
       )
