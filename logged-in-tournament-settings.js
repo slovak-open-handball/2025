@@ -79,6 +79,10 @@ function TournamentSettingsApp() {
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
+  // NOVINKA: Stavy pre počet hráčov a členov realizačného tímu
+  const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
+  const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
+
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
@@ -194,12 +198,19 @@ function TournamentSettingsApp() {
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
                 setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
                 setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); // Načítanie nového dátumu
+                // NOVINKA: Načítanie počtu hráčov a členov realizačného tímu
+                setNumberOfPlayers(data.numberOfPlayers || 0);
+                setNumberOfImplementationTeam(data.numberOfImplementationTeam || 0);
+
             } else {
                 console.log("TournamentSettingsApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
                 setDataEditDeadline(''); 
                 setRosterEditDeadline(''); // Predvolená prázdna hodnota pre nový dátum
+                // NOVINKA: Predvolené hodnoty pre počet hráčov a členov realizačného tímu
+                setNumberOfPlayers(0);
+                setNumberOfImplementationTeam(0);
             }
           }, error => {
             console.error("TournamentSettingsApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
@@ -249,6 +260,16 @@ function TournamentSettingsApp() {
         return;
       }
 
+      // NOVINKA: Validácia pre numberOfPlayers a numberOfImplementationTeam
+      if (numberOfPlayers < 0) {
+        showNotification("Počet hráčov nemôže byť záporný.", 'error');
+        return;
+      }
+      if (numberOfImplementationTeam < 0) {
+        showNotification("Počet členov realizačného tímu nemôže byť záporný.", 'error');
+        return;
+      }
+
 
       const settingsDocRef = doc(db, 'settings', 'registration');
       await setDoc(settingsDocRef, {
@@ -256,6 +277,9 @@ function TournamentSettingsApp() {
         registrationEndDate: regEnd ? Timestamp.fromDate(regEnd) : null,
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
         rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, // Uloženie nového dátumu
+        // NOVINKA: Uloženie počtu hráčov a členov realizačného tímu
+        numberOfPlayers: numberOfPlayers,
+        numberOfImplementationTeam: numberOfImplementationTeam,
       });
       
       showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); // Používame lokálnu showNotification
@@ -327,6 +351,34 @@ function TournamentSettingsApp() {
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
           value: rosterEditDeadline,
           onChange: (e) => setRosterEditDeadline(e.target.value),
+        })
+      ),
+      {/* NOVINKA: Input box pre počet hráčov */}
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'number-of-players' }, 'Maximálny počet hráčov v tíme'),
+        React.createElement('input', {
+          type: 'number',
+          id: 'number-of-players',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: numberOfPlayers,
+          onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
+          min: 0, // Minimálna hodnota
+        })
+      ),
+      {/* NOVINKA: Input box pre počet členov realizačného tímu */}
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'number-of-implementation-team' }, 'Maximálny počet členov realizačného tímu'),
+        React.createElement('input', {
+          type: 'number',
+          id: 'number-of-implementation-team',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: numberOfImplementationTeam,
+          onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
+          min: 0, // Minimálna hodnota
         })
       ),
       React.createElement(
