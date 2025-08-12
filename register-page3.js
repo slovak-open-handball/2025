@@ -83,6 +83,11 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
   const isFormValidPage3 = selectedCategoryRows.every(row => row.categoryId !== '' && row.teams >= 1);
   const isLastRowCategorySelected = selectedCategoryRows.length > 0 ? selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '' : false;
 
+  // NOVINKA: Kontrola, či je niektorá kategória nevybratá
+  const isAnyCategoryUnselected = React.useMemo(() => {
+    return selectedCategoryRows.some(row => row.categoryId === '');
+  }, [selectedCategoryRows]);
+
   const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
     ${loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0
@@ -93,7 +98,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
 
   const addButtonClasses = `
     font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 transition-colors duration-200 focus:outline-none focus:shadow-outline
-    ${loading || getAvailableCategoryOptions().length === 0 || !isLastRowCategorySelected
+    ${loading || getAvailableCategoryOptions().length === 0 || isAnyCategoryUnselected // Zmenená podmienka disable
       ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
       : 'bg-blue-500 hover:bg-blue-700 text-white'
     }
@@ -191,7 +196,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
                 {
                   type: 'button',
                   onClick: () => handleRemoveRow(index),
-                  className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`, // Podmienka pre neviditeľnosť
+                  className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${selectedCategoryRows.length === 1 ? 'invisible' : ''}`,
                   disabled: loading || selectedCategoryRows.length === 1,
                   tabIndex: 24 + index * 2
                 },
@@ -205,7 +210,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
               type: 'button',
               onClick: handleAddRow,
               className: addButtonClasses,
-              disabled: loading || !isLastRowCategorySelected || getAvailableCategoryOptions().length === 0,
+              disabled: loading || isAnyCategoryUnselected || getAvailableCategoryOptions().length === 0, // Zmenená podmienka disable
               tabIndex: 22 + selectedCategoryRows.length * 2
             },
             '+'
