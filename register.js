@@ -657,65 +657,122 @@ function App() {
       const firestoreDb = window.db;
 
       if (!authInstance || !firestoreDb) {
-        console.error("App.js: Firebase Auth alebo Firestore nie sú globálne dostupné. Zastavujem registráciu.");
-        setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
+        console.error("App.js: === KRITICKÁ CHYBA === Firebase Auth (window.auth) alebo Firestore (window.db) nie sú GLOBÁLNE dostupné PRI ODOSTLANÍ. authInstance:", authInstance, "firestoreDb:", firestoreDb);
+        setNotificationMessage('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.');
         setShowNotification(true);
         setNotificationType('error');
-        return;
+        return; 
       }
-      console.log("App.js: Firebase Auth a Firestore sú dostupné.");
+      console.log("App.js: Firebase Auth a Firestore sú dostupné a pripravené.");
 
-
-      // Získanie reCAPTCHA tokenu pre finálnu registráciu (klient-side overenie)
-      const recaptchaToken = await getRecaptchaToken('register_user');
-      if (!recaptchaToken) {
-        console.warn("App.js: reCAPTCHA Token nebol získaný. Zastavujem registráciu.");
-        return; // Zastav, ak token nebol získaný
+      let recaptchaToken = null;
+      try {
+        recaptchaToken = await getRecaptchaToken('register_user');
+        if (!recaptchaToken) {
+          console.warn("App.js: reCAPTCHA Token nebol získaný. Zastavujem registráciu.");
+          setNotificationMessage('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.');
+          setShowNotification(true);
+          setNotificationType('error');
+          return; 
+        }
+        console.log("App.js: reCAPTCHA Token pre registráciu používateľa získaný.");
+      } catch (recaptchaError) {
+          console.error("App.js: Chyba pri získavaní reCAPTCHA tokenu:", recaptchaError);
+          setNotificationMessage(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`);
+          setShowNotification(true);
+          setNotificationType('error');
+          return;
       }
-      console.log("App.js: reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
       console.log("App.js: Pokúšam sa vytvoriť používateľa v Authentication...");
-      // Používame globálnu inštanciu Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
-      const user = userCredential.user;
+      let user = null;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
+        user = userCredential.user;
 
-      if (!user || !user.uid) {
-        console.error("App.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii. Zastavujem registráciu.");
-        setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
-        setShowNotification(true);
-        setNotificationType('error');
-        return;
+        if (!user || !user.uid) {
+          console.error("App.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
+          setNotificationMessage('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.');
+          setShowNotification(true);
+          setNotificationType('error');
+          return; 
+        }
+        console.log("App.js: Používateľ úspešne vytvorený v Auth s UID:", user.uid);
+
+      } catch (authError) {
+          console.error("App.js: Chyba pri vytváraní používateľa v Authentication:", authError);
+          let authErrorMessage = 'Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.';
+          if (authError.code) {
+              switch (authError.code) {
+                  case 'auth/email-already-in-use':
+                      authErrorMessage = 'Zadaná e-mailová adresa je už používaná.';
+                      break;
+                  case 'auth/invalid-email':
+                      authErrorMessage = 'Neplatný formát e-mailovej adresy.';
+                      break;
+                  case 'auth/weak-password':
+                      authErrorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
+                      break;
+                  default:
+                      authErrorMessage = authError.message || authErrorMessage;
+                      break;
+              }
+          } else {
+              authErrorMessage = authError.message || authErrorMessage;
+          }
+          setNotificationMessage(authErrorMessage);
+          setShowNotification(true);
+          setNotificationType('error');
+          return;
       }
-      console.log("App.js: Používateľ vytvorený v Auth s UID:", user.uid);
 
-
-      // 2. Uloženie používateľských údajov do Firestore
-      // Zmenená cesta pre zápis do databázy na /users/{userId}
-      // Používame globálnu inštanciu Firestore DB
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
-
       console.log("App.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
-      await setDoc(userDocRef, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        contactPhoneNumber: fullPhoneNumber,
-        country: formData.country,
-        city: formData.city,
-        postalCode: formData.postalCode,
-        street: formData.street,
-        houseNumber: formData.houseNumber,
-        billing: formData.billing,
-        role: userRole, // Predvolená rola 'user'
-        approved: true,
-        registrationDate: serverTimestamp(),
-        passwordLastChanged: serverTimestamp(),
-        categories: formData.categories, // Uloženie dát o kategóriách a tímoch z Page3
-        teams: teamsDataToSave, // Uloženie finálnych dát o tímoch z Page4Form
-      });
-      console.log("App.js: Údaje používateľa úspešne zapísané do Firestore.");
+      try {
+        await setDoc(userDocRef, {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          contactPhoneNumber: fullPhoneNumber,
+          country: formData.country,
+          city: formData.city,
+          postalCode: formData.postalCode,
+          street: formData.street,
+          houseNumber: formData.houseNumber,
+          billing: formData.billing,
+          role: userRole,
+          approved: true,
+          registrationDate: serverTimestamp(),
+          passwordLastChanged: serverTimestamp(),
+          categories: formData.categories,
+          teams: teamsDataToSave,
+        });
+        console.log("App.js: Údaje používateľa úspešne zapísané do Firestore.");
+      } catch (firestoreError) {
+          console.error("App.js: Chyba pri zápise údajov do Firestore:", firestoreError);
+          let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
+          if (firestoreError.code === 'permission-denied') {
+              firestoreErrorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
+          } else {
+              firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
+          }
+          setNotificationMessage(firestoreErrorMessage);
+          setShowNotification(true);
+          setNotificationType('error');
+          // Dôležité: Ak zápis do Firestore zlyhá, odstráňte používateľa z Auth, aby ste predišli osiroteným účtom.
+          try {
+              if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
+                  await authInstance.currentUser.delete(); // Odstráňte používateľa z Auth
+                  console.warn("App.js: Používateľ z Auth bol odstránený kvôli zlyhaniu zápisu do Firestore.");
+              } else {
+                console.warn("App.js: Používateľ z Auth nebol odstránený po zlyhaní zápisu do Firestore (buď neexistuje, alebo bol už odhlásený/zmenený).");
+              }
+          } catch (deleteError) {
+              console.error("App.js: Chyba pri odstraňovaní používateľa z Auth po zlyhaní Firestore zápisu:", deleteError);
+          }
+          return;
+      }
 
-      // 3. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
       console.log("App.js: Pokúšam sa odoslať registračný e-mail.");
       try {
           const payload = {
@@ -744,7 +801,7 @@ function App() {
           console.log("App.js: Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Opaque response
             headers: {
               'Content-Type': 'application/json',
             },
@@ -756,6 +813,7 @@ function App() {
           console.log("App.js: Ak je 'no-cors' režim, výsledok fetchu nemusí byť dostupný. Pokračujem.");
       } catch (emailError) {
           console.error("App.js: Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
+          // Návrat z funkcie kvôli zlyhaniu emailu by nebol správny, pretože registrácia už prebehla
       }
 
       // Pridanie krátkeho oneskorenia, aby sa zabezpečilo spracovanie sieťových požiadaviek
@@ -770,8 +828,12 @@ function App() {
       // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
       console.log("App.js: Registrácia úspešná, pokúšam sa odhlásiť používateľa.");
       try {
-        await signOut(authInstance); // Používame globálnu inštanciu Firebase Auth
-        console.log("App.js: Používateľ úspešne odhlásený po registrácii.");
+        if (authInstance && authInstance.currentUser) { // Skontrolujte, či existuje prihlásený používateľ
+          await signOut(authInstance); // Používame globálnu inštanciu Firebase Auth
+          console.log("App.js: Používateľ úspešne odhlásený po registrácii.");
+        } else {
+          console.warn("App.js: Používateľ nebol prihlásený alebo už bol odhlásený, preskakujem odhlásenie.");
+        }
       } catch (signOutError) {
         console.error("App.js: Chyba pri odhlasovaní po registrácii:", signOutError);
       }
@@ -794,31 +856,10 @@ function App() {
         window.location.href = 'login.html';
       }, 5000); // 5 sekúnd na zobrazenie notifikácie
 
-    } catch (error) {
-      console.error('App.js: Vyskytla sa chyba počas registrácie alebo zápisu do Firestore:', error);
-      let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
-
-      if (error.code) {
-          switch (error.code) {
-              case 'auth/email-already-in-use':
-                  errorMessage = 'Zadaná e-mailová adresa je už používaná.';
-                  break;
-              case 'auth/invalid-email':
-                  errorMessage = 'Neplatný formát e-mailovej adresy.';
-                  break;
-              case 'auth/weak-password':
-                  errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
-                  break;
-              case 'permission-denied': // Špecifická chyba povolenia Firestore
-                  errorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
-                  break;
-              default:
-                  errorMessage = error.message || errorMessage;
-                  break;
-          }
-      } else {
-          errorMessage = error.message || errorMessage;
-      }
+    } catch (globalError) { // Záchytný blok pre akékoľvek neočakávané chyby
+      console.error('App.js: NEČAKANÁ CHYBA POČAS REGISTRÁCIE (pravdepodobne z chyby Promise mimo priameho await):', globalError);
+      let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
+      // Tu môžete pridať ďalšie podmienky pre globalError.code, ak je to potrebné
       setNotificationMessage(errorMessage);
       setShowNotification(true);
       setNotificationType('error');
@@ -999,8 +1040,9 @@ function initializeRegistrationApp() {
   const rootElement = document.getElementById('root');
   if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
-    appInitialized = true;
+    appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
 
+    // Priame vykreslenie React aplikácie
     root.render(React.createElement(App, null));
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
 
@@ -1009,18 +1051,23 @@ function initializeRegistrationApp() {
   }
 }
 
+// Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
 window.addEventListener('globalDataUpdated', () => {
   console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
-  globalDataUpdatedReceived = true; 
+  globalDataUpdatedReceived = true; // Označíme, že udalosť bola prijatá
   initializeRegistrationApp();
 });
 
+// NOVINKA: Počúvame na udalosť 'categoriesLoaded', ktorá je odoslaná z header.js
 window.addEventListener('categoriesLoaded', () => {
   console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
-  categoriesLoadedReceived = true; 
+  categoriesLoadedReceived = true; // Označíme, že kategórie boli prijaté
   initializeRegistrationApp();
 });
 
+
+// NOVINKA: Ak sa stránka načíta po tom, čo už boli odoslané obe udalosti, inicializujeme aplikáciu okamžite.
+// Toto je záložná možnosť, ak sa udalosti spustia skôr, ako React component začne počúvať.
 if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
   console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
   globalDataUpdatedReceived = true;
