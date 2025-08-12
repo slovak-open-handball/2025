@@ -591,27 +591,28 @@ function App() {
 
     console.log("App.js: Transformed categories for Page4:", transformedCategories); // Logovanie transformovaných kategórií
 
-    // NOVINKA: Inicializácia teamsDataFromPage4 (jediný zdroj pravdy) priamo tu v App komponente
-    const initialTeamsDataForPage4 = {};
+    // NOVINKA: Inicializácia newTeamsDataForPage4 (jediný zdroj pravdy) priamo tu v App komponente
+    const newTeamsDataForPage4 = {}; // Použijeme nový objekt, aby sme predišli priamym mutáciám
     const clubName = formData.billing.clubName || '';
 
     Object.keys(transformedCategories).forEach(categoryName => {
         const numTeams = transformedCategories[categoryName].numberOfTeams;
-        initialTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
+        newTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
             
             // Zachovať existujúce dáta, ak už existujú pre túto kategóriu a index tímu
+            // DÔLEŽITÉ: Použijeme existujúce teamsDataFromPage4 na záchranu už zadaných hodnôt
             const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
 
             return {
                 teamName: generatedTeamName, // Vždy pregenerujte názov
-                players: existingTeamData.players || 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
-                teamMembers: existingTeamData.teamMembers || 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
+                players: existingTeamData.players !== undefined ? existingTeamData.players : 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
+                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : 1, // Zachovať existujúci počet členov tímu, inak predvolené na 1
             };
         });
     });
-    setTeamsDataFromPage4(initialTeamsDataForPage4); // Nastavíme inicializované dáta tímov
+    setTeamsDataFromPage4(newTeamsDataForPage4); // Nastavíme inicializované dáta tímov
 
     setFormData(prev => ({
         ...prev,
