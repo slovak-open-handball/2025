@@ -1,8 +1,6 @@
 // register-page4.js
 // Obsahuje komponenty a logiku pre štvrtú (finálnu) stránku registračného formulára - detaily tímov.
 
-// import React from 'react'; // DÔLEŽITÁ OPRAVA: ODSTRÁNENÝ import Reactu, pretože je načítaný globálne cez CDN v register.html
-
 export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
     // formData.categories obsahuje štruktúru: { 'Kategória Názov': { numberOfTeams: X }, ... }
     // Vytvoríme počiatočný stav pre tímy na základe formData.categories a numberOfTeamsFromPage3
@@ -13,33 +11,44 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             return teamsDataFromPage4;
         }
 
+        const clubName = formData.billing.clubName || ''; // Získame názov klubu z formData
+
         if (formData.categories) {
             Object.keys(formData.categories).forEach(categoryName => {
                 const numTeams = formData.categories[categoryName].numberOfTeams;
-                initialDetails[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => ({
-                    teamName: '',
-                    players: 1, // Predvolené na 1
-                    teamMembers: 0, // Predvolené na 0
-                }));
+                initialDetails[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
+                    // Generovanie názvu tímu: NázovKlubu A, NázovKlubu B, atď., ak je viac ako 1 tím
+                    const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+                    return {
+                        teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
+                        players: 1, // Predvolené na 1
+                        teamMembers: 0, // Predvolené na 0
+                    };
+                });
             });
         }
         return initialDetails;
     });
 
     // useEffect pre aktualizáciu teamDetails, ak sa zmenia formData.categories (napr. pri návrate z inej strany a zmene kategórií)
+    // ALEBO ak sa zmení názov klubu, pregenerujeme názvy tímov (ak už nie sú zadané z teamsDataFromPage4)
     React.useEffect(() => {
-        if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) { // Ak teamsDataFromPage4 nie sú prítomné alebo sú prázdne
+        // Ak sú už dáta teamsDataFromPage4 naplnené (napr. pri návrate na stranu 4), neprepisujeme ich automaticky
+        if (Object.keys(teamsDataFromPage4).length === 0) {
             const newDetails = {};
+            const clubName = formData.billing.clubName || '';
+
             if (formData.categories) {
                 Object.keys(formData.categories).forEach(categoryName => {
                     const numTeams = formData.categories[categoryName].numberOfTeams;
-                    // Skontrolujeme, či kategória už existuje v teamDetails a zachováme existujúce tímy, ak je to možné
                     const existingTeams = teamDetails[categoryName] || [];
                     const updatedTeams = Array.from({ length: numTeams }).map((_, teamIndex) => {
-                        return existingTeams[teamIndex] || {
-                            teamName: '',
-                            players: 1,
-                            teamMembers: 0,
+                        const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+                        return {
+                            ...existingTeams[teamIndex], // Zachovať existujúce dáta (napr. počet hráčov/členov tímu)
+                            teamName: `${clubName}${suffix}`, // Automaticky generovaný názov tímu
+                            players: existingTeams[teamIndex]?.players || 1, // Zachovať existujúci počet hráčov, inak predvolené na 1
+                            teamMembers: existingTeams[teamIndex]?.teamMembers || 0, // Zachovať existujúci počet členov tímu, inak predvolené na 0
                         };
                     });
                     newDetails[categoryName] = updatedTeams;
@@ -48,20 +57,20 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             // Iba aktualizujeme stav, ak sa naozaj zmenil, aby sme predišli nekonečnej slučke
             if (JSON.stringify(newDetails) !== JSON.stringify(teamDetails)) {
                 setTeamDetails(newDetails);
-                setTeamsDataFromPage4(newDetails); // Aktualizovať stav v App.js
+                setTeamsDataFromPage4(newDetails); // Aktualizovať aj stav v App.js
             }
         }
-    }, [formData.categories, teamDetails, setTeamsDataFromPage4, teamsDataFromPage4]);
-
+    }, [formData.categories, formData.billing.clubName, setTeamsDataFromPage4]); // Pridané formData.billing.clubName ako závislosť
 
     // Handler pre zmenu názvu tímu, počtu hráčov alebo členov tímu
+    // Poznámka: onChange pre názov tímu je teraz odstránený, pretože je automaticky generovaný a zablokovaný
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         setTeamDetails(prevDetails => {
             const newDetails = { ...prevDetails };
             newDetails[categoryName] = [...(newDetails[categoryName] || [])]; // Zabezpečiť, že je to pole
             newDetails[categoryName][teamIndex] = {
                 ...(newDetails[categoryName][teamIndex] || {}),
-                [field]: field === 'teamName' ? value : parseInt(value, 10) || 0 // Prevod na číslo pre počty
+                [field]: parseInt(value, 10) || 0 // Prevod na číslo pre počty (názov tímu sa nemení cez tento handler)
             };
             return newDetails;
         });
@@ -71,7 +80,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             newDetails[categoryName] = [...(newDetails[categoryName] || [])];
             newDetails[categoryName][teamIndex] = {
                 ...(newDetails[categoryName][teamIndex] || {}),
-                [field]: field === 'teamName' ? value : parseInt(value, 10) || 0
+                [field]: parseInt(value, 10) || 0
             };
             return newDetails;
         });
@@ -83,7 +92,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const categoryName in teamDetails) {
             for (const team of teamDetails[categoryName]) {
-                if (!team.teamName.trim()) return false;
+                if (!team.teamName.trim()) return false; // Názov tímu je povinný (aj keď auto-generovaný)
                 if (team.players < 1 || team.players > numberOfPlayersLimit) return false; // Min 1, Max podľa nastavení
                 if (team.teamMembers < 0 || team.teamMembers > numberOfTeamMembersLimit) return false; // Min 0, Max podľa nastavení
             }
@@ -157,10 +166,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'text',
                                         id: `teamName-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        style: { cursor: 'none', pointerEvents: 'none' }, // Vynútenie kurzora 'none' a zakázanie interakcií
                                         value: team.teamName,
-                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamName', e.target.value),
-                                        required: true,
-                                        disabled: loading,
+                                        readOnly: true, // Zablokovanie editácie inputboxu
+                                        disabled: true, // Zabezpečenie, že input je disabled
                                     })
                                 ),
                                 React.createElement(
