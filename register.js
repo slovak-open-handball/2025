@@ -854,7 +854,7 @@ function App() {
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 13000); // 13 sekúnd na zobrazenie notifikácie
+      }, 20000); // 20 sekúnd na zobrazenie notifikácie
 
     } catch (globalError) { // Záchytný blok pre akékoľvek neočakávané chyby
       console.error('App.js: NEČAKANÁ CHYBA POČAS REGISTRÁCIE (pravdepodobne z chyby Promise mimo priameho await):', globalError);
