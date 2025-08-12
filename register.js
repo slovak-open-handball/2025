@@ -556,9 +556,8 @@ function App() {
             return {
                 teamName: generatedTeamName,
                 players: existingTeamData.players !== undefined ? existingTeamData.players : '',
-                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '',
-                teamMembersFemale: existingTeamData.teamMembersFemale !== undefined ? existingTeamData.teamMembersFemale : '', // Explicitná inicializácia
-                teamMembersMale: existingTeamData.teamMembersMale !== undefined ? existingTeamData.teamMembersMale : '',     // Explicitná inicializácia
+                womenTeamMembers: existingTeamData.womenTeamMembers !== undefined ? existingTeamData.womenTeamMembers : '', // Upravená inicializácia
+                menTeamMembers: existingTeamData.menTeamMembers !== undefined ? existingTeamData.menTeamMembers : '',     // Upravená inicializácia
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
                     ? existingTeamData.tshirts
                     : [{ size: '', quantity: '' }]
