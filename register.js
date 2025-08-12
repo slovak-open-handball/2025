@@ -609,6 +609,10 @@ function App() {
                 teamName: generatedTeamName, // Vždy pregenerujte názov
                 players: existingTeamData.players !== undefined ? existingTeamData.players : '', // Inicializácia na prázdny reťazec
                 teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '', // Inicializácia na prázdny reťazec
+                // NOVINKA: Inicializácia tshirts pre každý tím
+                tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
+                    ? existingTeamData.tshirts
+                    : [{ size: '', quantity: '' }]
             };
         });
     });
