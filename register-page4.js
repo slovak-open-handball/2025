@@ -114,11 +114,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Vytvorenie správy o validácii tričiek pre každý tím
     const getPerTeamTshirtValidationMessage = React.useCallback((diff, currentCategoryName, currentTeamName, isTeamMembersTotalOverLimit) => {
         if (isTeamMembersTotalOverLimit) {
-            return React.createElement(React.Fragment, null,
-                React.createElement('strong', null, 'Na pokračovanie'),
-                ' v registrácii na turnaj ',
-                React.createElement('strong', null, 'je\u00A0potrebné znížiť počet členov realizačného tímu.')
-            );
+            return [
+                React.createElement('strong', { key: 'prefix_bold' }, 'Na pokračovanie'),
+                React.createElement('span', { key: 'middle_normal' }, ' v registrácii na turnaj '),
+                React.createElement('strong', { key: 'suffix_bold' }, 'je\u00A0potrebné znížiť počet členov realizačného tímu.')
+            ];
         }
 
         if (diff === 0) return null; // Ak nie je rozdiel, vrátime null alebo prázdny reťazec, aby sa nič nezobrazilo
@@ -147,13 +147,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         }
 
-        return React.createElement(React.Fragment, null,
-            React.createElement('strong', null, 'Na pokračovanie'),
-            ' v registrácii na turnaj ',
-            React.createElement('strong', null, 'je\u00A0potrebné'), // Pridaná pevná medzera
-            ` v kategórii ${currentCategoryName} pre tím ${currentTeamName} `,
-            React.createElement('strong', null, `${actionText} ${countText}`)
-        );
+        return [
+            React.createElement('strong', { key: 'prefix_bold_tshirt' }, 'Na pokračovanie'),
+            React.createElement('span', { key: 'middle_normal_tshirt' }, ' v registrácii na turnaj '),
+            React.createElement('strong', { key: 'is_needed_tshirt' }, 'je\u00A0potrebné'), // Pridaná pevná medzera
+            React.createElement('span', { key: 'category_team_normal_tshirt' }, ` v kategórii ${currentCategoryName} pre tím ${currentTeamName} `),
+            React.createElement('strong', { key: 'action_count_bold_tshirt' }, `${actionText} ${countText}`)
+        ];
     }, []);
 
     // Validácia celého formulára pre stránku 4
@@ -471,7 +471,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     )
                                 ),
                                 // Zobrazenie validačnej správy pre tričká, ak je rozdiel
-                                teamTshirtDifference !== 0 && React.createElement(
+                                (isTeamMembersTotalOverLimit || teamTshirtDifference !== 0) && React.createElement( // Zobrazí sa, ak je prekročený limit alebo rozdiel v tričkách
                                     'div',
                                     { className: `mt-2 p-2 rounded-lg text-center bg-red-100 text-red-700` },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName, isTeamMembersTotalOverLimit) // Predanie isTeamMembersTotalOverLimit
@@ -514,7 +514,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať'
+                    ) : 'Registrovať sa'
                 )
             )
         )
