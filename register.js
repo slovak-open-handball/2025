@@ -1018,50 +1018,44 @@ function App() {
   );
 }
 
-// Global Firebase initialization should ideally be handled once in register.html,
-// but for this React component, we'll manage it internally for robustness.
-// Removed global initialization flags as React's useEffect handles lifecycle better.
-// let appInitialized = false;
-// let globalDataUpdatedReceived = false;
-// let categoriesLoadedReceived = false;
+let appInitialized = false;
+let globalDataUpdatedReceived = false;
+let categoriesLoadedReceived = false;
 
-// Removed redundant initializeRegistrationApp as React's App component handles rendering.
-// function initializeRegistrationApp() {
-//   if (appInitialized) {
-//     console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
-//     return;
-//   }
-//   if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
-//     console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
-//     return;
-//   }
-//   const rootElement = document.getElementById('root');
-//   if (rootElement) {
-//     const root = ReactDOM.createRoot(rootElement);
-//     appInitialized = true;
-//     root.render(React.createElement(App, null));
-//     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
-//   } else {
-//     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
-//   }
-// }
+ function initializeRegistrationApp() {
+   if (appInitialized) {
+     console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
+     return;
+   }
+   if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
+     console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
+     return;
+   }
+   const rootElement = document.getElementById('root');
+   if (rootElement) {
+     const root = ReactDOM.createRoot(rootElement);
+     appInitialized = true;
+     root.render(React.createElement(App, null));
+     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
+   } else {
+     console.error("register.js: Element s ID 'root' nebol nájdený. React aplikácia nemôže byť renderovaná.");
+   }
+ }
 
-// Removed global event listeners as Firebase initialization is now handled in App's useEffect.
-// window.addEventListener('globalDataUpdated', () => {
-//   console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
-//   globalDataUpdatedReceived = true;
-//   initializeRegistrationApp();
-// });
-// window.addEventListener('categoriesLoaded', () => {
-//   console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
-//   categoriesLoadedReceived = true;
-//   initializeRegistrationApp();
-// });
+ window.addEventListener('globalDataUpdated', () => {
+   console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
+   globalDataUpdatedReceived = true;
+   initializeRegistrationApp();
+ });
+ window.addEventListener('categoriesLoaded', () => {
+   console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
+   categoriesLoadedReceived = true;
+   initializeRegistrationApp();
+ });
 
-// Removed immediate initialization check. React's useEffect handles this.
-// if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
-//   console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
-//   globalDataUpdatedReceived = true;
-//   categoriesLoadedReceived = true;
-//   initializeRegistrationApp();
-// }
+ if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
+   console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
+   globalDataUpdatedReceived = true;
+   categoriesLoadedReceived = true;
+   initializeRegistrationApp();
+ }
