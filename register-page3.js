@@ -23,55 +23,193 @@ const getRecaptchaToken = async (action) => {
 };
 
 // Page3Form Component
-export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification }) { // NOVINKA: Pridaný notificationMessage a closeNotification
-  const isRegisteringRef = React.useRef(false); // Ref pre okamžitý prístup v onAuthStateChanged
+export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification }) {
+  const [categoriesData, setCategoriesData] = React.useState({}); // Objekt pre kategórie (kľúč: id, hodnota: názov)
+  const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
+
+  // Načítanie kategórií z Firestore
+  React.useEffect(() => {
+    const firestoreDb = window.db;
+    if (!firestoreDb) {
+      console.error("Firestore db nie je inicializované v Page3Form.");
+      setNotificationMessage('Chyba pri načítaní kategórií: Firestore nie je pripravené.');
+      setShowNotification(true);
+      setNotificationType('error');
+      return;
+    }
+
+    const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
+    const unsubscribe = onSnapshot(categoriesDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setCategoriesData(data); // Uložíme celý objekt
+        console.log("Kategórie načítané:", data);
+      } else {
+        setCategoriesData({});
+        console.log("Dokument kategórií neexistuje.");
+        setNotificationMessage('V systéme nie sú definované žiadne kategórie.');
+        setShowNotification(true);
+        setNotificationType('error');
+      }
+      setIsCategoriesLoaded(true);
+    }, (error) => {
+      console.error("Chyba pri načítaní kategórií:", error);
+      setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
+      setShowNotification(true);
+      setNotificationType('error');
+      setIsCategoriesLoaded(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Handler pre zmenu vybranej kategórie v riadku
+  const handleCategoryChange = (index, value) => {
+    setSelectedCategoryRows(prevRows => {
+      const newRows = [...prevRows];
+      newRows[index].categoryId = value;
+      return newRows;
+    });
+  };
+
+  // Handler pre zmenu počtu tímov v riadku
+  const handleTeamsChange = (index, value) => {
+    const numValue = parseInt(value, 10);
+    setSelectedCategoryRows(prevRows => {
+      const newRows = [...prevRows];
+      newRows[index].teams = Math.max(1, numValue || 1); // Minimálne 1 tím
+      return newRows;
+    });
+  };
+
+  // Handler pre pridanie nového riadku
+  const handleAddRow = () => {
+    // Len ak existujú nevybraté kategórie
+    if (getAvailableCategoryOptions().length > 0) {
+      setSelectedCategoryRows(prevRows => [...prevRows, { categoryId: '', teams: 1 }]);
+    }
+  };
+
+  // Handler pre odstránenie riadku
+  const handleRemoveRow = (indexToRemove) => {
+    setSelectedCategoryRows(prevRows => prevRows.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Funkcia na získanie dostupných kategórií pre selectbox
+  const getAvailableCategoryOptions = (currentIndex = -1) => {
+    const allCategoryIds = Object.keys(categoriesData);
+    const selectedIdsInOtherRows = selectedCategoryRows
+      .filter((row, idx) => idx !== currentIndex && row.categoryId !== '')
+      .map(row => row.categoryId);
+
+    return allCategoryIds
+      .filter(catId => !selectedIdsInOtherRows.includes(catId))
+      .map(catId => ({ id: catId, name: categoriesData[catId] })); // Predpokladáme, že categoriesData[catId] je názov
+  };
+
+  // Overenie platnosti formulára pre stranu 3
+  const isFormValidPage3 = selectedCategoryRows.every(row => row.categoryId !== '' && row.teams >= 1);
+  const hasSelectedCategories = selectedCategoryRows.length > 0 && selectedCategoryRows.some(row => row.categoryId !== '');
+
 
   // Dynamické triedy pre tlačidlo "Registrovať sa"
   const registerButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-    ${loading || !isRecaptchaReady
+    ${loading || !isRecaptchaReady || !isFormValidPage3
       ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed' // Zakázaný stav
       : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
     }
   `;
 
-  // handleSubmit z Page3Form je teraz handleFinalSubmit z App.js
-  // (Ponechávame názov handleSubmit pre konzistentnosť v rámci Page3Form)
-  // Funkcionalita bola presunutá do App.js a volá sa prostredníctvom propu.
-
+  // Renderovanie formulára
   return React.createElement(
     React.Fragment,
     null,
-    // NOVINKA: NotificationModal teraz správne prijíma props
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: "error" }), // Len pre chyby z formulára
+    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: "error" }),
 
     React.createElement(
       'h2',
       { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-      'Registrácia - Potvrdenie' // Nový nadpis
+      'Registrácia - strana 3' // Zmenený nadpis
     ),
     React.createElement(
-      'div',
-      { className: 'space-y-4' },
-      React.createElement(
-        'div',
-        { className: 'bg-blue-50 p-4 rounded-lg text-sm text-gray-700 border border-blue-200' },
-        React.createElement('p', { className: 'font-semibold mb-2' }, 'Skontrolujte prosím zadané údaje:'),
-        React.createElement('ul', { className: 'list-disc list-inside space-y-1' },
-          React.createElement('li', null, React.createElement('strong', null, 'Meno:'), ` ${formData.firstName} ${formData.lastName}`),
-          React.createElement('li', null, React.createElement('strong', null, 'Email:'), ` ${formData.email}`),
-          React.createElement('li', null, React.createElement('strong', null, 'Telefón:'), ` ${selectedCountryDialCode}${formData.contactPhoneNumber}`),
-          React.createElement('li', null, React.createElement('strong', null, 'Klub:'), ` ${formData.billing?.clubName}`),
-          (formData.billing?.ico || formData.billing?.dic || formData.billing?.icDph) &&
-          React.createElement('li', null, React.createElement('strong', null, 'IČO/DIČ/IČ DPH:'),
-            formData.billing?.ico && ` IČO: ${formData.billing.ico}`,
-            formData.billing?.dic && ` DIČ: ${formData.billing.dic}`,
-            formData.billing?.icDph && ` IČ DPH: ${formData.billing.icDph}`
-          ),
-          React.createElement('li', null, React.createElement('strong', null, 'Adresa:'), ` ${formData.street} ${formData.houseNumber}, ${formData.postalCode} ${formData.city}, ${formData.country}`)
-        ),
-        React.createElement('p', { className: 'mt-4 text-orange-600 font-semibold' }, 'Kliknutím na tlačidlo "Registrovať sa" potvrdzujete správnosť všetkých údajov a súhlasíte s podmienkami registrácie.')
+      'form',
+      { onSubmit: handleSubmit, className: 'space-y-4' }, // handleSubmit je prop z App.js
+
+      !isCategoriesLoaded ? (
+        React.createElement('div', { className: 'text-center py-8' }, 'Načítavam kategórie...')
+      ) : Object.keys(categoriesData).length === 0 ? (
+        React.createElement(
+          'div',
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+          React.createElement(
+            'p',
+            { className: 'text-red-600 text-lg font-semibold' },
+            'V systéme nie sú definované žiadne kategórie. Registrácia nie je možná.'
+          )
+        )
+      ) : (
+        React.createElement(
+          'div',
+          { className: 'space-y-4' },
+          selectedCategoryRows.map((row, index) => (
+            React.createElement(
+              'div',
+              { key: index, className: 'flex items-center space-x-2' },
+              React.createElement(
+                'select',
+                {
+                  className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-grow',
+                  value: row.categoryId,
+                  onChange: (e) => handleCategoryChange(index, e.target.value),
+                  required: true,
+                  disabled: loading,
+                  tabIndex: 22 + index * 2 // Dynamický tabIndex
+                },
+                React.createElement('option', { value: '' }, 'Vyberte kategóriu'),
+                getAvailableCategoryOptions(index).map(cat => (
+                  React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                ))
+              ),
+              React.createElement('input', {
+                type: 'number',
+                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-20 text-center',
+                value: row.teams,
+                onChange: (e) => handleTeamsChange(index, e.target.value),
+                min: 1,
+                required: true,
+                disabled: loading,
+                tabIndex: 23 + index * 2 // Dynamický tabIndex
+              }),
+              selectedCategoryRows.length > 1 && React.createElement( // Zobraziť tlačidlo mínus len ak je viac ako jeden riadok
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => handleRemoveRow(index),
+                  className: 'bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline',
+                  disabled: loading,
+                  tabIndex: 24 + index * 2 // Dynamický tabIndex
+                },
+                '-'
+              )
+            )
+          )),
+          // Tlačidlo "+"
+          getAvailableCategoryOptions().length > 0 && React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleAddRow,
+              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 transition-colors duration-200 focus:outline-none focus:shadow-outline',
+              disabled: loading,
+              tabIndex: 22 + selectedCategoryRows.length * 2 // Nový tabIndex pre tlačidlo "+"
+            },
+            '+'
+          )
+        )
       ),
+
       React.createElement(
         'div',
         { className: 'flex justify-between mt-6' },
@@ -90,9 +228,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
           'button',
           {
             type: 'submit',
-            onClick: handleSubmit, // Spustí finálnu registračnú logiku
             className: registerButtonClasses,
-            disabled: loading || !isRecaptchaReady, // Zmenená podmienka disable
+            disabled: loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0, // Zmenená podmienka disable
             tabIndex: 21 // Nový tabIndex
           },
           loading ? React.createElement(
