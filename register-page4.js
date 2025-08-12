@@ -100,7 +100,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return TSHIRT_SIZES.filter(size => !selectedSizesInOtherRows.includes(size));
     };
 
-    // Nová funkcia pre získanie správy o validácii tričiek pre konkrétny tím
     const getPerTeamTshirtValidationMessage = React.useCallback((diff, currentCategoryName, currentTeamName) => {
         if (diff === 0) return '';
 
@@ -126,7 +125,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             return false;
         }
 
-        let allTshirtsMatch = true; // Príznak pre kontrolu tričiek všetkých tímov
+        let allTshirtsMatch = true;
 
         for (const categoryName in teamsDataFromPage4) {
             for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
@@ -151,7 +150,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }
 
-                // Výpočet potrebného a objednaného počtu tričiek pre aktuálny tím
                 const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
                                             (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
                 
@@ -161,11 +159,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
 
                 if (teamRequiredTshirts !== teamOrderedTshirts) {
-                    allTshirtsMatch = false; // Ak sa počty tričiek pre akýkoľvek tím nezhodujú, nastav príznak na false
+                    allTshirtsMatch = false;
                 }
             }
         }
-        return allTshirtsMatch; // Vráť konečný príznak
+        return allTshirtsMatch;
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
     const registerButtonClasses = `
@@ -232,7 +230,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
                         (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => {
-                            // Výpočet potrebných a objednaných tričiek pre aktuálny tím
                             const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
                                                         (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
                             
@@ -346,10 +343,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         '+'
                                     )
                                 ),
-                                // Zobrazenie validačnej správy pre tričká pre konkrétny tím
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
-                                    { className: `mt-2 p-2 rounded-lg text-center font-bold ${teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}` },
+                                    { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
                             );
