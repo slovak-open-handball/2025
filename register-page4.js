@@ -414,7 +414,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: addButtonDisabled,
                                         },
                                         '+'
-                                    )
                                 ),
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
