@@ -390,6 +390,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 min: 0,
                                                 required: true,
                                                 disabled: loading,
+                                                placeholder: 'Zadajte počet', // Pridaný placeholder
                                             }),
                                             React.createElement(
                                                 'button',
