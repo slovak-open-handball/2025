@@ -1098,7 +1098,7 @@ function App() {
             )
           )
         )
-      ) : (isRegistrationOpen === false && countdownMessage) ? (
+      ) : (isRegistrationOpen === false && countdown) ? (
         // Ak registrácia nie je otvorená, ale je aktívny odpočet
         React.createElement(
           'div',
@@ -1122,8 +1122,8 @@ function App() {
                   ' hod.'
                 )
               ),
-              countdownMessage && (
-                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdownMessage}`))
+              countdown && (
+                  React.createElement('p', { className: 'text-md text-gray-700 mt-2' }, React.createElement('strong', null, `Zostáva: ${countdown}`))
               )
             )
           )
