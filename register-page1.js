@@ -237,6 +237,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // NOVINKA: Stav pre sledovanie, či bol input "Email" aktivovaný
   const [emailTouched, setEmailTouched] = React.useState(false);
 
+  // Ref pre input telefónneho čísla, aby sme mohli manipulovať s kurzorom
+  const phoneInputRef = React.useRef(null);
+
 
   const toggleShowPassword = () => setShowPassword(prev => !prev);
   const toggleShowConfirmPassword = () => setShowConfirmPassword(prev => !prev);
@@ -276,6 +279,77 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   const passwordValidationRules = getPasswordValidationRules(formData.password);
   // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
   // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
+
+  // NOVÁ FUNKCIA: Manipulácia s telefónnym číslom (formátovanie a Backspace)
+  const handlePhoneNumberInputChange = (e) => {
+      const input = e.target;
+      const originalValue = input.value;
+      const originalCursorPos = input.selectionStart;
+
+      // Odstránime všetky nečíselné znaky z hodnoty
+      let cleanedValue = originalValue.replace(/\D/g, '');
+
+      let formattedValue = '';
+      let cursorOffset = 0; // Pomocná premenná pre posun kurzora
+
+      for (let i = 0; i < cleanedValue.length; i++) {
+          formattedValue += cleanedValue[i];
+          // Ak je pozícia, kde by mala byť medzera (po každej 3. číslici) a nasleduje ďalšia číslica
+          if ((i + 1) % 3 === 0 && i + 1 < cleanedValue.length) {
+              formattedValue += ' ';
+              // Ak sme vkladali medzeru a kurzor bol za ňou, posunieme kurzor o 1
+              if (originalCursorPos === formattedValue.length - 1) {
+                  cursorOffset++;
+              }
+          }
+      }
+
+      // Aktualizujeme stav formulára
+      handleChange({ target: { id: 'contactPhoneNumber', value: formattedValue } });
+
+      // Obnovíme pozíciu kurzora po re-renderovaní
+      // Použijeme setTimeout, aby sa kód vykonal po aktualizácii DOM
+      setTimeout(() => {
+          if (phoneInputRef.current) {
+              // Výpočet novej pozície kurzora na základe formátovania
+              let newCursorPos = originalCursorPos + cursorOffset;
+              // Ak sa kurzor nachádzal pred vloženou medzerou, a bola vložená, posunieme ho za ňu
+              // Kontrolujeme, či je medzera na pozícii 'newCursorPos - 1' v novom formátovanom reťazci
+              // a či pôvodná hodnota neobsahovala znak na tejto pozícii (t.j. medzera bola pridaná)
+              if (newCursorPos > 0 && formattedValue.charAt(newCursorPos - 1) === ' ' && originalValue.length === newCursorPos - 1) {
+                  newCursorPos++;
+              }
+              phoneInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          }
+      }, 0);
+  };
+
+  const handlePhoneNumberKeyDown = (e) => {
+    if (e.key === 'Backspace') {
+        const input = e.target;
+        const value = input.value;
+        const cursorPosition = input.selectionStart;
+
+        // Kontrolujeme, či je kurzor na pozícii, kde by mala byť medzera (4, 8, 12, ...)
+        // A zároveň, či je znak pred kurzorom medzera
+        if (cursorPosition > 0 && cursorPosition % 4 === 0 && value.charAt(cursorPosition - 1) === ' ') {
+            e.preventDefault(); // Zabrániť predvolenému správaniu Backspace
+
+            // Odstrániť medzeru a číslicu pred ňou
+            const newValue = value.substring(0, cursorPosition - 2) + value.substring(cursorPosition);
+            
+            // Aktualizovať stav formulára
+            handleChange({ target: { id: 'contactPhoneNumber', value: newValue } });
+
+            // Nastaviť pozíciu kurzora po zmazaní
+            setTimeout(() => {
+                if (phoneInputRef.current) {
+                    phoneInputRef.current.setSelectionRange(cursorPosition - 2, cursorPosition - 2);
+                }
+            }, 0);
+        }
+    }
+  };
 
 
   // Kontrola, či sú všetky povinné polia vyplnené
@@ -491,12 +565,9 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 id: 'contactPhoneNumber',
                 className: 'w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none bg-white rounded-r-lg flex-grow min-w-0 border-none rounded-none',
                 value: formData.contactPhoneNumber,
-                onChange: (e) => {
-                  const re = /^[0-9\b]+$/;
-                  if (e.target.value === '' || re.test(e.target.value)) {
-                    handleChange(e);
-                  }
-                },
+                onChange: handlePhoneNumberInputChange, // Používa novú funkciu pre zmeny
+                onKeyDown: handlePhoneNumberKeyDown,   // Používa novú funkciu pre Backspace
+                ref: phoneInputRef, // Pridáme ref pre manipuláciu s kurzorom
                 required: true,
                 placeholder: 'Zadajte telefónne číslo',
                 tabIndex: 5,
