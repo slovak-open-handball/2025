@@ -9,7 +9,7 @@ import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com
 // Konštanty sú definované globálne v register.html
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Je definovaný aj globálne, ale pre istotu znova tu
 const getRecaptchaToken = async (action) => {
-  if (typeof grecaptcha === 'undefined' || !grecaptra.execute) {
+  if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
     console.error("reCAPTCHA API nie je načítané alebo pripravené.");
     return null;
   }
@@ -23,9 +23,8 @@ const getRecaptchaToken = async (action) => {
 };
 
 // Page3Form Component
-export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap, selectedCategoryRows, setSelectedCategoryRows }) { // NOVINKA: Prijaté selectedCategoryRows a setSelectedCategoryRows
+export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap, selectedCategoryRows, setSelectedCategoryRows }) { // NOVINKA: Zmena handleSubmit na handleNextPage3
   const [categoriesData, setCategoriesData] = React.useState({}); // Objekt pre kategórie (kľúč: id, hodnota: názov)
-  // const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]); // ODSTRÁNENÉ: Stav je teraz v rodičovskom komponente
   const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
 
   // Načítanie kategórií z Firestore
@@ -106,12 +105,12 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
   // NOVINKA: Kontrola, či je posledný riadok platný (vybratá kategória)
   const isLastRowCategorySelected = selectedCategoryRows.length > 0 ? selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '' : false;
 
-  // Dynamické triedy pre tlačidlo "Registrovať sa"
-  const registerButtonClasses = `
+  // Dynamické triedy pre tlačidlo "Ďalej"
+  const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-    ${loading || !isRecaptchaReady || !isFormValidPage3
-      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed' // Zakázaný stav
-      : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
+    ${loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav (zmenené z zelenej na modrú)
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav (zmenené z zelenej na modrú)
     }
   `;
 
@@ -124,8 +123,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }
   `;
 
-  // Handler pre finálne odoslanie formulára z Page3
-  const handlePage3Submit = async (e) => {
+  // Handler pre prechod na stranu 4
+  const handleNextPage3ToPage4 = async (e) => { // NOVINKA: Nová funkcia pre prechod na stranu 4
     e.preventDefault();
     // Pridávame defenzívnu kontrolu pred volaním
     if (typeof setLoading === 'function') setLoading(true); // Nastavíme loading stav
@@ -144,20 +143,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
       return;
     }
 
-    // Transformácia selectedCategoryRows do požadovaného formátu
-    const categoriesToSave = {};
-    selectedCategoryRows.forEach(row => {
-      if (row.categoryId && row.teams) {
-        // Použijeme názov kategórie ako kľúč a vnútri numberOfTeams
-        const categoryName = availableCategoriesMap[row.categoryId] || row.categoryId; // Získame názov z mapy
-        categoriesToSave[categoryName] = {
-          numberOfTeams: row.teams
-        };
-      }
-    });
-
-    // Zavoláme handleSubmit prop (čo je handleFinalSubmit z App.js) a odovzdáme mu dáta
-    await handleSubmit(categoriesToSave); // ODOSIELAME DÁTA
+    // Zavoláme handleNextPage3 prop (z App.js), ktorá zmení stránku na 4
+    await handleNextPage3(selectedCategoryRows); // Odovzdáme selectedCategoryRows do App.js
     if (typeof setLoading === 'function') setLoading(false); // Reset loading stavu po dokončení
   };
 
@@ -175,7 +162,7 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
     ),
     React.createElement(
       'form',
-      { onSubmit: handlePage3Submit, className: 'space-y-4' }, // handleSubmit je prop z App.js
+      { onSubmit: handleNextPage3ToPage4, className: 'space-y-4' }, // NOVINKA: onSubmit teraz volá handleNextPage3ToPage4
 
       !isCategoriesLoaded ? (
         React.createElement('div', { className: 'text-center py-8' }, 'Načítavam kategórie...')
@@ -268,19 +255,19 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
           'button',
           {
             type: 'submit',
-            className: registerButtonClasses,
+            className: nextButtonClasses, // NOVINKA: Používa nextButtonClasses
             disabled: loading || !isRecaptchaReady || !isFormValidPage3 || Object.keys(categoriesData).length === 0, // Zmenená podmienka disable
             tabIndex: 21 // Nový tabIndex
           },
           loading ? React.createElement(
             'div',
             { className: 'flex items-center justify-center' },
-            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+            React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' }, // Zmenená farba spinneru na modrú
               React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
               React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
             ),
-            'Registrujem...'
-          ) : 'Registrovať sa'
+            'Ďalej...' // NOVINKA: Text "Ďalej"
+          ) : 'Ďalej' // NOVINKA: Text "Ďalej"
         )
       )
     )
