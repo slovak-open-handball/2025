@@ -166,9 +166,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 if ((womenTeamMembersValue + menTeamMembersValue) > numberOfTeamMembersLimit) {
                     return false;
                 }
-                if ((womenTeamMembersValue + menTeamMembersValue) < 0 && (womenTeamMembersValue + menTeamMembersValue) !== '') {
-                    return false;
-                }
+                // Pre kontrolu minimálneho počtu by sme mohli pridať:
+                // if ((womenTeamMembersValue + menTeamMembersValue) < 1 && (womenTeamMembersValue + menTeamMembersValue) !== '') {
+                //     return false; // Ak je súčet menší ako 1 (a nie je prázdny), je neplatný
+                // }
+
 
                 // Validácia detailov tričiek
                 for (const tshirt of (team.tshirts || [])) {
@@ -344,7 +346,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         placeholder: 'Zadajte počet mužov',
                                         min: 0, // Pridame min pre muzov
                                         disabled: loading,
-                                    })
+                                    }),
+                                    // Nový text pod inputboxom pre počet mužov
+                                    React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, `Maximálny počet členov realizačného tímu je ${numberOfTeamMembersLimit}`)
                                 ),
                                 
                                 // Sekcia pre účastnícke tričká
