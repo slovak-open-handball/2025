@@ -96,6 +96,14 @@ function TournamentSettingsApp() {
     return (isRegStartValid ? now >= regStart : true) && (isRegEndValid ? now <= regEnd : true);
   }, [registrationStartDate, registrationEndDate]);
 
+  // NOVINKA: Stav pre indikáciu, či majú byť polia zablokované (od začiatku registrácie ďalej)
+  const isFrozenForEditing = React.useMemo(() => {
+    const now = new Date();
+    const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
+    // Je zablokované, ak regStart existuje a aktuálny čas je >= regStart
+    return regStart instanceof Date && !isNaN(regStart) && now >= regStart;
+  }, [registrationStartDate]);
+
 
   // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
@@ -373,12 +381,12 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-players',
-          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isRegistrationOpen
-          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isRegistrationOpen ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
+          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isFrozenForEditing
+          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
           value: numberOfPlayers,
           onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
           min: 0, // Minimálna hodnota
-          disabled: isRegistrationOpen, // Zablokovanie inputu, ak je registrácia otvorená
+          disabled: isFrozenForEditing, // Zablokovanie inputu, ak už registrácia začala alebo skončila
         })
       ),
       React.createElement(
@@ -388,12 +396,12 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-implementation-team',
-          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isRegistrationOpen
-          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isRegistrationOpen ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
+          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isFrozenForEditing
+          className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
           value: numberOfImplementationTeam,
           onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
           min: 0, // Minimálna hodnota
-          disabled: isRegistrationOpen, // Zablokovanie inputu, ak je registrácia otvorená
+          disabled: isFrozenForEditing, // Zablokovanie inputu, ak už registrácia začala alebo skončila
         })
       ),
       React.createElement(
