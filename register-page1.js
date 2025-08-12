@@ -290,17 +290,16 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       let cleanedValue = originalValue.replace(/\D/g, '');
 
       let formattedValue = '';
-      // Počiatočná pozícia kurzora po čistení, pred formátovaním
-      let tempCursorPos = originalCursorPos; 
+      let spacesAddedBeforeCursor = 0; // Počet medzier pridaných pred pôvodnou pozíciou kurzora
 
       for (let i = 0; i < cleanedValue.length; i++) {
           formattedValue += cleanedValue[i];
           // Ak je pozícia, kde by mala byť medzera (po každej 3. číslici) a nasleduje ďalšia číslica
           if ((i + 1) % 3 === 0 && i + 1 < cleanedValue.length) {
               formattedValue += ' ';
-              // Ak sa kurzor nachádzal na pozícii, kde bola vložená medzera (pred ňou), posunieme ho o 1
-              if (originalCursorPos === i + 1) { // Ak bol kurzor pred touto novo vloženou medzerou
-                tempCursorPos++;
+              // Ak sa medzera vkladá pred alebo na pôvodnej pozícii kurzora v "čistej" hodnote
+              if (i + 1 <= originalCursorPos) {
+                  spacesAddedBeforeCursor++;
               }
           }
       }
@@ -312,8 +311,27 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       // Použijeme setTimeout, aby sa kód vykonal po aktualizácii DOM
       setTimeout(() => {
           if (phoneInputRef.current) {
-              // Nastavíme kurzor na vypočítanú pozíciu
-              phoneInputRef.current.setSelectionRange(tempCursorPos, tempCursorPos);
+              // Nová pozícia kurzora je pôvodná pozícia + počet pridaných medzier
+              let newCursorPos = originalCursorPos + spacesAddedBeforeCursor;
+              // Ak sa kurzor nachádza na mieste, kde práve pribudla medzera
+              // a pôvodne tam nebol žiadny znak (t.j. kurzor bol na konci čísla, napr. "123|" a stlačilo sa "4")
+              // then, it should move past the new space.
+              // Example: '123' -> type '4'. originalCursorPos = 4 (after '4').
+              // formattedValue becomes '123 4'.
+              // spacesAddedBeforeCursor would be 1. newCursorPos = 4 + 1 = 5. (After '4')
+              // This is the desired behavior based on previous feedback.
+
+              // For clarity:
+              // If originalValue was "123" and originalCursorPos was 3 (typing '4' means value becomes "1234", cursor 4)
+              // cleanedValue = "1234", originalCursorPos = 4
+              // i=2 (char '3'). formattedValue = "123". (i+1)%3 === 0 is true. i+1 < cleanedValue.length is true.
+              // formattedValue += ' '; -> "123 ".
+              // i+1 (3) is <= originalCursorPos (4). So spacesAddedBeforeCursor becomes 1.
+              // Loop continues. i=3 (char '4'). formattedValue = "123 4".
+              // After loop: newCursorPos = originalCursorPos (4) + spacesAddedBeforeCursor (1) = 5.
+              // This places the cursor correctly after the '4'.
+
+              phoneInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
           }
       }, 0);
   };
