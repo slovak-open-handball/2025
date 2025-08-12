@@ -116,33 +116,31 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (diff === 0) return '';
 
         const absDiff = Math.abs(diff);
-        let prefixPart;
-        let boldPartStart;
-        let messageSuffix;
+        const prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
+        let boldPart;
 
         if (diff > 0) {
-            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-            boldPartStart = `objednať ešte `;
             if (absDiff === 1) {
-                messageSuffix = ' tričko.';
+                boldPart = `objednať ešte ${absDiff} tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                messageSuffix = ' tričká.';
+                boldPart = `objednať ešte ${absDiff} tričká.`;
             } else {
-                messageSuffix = ' tričiek.';
+                boldPart = `objednať ešte ${absDiff} tričiek.`;
             }
         } else { // diff < 0
-            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-            boldPartStart = `zrušiť `;
             if (absDiff === 1) {
-                messageSuffix = ' objednané tričko.';
+                boldPart = `zrušiť ${absDiff} objednané tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                messageSuffix = ' objednané tričká.';
+                boldPart = `zrušiť ${absDiff} objednané tričká.`;
             } else {
-                messageSuffix = ' objednaných tričiek.';
+                boldPart = `zrušiť ${absDiff} objednaných tričiek.`;
             }
         }
 
-        return `${prefixPart}<strong>${boldPartStart}${absDiff} ${messageSuffix}</strong>`;
+        return React.createElement(React.Fragment, null, 
+            prefixPart, 
+            React.createElement('strong', null, boldPart)
+        );
     }, []);
 
     // Validácia celého formulára pre stránku 4
@@ -497,7 +495,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať sa'
+                    ) : 'Registrovať'
                 )
             )
         )
