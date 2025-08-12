@@ -117,6 +117,7 @@ function App() {
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
   const [categoriesExist, setCategoriesExist] = React.useState(true); // NOVINKA: Stav pre existenciu kategórií
+  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({}); // NOVINKA: Pre uloženie kategórií z Firestore
 
   // Nové stavy pre odpočet a vynútenie prepočtu
   const [countdown, setCountdown] = React.useState(null);
@@ -298,13 +299,16 @@ function App() {
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
       if (docSnapshot.exists && Object.keys(docSnapshot.data()).length > 0) { // OPRAVENÉ: docSnap -> docSnapshot
         setCategoriesExist(true);
+        setCategoriesDataFromFirestore(docSnapshot.data()); // Uložiť načítané kategórie
       } else {
         setCategoriesExist(false);
+        setCategoriesDataFromFirestore({}); // Vyprázdniť kategórie
       }
     }, error => {
       console.error("register.js: Chyba pri načítaní kategórií (onSnapshot):", error);
       // Ak nastane chyba pri načítaní kategórií, predpokladáme, že neexistujú
       setCategoriesExist(false); 
+      setCategoriesDataFromFirestore({});
     });
 
 
@@ -549,8 +553,7 @@ function App() {
   };
 
   // NOVINKA: Pôvodná handleSubmit premenovaná na handleFinalSubmit
-  const handleFinalSubmit = async (e) => {
-    e.preventDefault();
+  const handleFinalSubmit = async (categoriesDataFromPage3) => { // NOVINKA: Prijíma dáta kategórií
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
@@ -619,6 +622,7 @@ function App() {
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
+        categories: categoriesDataFromPage3, // NOVINKA: Uloženie dát o kategóriách a tímoch
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
@@ -643,7 +647,8 @@ function App() {
                 city: formData.city,
                 country: formData.country
               }
-            }
+            },
+            categories: categoriesDataFromPage3, // NOVINKA: Pridanie kategórií do emailu
           };
           console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -843,6 +848,8 @@ function App() {
                     isRecaptchaReady: isRecaptchaReady,
                     selectedCountryDialCode: selectedCountryDialCode,
                     NotificationModal: NotificationModal,
+                    // NOVINKA: Odovzdanie načítaných kategórií do Page3Form
+                    availableCategoriesMap: categoriesDataFromFirestore
                 })
             ) : null
       )
