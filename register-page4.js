@@ -112,7 +112,15 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     // Vytvorenie správy o validácii tričiek pre každý tím
-    const getPerTeamTshirtValidationMessage = React.useCallback((diff, currentCategoryName, currentTeamName) => {
+    const getPerTeamTshirtValidationMessage = React.useCallback((diff, currentCategoryName, currentTeamName, isTeamMembersTotalOverLimit) => {
+        if (isTeamMembersTotalOverLimit) {
+            return React.createElement(React.Fragment, null,
+                React.createElement('strong', null, 'Na pokračovanie'),
+                ' v registrácii na turnaj ',
+                React.createElement('strong', null, 'je\u00A0potrebné znížiť počet členov realizačného tímu.')
+            );
+        }
+
         if (diff === 0) return null; // Ak nie je rozdiel, vrátime null alebo prázdny reťazec, aby sa nič nezobrazilo
 
         const absDiff = Math.abs(diff);
@@ -466,7 +474,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
                                     { className: `mt-2 p-2 rounded-lg text-center bg-red-100 text-red-700` },
-                                    getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
+                                    getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName, isTeamMembersTotalOverLimit) // Predanie isTeamMembersTotalOverLimit
                                 )
                             );
                         })
