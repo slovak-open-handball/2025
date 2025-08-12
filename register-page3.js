@@ -38,14 +38,17 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
     } else if (availableCategoriesMap) { // Ak je prázdny objekt, znamená to, že neboli nájdené žiadne kategórie
       setCategoriesData({});
       setIsCategoriesLoaded(true);
-      setNotificationMessage('V systéme nie sú definované žiadne kategórie.');
-      setShowNotification(true);
-      setNotificationType('error');
+      // Pridávame defenzívnu kontrolu pred volaním
+      if (typeof setNotificationMessage === 'function') {
+        setNotificationMessage('V systéme nie sú definované žiadne kategórie.');
+        setShowNotification(true);
+        setNotificationType('error');
+      }
     } else { // Ak availableCategoriesMap ešte nie je definované, znamená to, že sa načítava
       // Toto by sa nemalo stať, ak je App.js správne
       console.warn("availableCategoriesMap ešte nie je k dispozícii v Page3Form.");
     }
-  }, [availableCategoriesMap]);
+  }, [availableCategoriesMap, setNotificationMessage, setShowNotification, setNotificationType]); // Pridané závislosti pre setters
 
 
   // Handler pre zmenu vybranej kategórie v riadku
@@ -118,17 +121,20 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
   // Handler pre finálne odoslanie formulára z Page3
   const handlePage3Submit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Nastavíme loading stav
-    setNotificationMessage(''); // Vyčistíme notifikácie
-    setShowNotification(false);
-    setNotificationType('info');
+    // Pridávame defenzívnu kontrolu pred volaním
+    if (typeof setLoading === 'function') setLoading(true); // Nastavíme loading stav
+    if (typeof setNotificationMessage === 'function') setNotificationMessage(''); // Vyčistíme notifikácie
+    if (typeof setShowNotification === 'function') setShowNotification(false);
+    if (typeof setNotificationType === 'function') setNotificationType('info');
 
     // Validácia, či sú všetky vybraté kategórie a počet tímov platné
     if (!isFormValidPage3) {
-      setNotificationMessage('Prosím, vyberte kategóriu pre každý riadok a zadajte platný počet tímov (minimálne 1).');
-      setShowNotification(true);
-      setNotificationType('error');
-      setLoading(false);
+      if (typeof setNotificationMessage === 'function') {
+        setNotificationMessage('Prosím, vyberte kategóriu pre každý riadok a zadajte platný počet tímov (minimálne 1).');
+        setShowNotification(true);
+        setNotificationType('error');
+      }
+      if (typeof setLoading === 'function') setLoading(false);
       return;
     }
 
@@ -146,7 +152,7 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Zavoláme handleSubmit prop (čo je handleFinalSubmit z App.js) a odovzdáme mu dáta
     await handleSubmit(categoriesToSave); // ODOSIELAME DÁTA
-    setLoading(false); // Reset loading stavu po dokončení
+    if (typeof setLoading === 'function') setLoading(false); // Reset loading stavu po dokončení
   };
 
 
