@@ -152,9 +152,9 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
           { className: 'space-y-4' },
           React.createElement(
             'div',
-            { className: 'flex items-center font-bold mb-2 space-x-2' }, {/* Added space-x-2 */}
+            { className: 'flex items-center font-bold mb-2 space-x-2' },
             React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'),
-            React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Počet tímov'), {/* Changed w-28 to w-28, text-center to text-left */}
+            React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Počet tímov'),
             React.createElement('span', { className: 'w-8' })
           ),
           selectedCategoryRows.map((row, index) => (
