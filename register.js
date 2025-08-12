@@ -177,7 +177,7 @@ function App() {
 
     const days = Math.floor(difference / (1000 * 60 * 60 * 24));
     const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+    const minutes = Math.floor((difference % (1000 * 60)) / (1000 * 60));
     const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
@@ -199,7 +199,7 @@ function App() {
 
       const days = Math.floor(difference / (1000 * 60 * 60 * 24));
       const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const minutes = Math.floor((difference % (1000 * 60)) / (1000 * 60));
       const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
       return `${days}d ${hours}h ${minutes}m ${seconds}s`;
@@ -589,15 +589,18 @@ function App() {
     setShowNotification(false);
     setNotificationType('info');
     isRegisteringRef.current = true;
+    console.log("App.js: handleFinalSubmit started.");
+
 
     const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
-    console.log("Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber);
+    console.log("App.js: Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber);
 
     try {
       const authInstance = window.auth;
       const firestoreDb = window.db;
 
       if (!authInstance || !firestoreDb) {
+        console.error("App.js: Firebase Auth alebo Firestore nie sú globálne dostupné.");
         setNotificationMessage('Firebase nie je inicializované. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
@@ -605,20 +608,24 @@ function App() {
         isRegisteringRef.current = false;
         return;
       }
+      console.log("App.js: Firebase Auth a Firestore sú dostupné.");
+
 
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
+        console.warn("App.js: reCAPTCHA Token nebol získaný.");
         setLoading(false);
         isRegisteringRef.current = false;
         return;
       }
-      console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
+      console.log("App.js: reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
+      console.log("App.js: Pokúšam sa vytvoriť používateľa v Authentication...");
       const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       const user = userCredential.user;
 
       if (!user || !user.uid) {
-        console.error("register.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
+        console.error("App.js: Používateľský objekt je neplatný po vytvorení účtu. UID nie je k dispozícii.");
         setNotificationMessage('Chyba pri vytváraní používateľského účtu. Skúste to prosím znova.');
         setShowNotification(true);
         setNotificationType('error');
@@ -626,12 +633,12 @@ function App() {
         isRegisteringRef.current = false;
         return;
       }
-      console.log("Používateľ vytvorený v Auth s UID:", user.uid);
+      console.log("App.js: Používateľ vytvorený v Auth s UID:", user.uid);
 
 
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
 
-      console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
+      console.log("App.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       await setDoc(userDocRef, {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -650,8 +657,9 @@ function App() {
         categories: formData.categories,
         teams: teamsDataToSave,
       });
-      console.log("Údaje používateľa úspešne zapísané do Firestore.");
+      console.log("App.js: Údaje používateľa úspešne zapísané do Firestore.");
 
+      console.log("App.js: Pokúšam sa odoslať registračný e-mail.");
       try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -676,7 +684,7 @@ function App() {
             categories: formData.categories,
             teams: teamsDataToSave,
           };
-          console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2));
+          console.log("App.js: Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2));
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -685,31 +693,31 @@ function App() {
             },
             body: JSON.stringify(payload)
           });
-          console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
-          try {
-            const responseData = await response.text();
-            console.log("Odpoveď z Apps Script (fetch - registračný e-mail) ako text:", responseData);
-          } catch (jsonError) {
-            console.warn("Nepodarilo sa analyzovať odpoveď z Apps Script (očakávané s 'no-cors' pre JSON):", jsonError);
-          }
+          console.log("App.js: Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
+          // With 'no-cors' mode, response.text() or response.json() might fail due to opaque response.
+          // We can only check if the fetch operation itself didn't throw an error.
+          console.log("App.js: Ak je 'no-cors' režim, výsledok fetchu nemusí byť dostupný. Pokračujem.");
       } catch (emailError) {
-          console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
+          console.error("App.js: Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
+          // Do not re-throw, email sending is secondary
       }
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 200)); // Short delay for notification to show
 
       setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
       setNotificationType('success');
-      setRegistrationSuccess(true);
+      setRegistrationSuccess(true); // Triggers success state and conditional rendering
 
+      console.log("App.js: Registrácia úspešná, pokúšam sa odhlásiť používateľa.");
       try {
         await signOut(authInstance);
-        console.log("Používateľ úspešne odhlásený po registrácii.");
+        console.log("App.js: Používateľ úspešne odhlásený po registrácii.");
       } catch (signOutError) {
-        console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
+        console.error("App.js: Chyba pri odhlasovaní po registrácii:", signOutError);
       }
 
+      console.log("App.js: Resetujem formulárové dáta a presmerovávam na prihlasovaciu stránku.");
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
@@ -718,14 +726,15 @@ function App() {
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
       setTeamsDataFromPage4({});
-      setPage(1);
+      setPage(1); // Set page to 1, which corresponds to register.html initial view
 
+      // Redirect after a delay to allow success message to be seen
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 5000);
 
     } catch (error) {
-      console.error('Chyba počas registrácie alebo zápisu do Firestore:', error);
+      console.error('App.js: Chyba počas registrácie alebo zápisu do Firestore:', error);
       let errorMessage = 'Registrácia zlyhala. Skúste to prosím neskôr.';
 
       if (error.code) {
@@ -755,6 +764,7 @@ function App() {
     } finally {
       setLoading(false);
       isRegisteringRef.current = false;
+      console.log("App.js: handleFinalSubmit finished.");
     }
   };
 
