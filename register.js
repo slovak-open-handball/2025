@@ -948,20 +948,6 @@ function App() {
   const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
   const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
 
-  // DEBUG LOGGING
-  console.log("--- DEBUG RENDER App ---");
-  console.log("formData:", formData);
-  console.log("selectedCategoryRows:", selectedCategoryRows);
-  console.log("teamsDataFromPage4:", teamsDataFromPage4);
-  console.log("isPage1FormDataEmpty(formData):", isPage1FormDataEmpty(formData)); // Call to see what it returns
-  console.log("hasAnyPage1Data:", hasAnyPage1Data);
-  console.log("isRegistrationOpen:", isRegistrationOpen);
-  console.log("isRegistrationClosed:", isRegistrationClosed);
-  console.log("isBeforeRegistrationStart:", isBeforeRegistrationStart);
-  console.log("Current page:", page);
-  console.log("--- END DEBUG ---");
-
-
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
