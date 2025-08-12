@@ -7,8 +7,8 @@ import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com
 
 // Funkcia na získanie reCAPTCHA tokenu (prevzatá z register.js)
 // Konštanty sú definované globálne v register.html
+const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Je definovaný aj globálne, ale pre istotu znova tu
 const getRecaptchaToken = async (action) => {
-  const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Je definovaný aj globálne, ale pre istotu znova tu
   if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
     console.error("reCAPTCHA API nie je načítané alebo pripravené.");
     return null;
@@ -23,46 +23,30 @@ const getRecaptchaToken = async (action) => {
 };
 
 // Page3Form Component
-export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification }) {
+export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap }) { // Pridaný availableCategoriesMap
   const [categoriesData, setCategoriesData] = React.useState({}); // Objekt pre kategórie (kľúč: id, hodnota: názov)
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
   const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
 
   // Načítanie kategórií z Firestore
+  // Tento useEffect už nebude načítavať kategórie, ale použije tie, ktoré dostane z props
   React.useEffect(() => {
-    const firestoreDb = window.db;
-    if (!firestoreDb) {
-      console.error("Firestore db nie je inicializované v Page3Form.");
-      setNotificationMessage('Chyba pri načítaní kategórií: Firestore nie je pripravené.');
+    if (availableCategoriesMap && Object.keys(availableCategoriesMap).length > 0) {
+      setCategoriesData(availableCategoriesMap);
+      setIsCategoriesLoaded(true);
+      console.log("Kategórie prijaté z props:", availableCategoriesMap);
+    } else if (availableCategoriesMap) { // Ak je prázdny objekt, znamená to, že neboli nájdené žiadne kategórie
+      setCategoriesData({});
+      setIsCategoriesLoaded(true);
+      setNotificationMessage('V systéme nie sú definované žiadne kategórie.');
       setShowNotification(true);
       setNotificationType('error');
-      return;
+    } else { // Ak availableCategoriesMap ešte nie je definované, znamená to, že sa načítava
+      // Toto by sa nemalo stať, ak je App.js správne
+      console.warn("availableCategoriesMap ešte nie je k dispozícii v Page3Form.");
     }
+  }, [availableCategoriesMap]);
 
-    const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
-    const unsubscribe = onSnapshot(categoriesDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setCategoriesData(data); // Uložíme celý objekt
-        console.log("Kategórie načítané:", data);
-      } else {
-        setCategoriesData({});
-        console.log("Dokument kategórií neexistuje.");
-        setNotificationMessage('V systéme nie sú definované žiadne kategórie.');
-        setShowNotification(true);
-        setNotificationType('error');
-      }
-      setIsCategoriesLoaded(true);
-    }, (error) => {
-      console.error("Chyba pri načítaní kategórií:", error);
-      setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
-      setShowNotification(true);
-      setNotificationType('error');
-      setIsCategoriesLoaded(true);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Handler pre zmenu vybranej kategórie v riadku
   const handleCategoryChange = (index, value) => {
@@ -131,6 +115,40 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }
   `;
 
+  // Handler pre finálne odoslanie formulára z Page3
+  const handlePage3Submit = async (e) => {
+    e.preventDefault();
+    setLoading(true); // Nastavíme loading stav
+    setNotificationMessage(''); // Vyčistíme notifikácie
+    setShowNotification(false);
+    setNotificationType('info');
+
+    // Validácia, či sú všetky vybraté kategórie a počet tímov platné
+    if (!isFormValidPage3) {
+      setNotificationMessage('Prosím, vyberte kategóriu pre každý riadok a zadajte platný počet tímov (minimálne 1).');
+      setShowNotification(true);
+      setNotificationType('error');
+      setLoading(false);
+      return;
+    }
+
+    // Transformácia selectedCategoryRows do požadovaného formátu
+    const categoriesToSave = {};
+    selectedCategoryRows.forEach(row => {
+      if (row.categoryId && row.teams) {
+        // Použijeme názov kategórie ako kľúč a vnútri numberOfTeams
+        const categoryName = availableCategoriesMap[row.categoryId] || row.categoryId; // Získame názov z mapy
+        categoriesToSave[categoryName] = {
+          numberOfTeams: row.teams
+        };
+      }
+    });
+
+    // Zavoláme handleSubmit prop (čo je handleFinalSubmit z App.js) a odovzdáme mu dáta
+    await handleSubmit(categoriesToSave); // ODOSIELAME DÁTA
+    setLoading(false); // Reset loading stavu po dokončení
+  };
+
 
   // Renderovanie formulára
   return React.createElement(
@@ -145,7 +163,7 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
     ),
     React.createElement(
       'form',
-      { onSubmit: handleSubmit, className: 'space-y-4' }, // handleSubmit je prop z App.js
+      { onSubmit: handlePage3Submit, className: 'space-y-4' }, // handleSubmit je prop z App.js
 
       !isCategoriesLoaded ? (
         React.createElement('div', { className: 'text-center py-8' }, 'Načítavam kategórie...')
