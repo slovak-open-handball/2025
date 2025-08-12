@@ -7,20 +7,25 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Handler pre zmenu počtu hráčov alebo členov tímu
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
-        let parsedValue = parseInt(value, 10);
+        let newValue;
 
-        // Skontrolujte, či je hodnota NaN (napr. prázdny reťazec alebo neplatný vstup)
-        if (isNaN(parsedValue)) {
-            parsedValue = 0; // Nastavte na 0 alebo na minimálnu povolenú hodnotu (napr. 1)
-        }
-
-        // Aplikujte limity priamo pri zmene
-        if (field === 'players') {
-            if (parsedValue < 1) parsedValue = 1; // Minimálne 1 hráč
-            if (parsedValue > numberOfPlayersLimit) parsedValue = numberOfPlayersLimit; // Maximálny limit hráčov
-        } else if (field === 'teamMembers') {
-            if (parsedValue < 1) parsedValue = 1; // Minimálne 1 člen realizačného tímu
-            if (parsedValue > numberOfTeamMembersLimit) parsedValue = numberOfTeamMembersLimit; // Maximálny limit členov realizačného tímu
+        if (value === '') {
+            newValue = ''; // Ak je vstup prázdny reťazec, ponechajte ho prázdny.
+        } else {
+            let parsed = parseInt(value, 10);
+            if (isNaN(parsed)) {
+                newValue = ''; // Ak vstup nie je číslo (napr. "abc"), nastavte ho na prázdny reťazec.
+                               // Týmto umožníte používateľovi vymazať neplatný vstup.
+            } else {
+                // Aplikujte orezanie (clamping) iba, ak je to platné číslo
+                if (field === 'players') {
+                    newValue = Math.max(1, Math.min(parsed, numberOfPlayersLimit));
+                } else if (field === 'teamMembers') {
+                    newValue = Math.max(1, Math.min(parsed, numberOfTeamMembersLimit));
+                } else {
+                    newValue = parsed; // Fallback pre iné polia, ak by existovali
+                }
+            }
         }
 
         setTeamsDataFromPage4(prevDetails => { // Priamo aktualizujeme stav v rodičovskom komponente
@@ -30,15 +35,18 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             // Zabezpečiť, že existuje objekt tímu na danom indexe, inak ho vytvoriť
             if (!newDetails[categoryName][teamIndex]) {
+                // Pôvodný teamName by mal byť poskytnutý z App.js pri inicializácii Page4Form
+                // Ak by tu bol tím vytvorený "za behu", default teamName by bol prázdny.
+                // Pre tento scenár, predpokladáme, že tím objekt je vždy inicializovaný s teamName z App.js
                 newDetails[categoryName][teamIndex] = {
-                    teamName: '', // Názov tímu je už predpokladaný z inicializácie v App.js
+                    teamName: '', // Toto by malo byť reálne z App.js, ale pre istotu
                     players: 1, // Predvolené hodnoty pre novovytvorený tím
                     teamMembers: 1
                 };
             }
             newDetails[categoryName][teamIndex] = {
                 ...newDetails[categoryName][teamIndex],
-                [field]: parsedValue // Použijeme už skontrolovanú a orezanú hodnotu
+                [field]: newValue // Použijeme už skontrolovanú a orezanú hodnotu
             };
             return newDetails;
         });
@@ -60,10 +68,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
                     return false;
                 }
-                // Validácia voči limitom by už mala byť zabezpečená v handleTeamDetailChange,
-                // ale pre istotu ju ponechávame aj tu ako poslednú kontrolu.
-                if (team.players < 1 || team.players > numberOfPlayersLimit) return false; // Min 1, Max podľa nastavení
-                if (team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false; // Min 1, Max podľa nastavení
+                // DÔLEŽITÉ: Tu sa vykonáva finálna validácia, či sú hodnoty v rozsahu.
+                // Používame `typeof team.players !== 'number'` na kontrolu, či je hodnota vôbec číslo,
+                // pretože `newValue` môže byť prázdny reťazec.
+                if (typeof team.players !== 'number' || team.players < 1 || team.players > numberOfPlayersLimit) return false;
+                if (typeof team.teamMembers !== 'number' || team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false;
             }
         }
         return true;
@@ -148,7 +157,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `players-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.players,
+                                        value: team.players, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'players', e.target.value),
                                         min: 1,
                                         max: numberOfPlayersLimit,
@@ -164,7 +173,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `teamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.teamMembers,
+                                        value: team.teamMembers, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
                                         min: 1, // Zmenené min na 1
                                         max: numberOfTeamMembersLimit,
