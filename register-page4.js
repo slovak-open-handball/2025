@@ -116,20 +116,33 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (diff === 0) return '';
 
         const absDiff = Math.abs(diff);
-        const messagePrefix = diff > 0 
-            ? `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} objednať ešte `
-            : `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} zrušiť `;
-
+        let prefixPart;
+        let boldPartStart;
         let messageSuffix;
-        if (absDiff === 1) {
-            messageSuffix = diff > 0 ? ' tričko.' : ' objednané tričko.';
-        } else if (absDiff >= 2 && absDiff <= 4) {
-            messageSuffix = diff > 0 ? ' tričká.' : ' objednané tričká.';
-        } else {
-            messageSuffix = diff > 0 ? ' tričiek.' : ' objednaných tričiek.';
+
+        if (diff > 0) {
+            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
+            boldPartStart = `objednať ešte `;
+            if (absDiff === 1) {
+                messageSuffix = ' tričko.';
+            } else if (absDiff >= 2 && absDiff <= 4) {
+                messageSuffix = ' tričká.';
+            } else {
+                messageSuffix = ' tričiek.';
+            }
+        } else { // diff < 0
+            prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
+            boldPartStart = `zrušiť `;
+            if (absDiff === 1) {
+                messageSuffix = ' objednané tričko.';
+            } else if (absDiff >= 2 && absDiff <= 4) {
+                messageSuffix = ' objednané tričká.';
+            } else {
+                messageSuffix = ' objednaných tričiek.';
+            }
         }
 
-        return `${messagePrefix}${absDiff} ${messageSuffix}`;
+        return `${prefixPart}<strong>${boldPartStart}${absDiff} ${messageSuffix}</strong>`;
     }, []);
 
     // Validácia celého formulára pre stránku 4
@@ -332,7 +345,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `womenTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.womenTeamMembers === 0 ? 0 : team.womenTeamMembers || '', // Explicitné zachovanie 0
+                                        value: team.womenTeamMembers === 0 ? 0 : team.womenTeamMembers || '', 
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'womenTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet žien',
                                         min: 0, 
@@ -348,7 +361,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `menTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.menTeamMembers === 0 ? 0 : team.menTeamMembers || '', // Explicitné zachovanie 0
+                                        value: team.menTeamMembers === 0 ? 0 : team.menTeamMembers || '', 
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'menTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet mužov',
                                         min: 0, 
