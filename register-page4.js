@@ -7,6 +7,22 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Handler pre zmenu počtu hráčov alebo členov tímu
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
+        let parsedValue = parseInt(value, 10);
+
+        // Skontrolujte, či je hodnota NaN (napr. prázdny reťazec alebo neplatný vstup)
+        if (isNaN(parsedValue)) {
+            parsedValue = 0; // Nastavte na 0 alebo na minimálnu povolenú hodnotu (napr. 1)
+        }
+
+        // Aplikujte limity priamo pri zmene
+        if (field === 'players') {
+            if (parsedValue < 1) parsedValue = 1; // Minimálne 1 hráč
+            if (parsedValue > numberOfPlayersLimit) parsedValue = numberOfPlayersLimit; // Maximálny limit hráčov
+        } else if (field === 'teamMembers') {
+            if (parsedValue < 1) parsedValue = 1; // Minimálne 1 člen realizačného tímu
+            if (parsedValue > numberOfTeamMembersLimit) parsedValue = numberOfTeamMembersLimit; // Maximálny limit členov realizačného tímu
+        }
+
         setTeamsDataFromPage4(prevDetails => { // Priamo aktualizujeme stav v rodičovskom komponente
             const newDetails = { ...prevDetails };
             if (!newDetails[categoryName]) {
@@ -16,13 +32,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (!newDetails[categoryName][teamIndex]) {
                 newDetails[categoryName][teamIndex] = {
                     teamName: '', // Názov tímu je už predpokladaný z inicializácie v App.js
-                    players: 1,
+                    players: 1, // Predvolené hodnoty pre novovytvorený tím
                     teamMembers: 1
                 };
             }
             newDetails[categoryName][teamIndex] = {
                 ...newDetails[categoryName][teamIndex],
-                [field]: parseInt(value, 10) || 0 // Prevod na číslo pre počty
+                [field]: parsedValue // Použijeme už skontrolovanú a orezanú hodnotu
             };
             return newDetails;
         });
@@ -44,6 +60,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
                     return false;
                 }
+                // Validácia voči limitom by už mala byť zabezpečená v handleTeamDetailChange,
+                // ale pre istotu ju ponechávame aj tu ako poslednú kontrolu.
                 if (team.players < 1 || team.players > numberOfPlayersLimit) return false; // Min 1, Max podľa nastavení
                 if (team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false; // Min 1, Max podľa nastavení
             }
@@ -114,7 +132,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamName-${categoryName}-${teamIndex}` }, 'Názov tímu'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, 'Názov tímu'),
                                     // Zmena z inputboxu na zalamovateľný text
                                     React.createElement('p', {
                                         id: `teamName-${categoryName}-${teamIndex}`,
