@@ -332,7 +332,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `womenTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.womenTeamMembers || '', 
+                                        value: team.womenTeamMembers === 0 ? 0 : team.womenTeamMembers || '', // Explicitné zachovanie 0
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'womenTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet žien',
                                         min: 0, 
@@ -348,7 +348,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `menTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.menTeamMembers || '', 
+                                        value: team.menTeamMembers === 0 ? 0 : team.menTeamMembers || '', // Explicitné zachovanie 0
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'menTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet mužov',
                                         min: 0, 
