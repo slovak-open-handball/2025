@@ -9,7 +9,7 @@ import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com
 // Konštanty sú definované globálne v register.html
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa"; // Je definovaný aj globálne, ale pre istotu znova tu
 const getRecaptchaToken = async (action) => {
-  if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
+  if (typeof grecaptcha === 'undefined' || !grecaptra.execute) {
     console.error("reCAPTCHA API nie je načítané alebo pripravené.");
     return null;
   }
@@ -23,9 +23,9 @@ const getRecaptchaToken = async (action) => {
 };
 
 // Page3Form Component
-export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap }) { // Pridaný availableCategoriesMap
+export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoading, setNotificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, notificationMessage, closeNotification, availableCategoriesMap, selectedCategoryRows, setSelectedCategoryRows }) { // NOVINKA: Prijaté selectedCategoryRows a setSelectedCategoryRows
   const [categoriesData, setCategoriesData] = React.useState({}); // Objekt pre kategórie (kľúč: id, hodnota: názov)
-  const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
+  // const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]); // ODSTRÁNENÉ: Stav je teraz v rodičovskom komponente
   const [isCategoriesLoaded, setIsCategoriesLoaded] = React.useState(false);
 
   // Načítanie kategórií z Firestore
@@ -48,12 +48,16 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
       // Toto by sa nemalo stať, ak je App.js správne
       console.warn("availableCategoriesMap ešte nie je k dispozícii v Page3Form.");
     }
-  }, [availableCategoriesMap, setNotificationMessage, setShowNotification, setNotificationType]); // Pridané závislosti pre setters
+    // NOVINKA: Inicializácia selectedCategoryRows z props, ak sú prázdne
+    if (!selectedCategoryRows || selectedCategoryRows.length === 0) {
+        setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
+    }
+  }, [availableCategoriesMap, setNotificationMessage, setShowNotification, setNotificationType, selectedCategoryRows, setSelectedCategoryRows]); // Pridané závislosti pre setters
 
 
   // Handler pre zmenu vybranej kategórie v riadku
   const handleCategoryChange = (index, value) => {
-    setSelectedCategoryRows(prevRows => {
+    setSelectedCategoryRows(prevRows => { // Volá setSelectedCategoryRows z props
       const newRows = [...prevRows];
       newRows[index].categoryId = value;
       return newRows;
@@ -63,7 +67,7 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
   // Handler pre zmenu počtu tímov v riadku
   const handleTeamsChange = (index, value) => {
     const numValue = parseInt(value, 10);
-    setSelectedCategoryRows(prevRows => {
+    setSelectedCategoryRows(prevRows => { // Volá setSelectedCategoryRows z props
       const newRows = [...prevRows];
       newRows[index].teams = Math.max(1, numValue || 1); // Minimálne 1 tím
       return newRows;
@@ -74,13 +78,13 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
   const handleAddRow = () => {
     // Len ak existujú nevybraté kategórie a posledný riadok je platný
     if (getAvailableCategoryOptions().length > 0 && selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '') {
-      setSelectedCategoryRows(prevRows => [...prevRows, { categoryId: '', teams: 1 }]);
+      setSelectedCategoryRows(prevRows => [...prevRows, { categoryId: '', teams: 1 }]); // Volá setSelectedCategoryRows z props
     }
   };
 
   // Handler pre odstránenie riadku
   const handleRemoveRow = (indexToRemove) => {
-    setSelectedCategoryRows(prevRows => prevRows.filter((_, index) => index !== indexToRemove));
+    setSelectedCategoryRows(prevRows => prevRows.filter((_, index) => index !== indexToRemove)); // Volá setSelectedCategoryRows z props
   };
 
   // Funkcia na získanie dostupných kategórií pre selectbox
