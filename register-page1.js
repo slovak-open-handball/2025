@@ -140,12 +140,6 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
     return a.name.localeCompare(b.name);
   });
 
-  // Odstránené tlačidlo Potvrdiť, takže táto funkcia už nie je potrebná
-  // const handleConfirm = () => {
-  //   onSelect(tempSelectedCode);
-  //   onClose();
-  // };
-
   return React.createElement(
     'div',
     { className: 'modal' },
@@ -204,7 +198,6 @@ export function CountryCodeModal({ isOpen, onClose, onSelect, selectedCode, disa
           )
         )
       )
-      // Odstránený div s tlačidlami "Zrušiť" a "Potvrdiť"
     )
   );
 }
@@ -277,8 +270,6 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   };
 
   const passwordValidationRules = getPasswordValidationRules(formData.password);
-  // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
-  // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
   // Helper funkcia na mapovanie pozície kurzora z vyčistenej hodnoty na naformátovanú hodnotu
   const getFormattedCursorPos = (rawCursorPos, newFormattedValue) => {
@@ -415,7 +406,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                       /[A-Z]/.test(formData.password) &&
                       /\d/.test(formData.password) &&
                       formData.password === formData.confirmPassword &&
-                      isRegistrationOpen &&
+                      isRegistrationOpen && // Formulár je validný len ak je registrácia otvorená
                       isRecaptchaReady;
 
   // Dynamické triedy pre tlačidlo "Ďalej"
@@ -427,13 +418,27 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
     }
   `;
 
+  // NOVINKA: Funkcia na kontrolu, či sú všetky polia na prvej strane prázdne
+  // Táto funkcia je lokálna pre Page1Form, kontroluje len polia, ktoré Page1Form "spravuje"
+  const isPage1FieldsEmpty = () => {
+    return formData.firstName.trim() === '' &&
+           formData.lastName.trim() === '' &&
+           formData.email.trim() === '' &&
+           formData.contactPhoneNumber.trim() === '' &&
+           formData.password.trim() === '' &&
+           formData.confirmPassword.trim() === '';
+  };
+
+
   return React.createElement(
     React.Fragment, // Používame React.Fragment namiesto div, aby sa zabránilo extra obdĺžniku
     null,
-    React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
+    // Notifikačné okno sa spravuje z App.js, takže ho tu nebudeme renderovať
+    // React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
 
-    // NOVINKA: Podmienené zobrazenie na základe stavu registrácie
-    isRegistrationClosed ? (
+    // Podmienené zobrazenie na základe stavu registrácie a či sú polia prázdne
+    isRegistrationClosed && isPage1FieldsEmpty() ? (
+      // Zobrazenie správy o ukončenej registrácii, AK je registrácia ukončená a Page1 polia sú PRÁZDNE
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
@@ -458,6 +463,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
         )
       )
     ) : (isRegistrationOpen === false && countdownMessage) ? (
+      // Zobrazenie odpočtu, ak registrácia ešte nezačala
       React.createElement(
         'div',
         { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, // Zmenené triedy šírky
@@ -486,21 +492,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           )
         )
       )
-    ) : (isRegistrationOpen === null) ? (
-      React.createElement(
-        'div',
-        { className: 'flex items-center justify-center py-8' },
-        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
-          React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
-          React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
-        ),
-        'Načítavam stav registrácie...'
-      )
     ) : (
-      // Toto je pôvodný obsah formulára, ktorý sa zobrazí iba ak je registrácia otvorená
-      // Odstránený vonkajší div, ktorý spôsoboval duplicitný obdĺžnik.
+      // Toto je pôvodný obsah formulára, ktorý sa zobrazí za iných podmienok
       React.createElement(
-        React.Fragment, // Používame React.Fragment, aby sme nepridávali ďalší zbytočný div
+        React.Fragment, 
         null,
         React.createElement(
           'h2',
@@ -530,7 +525,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte vaše meno',
                 tabIndex: 1,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady
+                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
               })
             )
           ),
@@ -553,7 +548,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte vaše priezvisko',
                 tabIndex: 2,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady
+                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
               })
             )
           ),
@@ -579,7 +574,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 placeholder: 'Zadajte svoju e-mailovú adresu',
                 autoComplete: 'email',
                 tabIndex: 3,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady
+                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
               })
             ),
             // NOVINKA: Zobrazenie správy pre neplatný email
@@ -607,7 +602,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                   className: 'bg-white text-gray-800 font-bold py-2 px-3 rounded-l-lg focus:outline-none flex-shrink-0 flex items-center',
                   onClick: () => setIsCountryCodeModalOpen(true),
                   tabIndex: 4,
-                  disabled: loading || !isRegistrationOpen || !isRecaptchaReady
+                  disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
                 },
                 selectedCountryDialCode || '+XXX',
                 ChevronDown
@@ -623,7 +618,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
                 required: true,
                 placeholder: 'Zadajte telefónne číslo',
                 tabIndex: 5,
-                disabled: loading || !isRegistrationOpen || !isRecaptchaReady
+                disabled: loading || !isRegistrationOpen || !isRecaptchaReady // Zablokované ak nie je otvorená registrácia
               })
             )
           ),
@@ -640,7 +635,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             preDescription: 'E-mailová adresa a heslo budú potrebné na prípadnú neskoršiu úpravu údajov poskytnutých v tomto registračnom formulári.',
             validationRules: getPasswordValidationRules(formData.password), // Používame priamo funkciu
             tabIndex: 6,
-            disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
+            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
             showPassword: showPassword,
             toggleShowPassword: toggleShowPassword,
           }),
@@ -659,7 +654,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             placeholder: 'Zadajte heslo znova',
             autoComplete: 'new-password',
             tabIndex: 7,
-            disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
+            disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
             showPassword: showConfirmPassword,
             toggleShowPassword: toggleShowConfirmPassword,
             showValidationList: false // Nezobrazovať zoznam pre toto pole
@@ -697,7 +692,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       onClose: () => setIsCountryCodeModalOpen(false),
       onSelect: setSelectedCountryDialCode,
       selectedCode: selectedCountryDialCode,
-      disabled: loading || !isRegistrationOpen || !isRecaptchaReady,
+      disabled: loading || !isRegistrationOpen || !isRecaptchaReady, // Zablokované ak nie je otvorená registrácia
     })
   );
 }
