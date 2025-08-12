@@ -162,15 +162,12 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     'div',
                                     null,
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamName-${categoryName}-${teamIndex}` }, 'Názov tímu'),
-                                    React.createElement('input', {
-                                        type: 'text',
+                                    // Zmena z inputboxu na zalamovateľný text
+                                    React.createElement('p', {
                                         id: `teamName-${categoryName}-${teamIndex}`,
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        style: { cursor: 'none', pointerEvents: 'none' }, // Vynútenie kurzora 'none' a zakázanie interakcií
-                                        value: team.teamName,
-                                        readOnly: true, // Zablokovanie editácie inputboxu
-                                        disabled: true, // Zabezpečenie, že input je disabled
-                                    })
+                                        className: 'text-gray-700 py-2 px-3 break-words', // Pridané break-words pre zalamovanie dlhého textu
+                                        style: { cursor: 'default' }, // Zmenený kurzor na default
+                                    }, team.teamName)
                                 ),
                                 React.createElement(
                                     'div',
