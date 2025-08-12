@@ -67,7 +67,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleNextPage3,
     React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
     React.createElement(
       'form',
-      { onSubmit: handleNextPage3, className: 'space-y-4' }, {/* Zmenený onSubmit na handleNextPage3 */}
+      { onSubmit: handleNextPage3, className: 'space-y-4' },
 
       // Fakturačné údaje
       React.createElement(
