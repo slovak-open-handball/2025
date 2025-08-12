@@ -9,21 +9,27 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         let newValue;
 
+        // Ak je vstup prázdny reťazec, explicitne ponechajte newValue ako prázdny reťazec.
+        // Toto umožní používateľovi vymazať pole a nechať ho prázdne.
         if (value === '') {
-            newValue = ''; // Ak je vstup prázdny reťazec, ponechajte ho prázdny.
+            newValue = '';
         } else {
+            // Pokúste sa konvertovať hodnotu na celé číslo
             let parsed = parseInt(value, 10);
+            
+            // Ak vstup nie je platné číslo (napr. text alebo prázdny reťazec po vymazaní),
+            // nastavte newValue na prázdny reťazec, aby sa input vyprázdnil.
             if (isNaN(parsed)) {
-                newValue = ''; // Ak vstup nie je číslo (napr. "abc"), nastavte ho na prázdny reťazec.
-                               // Týmto umožníte používateľovi vymazať neplatný vstup.
+                newValue = '';
             } else {
-                // Aplikujte orezanie (clamping) iba, ak je to platné číslo
+                // Ak je to platné číslo, aplikujte orezanie (clamping) na základe limitov.
                 if (field === 'players') {
                     newValue = Math.max(1, Math.min(parsed, numberOfPlayersLimit));
                 } else if (field === 'teamMembers') {
                     newValue = Math.max(1, Math.min(parsed, numberOfTeamMembersLimit));
                 } else {
-                    newValue = parsed; // Fallback pre iné polia, ak by existovali
+                    // Pre akékoľvek iné číselné polia, ak by existovali
+                    newValue = parsed; 
                 }
             }
         }
@@ -35,18 +41,17 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
             // Zabezpečiť, že existuje objekt tímu na danom indexe, inak ho vytvoriť
             if (!newDetails[categoryName][teamIndex]) {
-                // Pôvodný teamName by mal byť poskytnutý z App.js pri inicializácii Page4Form
-                // Ak by tu bol tím vytvorený "za behu", default teamName by bol prázdny.
-                // Pre tento scenár, predpokladáme, že tím objekt je vždy inicializovaný s teamName z App.js
+                // teamName by mal byť inicializovaný z App.js, ak tím vznikol výberom kategórie.
+                // Predvolené hodnoty pre hráčov/členov by tu mali byť prázdne reťazce.
                 newDetails[categoryName][teamIndex] = {
-                    teamName: '', // Toto by malo byť reálne z App.js, ale pre istotu
-                    players: 1, // Predvolené hodnoty pre novovytvorený tím
-                    teamMembers: 1
+                    teamName: '', 
+                    players: '', 
+                    teamMembers: ''
                 };
             }
             newDetails[categoryName][teamIndex] = {
                 ...newDetails[categoryName][teamIndex],
-                [field]: newValue // Použijeme už skontrolovanú a orezanú hodnotu
+                [field]: newValue // Použijeme už skontrolovanú a orezanú hodnotu (alebo prázdny reťazec)
             };
             return newDetails;
         });
@@ -68,9 +73,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
                     return false;
                 }
+                
                 // DÔLEŽITÉ: Tu sa vykonáva finálna validácia, či sú hodnoty v rozsahu.
-                // Používame `typeof team.players !== 'number'` na kontrolu, či je hodnota vôbec číslo,
-                // pretože `newValue` môže byť prázdny reťazec.
+                // Ak je hodnota prázdny reťazec, alebo nie je číslo, alebo je mimo povoleného rozsahu, považujeme ju za neplatnú.
+                // Typ hodnoty by mal byť 'number' a zároveň by mala byť v rozsahu [1, limit].
                 if (typeof team.players !== 'number' || team.players < 1 || team.players > numberOfPlayersLimit) return false;
                 if (typeof team.teamMembers !== 'number' || team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false;
             }
@@ -141,7 +147,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, 'Názov tímu'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamName-${categoryName}-${teamIndex}` }, 'Názov tímu'),
                                     // Zmena z inputboxu na zalamovateľný text
                                     React.createElement('p', {
                                         id: `teamName-${categoryName}-${teamIndex}`,
@@ -161,7 +167,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'players', e.target.value),
                                         min: 1,
                                         max: numberOfPlayersLimit,
-                                        required: true,
+                                        required: true, // Toto hovorí, že pole NESMIE byť prázdne pri odosielaní
                                         disabled: loading,
                                     })
                                 ),
@@ -177,7 +183,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
                                         min: 1, // Zmenené min na 1
                                         max: numberOfTeamMembersLimit,
-                                        required: true, // Je nutné, aby pole existovalo pre validáciu
+                                        required: true, // Toto hovorí, že pole NESMIE byť prázdne pri odosielaní
                                         disabled: loading,
                                     })
                                 ),
