@@ -280,35 +280,54 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
   // Pre potvrdenie hesla nebudeme zobrazovať zoznam validácie
   // const confirmPasswordValidationRules = getPasswordValidationRules(formData.confirmPassword);
 
-  // Helper function to map cursor position from cleaned value to formatted value
+  // Helper funkcia na mapovanie pozície kurzora z vyčistenej hodnoty na naformátovanú hodnotu
   const getFormattedCursorPos = (rawPos, newCleanedValue, newFormattedValue) => {
     let formattedPos = 0;
     let rawIdx = 0; 
 
+    // Prechádzame naformátovanú hodnotu
     for (let i = 0; i < newFormattedValue.length; i++) {
+        // Ak narazíme na medzeru
         if (newFormattedValue[i] === ' ') {
+            // Ak je pozícia v surovej hodnote menšia ako surový index,
+            // znamená to, že medzera bola vložená pred kurzorom (v surovej hodnote)
             if (rawIdx >= rawPos) {
-                return formattedPos; // Cursor is at or before this space in raw, so formatted cursor is here
+                // Vrátime aktuálnu naformátovanú pozíciu, pretože kurzor by mal byť tu,
+                // pred touto medzerou, ak bola vložená pred ním
+                return formattedPos; 
             }
         } else {
+            // Ak je to číslica, inkrementujeme surový index
             rawIdx++;
         }
+        // Inkrementujeme naformátovanú pozíciu
         formattedPos++;
+
+        // Ak sme dosiahli pôvodnú surovú pozíciu, vrátime naformátovanú pozíciu
         if (rawIdx === rawPos) {
-            return formattedPos; // Cursor is after this digit in the raw string
+            return formattedPos; 
         }
     }
-    return formattedPos; // If rawPos is at the very end
+    // Ak surová pozícia bola na konci, vrátime naformátovanú dĺžku
+    return formattedPos; 
   };
 
 
   // NOVÁ FUNKCIA: Manipulácia s telefónnym číslom (formátovanie a Backspace)
   const handlePhoneNumberInputChange = (e) => {
       const input = e.target;
-      const originalValue = input.value; // This is the value *after* the current input change
+      const originalValue = input.value; 
       const originalCursorPos = input.selectionStart;
 
-      // Get the raw value (digits only) from the *new* input value
+      // Získame pôvodnú pozíciu kurzora v "čistej" (iba čísla) hodnote
+      let originalCleanedCursorPos = 0;
+      for (let i = 0; i < originalCursorPos; i++) {
+          if (originalValue[i] >= '0' && originalValue[i] <= '9') {
+              originalCleanedCursorPos++;
+          }
+      }
+
+      // Odstránime všetky nečíselné znaky z hodnoty
       let newCleanedValue = originalValue.replace(/\D/g, '');
 
       let newFormattedValue = '';
@@ -319,18 +338,10 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           }
       }
 
-      // Determine the logical cursor position in the *cleaned* string based on originalCursorPos
-      let originalCleanedCursorPos = 0;
-      for (let i = 0; i < originalCursorPos; i++) {
-          if (originalValue[i] >= '0' && originalValue[i] <= '9') {
-              originalCleanedCursorPos++;
-          }
-      }
-
-      // Update the state
+      // Aktualizujeme stav formulára
       handleChange({ target: { id: 'contactPhoneNumber', value: newFormattedValue } });
 
-      // Set cursor position after re-render
+      // Nastavíme pozíciu kurzora po re-renderovaní
       setTimeout(() => {
           if (phoneInputRef.current) {
               const newCursorFormattedPos = getFormattedCursorPos(originalCleanedCursorPos, newCleanedValue, newFormattedValue);
@@ -370,18 +381,45 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
             e.preventDefault(); // Zabrániť predvolenému správaniu Delete
 
             // Odstrániť znak na pozícii kurzora
-            const newValue = value.substring(0, cursorPosition) + value.substring(cursorPosition + 1);
+            const newValueBeforeCursor = value.substring(0, cursorPosition);
+            const newValueAfterCursor = value.substring(cursorPosition + 1);
+            let newValue = newValueBeforeCursor + newValueAfterCursor;
+
+            // Získame pôvodnú pozíciu kurzora v "čistej" (iba čísla) hodnote
+            let originalCleanedCursorPos = 0;
+            for (let i = 0; i < cursorPosition; i++) {
+                if (value[i] >= '0' && value[i] <= '9') {
+                    originalCleanedCursorPos++;
+                }
+            }
             
+            // Ak sa maže medzera, nesmie to ovplyvniť pozíciu kurzora v "čistej" hodnote
+            let newCleanedValue = newValue.replace(/\D/g, '');
+            if (value.charAt(cursorPosition) === ' ' && newCleanedValue.length > 0) {
+                 // Ak mažeme medzeru, kurzor v "čistej" hodnote sa neposúva
+                 // No, we need to consider if the character *after* the cursor (which is being deleted) is a digit.
+                 // If the character being deleted is a digit, then the originalCleanedCursorPos will effectively be
+                 // one position ahead of where the cursor should logically be in the cleaned value.
+                 // If the character being deleted is a space, the originalCleanedCursorPos is already correct.
+                 if (value.charAt(cursorPosition) >= '0' && value.charAt(cursorPosition) <= '9') {
+                    // If a digit is deleted, the cleaned cursor position should stay the same (effectively deleting the char *at* that position)
+                    // The handlePhoneNumberInputChange will recalculate correctly based on the new value and originalCleanedCursorPos
+                 }
+            }
+
+
             // Aktualizovať stav formulára (toto spustí handlePhoneNumberInputChange na preformátovanie a nastavenie kurzora)
             handleChange({ target: { id: 'contactPhoneNumber', value: newValue } });
 
-            // Kurzor by mal zostať na pôvodnej pozícii, handlePhoneNumberInputChange by to mal zabezpečiť
-            // Tu len zabezpečíme, že sa neposunie na koniec, ak by handleChange nezareagoval okamžite.
+            // Kurzor by mal zostať na pôvodnej pozícii v rámci naformátovaného reťazca
+            // setTimeout pre zaistenie, že DOM je aktualizovaný
             setTimeout(() => {
                 if (phoneInputRef.current) {
-                    // Predpokladáme, že getFormattedCursorPos už vezme do úvahy úpravu zmazaním.
-                    // Ak má kurzor ostať na povodnej pozicii, tak ju nastavíme.
-                    phoneInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                    // Potrebujeme znova vypočítať formátovanú pozíciu kurzora pre nový reťazec
+                    // based on the original clean cursor position
+                    const currentCleanedValue = phoneInputRef.current.value.replace(/\D/g, '');
+                    const newCursorPos = getFormattedCursorPos(originalCleanedCursorPos, currentCleanedValue, phoneInputRef.current.value);
+                    phoneInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
                 }
             }, 0);
         }
