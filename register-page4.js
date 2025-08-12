@@ -375,7 +375,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             React.createElement(
                                                 'select',
                                                 {
-                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/4', // Upravená šírka
+                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/3', // Upravená šírka na w-1/3
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
