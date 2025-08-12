@@ -19,7 +19,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     if (newValue > numberOfPlayersLimit) newValue = numberOfPlayersLimit;
                 } else if (field === 'teamMembersFemale' || field === 'teamMembersMale') {
                     newValue = parsed;
-                    if (newValue < 0 && newValue !== '') newValue = 0; 
+                    if (newValue < 0 && newValue !== '') newValue = 0;
                 }
                 else if (field === 'teamMembers') {
                     newValue = parsed;
@@ -40,7 +40,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 newDetails[categoryName][teamIndex] = {
                     teamName: '', 
                     players: '', 
-                    teamMembers: '', 
+                    teamMembers: '',
                     teamMembersFemale: '',
                     teamMembersMale: '',
                     tshirts: [{ size: '', quantity: '' }]
