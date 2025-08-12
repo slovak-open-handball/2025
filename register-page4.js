@@ -371,13 +371,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             React.createElement(
                                                 'select',
                                                 {
-                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
+                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/4', // Upravená šírka
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
                                                     disabled: loading,
                                                 },
-                                                React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
+                                                React.createElement('option', { value: '' }, 'Vyberte'), // Upravený text
                                                 // Mapovanie dostupných veľkostí
                                                 getAvailableTshirtSizeOptions(team.tshirts, tshirtIndex).map(size => (
                                                     React.createElement('option', { key: size, value: size }, size)
@@ -392,6 +392,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 min: 0,
                                                 required: true,
                                                 disabled: loading,
+                                                placeholder: 'Zadajte počet', // Pridaný placeholder
                                             }),
                                             // Tlačidlo na odstránenie riadku trička
                                             React.createElement(
