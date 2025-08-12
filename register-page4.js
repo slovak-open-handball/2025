@@ -88,7 +88,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const categoryName in teamDetails) {
             // Zabezpečiť, že teamDetails[categoryName] je pole a iterovať cez jeho prvky
-            for (const team of (teamDetails[categoryName] || [])) {
+            // Filter pre odstránenie null/undefined prvkov, ktoré by mohli viesť k chybe trim()
+            for (const team of (teamDetails[categoryName] || []).filter(t => t)) {
                 // Obranná kontrola: zabezpečiť, že 'team' je objekt a 'team.teamName' je reťazec
                 if (!team || typeof team.teamName !== 'string' || !team.teamName.trim()) {
                     console.error("Validácia zlyhala: Názov tímu je neplatný alebo chýba pre kategóriu:", categoryName, "Tím:", team);
@@ -154,7 +155,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
-                        (teamDetails[categoryName] || []).map((team, teamIndex) => (
+                        // Filter pre odstránenie null/undefined prvkov pred mapovaním
+                        (teamDetails[categoryName] || []).filter(t => t).map((team, teamIndex) => (
                             React.createElement(
                                 'div',
                                 { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
