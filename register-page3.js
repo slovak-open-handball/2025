@@ -154,7 +154,7 @@ export function Page3Form({ formData, handlePrev, handleNextPage3, loading, setL
             'div',
             { className: 'flex items-center font-bold mb-2' },
             React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Kategória'),
-            React.createElement('span', { className: 'w-20 text-center text-gray-700' }, 'Počet tímov'),
+            React.createElement('span', { className: 'w-28 text-center text-gray-700' }, 'Počet tímov'), {/* Changed w-20 to w-28 */}
             React.createElement('span', { className: 'w-8' })
           ),
           selectedCategoryRows.map((row, index) => (
