@@ -234,8 +234,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
   `;
 
     // Funkcia pre finálne odoslanie formulára
-    const handleFinalSubmit = async (teamsDataToSave) => {
-        e.preventDefault();
+    // Táto funkcia je volaná z App.js cez prop handleSubmit
+    const handleFinalSubmit = async (e) => { // 'e' je udalosť odoslania formulára
+        e.preventDefault(); // Zastavíme predvolené správanie formulára (načítanie stránky)
+        
         // Nastavenie stavov načítania a notifikácií
         if (typeof setLoading === 'function') setLoading(true);
         if (typeof setNotificationMessage === 'function') setNotificationMessage('');
@@ -254,7 +256,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         
         // Príprava dát pred odoslaním (konverzia prázdnych reťazcov na 0)
-        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataToSave)); // Používame teamsDataToSave z parametra
+        // Používame teamsDataFromPage4 zo stavu komponentu, nie z parametra
+        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
         for (const categoryName in teamsDataToSaveFinal) {
             teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
                 ...team,
@@ -269,6 +272,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Odoslanie spracovaných dát
+        // Dôležité: handleSubmit, ktorá je prop z App.js, očakáva dáta, nie event
         await handleSubmit(teamsDataToSaveFinal); // Odosielame upravené dáta
         if (typeof setLoading === 'function') setLoading(false);
     };
