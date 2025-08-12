@@ -318,8 +318,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 (parseInt(team.menTeamMembers, 10) > 0);
 
                             // Doplnková kontrola pre zablokovanie, ak súčet realizačných tímov prekročí limit
+                            // OPRAVA: Konvertujeme hodnoty na čísla (alebo 0, ak sú prázdne/NaN) pred sčítaním
+                            const currentWomenTeamMembers = parseInt(team.womenTeamMembers, 10) || 0;
+                            const currentMenTeamMembers = parseInt(team.menTeamMembers, 10) || 0;
                             const isTeamMembersTotalOverLimit = 
-                                (parseInt(team.womenTeamMembers, 10) + parseInt(team.menTeamMembers, 10)) > numberOfTeamMembersLimit;
+                                (currentWomenTeamMembers + currentMenTeamMembers) > numberOfTeamMembersLimit;
 
                             const isTshirtSectionDisabled = loading || !isTshirtInputEnabled || isTeamMembersTotalOverLimit;
 
