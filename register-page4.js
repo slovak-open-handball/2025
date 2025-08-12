@@ -36,12 +36,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (!newDetails[categoryName]) {
                 newDetails[categoryName] = [];
             }
+            // Zabezpečíme, že tímový objekt existuje a má inicializované aj womenTeamMembers a menTeamMembers
             if (!newDetails[categoryName][teamIndex]) {
                 newDetails[categoryName][teamIndex] = {
                     teamName: '', 
                     players: '', 
-                    womenTeamMembers: '', // Nové pole pre počet žien
-                    menTeamMembers: '',   // Nové pole pre počet mužov
+                    womenTeamMembers: '', 
+                    menTeamMembers: '',   
                     tshirts: [{ size: '', quantity: '' }]
                 };
             }
@@ -362,8 +363,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center font-bold mb-2 space-x-2' },
-                                        React.createElement('span', { className: 'w-1/3 text-gray-700' }, 'Veľkosť'), // Zmenené z flex-1 na w-1/3
-                                        React.createElement('span', { className: 'w-1/2 text-left text-gray-700' }, 'Množstvo'), // Zmenené z w-28 na w-1/2
+                                        React.createElement('span', { className: 'w-1/3 text-gray-700' }, 'Veľkosť'), 
+                                        React.createElement('span', { className: 'w-1/2 text-left text-gray-700' }, 'Množstvo'), 
                                         React.createElement('span', { className: 'w-8' })
                                     ),
                                     // Mapovanie cez riadky s tričkami
@@ -375,13 +376,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             React.createElement(
                                                 'select',
                                                 {
-                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/3', // Šírka je už w-1/3
+                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/3', 
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
                                                     disabled: loading,
                                                 },
-                                                React.createElement('option', { value: '' }, 'Vyberte'), // Upravený text
+                                                React.createElement('option', { value: '' }, 'Vyberte'), 
                                                 // Mapovanie dostupných veľkostí
                                                 getAvailableTshirtSizeOptions(team.tshirts, tshirtIndex).map(size => (
                                                     React.createElement('option', { key: size, value: size }, size)
@@ -390,13 +391,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             // Zadanie množstva trička
                                             React.createElement('input', {
                                                 type: 'number',
-                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/2 text-left', // Zmena šírky na w-1/2
+                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/2 text-left', 
                                                 value: tshirt.quantity,
                                                 onChange: (e) => handleTshirtQuantityChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                 min: 0,
                                                 required: true,
                                                 disabled: loading,
-                                                placeholder: 'Zadajte počet', // Pridaný placeholder
+                                                placeholder: 'Zadajte počet', 
                                             }),
                                             // Tlačidlo na odstránenie riadku trička
                                             React.createElement(
