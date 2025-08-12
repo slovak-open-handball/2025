@@ -24,9 +24,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             } else {
                 // Ak je to platné číslo, aplikujte orezanie (clamping) na základe limitov.
                 if (field === 'players') {
-                    newValue = Math.max(1, Math.min(parsed, numberOfPlayersLimit));
+                    // Ponecháme možnosť zadávať aj hodnoty mimo rozsahu pre okamžitú spätnú väzbu,
+                    // ale pri validácii formulára bude overené, či je v rozsahu.
+                    newValue = parsed;
                 } else if (field === 'teamMembers') {
-                    newValue = Math.max(1, Math.min(parsed, numberOfTeamMembersLimit));
+                    newValue = parsed;
                 } else {
                     // Pre akékoľvek iné číselné polia, ak by existovali
                     newValue = parsed; 
@@ -76,9 +78,17 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 
                 // DÔLEŽITÉ: Tu sa vykonáva finálna validácia, či sú hodnoty v rozsahu.
                 // Ak je hodnota prázdny reťazec, alebo nie je číslo, alebo je mimo povoleného rozsahu, považujeme ju za neplatnú.
-                // Typ hodnoty by mal byť 'number' a zároveň by mala byť v rozsahu [1, limit].
-                if (typeof team.players !== 'number' || team.players < 1 || team.players > numberOfPlayersLimit) return false;
-                if (typeof team.teamMembers !== 'number' || team.teamMembers < 1 || team.teamMembers > numberOfTeamMembersLimit) return false;
+                // Kontrola pre players
+                const playersValue = parseInt(team.players, 10);
+                if (isNaN(playersValue) || playersValue < 1 || playersValue > numberOfPlayersLimit) {
+                    return false;
+                }
+
+                // Kontrola pre teamMembers
+                const teamMembersValue = parseInt(team.teamMembers, 10);
+                if (isNaN(teamMembersValue) || teamMembersValue < 1 || teamMembersValue > numberOfTeamMembersLimit) {
+                    return false;
+                }
             }
         }
         return true;
@@ -112,7 +122,17 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         
         // Predáme teamsDataFromPage4 rodičovskému komponentu na uloženie do Firestore
-        await handleSubmit(teamsDataFromPage4); // Odovzdávame priamo teamsDataFromPage4
+        // Pred odoslaním na handleSubmit prevedieme prázdne reťazce na 0 pre správne uloženie
+        const teamsDataToSave = JSON.parse(JSON.stringify(teamsDataFromPage4)); // Hlboká kópia
+        for (const categoryName in teamsDataToSave) {
+            teamsDataToSave[categoryName] = teamsDataToSave[categoryName].map(team => ({
+                ...team,
+                players: team.players === '' ? 0 : team.players, // Konvertovať prázdny reťazec na 0
+                teamMembers: team.teamMembers === '' ? 0 : team.teamMembers // Konvertovať prázdny reťazec na 0
+            }));
+        }
+
+        await handleSubmit(teamsDataToSave); // Odovzdávame priamo teamsDataFromPage4
         if (typeof setLoading === 'function') setLoading(false);
     };
 
@@ -165,9 +185,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                         value: team.players, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'players', e.target.value),
-                                        min: 1,
-                                        max: numberOfPlayersLimit,
-                                        required: true, // Toto hovorí, že pole NESMIE byť prázdne pri odosielaní
+                                        // Odstránené min a required, aby sa povolili prázdne polia
+                                        // min: 1,
+                                        // max: numberOfPlayersLimit,
+                                        // required: true, 
                                         disabled: loading,
                                     })
                                 ),
@@ -181,9 +202,10 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
                                         value: team.teamMembers, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
-                                        min: 1, // Zmenené min na 1
-                                        max: numberOfTeamMembersLimit,
-                                        required: true, // Toto hovorí, že pole NESMIE byť prázdne pri odosielaní
+                                        // Odstránené min a required, aby sa povolili prázdne polia
+                                        // min: 1, 
+                                        // max: numberOfTeamMembersLimit,
+                                        // required: true, 
                                         disabled: loading,
                                     })
                                 ),
