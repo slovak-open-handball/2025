@@ -85,8 +85,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
   // Handler pre pridanie nového riadku
   const handleAddRow = () => {
-    // Len ak existujú nevybraté kategórie
-    if (getAvailableCategoryOptions().length > 0) {
+    // Len ak existujú nevybraté kategórie a posledný riadok je platný
+    if (getAvailableCategoryOptions().length > 0 && selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '') {
       setSelectedCategoryRows(prevRows => [...prevRows, { categoryId: '', teams: 1 }]);
     }
   };
@@ -110,8 +110,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
   // Overenie platnosti formulára pre stranu 3
   const isFormValidPage3 = selectedCategoryRows.every(row => row.categoryId !== '' && row.teams >= 1);
-  const hasSelectedCategories = selectedCategoryRows.length > 0 && selectedCategoryRows.some(row => row.categoryId !== '');
-
+  // NOVINKA: Kontrola, či je posledný riadok platný (vybratá kategória)
+  const isLastRowCategorySelected = selectedCategoryRows.length > 0 ? selectedCategoryRows[selectedCategoryRows.length - 1].categoryId !== '' : false;
 
   // Dynamické triedy pre tlačidlo "Registrovať sa"
   const registerButtonClasses = `
@@ -121,6 +121,16 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
       : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
     }
   `;
+
+  // Dynamické triedy pre tlačidlo "+"
+  const addButtonClasses = `
+    font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 transition-colors duration-200 focus:outline-none focus:shadow-outline
+    ${loading || getAvailableCategoryOptions().length === 0 || !isLastRowCategorySelected // Zmenená podmienka disable
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav: biele pozadie, modrý text a border, no-drop kurzor
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav
+    }
+  `;
+
 
   // Renderovanie formulára
   return React.createElement(
@@ -201,8 +211,8 @@ export function Page3Form({ formData, handlePrev, handleSubmit, loading, setLoad
             {
               type: 'button',
               onClick: handleAddRow,
-              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 transition-colors duration-200 focus:outline-none focus:shadow-outline',
-              disabled: loading,
+              className: addButtonClasses, // Použitie dynamických tried
+              disabled: loading || !isLastRowCategorySelected || getAvailableCategoryOptions().length === 0, // Zmenená podmienka disable
               tabIndex: 22 + selectedCategoryRows.length * 2 // Nový tabIndex pre tlačidlo "+"
             },
             '+'
