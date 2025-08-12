@@ -300,8 +300,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         disabled: loading,
                                     })
                                 ),
-                                
-                                {/* Účastnícke tričká sekcia */}
                                 React.createElement(
                                     'div',
                                     { className: 'border-t border-gray-200 pt-4 mt-4' },
