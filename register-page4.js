@@ -116,31 +116,35 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (diff === 0) return null; // Ak nie je rozdiel, vrátime null alebo prázdny reťazec, aby sa nič nezobrazilo
 
         const absDiff = Math.abs(diff);
-        const prefixPart = `Na pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-        let boldText;
+        let actionText; // "objednať ešte" alebo "zrušiť"
+        let countText; // "1 tričko", "2 tričká", "5 tričiek"
 
         if (diff > 0) {
+            actionText = 'objednať ešte';
             if (absDiff === 1) {
-                boldText = `objednať ešte ${absDiff} tričko.`;
+                countText = `${absDiff} tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                boldText = `objednať ešte ${absDiff} tričká.`;
+                countText = `${absDiff} tričká.`;
             } else {
-                boldText = `objednať ešte ${absDiff} tričiek.`;
+                countText = `${absDiff} tričiek.`;
             }
         } else { // diff < 0
+            actionText = 'zrušiť';
             if (absDiff === 1) {
-                boldText = `zrušiť ${absDiff} objednané tričko.`;
+                countText = `${absDiff} objednané tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                boldText = `zrušiť ${absDiff} objednané tričká.`;
+                countText = `${absDiff} objednané tričká.`;
             } else {
-                boldText = `zrušiť ${absDiff} objednaných tričiek.`;
+                countText = `${absDiff} objednaných tričiek.`;
             }
         }
 
-        // Vrátime pole React elementov, kde len druhý element je tučný
-        return React.createElement(React.Fragment, null, 
-            prefixPart, 
-            React.createElement('strong', null, boldText)
+        return React.createElement(React.Fragment, null,
+            React.createElement('strong', null, 'Na pokračovanie'),
+            ' v registrácii na turnaj ',
+            React.createElement('strong', null, 'je potrebné'),
+            ` v kategórii ${currentCategoryName} pre tím ${currentTeamName} `,
+            React.createElement('strong', null, `${actionText} ${countText}`)
         );
     }, []);
 
@@ -455,7 +459,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 // Zobrazenie validačnej správy pre tričká, ak je rozdiel
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
-                                    { className: `mt-2 p-2 rounded-lg text-center bg-red-100 text-red-700` }, // Odstránená trieda font-bold
+                                    { className: `mt-2 p-2 rounded-lg text-center bg-red-100 text-red-700` },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
                             );
