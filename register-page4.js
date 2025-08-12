@@ -113,33 +113,34 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Vytvorenie správy o validácii tričiek pre každý tím
     const getPerTeamTshirtValidationMessage = React.useCallback((diff, currentCategoryName, currentTeamName) => {
-        if (diff === 0) return '';
+        if (diff === 0) return null; // Ak nie je rozdiel, vrátime null alebo prázdny reťazec, aby sa nič nezobrazilo
 
         const absDiff = Math.abs(diff);
         const prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
-        let boldPart;
+        let boldText;
 
         if (diff > 0) {
             if (absDiff === 1) {
-                boldPart = `objednať ešte ${absDiff} tričko.`;
+                boldText = `objednať ešte ${absDiff} tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                boldPart = `objednať ešte ${absDiff} tričká.`;
+                boldText = `objednať ešte ${absDiff} tričká.`;
             } else {
-                boldPart = `objednať ešte ${absDiff} tričiek.`;
+                boldText = `objednať ešte ${absDiff} tričiek.`;
             }
         } else { // diff < 0
             if (absDiff === 1) {
-                boldPart = `zrušiť ${absDiff} objednané tričko.`;
+                boldText = `zrušiť ${absDiff} objednané tričko.`;
             } else if (absDiff >= 2 && absDiff <= 4) {
-                boldPart = `zrušiť ${absDiff} objednané tričká.`;
+                boldText = `zrušiť ${absDiff} objednané tričká.`;
             } else {
-                boldPart = `zrušiť ${absDiff} objednaných tričiek.`;
+                boldText = `zrušiť ${absDiff} objednaných tričiek.`;
             }
         }
 
+        // Vrátime pole React elementov, kde len druhý element je tučný
         return React.createElement(React.Fragment, null, 
             prefixPart, 
-            React.createElement('strong', null, boldPart)
+            React.createElement('strong', null, boldText)
         );
     }, []);
 
@@ -495,7 +496,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať'
+                    ) : 'Registrovať sa'
                 )
             )
         )
