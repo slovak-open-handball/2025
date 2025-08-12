@@ -573,10 +573,27 @@ function App() {
     setShowNotification(false);
     setNotificationType('info');
 
-    // Uložíme dáta kategórií do formData
+    // Transformačná logika pre dáta kategórií
+    // Z selectedCategoryRows (formát z Page3: [{ categoryId: 'cat1_id', teams: 2 }, ...])
+    // Prevedieme na formát pre Page4: { 'Názov Kategórie 1': { numberOfTeams: 2 }, 'Názov Kategórie 2': { numberOfTeams: 1 }, ... }
+    const transformedCategories = {};
+    categoriesDataFromPage3.forEach(row => {
+        // Získame názov kategórie z categoriesDataFromFirestore
+        const categoryName = categoriesDataFromFirestore[row.categoryId];
+        if (categoryName) {
+            transformedCategories[categoryName] = {
+                numberOfTeams: row.teams
+            };
+        } else {
+            console.warn(`register.js: Názov kategórie pre ID ${row.categoryId} sa nenašiel v categoriesDataFromFirestore.`);
+        }
+    });
+
+    console.log("App.js: Transformed categories for Page4:", transformedCategories); // Logovanie transformovaných kategórií
+
     setFormData(prev => ({
         ...prev,
-        categories: categoriesDataFromPage3 // Uloženie štruktúry { 'Kategória Názov': { numberOfTeams: X } }
+        categories: transformedCategories // Uloženie transformovaných kategórií
     }));
 
     // Prejdeme na stranu 4
