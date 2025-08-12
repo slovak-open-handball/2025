@@ -353,14 +353,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         );
                                         const isAddButtonTrulyDisabled = loading || hasInvalidTshirtFields || getAvailableTshirtSizeOptions(team.tshirts).length === 0;
 
-                                        const addButtonClassName = `
-                                            font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
-                                            transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                            ${isAddButtonTrulyDisabled
-                                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
-                                                : 'bg-blue-500 hover:bg-blue-700 text-white'
-                                            }
-                                        `.trim();
+                                        const addButtonClassName = `font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 transition-colors duration-200 focus:outline-none focus:shadow-outline ${isAddButtonTrulyDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`.trim();
 
                                         const addButtonDisabled = isAddButtonTrulyDisabled;
 
