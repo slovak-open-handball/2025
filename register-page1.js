@@ -513,7 +513,7 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
           React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
-            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formuláru. Ďakujeme.'),
+            React.createElement('p', { className: 'text-gray-600 text-sm mb-1' }, 'Prosíme Vás o vyplnenie tohto formulára. Ďakujeme.'),
             React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'firstName' }, 
               'Meno kontaktnej osoby',
               React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*')
