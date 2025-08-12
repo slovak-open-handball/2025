@@ -105,7 +105,7 @@ function App() {
   });
   // NOVINKA: Stav pre dáta z Page3 (selectedCategoryRows)
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
-  // NOVINKA: Stav pre dáta z Page4 (details o tímoch)
+  // NOVINKA: Stav pre dáta z Page4 (details o tímoch) - Teraz bude zdrojom pravdy pre Page4Form
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
 
   const [userRole, setUserRole] = React.useState('user'); // Predvolená rola
@@ -591,6 +591,22 @@ function App() {
 
     console.log("App.js: Transformed categories for Page4:", transformedCategories); // Logovanie transformovaných kategórií
 
+    // NOVINKA: Inicializácia teamsDataFromPage4 (jediný zdroj pravdy) priamo tu v App komponente
+    const initialTeamsDataForPage4 = {};
+    const clubName = formData.billing.clubName || '';
+    Object.keys(transformedCategories).forEach(categoryName => {
+        const numTeams = transformedCategories[categoryName].numberOfTeams;
+        initialTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
+            const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
+            return {
+                teamName: `${clubName}${suffix}`,
+                players: 1,
+                teamMembers: 1,
+            };
+        });
+    });
+    setTeamsDataFromPage4(initialTeamsDataForPage4); // Nastavíme inicializované dáta tímov
+
     setFormData(prev => ({
         ...prev,
         categories: transformedCategories // Uloženie transformovaných kategórií
@@ -609,7 +625,7 @@ function App() {
   };
 
   // NOVINKA: Pôvodná handleSubmit premenovaná na handleFinalSubmit
-  const handleFinalSubmit = async (teamsDataFromPage4) => { // NOVINKA: Prijíma dáta tímov z Page4
+  const handleFinalSubmit = async (teamsDataToSave) => { // Prijíma finálne dáta tímov z Page4Form
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
@@ -679,7 +695,7 @@ function App() {
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
         categories: formData.categories, // Uloženie dát o kategóriách a tímoch z Page3
-        teams: teamsDataFromPage4, // NOVINKA: Uloženie dát o tímoch z Page4
+        teams: teamsDataToSave, // Uloženie finálnych dát o tímoch z Page4Form
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
@@ -706,7 +722,7 @@ function App() {
               }
             },
             categories: formData.categories, // Pridanie kategórií do emailu
-            teams: teamsDataFromPage4, // NOVINKA: Pridanie dát o tímoch do emailu
+            teams: teamsDataToSave, // NOVINKA: Pridanie finálnych dát o tímoch do emailu
           };
           console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -756,7 +772,7 @@ function App() {
       });
       // NOVINKA: Vyčistenie stavu selectedCategoryRows a teamsDataFromPage4
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({});
+      setTeamsDataFromPage4({}); // Vyčistíme aj dáta tímov
       setPage(1); // Reset na prvú stránku formulára
 
       // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
@@ -933,9 +949,9 @@ function App() {
                     NotificationModal: NotificationModal,
                     numberOfPlayersLimit: numberOfPlayersInTeam, // NOVINKA: Limit pre hráčov
                     numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // NOVINKA: Limit pre členov realizačného tímu
-                    teamsDataFromPage4: teamsDataFromPage4, // Počiatočné dáta pre tímy (ak sa vrátim na stranu 4)
+                    teamsDataFromPage4: teamsDataFromPage4, // DÔLEŽITÉ: Posielame aktuálny stav dát tímov
                     setTeamsDataFromPage4: setTeamsDataFromPage4, // Setter pre dáta tímov
-                    closeNotification: closeNotification, // DÔLEŽITÁ OPRAVA: Odovzdanie closeNotification do Page4Form
+                    closeNotification: closeNotification, // Odovzdanie closeNotification do Page4Form
                 })
             ) : null
       )
