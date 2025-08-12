@@ -1,24 +1,18 @@
 // register.js
 // Hlavný súbor aplikácie, ktorý spravuje stav a orchestráciu medzi stránkami formulára.
-// Táto verzia pridáva kontrolu na inicializáciu po prijatí globalDataUpdated a categoriesLoaded.
-// NOVINKA: Pridaná logika pre automatické zatvorenie registrácie bez zobrazenia odpočtu.
 
-// Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; // Predpokladáme, že táto URL je správna pre Apps Script
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
-// Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
-import { Page3Form } from './register-page3.js'; // NOVINKA: Import pre Page3Form
-import { Page4Form } from './register-page4.js'; // NOVINKA: Import pre Page4Form
+import { Page3Form } from './register-page3.js';
+import { Page4Form } from './register-page4.js';
 
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
-// Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -29,8 +23,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component pre zobrazovanie dočasných správ
-function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný prop 'type'
+function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -43,7 +36,7 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
       timerRef.current = setTimeout(() => {
         setShow(false);
         setTimeout(onClose, 500);
-      }, 10000); // Zobrazí sa na 10 sekúnd
+      }, 10000);
     } else {
       setShow(false);
       if (timerRef.current) {
@@ -61,14 +54,13 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
 
   if (!show && !message) return null;
 
-  // Dynamické triedy pre farbu pozadia na základe typu správy
   let bgColorClass;
   if (type === 'success') {
     bgColorClass = 'bg-green-500';
   } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; // Nastavenie červenej pre chyby
+    bgColorClass = 'bg-red-600';
   } else {
-    bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+    bgColorClass = 'bg-blue-500';
   }
 
   return React.createElement(
@@ -81,7 +73,6 @@ function NotificationModal({ message, onClose, type = 'info' }) { // Pridaný pr
   );
 }
 
-// Hlavný App komponent
 function App() {
   const [page, setPage] = React.useState(1);
   const [formData, setFormData] = React.useState({
@@ -103,48 +94,40 @@ function App() {
       icDph: '',
     }
   });
-  // NOVINKA: Stav pre dáta z Page3 (selectedCategoryRows)
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
-  // NOVINKA: Stav pre dáta z Page4 (details o tímoch) - Teraz bude zdrojom pravdy pre Page4Form
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
 
-  const [userRole, setUserRole] = React.useState('user'); // Predvolená rola
+  const [userRole, setUserRole] = React.useState('user');
   const [loading, setLoading] = React.useState(false);
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
-  const [notificationType, setNotificationType] = React.useState('info'); // Nový stav pre typ notifikácie
+  const [notificationType, setNotificationType] = React.useState('info');
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
-  const [registrationSuccess, setRegistrationSuccess] = React.useState(false); // Nový stav pre úspešnú registráciu
+  const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
 
-  // Firebase stav - už nie sú potrebné useState, pristupujeme ku globálnym inštanciám
-  const [isAuthReady, setIsAuthReady] = React.useState(false); // Stále potrebné pre sledovanie pripravenosti autentifikácie
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
-  // NOVINKA: Stavy pre počet hráčov a členov realizačného tímu načítané z nastavení
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(true); // NOVINKA: Stav pre existenciu kategórií
-  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({}); // NOVINKA: Pre uloženie kategórií z Firestore
+  const [categoriesExist, setCategoriesExist] = React.useState(true);
+  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({});
 
-  // Nové stavy pre odpočet a vynútenie prepočtu
   const [countdown, setCountdown] = React.useState(null);
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
   const [periodicRefreshKey, setPeriodicRefreshKey] = React.useState(0);
 
-  // NOVINKA: Stav pre odpočet do konca registrácie
   const [countdownEnd, setCountdownEnd] = React.useState(null);
   const countdownEndIntervalRef = React.useRef(null);
 
-  // Nový stav pre reCAPTCHA pripravenosť
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
-  // Nový stav na indikáciu prebiehajúcej registrácie (používa sa aj ref pre okamžitý prístup)
-  const isRegisteringRef = React.useRef(false); // Ref pre okamžitý prístup v onAuthStateChanged
+  const isRegisteringRef = React.useRef(false);
 
   const countdownIntervalRef = React.useRef(null);
 
@@ -163,7 +146,6 @@ function App() {
     );
   }, [settingsLoaded, registrationStartDate, registrationEndDate, forceRegistrationCheck, periodicRefreshKey]);
 
-  // NOVINKA: Stav pre kontrolu, či je registrácia už zatvorená (po dátume ukončenia)
   const isRegistrationClosed = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
@@ -171,7 +153,6 @@ function App() {
     return regEnd instanceof Date && !isNaN(regEnd) && now > regEnd;
   }, [settingsLoaded, registrationEndDate, periodicRefreshKey]);
 
-  // NOVINKA: Stav pre kontrolu, či je terajší čas skorší ako čas otvorenia registrácie
   const isBeforeRegistrationStart = React.useMemo(() => {
     if (!settingsLoaded) return false;
     const now = new Date();
@@ -202,7 +183,6 @@ function App() {
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }, [registrationStartDate]);
   
-  // NOVÁ FUNKCIA: na výpočet zostávajúceho času do konca registrácie
   const calculateTimeLeftToEnd = React.useCallback(() => {
       const now = new Date();
       const endDate = registrationEndDate ? new Date(registrationEndDate) : null;
@@ -226,15 +206,12 @@ function App() {
   }, [registrationEndDate]);
 
 
-  // Inicializácia Firebase a autentifikácie
   React.useEffect(() => {
-    // Zobrazenie globálneho loaderu pri načítavaní
     if (window.showGlobalLoader) {
       window.showGlobalLoader();
     }
 
     try {
-      // Prístup ku globálnym inštanciám Firebase Auth a Firestore
       const authInstance = window.auth;
       const firestoreDb = window.db;
 
@@ -243,17 +220,14 @@ function App() {
         setNotificationMessage('Chyba pri inicializácii aplikácie: Firebase SDK chýba.');
         setShowNotification(true);
         setNotificationType('error');
-        // Skrytie loaderu aj pri chybe
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
         return;
       }
 
-      // Používame onAuthStateChanged z globálneho window.auth
       const unsubscribe = window.auth.onAuthStateChanged(async (currentUser) => {
-        setIsAuthReady(true); // Nastavíme, že autentifikácia je pripravená
-        // Skrytie loaderu po pripravenosti autentifikácie
+        setIsAuthReady(true);
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
@@ -261,7 +235,6 @@ function App() {
 
       return () => {
         unsubscribe();
-        // Zabezpečenie skrytia loaderu pri odmontovaní komponentu
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
@@ -271,21 +244,18 @@ function App() {
       setNotificationMessage('Chyba pri inicializácii aplikácie.');
       setShowNotification(true);
       setNotificationType('error');
-      // Skrytie loaderu aj pri chybe
       if (window.hideGlobalLoader) {
         window.hideGlobalLoader();
       }
     }
-  }, []); // Odstránená závislosť isRegistering, pretože ref je okamžitý
+  }, []);
 
-  // Načítanie a počúvanie stavu registrácie a kategórií z Firestore
   React.useEffect(() => {
     const firestoreDb = window.db;
     if (!firestoreDb || !isAuthReady) {
       return;
     }
 
-    // Načítanie nastavení registrácie
     const settingsDocRef = doc(collection(firestoreDb, 'settings'), 'registration');
     const unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
       if (docSnapshot.exists()) {
@@ -294,7 +264,6 @@ function App() {
           setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
           setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
           setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
-          // NOVINKA: Načítanie počtu hráčov a členov realizačného tímu
           setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
           setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
       } else {
@@ -315,19 +284,17 @@ function App() {
       setSettingsLoaded(true);
     });
 
-    // Načítanie kategórií
     const categoriesDocRef = doc(collection(firestoreDb, 'settings'), 'categories');
     const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
-      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) { // OPRAVENÉ: docSnap -> docSnapshot
+      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
-        setCategoriesDataFromFirestore(docSnapshot.data()); // Uložiť načítané kategórie
+        setCategoriesDataFromFirestore(docSnapshot.data());
       } else {
         setCategoriesExist(false);
-        setCategoriesDataFromFirestore({}); // Vyprázdniť kategórie
+        setCategoriesDataFromFirestore({});
       }
     }, error => {
       console.error("register.js: Chyba pri načítaní kategórií (onSnapshot):", error);
-      // Ak nastane chyba pri načítaní kategórií, predpokladáme, že neexistujú
       setCategoriesExist(false); 
       setCategoriesDataFromFirestore({});
     });
@@ -337,9 +304,8 @@ function App() {
       unsubscribeSettings();
       unsubscribeCategories();
     };
-  }, [isAuthReady]); // Zmenená závislosť na isAuthReady
+  }, [isAuthReady]);
 
-  // Effect pre odpočet do začiatku registrácie
   React.useEffect(() => {
     const updateCountdown = () => {
         const timeLeft = calculateTimeLeft();
@@ -348,7 +314,6 @@ function App() {
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
             }
-            // Vynútime prepočet stavu, aby sa aplikácia okamžite aktualizovala
             setForceRegistrationCheck(prev => prev + 1); 
         }
     };
@@ -370,7 +335,6 @@ function App() {
     };
   }, [registrationStartDate, calculateTimeLeft]);
 
-  // NOVINKA: Effect pre odpočet do konca registrácie
   React.useEffect(() => {
     const updateCountdownEnd = () => {
       const timeLeft = calculateTimeLeftToEnd();
@@ -379,7 +343,6 @@ function App() {
           if (countdownEndIntervalRef.current) {
               clearInterval(countdownEndIntervalRef.current);
           }
-          // Vynútime prepočet stavu, aby sa aplikácia okamžite aktualizovala
           setPeriodicRefreshKey(prev => prev + 1);
       }
     };
@@ -401,16 +364,14 @@ function App() {
     };
   }, [registrationEndDate, calculateTimeLeftToEnd]);
 
-  // NOVINKA: Upravený useEffect pre periodickú aktualizáciu, teraz už je to len pre fallback
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); // Každú minútu
+    }, 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Effect pre kontrolu pripravenosti reCAPTCHA
   React.useEffect(() => {
     const checkRecaptcha = () => {
       if (window.grecaptcha && window.grecaptcha.ready) {
@@ -429,15 +390,15 @@ function App() {
   const closeNotification = () => {
     setShowNotification(false);
     setNotificationMessage('');
-    setNotificationType('info'); // Reset typu notifikácie
+    setNotificationType('info');
   };
 
   const handleChange = (e) => {
     const { id, value } = e.target;
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
       setFormData(prev => ({
-        ...prev, // Zachovať ostatné polia formData
-        billing: { // Aktualizovať iba billing objekt
+        ...prev,
+        billing: {
           ...prev.billing,
           [id]: value
         }
@@ -451,7 +412,6 @@ function App() {
     setUserRole(e.target.value);
   };
 
-  // Pomocná funkcia pre získanie reCAPTCHA tokenu (prevzatá z admin-register.js)
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
       setNotificationMessage("reCAPTCHA API nie je načítané alebo pripravené.");
@@ -503,18 +463,16 @@ function App() {
       return;
     }
 
-    // Získanie reCAPTCHA tokenu pre prechod na ďalšiu stránku (klient-side overenie)
     const recaptchaToken = await getRecaptchaToken('page_transition');
     if (!recaptchaToken) {
         setLoading(false);
-        return; // Zastav, ak token nebol získaný
+        return;
     }
     console.log("reCAPTCHA Token pre prechod stránky získaný (klient-side overenie).");
     setPage(2);
-    setLoading(false); // Ukončiť načítavanie po prechode na ďalšiu stránku
+    setLoading(false);
   };
 
-  // NOVINKA: Funkcia pre prechod z Page2 na Page3
   const handleNextPage2ToPage3 = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -522,7 +480,6 @@ function App() {
     setShowNotification(false);
     setNotificationType('info');
 
-    // Validácia fakturačných údajov (presunuté z handleFinalSubmit)
     const { clubName, ico, dic, icDph } = formData.billing;
 
     if (!clubName.trim()) {
@@ -561,24 +518,18 @@ function App() {
       return;
     }
 
-    // Ak prejde validácia, prejdeme na stranu 3
     setPage(3);
     setLoading(false);
   };
 
-  // NOVINKA: Funkcia pre prechod z Page3 na Page4
   const handleNextPage3ToPage4 = async (categoriesDataFromPage3) => {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
 
-    // Transformačná logika pre dáta kategórií
-    // Z selectedCategoryRows (formát z Page3: [{ categoryId: 'cat1_id', teams: 2 }, ...])
-    // Prevedieme na formát pre Page4: { 'Názov Kategórie 1': { numberOfTeams: 2 }, 'Názov Kategórie 2': { numberOfTeams: 1 }, ... }
     const transformedCategories = {};
     categoriesDataFromPage3.forEach(row => {
-        // Získame názov kategórie z categoriesDataFromFirestore
         const categoryName = categoriesDataFromFirestore[row.categoryId];
         if (categoryName) {
             transformedCategories[categoryName] = {
@@ -589,10 +540,9 @@ function App() {
         }
     });
 
-    console.log("App.js: Transformed categories for Page4:", transformedCategories); // Logovanie transformovaných kategórií
+    console.log("App.js: Transformed categories for Page4:", transformedCategories);
 
-    // NOVINKA: Inicializácia newTeamsDataForPage4 (jediný zdroj pravdy) priamo tu v App komponente
-    const newTeamsDataForPage4 = {}; // Použijeme nový objekt, aby sme predišli priamym mutáciám
+    const newTeamsDataForPage4 = {};
     const clubName = formData.billing.clubName || '';
 
     Object.keys(transformedCategories).forEach(categoryName => {
@@ -601,53 +551,49 @@ function App() {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
             
-            // Zachovať existujúce dáta, ak už existujú pre túto kategóriu a index tímu
-            // DÔLEŽITÉ: Použijeme existujúce teamsDataFromPage4 na záchranu už zadaných hodnôt
             const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
 
             return {
-                teamName: generatedTeamName, // Vždy pregenerujte názov
-                players: existingTeamData.players !== undefined ? existingTeamData.players : '', // Inicializácia na prázdny reťazec
-                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '', // Inicializácia na prázdny reťazec
-                // NOVINKA: Inicializácia tshirts pre každý tím
+                teamName: generatedTeamName,
+                players: existingTeamData.players !== undefined ? existingTeamData.players : '',
+                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '',
+                teamMembersFemale: existingTeamData.teamMembersFemale !== undefined ? existingTeamData.teamMembersFemale : '', // Explicitná inicializácia
+                teamMembersMale: existingTeamData.teamMembersMale !== undefined ? existingTeamData.teamMembersMale : '',     // Explicitná inicializácia
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
                     ? existingTeamData.tshirts
                     : [{ size: '', quantity: '' }]
             };
         });
     });
-    setTeamsDataFromPage4(newTeamsDataForPage4); // Nastavíme inicializované dáta tímov
+    setTeamsDataFromPage4(newTeamsDataForPage4);
 
     setFormData(prev => ({
         ...prev,
-        categories: transformedCategories // Uloženie transformovaných kategórií
+        categories: transformedCategories
     }));
 
-    // Prejdeme na stranu 4
     setPage(4);
     setLoading(false);
   };
 
   const handlePrev = () => {
-    setPage(prevPage => prevPage - 1); // Upravené pre prechod na predchádzajúcu stránku
+    setPage(prevPage => prevPage - 1);
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
   };
 
-  // NOVINKA: Pôvodná handleSubmit premenovaná na handleFinalSubmit
-  const handleFinalSubmit = async (teamsDataToSave) => { // Prijíma finálne dáta tímov z Page4Form
+  const handleFinalSubmit = async (teamsDataToSave) => {
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
     setNotificationType('info');
-    isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
+    isRegisteringRef.current = true;
 
     const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
-    console.log("Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber); // Logovanie telefónneho čísla
+    console.log("Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber);
 
     try {
-      // Prístup ku globálnym inštanciám Firebase Auth a Firestore
       const authInstance = window.auth;
       const firestoreDb = window.db;
 
@@ -660,16 +606,14 @@ function App() {
         return;
       }
 
-      // Získanie reCAPTCHA tokenu pre finálnu registráciu (klient-side overenie)
       const recaptchaToken = await getRecaptchaToken('register_user');
       if (!recaptchaToken) {
         setLoading(false);
         isRegisteringRef.current = false;
-        return; // Zastav, ak token nebol získaný
+        return;
       }
       console.log("reCAPTCHA Token pre registráciu používateľa získaný (klient-side overenie).");
 
-      // 1. Vytvorenie používateľa vo Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(authInstance, formData.email, formData.password);
       const user = userCredential.user;
 
@@ -685,8 +629,6 @@ function App() {
       console.log("Používateľ vytvorený v Auth s UID:", user.uid);
 
 
-      // 2. Uloženie používateľských údajov do Firestore
-      // Zmenená cesta pre zápis do databázy na /users/{userId}
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
 
       console.log("register.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
@@ -701,16 +643,15 @@ function App() {
         street: formData.street,
         houseNumber: formData.houseNumber,
         billing: formData.billing,
-        role: userRole, // Predvolená rola 'user'
+        role: userRole,
         approved: true,
         registrationDate: serverTimestamp(),
         passwordLastChanged: serverTimestamp(),
-        categories: formData.categories, // Uloženie dát o kategóriách a tímoch z Page3
-        teams: teamsDataToSave, // Uloženie finálnych dát o tímoch z Page4Form
+        categories: formData.categories,
+        teams: teamsDataToSave,
       });
       console.log("Údaje používateľa úspešne zapísané do Firestore.");
 
-      // 3. Odoslanie registračného e-mailu cez Google Apps Script (no-cors)
       try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -718,13 +659,13 @@ function App() {
             firstName: formData.firstName,
             lastName: formData.lastName,
             contactPhoneNumber: fullPhoneNumber,
-            isAdmin: false, // Toto nie je administrátorská registrácia
-            billing: { // Pridanie fakturačných údajov
+            isAdmin: false,
+            billing: {
               clubName: formData.billing.clubName,
               ico: formData.billing.ico,
               dic: formData.billing.dic,
               icDph: formData.billing.icDph,
-              address: { // Adresa pre fakturačné údaje
+              address: {
                 street: formData.street,
                 houseNumber: formData.houseNumber,
                 zipCode: formData.postalCode,
@@ -732,10 +673,10 @@ function App() {
                 country: formData.country
               }
             },
-            categories: formData.categories, // Pridanie kategórií do emailu
-            teams: teamsDataToSave, // NOVINKA: Pridanie finálnych dát o tímoch do emailu
+            categories: formData.categories,
+            teams: teamsDataToSave,
           };
-          console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
+          console.log("Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2));
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -746,8 +687,6 @@ function App() {
           });
           console.log("Požiadavka na odoslanie registračného e-mailu odoslaná (no-cors režim).");
           try {
-            // V režime 'no-cors' je odpoveď 'opaque', takže text() alebo json() zlyhá.
-            // Táto časť je tu len pre konzistentnosť s admin-register.js, ale nefunguje.
             const responseData = await response.text();
             console.log("Odpoveď z Apps Script (fetch - registračný e-mail) ako text:", responseData);
           } catch (jsonError) {
@@ -757,16 +696,13 @@ function App() {
           console.error("Chyba pri odosielaní registračného e-mailu cez Apps Script (chyba fetch):", emailError);
       }
 
-      // Pridanie krátkeho oneskorenia, aby sa zabezpečilo spracovanie sieťových požiadaviek
-      await new Promise(resolve => setTimeout(resolve, 200)); // Oneskorenie 200ms
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // Aktualizovaná správa po úspešnej registrácii
       setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
       setShowNotification(true);
-      setNotificationType('success'); // Nastavenie typu notifikácie na úspech
-      setRegistrationSuccess(true); // Nastavenie stavu úspešnej registrácie
+      setNotificationType('success');
+      setRegistrationSuccess(true);
 
-      // 5. Explicitne odhlásiť používateľa po úspešnej registrácii a uložení dát
       try {
         await signOut(authInstance);
         console.log("Používateľ úspešne odhlásený po registrácii.");
@@ -774,22 +710,19 @@ function App() {
         console.error("Chyba pri odhlasovaní po registrácii:", signOutError);
       }
 
-      // Vyčistiť formulár
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' }
       });
-      // NOVINKA: Vyčistenie stavu selectedCategoryRows a teamsDataFromPage4
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({}); // Vyčistíme aj dáta tímov
-      setPage(1); // Reset na prvú stránku formulára
+      setTeamsDataFromPage4({});
+      setPage(1);
 
-      // Presmerovanie na prihlasovaciu stránku po dlhšom oneskorení (aby sa správa zobrazila)
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 5000); // 5 sekúnd na zobrazenie notifikácie
+      }, 5000);
 
     } catch (error) {
       console.error('Chyba počas registrácie alebo zápisu do Firestore:', error);
@@ -806,7 +739,7 @@ function App() {
               case 'auth/weak-password':
                   errorMessage = 'Heslo je príliš slabé. Použite silnejšie heslo.';
                   break;
-              case 'permission-denied': // Špecifická chyba povolenia Firestore
+              case 'permission-denied':
                   errorMessage = 'Chyba databázy: Nemáte oprávnenie na zápis. Skontrolujte bezpečnostné pravidlá Firestore.';
                   break;
               default:
@@ -821,50 +754,41 @@ function App() {
       setNotificationType('error');
     } finally {
       setLoading(false);
-      isRegisteringRef.current = false; // Reset referencie
+      isRegisteringRef.current = false;
     }
   };
 
-  // Effect to ensure header visibility once main app content is ready
-  // Táto logika bola presunutá do header.js, ktorý sa stará o viditeľnosť hlavičky.
-  // Odstránené, aby sa predišlo duplicitnej logike a pretekovým podmienkam.
   React.useEffect(() => {
-    // Táto funkcia je prázdna, pretože logiku viditeľnosti hlavičky spravuje header.js
   }, [settingsLoaded, isAuthReady]); 
 
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
-    // Notifikačné okno sa zobrazí LEN pre chyby alebo informačné správy, NIE pre úspešnú registráciu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
-    // Podmienečné renderovanie formulára alebo správy o úspechu
-    // Používame globálny loader namiesto lokálneho spinneru
     !settingsLoaded || !isAuthReady ? (
-      null // Loader je spravovaný globálne cez showGlobalLoader/hideGlobalLoader
+      null
     ) : registrationSuccess ? (
-      // Zobrazenie úspešnej správy namiesto formulára
       React.createElement(
         'div',
-        { className: 'bg-green-700', text: 'white', p: '8', rounded: 'lg', shadow: 'md', w: 'full', maxW: 'md', text: 'center' }, // Zmenené pozadie na tmavšiu zelenú (green-700)
+        { className: 'bg-green-700', text: 'white', p: '8', rounded: 'lg', shadow: 'md', w: 'full', maxW: 'md', text: 'center' },
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-4 text-black' }, // Zmenená farba textu nadpisu na čiernu
+          { className: 'text-2xl font-bold mb-4 text-black' },
           'Registrácia úspešná!'
         ),
         React.createElement(
           'p',
-          { className: 'text-white' }, // Text zostáva biely pre kontrast
-          notificationMessage // Zobrazí detailnú správu z notifikácie
+          { className: 'text-white' },
+          notificationMessage
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-200 text-sm mt-4' }, // Zmenená farba pre ľahšiu čitateľnosť na tmavšom zelenom pozadí
+          { className: 'text-gray-200 text-sm mt-4' },
           'Budete automaticky presmerovaní na prihlasovaciu stránku.'
         )
       )
     ) : (
-      // NOVINKA: Podmienené zobrazenie správy o kategóriách/registrácii
       (!categoriesExist && (isBeforeRegistrationStart || isRegistrationOpen)) ? (
         React.createElement(
           'div',
@@ -876,17 +800,16 @@ function App() {
           )
         )
       ) : (
-        // Zobrazenie formulára, ak registrácia nebola úspešná
         page === 1 ?
           React.createElement(
-            'div', // Obalový div pre Page1Form
+            'div',
             { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
             React.createElement(Page1Form, {
               formData: formData,
               handleChange: handleChange,
               handleNext: handleNext,
               loading: loading,
-              notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+              notificationMessage: notificationMessage,
               closeNotification: closeNotification,
               isCountryCodeModalOpen: isCountryCodeModalOpen,
               setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
@@ -897,58 +820,35 @@ function App() {
               countdownMessage: countdown,
               registrationStartDate: registrationStartDate,
               isRecaptchaReady: isRecaptchaReady,
-              isRegistrationClosed: isRegistrationClosed, // Odovzdávame stav registrácie
-              registrationEndDate: registrationEndDate // NOVINKA: Odovzdávame registrationEndDate
+              isRegistrationClosed: isRegistrationClosed,
+              registrationEndDate: registrationEndDate
             })
           ) :
-        page === 2 ? // NOVINKA: Kontrola pre stranu 2
+        page === 2 ?
           React.createElement(
-            'div', // Obalový div pre Page2Form
+            'div',
             { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
             React.createElement(Page2Form, {
               formData: formData,
               handleChange: handleChange,
               handlePrev: handlePrev,
-              // NOVINKA: Zmena handleSubmit na handleNextPage2ToPage3 pre prechod na stranu 3
               handleSubmit: handleNextPage2ToPage3, 
               loading: loading,
-              notificationMessage: notificationMessage, // Notifikácia sa riadi stavom App
+              notificationMessage: notificationMessage,
               closeNotification: closeNotification,
               userRole: userRole,
               handleRoleChange: handleRoleChange,
               NotificationModal: NotificationModal,
             })
           ) :
-        page === 3 ? // NOVINKA: Zobrazenie Page3Form
+        page === 3 ?
             React.createElement(
-                'div', // Obalový div pre Page3Form
+                'div',
                 { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
                 React.createElement(Page3Form, {
                     formData: formData,
                     handlePrev: handlePrev,
-                    handleNextPage3: handleNextPage3ToPage4, // NOVINKA: Prop pre prechod na stranu 4
-                    loading: loading,
-                    setLoading: setLoading, // Page3Form bude spravovať svoj loading stav
-                    notificationMessage: notificationMessage,
-                    setShowNotification: setShowNotification,
-                    setNotificationType: setNotificationType,
-                    setRegistrationSuccess: setRegistrationSuccess,
-                    isRecaptchaReady: isRecaptchaReady,
-                    selectedCountryDialCode: selectedCountryDialCode,
-                    NotificationModal: NotificationModal,
-                    availableCategoriesMap: categoriesDataFromFirestore, // Odovzdanie načítaných kategórií do Page3Form
-                    selectedCategoryRows: selectedCategoryRows, // NOVINKA: Odovzdanie stavu pre kategórie
-                    setSelectedCategoryRows: setSelectedCategoryRows, // NOVINKA: Odovzdanie setter funkcie
-                })
-            ) :
-        page === 4 ? // NOVINKA: Zobrazenie Page4Form
-            React.createElement(
-                'div', // Obalový div pre Page4Form
-                { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
-                React.createElement(Page4Form, {
-                    formData: formData, // formData obsahuje selectedCategoryRows ako formData.categories
-                    handlePrev: handlePrev,
-                    handleSubmit: handleFinalSubmit, // Finálne odoslanie formulára
+                    handleNextPage3: handleNextPage3ToPage4,
                     loading: loading,
                     setLoading: setLoading,
                     notificationMessage: notificationMessage,
@@ -958,11 +858,37 @@ function App() {
                     isRecaptchaReady: isRecaptchaReady,
                     selectedCountryDialCode: selectedCountryDialCode,
                     NotificationModal: NotificationModal,
-                    numberOfPlayersLimit: numberOfPlayersInTeam, // NOVINKA: Limit pre hráčov
-                    numberOfTeamMembersLimit: numberOfImplementationTeamMembers, // NOVINKA: Limit pre členov realizačného tímu
-                    teamsDataFromPage4: teamsDataFromPage4, // DÔLEŽITÉ: Posielame aktuálny stav dát tímov
-                    setTeamsDataFromPage4: setTeamsDataFromPage4, // Setter pre dáta tímov
-                    closeNotification: closeNotification, // Odovzdanie closeNotification do Page4Form
+                    availableCategoriesMap: categoriesDataFromFirestore,
+                    selectedCategoryRows: selectedCategoryRows,
+                    setSelectedCategoryRows: setSelectedCategoryRows,
+                })
+            ) :
+        page === 4 ?
+            React.createElement(
+                'div',
+                { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
+                React.createElement(Page4Form, {
+                    formData: formData,
+                    handlePrev: handlePrev,
+                    handleSubmit: handleFinalSubmit,
+                    loading: loading,
+                    setLoading: setLoading,
+                    notificationMessage: notificationMessage,
+                    setShowNotification: setShowNotification,
+                    setNotificationType: setNotificationType,
+                    setRegistrationSuccess: setRegistrationSuccess,
+                    isRecaptchaReady: isRecaptchaReady,
+                    selectedCountryDialCode: selectedCountryDialCode,
+                    NotificationModal: NotificationModal,
+                    numberOfPlayersLimit: numberOfPlayersInTeam,
+                    numberOfTeamMembersLimit: numberOfImplementationTeamMembers,
+                    teamsDataFromPage4: teamsDataFromPage4,
+                    setTeamsDataFromPage4: setTeamsDataFromPage4,
+                    closeNotification: closeNotification,
+                    // Prijímanie funkcií pre notifikácie
+                    setNotificationMessage: setNotificationMessage, 
+                    setShowNotification: setShowNotification, 
+                    setNotificationType: setNotificationType,
                 })
             ) : null
       )
@@ -970,21 +896,16 @@ function App() {
   );
 }
 
-// Premenná na sledovanie, či už bola aplikácia inicializovaná
 let appInitialized = false;
-// Premenná na sledovanie, či už bola udalosť globalDataUpdated prijatá
 let globalDataUpdatedReceived = false;
-// NOVINKA: Premenná na sledovanie, či už bola udalosť categoriesLoaded prijatá
 let categoriesLoadedReceived = false;
 
-// Funkcia na inicializáciu a renderovanie React aplikácie
 function initializeRegistrationApp() {
   if (appInitialized) {
     console.log("register.js: Aplikácia už bola inicializovaná, preskakujem.");
     return;
   }
   
-  // NOVINKA: Kombinovaná kontrola pre obe udalosti
   if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
     console.log("register.js: Čakám na všetky potrebné udalosti ('globalDataUpdated' a 'categoriesLoaded')...");
     return;
@@ -993,9 +914,8 @@ function initializeRegistrationApp() {
   const rootElement = document.getElementById('root');
   if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
-    appInitialized = true; // Označíme ako inicializované hneď, aby sa predišlo opakovanému vstupu
+    appInitialized = true;
 
-    // Priame vykreslenie React aplikácie
     root.render(React.createElement(App, null));
     console.log("register.js: React aplikácia úspešne inicializovaná a renderovaná.");
 
@@ -1004,22 +924,19 @@ function initializeRegistrationApp() {
   }
 }
 
-// Počúvame na udalosť 'globalDataUpdated', ktorá je odoslaná z authentication.js
 window.addEventListener('globalDataUpdated', () => {
   console.log("register.js: Prijatá udalosť 'globalDataUpdated'.");
-  globalDataUpdatedReceived = true; // Označíme, že udalosť bola prijatá
+  globalDataUpdatedReceived = true;
   initializeRegistrationApp();
 });
 
-// NOVINKA: Počúvame na udalosť 'categoriesLoaded', ktorá je odoslaná z header.js
 window.addEventListener('categoriesLoaded', () => {
   console.log("register.js: Prijatá udalosť 'categoriesLoaded'.");
-  categoriesLoadedReceived = true; // Označíme, že kategórie boli prijaté
+  categoriesLoadedReceived = true;
   initializeRegistrationApp();
 });
 
 
-// NOVINKA: Ak sa stránka načíta po tom, čo už boli odoslané obe udalosti, inicializujeme aplikáciu okamžite.
 if (window.isGlobalAuthReady && window.areCategoriesLoaded) {
   console.log("register.js: Všetky globálne dáta a kategórie sú už inicializované. Spúšťam React aplikáciu okamžite.");
   globalDataUpdatedReceived = true;
