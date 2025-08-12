@@ -648,7 +648,7 @@ function App() {
     setNotificationType('info');
     isRegisteringRef.current = true; // Okamžitá aktualizácia referencie pre onAuthStateChanged
 
-    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
+    const fullPhoneNumber = `${selectedCountryDialCode} ${formData.contactPhoneNumber}`;
     console.log("App.js: Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
