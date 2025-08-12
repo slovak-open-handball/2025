@@ -349,7 +349,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, `Počet hráčov (min: 1, max: ${numberOfPlayersLimit})`),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, `Počet hráčov (max: ${numberOfPlayersLimit})`),
                                     React.createElement('input', {
                                         type: 'number',
                                         id: `players-${categoryName}-${teamIndex}`,
