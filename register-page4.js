@@ -116,7 +116,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (diff === 0) return null; // Ak nie je rozdiel, vrátime null alebo prázdny reťazec, aby sa nič nezobrazilo
 
         const absDiff = Math.abs(diff);
-        const prefixPart = `Pre pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
+        const prefixPart = `Na pokračovanie v registrácii na turnaj je potrebné v kategórii ${currentCategoryName} pre tím ${currentTeamName} `;
         let boldText;
 
         if (diff > 0) {
