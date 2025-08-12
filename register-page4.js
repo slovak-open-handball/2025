@@ -347,27 +347,38 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Množstvo'),
                                         React.createElement('span', { className: 'w-8' })
                                     ),
-                                    (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => (
-                                        React.createElement(
+                                    (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => {
+                                        const addButtonClassName = `
+                                            font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
+                                            transition-colors duration-200 focus:outline-none focus:shadow-outline
+                                            ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
+                                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                                                : 'bg-blue-500 hover:bg-blue-700 text-white'
+                                            }
+                                        `.trim();
+
+                                        const addButtonDisabled = loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0;
+
+                                        return React.createElement(
                                             'div',
                                             { key: tshirtIndex, className: 'flex items-center space-x-2 mb-2' },
                                             React.createElement(
                                                 'select',
                                                 {
-                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
+                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/4',
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
                                                     disabled: loading,
                                                 },
-                                                React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
+                                                React.createElement('option', { value: '' }, 'Vyberte'),
                                                 getAvailableTshirtSizeOptions(team.tshirts, tshirtIndex).map(size => (
                                                     React.createElement('option', { key: size, value: size }, size)
                                                 ))
                                             ),
                                             React.createElement('input', {
                                                 type: 'number',
-                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
+                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1 text-left',
                                                 value: tshirt.quantity,
                                                 onChange: (e) => handleTshirtQuantityChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                 min: 0,
@@ -392,15 +403,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         {
                                             type: 'button',
                                             onClick: () => handleAddTshirtRow(categoryName, teamIndex),
-                                            className: `
-                                                font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
-                                                transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                                ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
-                                                    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
-                                                    : 'bg-blue-500 hover:bg-blue-700 text-white'
-                                                }
-                                            `.trim(),
-                                            disabled: loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0,
+                                            className: addButtonClassName,
+                                            disabled: addButtonDisabled,
                                         },
                                         '+'
                                     )
