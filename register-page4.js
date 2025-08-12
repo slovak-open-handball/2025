@@ -1,10 +1,6 @@
 export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
 
-    const TSHIRT_SIZES = ['134 - 140', '146 - 152', '158 - 164', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
-
-    const classNames = (...classes) => {
-        return classes.filter(Boolean).join(' ');
-    };
+    const TSHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         let newValue;
@@ -21,11 +17,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     newValue = parsed;
                     if (newValue < 1 && newValue !== '') newValue = 1;
                     if (newValue > numberOfPlayersLimit) newValue = numberOfPlayersLimit;
-                } else if (field === 'teamMembersFemale' || field === 'teamMembersMale') {
-                    newValue = parsed;
-                    if (newValue < 0 && newValue !== '') newValue = 0;
-                }
-                else if (field === 'teamMembers') {
+                } else if (field === 'teamMembers') {
                     newValue = parsed;
                     if (newValue < 1 && newValue !== '') newValue = 1;
                     if (newValue > numberOfTeamMembersLimit) newValue = numberOfTeamMembersLimit;
@@ -45,8 +37,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     teamName: '', 
                     players: '', 
                     teamMembers: '',
-                    teamMembersFemale: '',
-                    teamMembersMale: '',
                     tshirts: [{ size: '', quantity: '' }]
                 };
             }
@@ -54,21 +44,6 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ...newDetails[categoryName][teamIndex],
                 [field]: newValue
             };
-
-            const currentTeam = newDetails[categoryName][teamIndex];
-            const femaleMembers = parseInt(currentTeam.teamMembersFemale, 10);
-            const maleMembers = parseInt(currentTeam.teamMembersMale, 10);
-            currentTeam.teamMembers = (isNaN(femaleMembers) ? 0 : femaleMembers) + (isNaN(maleMembers) ? 0 : maleMembers);
-            
-            if (currentTeam.teamMembers > numberOfTeamMembersLimit) {
-                currentTeam.teamMembers = numberOfTeamMembersLimit;
-                if (!notificationMessage) {
-                    setShowNotification(true);
-                    setNotificationType('error');
-                    setNotificationMessage(`Celkový počet členov realizačného tímu nemôže presiahnuť ${numberOfTeamMembersLimit}.`);
-                }
-            }
-
             return newDetails;
         });
     };
@@ -164,25 +139,19 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return false;
                 }
 
-                const femaleMembersValue = parseInt(team.teamMembersFemale, 10);
-                const maleMembersValue = parseInt(team.teamMembersMale, 10);
-
-                if (isNaN(femaleMembersValue) || femaleMembersValue < 0) return false;
-                if (isNaN(maleMembersValue) || maleMembersValue < 0) return false;
-
-                const totalTeamMembers = femaleMembersValue + maleMembersValue;
-                if (totalTeamMembers < 1 || totalTeamMembers > numberOfTeamMembersLimit) {
+                const teamMembersValue = parseInt(team.teamMembers, 10);
+                if (isNaN(teamMembersValue) || teamMembersValue < 1 || teamMembersValue > numberOfTeamMembersLimit) {
                     return false;
                 }
 
                 for (const tshirt of (team.tshirts || [])) {
-                    if (tshirt.size === '' || tshirt.quantity === '' || isNaN(parseInt(tshirt.quantity, 10)) || parseInt(tshirt.quantity, 10) < 0) {
+                    if (tshirt.size === '' || isNaN(parseInt(tshirt.quantity, 10)) || parseInt(tshirt.quantity, 10) < 0) {
                         return false;
                     }
                 }
 
                 const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
-                                            totalTeamMembers;
+                                            (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
                 
                 let teamOrderedTshirts = 0;
                 for (const tshirt of (team.tshirts || [])) {
@@ -197,12 +166,13 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return allTshirtsMatch;
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
-    const registerButtonClasses = classNames(
-        'font-bold', 'py-2', 'px-4', 'rounded-lg', 'focus:outline-none', 'focus:shadow-outline', 'transition-colors', 'duration-200',
-        loading || !isRecaptchaReady || !isFormValidPage4
-            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-            : 'bg-green-500 hover:bg-green-700 text-white'
-    );
+    const registerButtonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
+    ${loading || !isRecaptchaReady || !isFormValidPage4
+      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
+      : 'bg-green-500 hover:bg-green-700 text-white'
+    }
+  `;
 
     const handleFinalSubmit = async (e) => {
         e.preventDefault();
@@ -226,9 +196,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             teamsDataToSave[categoryName] = teamsDataToSave[categoryName].map(team => ({
                 ...team,
                 players: team.players === '' ? 0 : team.players,
-                teamMembersFemale: team.teamMembersFemale === '' ? 0 : team.teamMembersFemale,
-                teamMembersMale: team.teamMembersMale === '' ? 0 : team.teamMembersMale,
-                teamMembers: (parseInt(team.teamMembersFemale, 10) || 0) + (parseInt(team.teamMembersMale, 10) || 0),
+                teamMembers: team.teamMembers === '' ? 0 : team.teamMembers,
                 tshirts: team.tshirts.map(tshirt => ({
                     ...tshirt,
                     quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
@@ -262,20 +230,14 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
                         (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => {
-                            const totalTeamMembersCalculated = (parseInt(team.teamMembersFemale, 10) || 0) + (parseInt(team.teamMembersMale, 10) || 0);
-
                             const teamRequiredTshirts = (isNaN(parseInt(team.players, 10)) ? 0 : parseInt(team.players, 10)) + 
-                                                        totalTeamMembersCalculated;
+                                                        (isNaN(parseInt(team.teamMembers, 10)) ? 0 : parseInt(team.teamMembers, 10));
                             
                             let teamOrderedTshirts = 0;
                             for (const tshirt of (team.tshirts || [])) {
                                 teamOrderedTshirts += (isNaN(parseInt(tshirt.quantity, 10)) ? 0 : parseInt(tshirt.quantity, 10));
                             }
                             const teamTshirtDifference = teamRequiredTshirts - teamOrderedTshirts;
-
-                            const validationMessageColorClass = teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700';
-                            const validationMessageClasses = classNames('mt-2', 'p-2', 'rounded-lg', 'text-center', 'font-bold', validationMessageColorClass);
-
 
                             return React.createElement(
                                 'div',
@@ -308,45 +270,22 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembersFemale-${categoryName}-${teamIndex}` }, `Počet žien (realizačný tím)`),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembers-${categoryName}-${teamIndex}` }, `Počet členov realizačného tímu (min: 1, max: ${numberOfTeamMembersLimit})`),
                                     React.createElement('input', {
                                         type: 'number',
-                                        id: `teamMembersFemale-${categoryName}-${teamIndex}`,
+                                        id: `teamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.teamMembersFemale,
-                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembersFemale', e.target.value),
-                                        placeholder: 'Zadajte počet žien',
+                                        value: team.teamMembers,
+                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
+                                        placeholder: 'Zadajte počet členov realizačného tímu',
                                         disabled: loading,
-                                        min: 0,
                                     })
-                                ),
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `teamMembersMale-${categoryName}-${teamIndex}` }, `Počet mužov (realizačný tím)`),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        id: `teamMembersMale-${categoryName}-${teamIndex}`,
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.teamMembersMale,
-                                        onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembersMale', e.target.value),
-                                        placeholder: 'Zadajte počet mužov',
-                                        disabled: loading,
-                                        min: 0,
-                                    })
-                                ),
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, `Celkový počet členov realizačného tímu (max: ${numberOfTeamMembersLimit})`),
-                                    React.createElement('p', { className: 'py-2 px-3 text-gray-700 bg-gray-100 rounded-lg' }, totalTeamMembersCalculated)
                                 ),
                                 
                                 React.createElement(
                                     'div',
                                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                                     React.createElement('h4', { className: 'text-base font-bold mb-2 text-gray-700' }, 'Účastnícke tričká'),
-                                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Všetky sú unisex.'),
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center font-bold mb-2 space-x-2' },
@@ -354,60 +293,39 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Množstvo'),
                                         React.createElement('span', { className: 'w-8' })
                                     ),
-                                    (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => {
-                                        const hasInvalidTshirtFields = team.tshirts.some(t => 
-                                            t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))
-                                        );
-                                        const isAddButtonTrulyDisabled = loading || hasInvalidTshirtFields || getAvailableTshirtSizeOptions(team.tshirts).length === 0;
-
-                                        const addButtonClassName = classNames(
-                                            'font-bold', 'w-10', 'h-10', 'rounded-full', 'flex', 'items-center', 'justify-center', 'mx-auto', 'mt-4',
-                                            'transition-colors', 'duration-200', 'focus:outline-none', 'focus:shadow-outline',
-                                            isAddButtonTrulyDisabled
-                                                ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
-                                                : 'bg-blue-500 hover:bg-blue-700 text-white'
-                                        );
-
-                                        const addButtonDisabled = isAddButtonTrulyDisabled;
-
-                                        return React.createElement(
+                                    (team.tshirts || [{ size: '', quantity: '' }]).map((tshirt, tshirtIndex) => (
+                                        React.createElement(
                                             'div',
                                             { key: tshirtIndex, className: 'flex items-center space-x-2 mb-2' },
                                             React.createElement(
                                                 'select',
                                                 {
-                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-1/4',
+                                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
                                                     value: tshirt.size,
                                                     onChange: (e) => handleTshirtSizeChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                     required: true,
                                                     disabled: loading,
                                                 },
-                                                React.createElement('option', { value: '' }, 'Vyberte'),
+                                                React.createElement('option', { value: '' }, 'Vyberte veľkosť'),
                                                 getAvailableTshirtSizeOptions(team.tshirts, tshirtIndex).map(size => (
                                                     React.createElement('option', { key: size, value: size }, size)
                                                 ))
                                             ),
                                             React.createElement('input', {
                                                 type: 'number',
-                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1 text-left',
+                                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-28 text-left',
                                                 value: tshirt.quantity,
                                                 onChange: (e) => handleTshirtQuantityChange(categoryName, teamIndex, tshirtIndex, e.target.value),
                                                 min: 0,
                                                 required: true,
                                                 disabled: loading,
-                                                placeholder: 'Zadajte počet',
                                             }),
                                             React.createElement(
                                                 'button',
                                                 {
                                                     type: 'button',
                                                     onClick: () => handleRemoveTshirtRow(categoryName, teamIndex, tshirtIndex),
-                                                    className: classNames(
-                                                        'bg-red-500', 'hover:bg-red-700', 'text-white', 'font-bold', 'w-8', 'h-8', 'rounded-full',
-                                                        'flex', 'items-center', 'justify-center', 'transition-colors', 'duration-200',
-                                                        'focus:outline-none', 'focus:shadow-outline',
-                                                        team.tshirts.length === 1 ? 'invisible' : ''
-                                                    ),
+                                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${team.tshirts.length === 1 ? 'invisible' : ''}`,
                                                     disabled: loading || team.tshirts.length === 1,
                                                 },
                                                 '-'
@@ -419,17 +337,22 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         {
                                             type: 'button',
                                             onClick: () => handleAddTshirtRow(categoryName, teamIndex),
-                                            className: addButtonClassName,
-                                            disabled: addButtonDisabled,
+                                            className: `
+                                                font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
+                                                transition-colors duration-200 focus:outline-none focus:shadow-outline
+                                                ${loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0
+                                                    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+                                                    : 'bg-blue-500 hover:bg-blue-700 text-white'
+                                                }
+                                            `.trim(),
+                                            disabled: loading || team.tshirts.some(t => t.size === '' || t.quantity === '' || isNaN(parseInt(t.quantity, 10))) || getAvailableTshirtSizeOptions(team.tshirts).length === 0,
                                         },
                                         '+'
                                     )
                                 ),
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
-                                    {
-                                        className: validationMessageClasses
-                                    },
+                                    { className: `mt-2 p-2 rounded-lg text-center font-bold bg-red-100 text-red-700` },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
                             );
