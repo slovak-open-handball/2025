@@ -23,12 +23,16 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 newValue = '';
             } else {
                 // Ak je to platné číslo, aplikujte orezanie (clamping) na základe limitov.
+                // Hodnota sa oreže len ak pretečie max, alebo ak je menšia ako 1 (pri opätovnom zadaní).
+                // Používateľ tak môže napr. zadať "0" a potom "1" bez toho, aby systém okamžite preskočil na 1.
                 if (field === 'players') {
-                    // Ponecháme možnosť zadávať aj hodnoty mimo rozsahu pre okamžitú spätnú väzbu,
-                    // ale pri validácii formulára bude overené, či je v rozsahu.
                     newValue = parsed;
+                    if (newValue < 1 && newValue !== '') newValue = 1; // Ak je číslo a je < 1, nastav na 1 (okrem prázdneho reťazca)
+                    if (newValue > numberOfPlayersLimit) newValue = numberOfPlayersLimit;
                 } else if (field === 'teamMembers') {
                     newValue = parsed;
+                    if (newValue < 1 && newValue !== '') newValue = 1; // Ak je číslo a je < 1, nastav na 1 (okrem prázdneho reťazca)
+                    if (newValue > numberOfTeamMembersLimit) newValue = numberOfTeamMembersLimit;
                 } else {
                     // Pre akékoľvek iné číselné polia, ak by existovali
                     newValue = parsed; 
@@ -186,7 +190,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         value: team.players, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'players', e.target.value),
                                         // Odstránené min a required, aby sa povolili prázdne polia
-                                        // min: 1,
+                                        // min: 1, // Tieto riadky sú teraz skutočne odstránené
                                         // max: numberOfPlayersLimit,
                                         // required: true, 
                                         disabled: loading,
@@ -203,7 +207,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         value: team.teamMembers, // Hodnota je čítaná priamo zo stavu
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'teamMembers', e.target.value),
                                         // Odstránené min a required, aby sa povolili prázdne polia
-                                        // min: 1, 
+                                        // min: 1, // Tieto riadky sú teraz skutočne odstránené
                                         // max: numberOfTeamMembersLimit,
                                         // required: true, 
                                         disabled: loading,
