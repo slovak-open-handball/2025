@@ -290,16 +290,17 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       let cleanedValue = originalValue.replace(/\D/g, '');
 
       let formattedValue = '';
-      let cursorOffset = 0; // Pomocná premenná pre posun kurzora
+      // Počiatočná pozícia kurzora po čistení, pred formátovaním
+      let tempCursorPos = originalCursorPos; 
 
       for (let i = 0; i < cleanedValue.length; i++) {
           formattedValue += cleanedValue[i];
           // Ak je pozícia, kde by mala byť medzera (po každej 3. číslici) a nasleduje ďalšia číslica
           if ((i + 1) % 3 === 0 && i + 1 < cleanedValue.length) {
               formattedValue += ' ';
-              // Ak sme vkladali medzeru a kurzor bol za ňou, posunieme kurzor o 1
-              if (originalCursorPos === formattedValue.length - 1) {
-                  cursorOffset++;
+              // Ak sa kurzor nachádzal na pozícii, kde bola vložená medzera (pred ňou), posunieme ho o 1
+              if (originalCursorPos === i + 1) { // Ak bol kurzor pred touto novo vloženou medzerou
+                tempCursorPos++;
               }
           }
       }
@@ -311,15 +312,8 @@ export function Page1Form({ formData, handleChange, handleNext, loading, notific
       // Použijeme setTimeout, aby sa kód vykonal po aktualizácii DOM
       setTimeout(() => {
           if (phoneInputRef.current) {
-              // Výpočet novej pozície kurzora na základe formátovania
-              let newCursorPos = originalCursorPos + cursorOffset;
-              // Ak sa kurzor nachádzal pred vloženou medzerou, a bola vložená, posunieme ho za ňu
-              // Kontrolujeme, či je medzera na pozícii 'newCursorPos - 1' v novom formátovanom reťazci
-              // a či pôvodná hodnota neobsahovala znak na tejto pozícii (t.j. medzera bola pridaná)
-              if (newCursorPos > 0 && formattedValue.charAt(newCursorPos - 1) === ' ' && originalValue.length === newCursorPos - 1) {
-                  newCursorPos++;
-              }
-              phoneInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+              // Nastavíme kurzor na vypočítanú pozíciu
+              phoneInputRef.current.setSelectionRange(tempCursorPos, tempCursorPos);
           }
       }, 0);
   };
