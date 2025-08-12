@@ -222,9 +222,9 @@ function App() {
       const days = Math.floor(difference / (1000 * 60 * 60 * 24));
       const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
-      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }, [registrationEndDate]);
 
 
@@ -654,7 +654,7 @@ function App() {
     console.log("App.js: Konštruované telefónne číslo pre odoslanie (finálne):", fullPhoneNumber); // Logovanie telefónneho čísla
 
     try {
-      // Prístup ku globálnym inštanciám Firebase Auth a Firestore
+      // Prístup ku globálnym inštanciam Firebase Auth a Firestore
       const authInstance = window.auth;
       const firestoreDb = window.db;
 
@@ -881,7 +881,6 @@ function App() {
         data.contactPhoneNumber.trim() !== '' ||
         data.password.trim() !== '' ||
         data.confirmPassword.trim() !== '') {
-        console.log("isPage1FormDataEmpty: Core fields are NOT empty.");
         return false;
     }
 
@@ -891,7 +890,6 @@ function App() {
         data.city.trim() !== '' ||
         data.postalCode.trim() !== '' ||
         data.street.trim() !== '') {
-        console.log("isPage1FormDataEmpty: Address fields are NOT empty.");
         return false;
     }
 
@@ -900,41 +898,47 @@ function App() {
         data.billing.ico.trim() !== '' ||
         data.billing.dic.trim() !== '' ||
         data.billing.icDph.trim() !== '') {
-        console.log("isPage1FormDataEmpty: Billing fields are NOT empty.");
         return false;
     }
     
     // Kontrola selectedCategoryRows - ak nejaká kategória má teams > 0
-    // Je dôležité, aby teamsDataFromPage4 nebolo prázdne len preto, že je na Page4.
-    // Toto je kľúčové pre tvoju požiadavku.
+    // selectedCategoryRows môže byť [] ak sa ešte nevyplnila Page3, alebo ak sa zrušili všetky kategórie.
+    // Aby sme predišli problémom, skontrolujeme, či pole nie je prázdne a či obsahuje platné hodnoty.
     let hasSelectedCategories = false;
     if (selectedCategoryRows && selectedCategoryRows.length > 0) {
         // Skontroluj, či existuje aspoň jeden záznam, ktorý má categoryId a teams > 0
-        hasSelectedCategories = selectedCategoryRows.some(row => row.categoryId && row.teams > 0);
+        hasSelectedCategories = selectedCategoryRows.some(row => row.categoryId && row.teams && row.teams > 0);
     }
     if (hasSelectedCategories) {
-        console.log("isPage1FormDataEmpty: Selected categories are NOT empty.");
         return false;
     }
 
-    // Kontrola teamsDataFromPage4 - ak existujú akékoľvek tímy
+    // Kontrola teamsDataFromPage4 - ak existujú akékoľvek tímy a majú vyplnené detaily
     if (teamsDataFromPage4 && Object.keys(teamsDataFromPage4).length > 0) {
         let hasTeamDetails = false;
         for (const categoryName in teamsDataFromPage4) {
-            if (teamsDataFromPage4[categoryName] && teamsDataFromPage4[categoryName].length > 0) {
-                // Stačí, ak existuje aspoň jeden tím v akejkoľvek kategórii
-                hasTeamDetails = true;
-                break;
+            const teamsInCategory = teamsDataFromPage4[categoryName];
+            if (teamsInCategory && teamsInCategory.length > 0) {
+                // Skontroluj, či aspoň jeden tím má nejaký vyplnený detail (napr. players alebo teamMembers)
+                hasTeamDetails = teamsInCategory.some(team =>
+                    team.teamName.trim() !== '' ||
+                    (team.players !== undefined && team.players !== '') ||
+                    (team.teamMembers !== undefined && team.teamMembers !== '') ||
+                    (team.womenTeamMembers !== undefined && team.womenTeamMembers !== '') ||
+                    (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
+                    (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== '')))
+                );
+                if (hasTeamDetails) { // Ak nájdeme detaily v tejto kategórii, už nemusíme hľadať ďalej
+                    break;
+                }
             }
         }
         if (hasTeamDetails) {
-            console.log("isPage1FormDataEmpty: Team details are NOT empty.");
             return false;
         }
     }
 
 
-    console.log("isPage1FormDataEmpty: ALL checked fields ARE empty.");
     return true; // Ak nič z vyššie uvedeného nie je vyplnené, formData je prázdne
   };
 
@@ -1025,7 +1029,8 @@ function App() {
               registrationStartDate: registrationStartDate,
               isRecaptchaReady: isRecaptchaReady,
               isRegistrationClosed: isRegistrationClosed, // Odovzdávame isRegistrationClosed
-              registrationEndDate: registrationEndDate // Odovzdávame registrationEndDate
+              registrationEndDate: registrationEndDate, // Odovzdávame registrationEndDate
+              hasAnyPage1Data: hasAnyPage1Data // NOVINKA: Odovzdávame hasAnyPage1Data
             }) :
           page === 2 ?
             React.createElement(Page2Form, {
