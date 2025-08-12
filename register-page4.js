@@ -325,7 +325,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `womenTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.womenTeamMembers,
+                                        value: team.womenTeamMembers || '', // Pridaná defenzívna inicializácia
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'womenTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet žien',
                                         min: 0, // Pridame min pre zeny
@@ -341,7 +341,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         type: 'number',
                                         id: `menTeamMembers-${categoryName}-${teamIndex}`,
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: team.menTeamMembers,
+                                        value: team.menTeamMembers || '', // Pridaná defenzívna inicializácia
                                         onChange: (e) => handleTeamDetailChange(categoryName, teamIndex, 'menTeamMembers', e.target.value),
                                         placeholder: 'Zadajte počet mužov',
                                         min: 0, // Pridame min pre muzov
@@ -362,8 +362,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     React.createElement(
                                         'div',
                                         { className: 'flex items-center font-bold mb-2 space-x-2' },
-                                        React.createElement('span', { className: 'flex-1 text-gray-700' }, 'Veľkosť'),
-                                        React.createElement('span', { className: 'w-28 text-left text-gray-700' }, 'Množstvo'),
+                                        React.createElement('span', { className: 'w-1/3 text-gray-700' }, 'Veľkosť'), // Zmenené z flex-1 na w-1/3
+                                        React.createElement('span', { className: 'w-1/2 text-left text-gray-700' }, 'Množstvo'), // Zmenené z w-28 na w-1/2
                                         React.createElement('span', { className: 'w-8' })
                                     ),
                                     // Mapovanie cez riadky s tričkami
@@ -474,7 +474,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať'
+                    ) : 'Registrovať sa'
                 )
             )
         )
