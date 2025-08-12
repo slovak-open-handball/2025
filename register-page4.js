@@ -423,8 +423,11 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 ),
                                 teamTshirtDifference !== 0 && React.createElement(
                                     'div',
-                                    { className: classNames('mt-2', 'p-2', 'rounded-lg', 'text-center', 'font-bold',
-                                        teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')
+                                    {
+                                        className: classNames(
+                                            'mt-2', 'p-2', 'rounded-lg', 'text-center', 'font-bold',
+                                            teamTshirtDifference > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                        )
                                     },
                                     getPerTeamTshirtValidationMessage(teamTshirtDifference, categoryName, team.teamName)
                                 )
