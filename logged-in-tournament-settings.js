@@ -88,7 +88,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'updateSettings') {
         changesMessage = `${notificationData.data.changesMade}`; 
       } else if (notificationData.type === 'createAccommodation') { 
-        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} (kapacita ${notificationData.data.capacity})'`;
+        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
       } else if (notificationData.type === 'editAccommodation') { 
         changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType} (kapacita: ${notificationData.data.originalCapacity})' na '${notificationData.data.newType} (kapacita: ${notificationData.data.newCapacity})'`;
       } else if (notificationData.type === 'deleteAccommodation') { 
@@ -96,10 +96,23 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'createPackage') {
         changesMessage = `Vytvorenie nového balíčka: '''${notificationData.data.name} s cenou ${notificationData.data.price}€'`;
       } else if (notificationData.type === 'editPackage') {
-        // Podrobná správa pre zmenu balíčka
         const originalPackage = notificationData.data.originalPackage;
         const newPackage = notificationData.data.newPackage;
         const changes = [];
+
+        // Pridávam obranné kontroly pre originalPackage a newPackage
+        if (!originalPackage || !newPackage) {
+            console.error("sendAdminNotification: Chýbajú pôvodné alebo nové dáta balíčka pre notifikáciu 'editPackage'.");
+            changesMessage = `Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`;
+            // Ak nemáme kompletné dáta, vrátime sa k jednoduchšej správe, alebo preskočíme ďalšie porovnania.
+            await addDoc(notificationsCollectionRef, {
+                userEmail: userEmail,
+                changes: changesMessage,
+                timestamp: Timestamp.fromDate(new Date()),
+                recipientId: 'all_admins'
+            });
+            return; 
+        }
 
         if (originalPackage.name !== newPackage.name) {
           changes.push(`Názov: '${originalPackage.name}' -> '${newPackage.name}'`);
@@ -109,7 +122,6 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         }
 
         const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
-        // Získanie všetkých relevantných dátumov z oboch balíčkov (starého aj nového)
         const allDates = new Set([...Object.keys(originalPackage.meals || {}), ...Object.keys(newPackage.meals || {})]);
         const sortedDates = Array.from(allDates).sort();
 
