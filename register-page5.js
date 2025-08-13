@@ -211,20 +211,21 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const accommodationToUpdate = finalFormData.accommodation?.type;
             if (accommodationToUpdate) {
                 const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
-                // Skontrolujeme, či dokument už existuje
+                
+                // Získajte aktuálny stav dokumentu a počtu
                 const docSnap = await getDoc(accommodationCountsDocRef);
+                let currentCount = 0;
 
-                if (!docSnap.exists()) {
-                    // Ak neexistuje, inicializujeme ho s aktuálnym počtom
-                    await setDoc(accommodationCountsDocRef, {
-                        [accommodationToUpdate]: totalPeopleForCurrentRegistration
-                    });
-                } else {
-                    // Ak existuje, inkrementujeme počet pre vybraný typ ubytovania
-                    await updateDoc(accommodationCountsDocRef, {
-                        [accommodationToUpdate]: FieldValue.increment(totalPeopleForCurrentRegistration)
-                    });
+                if (docSnap.exists() && docSnap.data()[accommodationToUpdate] !== undefined) {
+                    currentCount = docSnap.data()[accommodationToUpdate];
                 }
+
+                const newTotal = currentCount + totalPeopleForCurrentRegistration;
+
+                // Aktualizujte dokument pomocou setDoc s merge: true
+                await setDoc(accommodationCountsDocRef, {
+                    [accommodationToUpdate]: newTotal
+                }, { merge: true }); // Toto zabezpečí, že sa aktualizuje len dané pole, alebo sa vytvorí, ak neexistuje
             }
 
 
