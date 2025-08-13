@@ -8,6 +8,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
     const [isAccommodationDataLoaded, setIsAccommodationDataLoaded] = React.useState(false);
 
+    // Lokálna funkcia pre zobrazenie notifikácií v tomto module, ktorá využíva props z rodičovského komponentu
+    const showLocalNotification = React.useCallback((message, type = 'success') => {
+        if (setNotificationMessage) setNotificationMessage(message);
+        if (setShowNotification) setShowNotification(true);
+        if (setNotificationType) setNotificationType(type);
+    }, [setNotificationMessage, setShowNotification, setNotificationType]);
+
+
     // Načítanie dostupných typov ubytovania a ich kapacít
     React.useEffect(() => {
         let unsubscribeAccommodation;
@@ -28,18 +36,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setIsAccommodationDataLoaded(true);
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    // Defenzívne volanie notifikačných funkcií
-                    if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní nastavení ubytovania.");
-                    if (setShowNotification) setShowNotification(true);
-                    if (setNotificationType) setNotificationType('error');
+                    showLocalNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
                     setIsAccommodationDataLoaded(true);
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie:", e);
-                // Defenzívne volanie notifikačných funkcií
-                if (setNotificationMessage) setNotificationMessage("Chyba pri nastavovaní poslucháča pre ubytovanie.");
-                if (setShowNotification) setShowNotification(true);
-                if (setNotificationType) setNotificationType('error');
+                showLocalNotification("Chyba pri nastavovaní poslucháča pre ubytovanie.", 'error');
                 setIsAccommodationDataLoaded(true);
             }
         };
@@ -51,7 +53,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeAccommodation();
             }
         };
-    }, [db, setNotificationMessage, setShowNotification, setNotificationType]);
+    }, [db, showLocalNotification]);
 
     // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
@@ -72,17 +74,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
-                    // Defenzívne volanie notifikačných funkcií
-                    if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.");
-                    if (setShowNotification) setShowNotification(true);
-                    if (setNotificationType) setNotificationType('error');
+                    showLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                // Defenzívne volanie notifikačných funkcií
-                if (setNotificationMessage) setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.");
-                if (setShowNotification) setShowNotification(true);
-                if (setNotificationType) setNotificationType('error');
+                showLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
             }
         };
 
@@ -93,7 +89,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeCounts();
             }
         };
-    }, [db, setNotificationMessage, setShowNotification, setNotificationType]);
+    }, [db, showLocalNotification]);
 
 
     const handleAccommodationChange = (e) => {
@@ -115,16 +111,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            if (setNotificationMessage) setNotificationMessage("Prosím, vyberte typ ubytovania.");
-            if (setShowNotification) setShowNotification(true);
-            if (setNotificationType) setNotificationType('error');
+            showLocalNotification("Prosím, vyberte typ ubytovania.", 'error');
             return;
         }
 
         if (setLoading) setLoading(true);
-        if (setNotificationMessage) setNotificationMessage('');
-        if (setShowNotification) setShowNotification(false);
-        if (setNotificationType) setNotificationType('info');
+        // Pri odoslaní formulára vynulujeme notifikácie cez rodičovskú funkciu (closeNotification)
+        // namiesto priameho nastavovania stavov notificationMessage atď.
+        if (closeNotification) closeNotification(); 
 
         try {
             const finalFormData = {
@@ -137,9 +131,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
             console.error("Chyba pri finalizácii registrácie:", error);
-            if (setNotificationMessage) setNotificationMessage(`Chyba pri registrácii: ${error.message}`);
-            if (setShowNotification) setShowNotification(true);
-            if (setNotificationType) setNotificationType('error');
+            showLocalNotification(`Chyba pri registrácii: ${error.message}`, 'error');
             if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
             if (setLoading) setLoading(false);
@@ -229,7 +221,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Odosielam...'
-                    ) : 'Registrovať sa'
+                    ) : 'Registrovať'
                 )
             )
         )
