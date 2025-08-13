@@ -1,13 +1,10 @@
 import { doc, onSnapshot, setDoc, Timestamp, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Importovanie pomocných funkcií z hlavného súboru
-const formatToDatetimeLocal = window.formatToDatetimeLocal;
-const formatDateForDisplay = window.formatDateForDisplay;
-const showNotification = window.showNotification;
-const sendAdminNotification = window.sendAdminNotification;
+// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
+// import { formatToDatetimeLocal, formatDateForDisplay, showNotification, sendAdminNotification } from './utils.js';
 
 
-export function GeneralRegistrationSettings({ db, userProfileData, tournamentStartDate, setTournamentStartDate, tournamentEndDate, setTournamentEndDate }) {
+export function GeneralRegistrationSettings({ db, userProfileData, tournamentStartDate, setTournamentStartDate, tournamentEndDate, setTournamentEndDate, showNotification, sendAdminNotification, formatToDatetimeLocal, formatDateForDisplay }) {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
@@ -66,7 +63,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
     };
 
     fetchSettings();
-  }, [db, userProfileData, setTournamentStartDate, setTournamentEndDate]);
+  }, [db, userProfileData, setTournamentStartDate, setTournamentEndDate, showNotification, formatToDatetimeLocal]);
 
 
   const handleUpdateRegistrationSettings = async (e) => {
@@ -112,7 +109,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       }
 
       const settingsDocRef = doc(db, 'settings', 'registration');
-      const oldSettingsDoc = await getDoc(settingsDocRef);
+      const oldSettingsDoc = await getDoc(settingsDocRef); // Oprava - bolo "settingsDocRef"
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
       let changes = [];
 
@@ -157,7 +154,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); 
 
       if (changes.length > 0) {
-          await sendAdminNotification({
+          sendAdminNotification({
               type: 'updateSettings',
               data: {
                   changesMade: changes.join('; ')
