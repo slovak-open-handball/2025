@@ -633,8 +633,8 @@ function App() {
     isRegisteringRef.current = true;
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
-    // Presunutá deklarácia teamsDataToSaveFinal sem, aby bola dostupná v celom rozsahu funkcie
-    let teamsDataToSaveFinal; 
+    // OPRAVA: Inicializácia teamsDataToSaveFinal ihneď po deklarácii, aby bola vždy definovaná
+    let teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
 
     try {
       const authInstance = window.auth;
@@ -693,8 +693,7 @@ function App() {
 
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
       try {
-        // Inicializácia premennej (už bez 'const')
-        teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4));
+        // Logika transformácie teamsDataToSaveFinal (už je inicializovaná)
         for (const categoryName in teamsDataToSaveFinal) {
             teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
                 ...team,
