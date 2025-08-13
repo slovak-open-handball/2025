@@ -338,27 +338,40 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         'div',
         { className: 'modal-content' },
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, packageModalMode === 'add' ? 'Pridať nový balíček' : `Upraviť balíček: ${currentPackageEdit?.name}`),
+        
+        // Nový label pre Názov balíčka
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackageName' }, 'Názov balíčka'),
         React.createElement(
           'input',
           {
             type: 'text',
+            id: 'newPackageName', // Pridané ID pre label
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
             placeholder: 'Zadajte názov balíčka',
             value: newPackageName,
             onChange: (e) => setNewPackageName(e.target.value),
           }
         ),
+        
+        // Nový label a úprava pre Cenu balíčka s "€"
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackagePrice' }, 'Cena balíčka'),
         React.createElement(
-            'input',
-            {
-              type: 'number',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
-              placeholder: 'Zadajte cenu balíčka v EUR (€)',
-              value: newPackagePrice,
-              onChange: (e) => setNewPackagePrice(parseFloat(e.target.value) || 0),
-              min: 0,
-              step: 0.01
-            }
+            'div',
+            { className: 'flex items-center mb-4' }, // Flexbox na zarovnanie inputu a "€"
+            React.createElement(
+                'input',
+                {
+                  type: 'number',
+                  id: 'newPackagePrice', // Pridané ID pre label
+                  className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2', // Pridaný pravý margin
+                  placeholder: 'Zadajte cenu balíčka',
+                  value: newPackagePrice,
+                  onChange: (e) => setNewPackagePrice(parseFloat(e.target.value) || 0),
+                  min: 0,
+                  step: 0.01
+                }
+            ),
+            React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€') // Znak Euro
         ),
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
