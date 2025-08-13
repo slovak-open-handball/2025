@@ -81,7 +81,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('add');
     setNewPackageName('');
     setNewPackagePrice(0);
-    setPackageMeals({});
+    setPackageMeals({}); // Reset na prázdny objekt pre nové balíčky
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
@@ -91,6 +91,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
+    // Pri editácii, ak meals alebo refreshments chýbajú, inicializujte ich na prázdne objekty/polia
     setPackageMeals(pkg.meals || {});
     setPackageRefreshments(pkg.refreshments || []);
     setCurrentPackageEdit(pkg);
@@ -107,12 +108,13 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('add');
   };
 
-  const handleMealChange = (date, mealType, value) => {
+  // Upravená funkcia pre zmenu stavu checkboxu pre jedlá
+  const handleMealChange = (date, mealType, isChecked) => {
     setPackageMeals(prevMeals => ({
       ...prevMeals,
       [date]: {
         ...(prevMeals[date] || {}),
-        [mealType]: parseInt(value, 10) || 0
+        [mealType]: isChecked ? 1 : 0 // Ak je začiarknuté, nastavíme 1, inak 0
       }
     }));
   };
@@ -361,89 +363,119 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
         tournamentDays.length > 0 ? (
-            tournamentDays.map(date => (
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto' }, // Pre responzívnosť tabuľky na menších obrazovkách
                 React.createElement(
-                    'div',
-                    { key: date, className: 'mb-4 p-3 border rounded-lg bg-gray-50' },
-                    React.createElement('h5', { className: 'font-medium mb-2 text-gray-700' }, `Dátum: ${new Date(date).toLocaleDateString('sk-SK')}`),
+                    'table',
+                    { className: 'min-w-full bg-white border border-gray-200 rounded-lg shadow-sm' },
                     React.createElement(
-                        'div',
-                        { className: 'grid grid-cols-3 gap-2' },
-                        React.createElement('label', { className: 'block text-gray-700 text-sm' }, 'Raňajky:'),
-                        React.createElement('input', {
-                            type: 'number',
-                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-full',
-                            value: packageMeals[date]?.breakfast || 0,
-                            onChange: (e) => handleMealChange(date, 'breakfast', e.target.value),
-                            min: 0,
-                        }),
-                        React.createElement('span', null),
-
-                        React.createElement('label', { className: 'block text-gray-700 text-sm' }, 'Obed:'),
-                        React.createElement('input', {
-                            type: 'number',
-                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-full',
-                            value: packageMeals[date]?.lunch || 0,
-                            onChange: (e) => handleMealChange(date, 'lunch', e.target.value),
-                            min: 0,
-                        }),
-                        React.createElement('span', null),
-
-                        React.createElement('label', { className: 'block text-gray-700 text-sm' }, 'Večera:'),
-                        React.createElement('input', {
-                            type: 'number',
-                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-full',
-                            value: packageMeals[date]?.dinner || 0,
-                            onChange: (e) => handleMealChange(date, 'dinner', e.target.value),
-                            min: 0,
-                        }),
-                        React.createElement('span', null),
-                    ),
-                    React.createElement('h5', { className: 'font-medium mt-4 mb-2 text-gray-700' }, 'Občerstvenie:'),
-                    (packageRefreshments.find(r => r.date === date)?.items || []).map((item, itemIndex) => (
+                        'thead',
+                        null,
                         React.createElement(
-                            'div',
-                            { key: itemIndex, className: 'flex space-x-2 mb-2 items-center' },
-                            React.createElement('input', {
-                                type: 'text',
-                                className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline flex-grow',
-                                placeholder: 'Názov občerstvenia',
-                                value: item.name,
-                                onChange: (e) => handleRefreshmentItemChange(date, itemIndex, 'name', e.target.value),
-                            }),
-                            React.createElement('input', {
-                                type: 'number',
-                                className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-24',
-                                placeholder: 'Cena (€)',
-                                value: item.price,
-                                onChange: (e) => handleRefreshmentItemChange(date, itemIndex, 'price', e.target.value),
-                                min: 0,
-                                step: 0.01,
-                            }),
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => handleRemoveRefreshment(date, itemIndex),
-                                    className: 'bg-red-500 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center'
-                                },
-                                '-'
-                            )
+                            'tr',
+                            { className: 'bg-gray-100' },
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-left text-sm font-semibold text-gray-600' }, 'Dátum'),
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera')
                         )
-                    )),
+                    ),
                     React.createElement(
-                        'button',
-                        {
-                            type: 'button',
-                            onClick: () => handleAddRefreshment(date),
-                            className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg mt-2'
-                        },
-                        'Pridať občerstvenie'
+                        'tbody',
+                        null,
+                        tournamentDays.map(date => (
+                            React.createElement(
+                                'tr',
+                                { key: date, className: 'hover:bg-gray-50' },
+                                React.createElement('td', { className: 'py-2 px-4 border-b text-gray-700' }, new Date(date).toLocaleDateString('sk-SK')),
+                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                        checked: packageMeals[date]?.breakfast === 1,
+                                        onChange: (e) => handleMealChange(date, 'breakfast', e.target.checked),
+                                    })
+                                ),
+                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                        checked: packageMeals[date]?.lunch === 1,
+                                        onChange: (e) => handleMealChange(date, 'lunch', e.target.checked),
+                                    })
+                                ),
+                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                        checked: packageMeals[date]?.dinner === 1,
+                                        onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
+                                    })
+                                )
+                            )
+                        ))
                     )
                 )
-            ))
+            )
         ) : (
             React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
+        ),
+
+        React.createElement('h5', { className: 'font-medium mt-4 mb-2 text-gray-700' }, 'Občerstvenie:'),
+        (packageRefreshments.map((dayRefreshment, dayIndex) => (
+            React.createElement('div', { key: dayIndex, className: 'mb-4 p-3 border rounded-lg bg-gray-50' },
+                React.createElement('h6', { className: 'font-bold mb-2' }, `Občerstvenie pre: ${new Date(dayRefreshment.date).toLocaleDateString('sk-SK')}`),
+                dayRefreshment.items.map((item, itemIndex) => (
+                    React.createElement(
+                        'div',
+                        { key: itemIndex, className: 'flex space-x-2 mb-2 items-center' },
+                        React.createElement('input', {
+                            type: 'text',
+                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline flex-grow',
+                            placeholder: 'Názov občerstvenia',
+                            value: item.name,
+                            onChange: (e) => handleRefreshmentItemChange(dayRefreshment.date, itemIndex, 'name', e.target.value),
+                        }),
+                        React.createElement('input', {
+                            type: 'number',
+                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-24',
+                            placeholder: 'Cena (€)',
+                            value: item.price,
+                            onChange: (e) => handleRefreshmentItemChange(dayRefreshment.date, itemIndex, 'price', e.target.value),
+                            min: 0,
+                            step: 0.01,
+                        }),
+                        React.createElement(
+                            'button',
+                            {
+                                type: 'button',
+                                onClick: () => handleRemoveRefreshment(dayRefreshment.date, itemIndex),
+                                className: 'bg-red-500 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center'
+                            },
+                            '-'
+                        )
+                    )
+                )),
+                React.createElement(
+                    'button',
+                    {
+                        type: 'button',
+                        onClick: () => handleAddRefreshment(dayRefreshment.date),
+                        className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg mt-2'
+                    },
+                    'Pridať občerstvenie pre tento deň'
+                )
+            ))
+        )),
+        tournamentDays.length > 0 && React.createElement(
+            'button',
+            {
+                type: 'button',
+                onClick: () => handleAddRefreshment(tournamentDays[0]), // Predpokladáme, že občerstvenie môžete pridať k prvému dňu, ak ešte nie je žiadne
+                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg mt-4'
+            },
+            'Pridať deň pre občerstvenie'
         ),
 
         React.createElement(
