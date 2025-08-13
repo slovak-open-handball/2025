@@ -161,9 +161,13 @@ function TeamAccommodationAndArrival({
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
                     ),
                     accommodationTypes.map((acc) => {
+                        // Získanie aktuálneho počtu pre daný typ ubytovania
                         const currentCount = accommodationCounts[acc.type] || 0;
+                        // Skontrolujte, či je kapacita plná
                         const isFull = currentCount >= acc.capacity;
+                        // Zablokovať, ak je plná kapacita alebo sa načítava
                         const isDisabled = isFull || loading;
+                        // Triedy pre label
                         const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
 
                         return React.createElement(
@@ -625,8 +629,20 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 // Validácia ubytovania pre každý tím
                 // Check if accommodationTypes exist and if a type is selected, or if no types exist
                 if (accommodationTypes.length > 0 && (!team.accommodation?.type || team.accommodation.type.trim() === '')) {
-                    return false;
+                    // Ak je ubytovanie vyžadované (existujú typy okrem "Bez ubytovania")
+                    // A zároveň nie je vybraný typ ubytovania
+                    // Alebo je vybraný typ ubytovania, ktorý je už plne obsadený
+                    const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation?.type);
+                    if (team.accommodation?.type !== 'Bez ubytovania' && selectedAccType) {
+                        const currentCount = accommodationCounts[selectedAccType.type] || 0;
+                        if (currentCount >= selectedAccType.capacity) {
+                            return false; // Vybrané ubytovanie je plné
+                        }
+                    } else if (accommodationTypes.length > 0 && !team.accommodation?.type) {
+                        return false; // Ak sú typy ubytovania, ale nič nie je vybrané
+                    }
                 }
+
                 // Validácia balíčka pre každý tím
                 // Check if packages exist and if a package is selected, or if no packages exist
                 if (packages.length > 0 && (!team.packageId || team.packageId.trim() === '')) {
@@ -640,7 +656,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         }
         return true;
-    }, [teamsDataFromPage4, accommodationTypes, packages]);
+    }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages]);
 
 
     const nextButtonClasses = `
@@ -658,7 +674,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification(); 
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod).", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod) a uistite sa, že vybrané ubytovanie nie je plne obsadené.", 'error');
             setNotificationType('error');
             setLoading(false); 
             return;
