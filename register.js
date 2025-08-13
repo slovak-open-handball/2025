@@ -421,6 +421,7 @@ function App() {
         // Spracovanie aktualizácií prichádzajúcich z TeamAccommodationAndArrival a TeamPackageSettings
         setTeamsDataFromPage4(prevTeamsData => {
             const newTeamsData = { ...prevTeamsData };
+            // Ensure category and team objects exist before updating
             if (!newTeamsData[value.categoryName]) {
                 newTeamsData[value.categoryName] = [];
             }
