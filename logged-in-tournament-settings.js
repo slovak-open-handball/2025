@@ -100,11 +100,9 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         const newPackage = notificationData.data.newPackage;
         const changes = [];
 
-        // Pridávam obranné kontroly pre originalPackage a newPackage
         if (!originalPackage || !newPackage) {
             console.error("sendAdminNotification: Chýbajú pôvodné alebo nové dáta balíčka pre notifikáciu 'editPackage'.");
             changesMessage = `Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`;
-            // Ak nemáme kompletné dáta, vrátime sa k jednoduchšej správe, alebo preskočíme ďalšie porovnania.
             await addDoc(notificationsCollectionRef, {
                 userEmail: userEmail,
                 changes: changesMessage,
@@ -122,9 +120,12 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         }
 
         const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
-        const allDates = new Set([...Object.keys(originalPackage.meals || {}), ...Object.keys(newPackage.meals || {})]);
+        
+        // Získame všetky kľúče z meals objektov, ktoré sú platnými dátumami
+        const originalMealDates = Object.keys(originalPackage.meals || {}).filter(key => !isNaN(new Date(key)));
+        const newMealDates = Object.keys(newPackage.meals || {}).filter(key => !isNaN(new Date(key)));
+        const allDates = new Set([...originalMealDates, ...newMealDates]);
         const sortedDates = Array.from(allDates).sort();
-
 
         sortedDates.forEach(date => {
             mealTypes.forEach(mealType => {
