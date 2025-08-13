@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, getDocs, FieldValue, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component pre zobrazovanie dočasných správ (presunutý sem)
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -189,10 +189,49 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     type: selectedAccommodationType
                 }
             };
+
+            // Vypočítaj celkový počet ľudí pre túto registráciu
+            let totalPeopleForCurrentRegistration = 0;
+            const teamsData = formData.teams; 
+            if (teamsData) {
+                for (const categoryName in teamsData) {
+                    if (teamsData[categoryName]) {
+                        for (const team of teamsData[categoryName]) {
+                            totalPeopleForCurrentRegistration += (parseInt(team.players, 10) || 0) +
+                                                                  (parseInt(team.womenTeamMembers, 10) || 0) +
+                                                                  (parseInt(team.menTeamMembers, 10) || 0);
+                        }
+                    }
+                }
+            }
+            
+            // Pred odoslaním na registráciu, aktualizujeme počty ubytovania
+            // Až po úspešnej registrácii rodičom sa aktualizuje accommodationCounts
             await handleSubmit(finalFormData); 
+
+            const accommodationToUpdate = finalFormData.accommodation?.type;
+            if (accommodationToUpdate) {
+                const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
+                // Skontrolujeme, či dokument už existuje
+                const docSnap = await getDoc(accommodationCountsDocRef);
+
+                if (!docSnap.exists()) {
+                    // Ak neexistuje, inicializujeme ho s aktuálnym počtom
+                    await setDoc(accommodationCountsDocRef, {
+                        [accommodationToUpdate]: totalPeopleForCurrentRegistration
+                    });
+                } else {
+                    // Ak existuje, inkrementujeme počet pre vybraný typ ubytovania
+                    await updateDoc(accommodationCountsDocRef, {
+                        [accommodationToUpdate]: FieldValue.increment(totalPeopleForCurrentRegistration)
+                    });
+                }
+            }
+
+
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
-            console.error("Chyba pri finalizácii registrácie:", error);
+            console.error("Chyba pri finalizácii registrácie alebo aktualizácii počtov ubytovania:", error);
             dispatchLocalNotification(`Chyba pri registrácii: ${error.message}`, 'error');
             if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
