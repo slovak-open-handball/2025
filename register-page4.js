@@ -1,6 +1,6 @@
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
+export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
 
     // Získame referenciu na Firebase Firestore
     const db = getFirestore();
@@ -272,23 +272,21 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return allTshirtsMatch && allTeamMembersFilled; // Vrátime výsledok validácie
     }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
 
-    // CSS triedy pre tlačidlo registrácie
-    const registerButtonClasses = `
+    // CSS triedy pre tlačidlo "Ďalej" (zmenené z "Registrovať")
+    const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
     ${loading || !isRecaptchaReady || !isFormValidPage4
-      ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-      : 'bg-green-500 hover:bg-green-700 text-white'
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zakázaný stav
+      : 'bg-blue-500 hover:bg-blue-700 text-white' // Aktívny stav (modrá pre "Ďalej")
     }
   `;
 
-    // Funkcia pre finálne odoslanie formulára
-    // Táto funkcia je volaná z App.js cez prop handleSubmit
-    const handleFinalSubmit = async (e) => { // 'e' je udalosť odoslania formulára
+    // Funkcia pre prechod na Page5
+    const handleNextPage4ToPage5 = async (e) => { // 'e' je udalosť odoslania formulára
         e.preventDefault(); // Zastavíme predvolené správanie formulára (načítanie stránky)
         
         // Nastavenie stavov načítania a notifikácií
         if (typeof setLoading === 'function') setLoading(true);
-        if (typeof setNotificationMessage === 'function') setNotificationMessage('');
         if (typeof setShowNotification === 'function') setShowNotification(false);
         if (typeof setNotificationType === 'function') setNotificationType('info');
 
@@ -310,8 +308,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
                 ...team,
                 players: team.players === '' ? 0 : team.players,
-                womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers, // Konverzia
-                menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,       // Konverzia
+                womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,       // Konverzia
+                menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,         // Konverzia
                 tshirts: team.tshirts.map(tshirt => ({
                     ...tshirt,
                     quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
@@ -319,9 +317,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }));
         }
 
-        // Odoslanie spracovaných dát
-        // Dôležité: handleSubmit, ktorá je prop z App.js, očakáva dáta, nie event
-        await handleSubmit(teamsDataToSaveFinal); // Odosielame upravené dáta
+        // Odoslanie spracovaných dát na ďalšiu stránku (Page5)
+        await handleNextPage4(teamsDataToSaveFinal); // Voláme handleNextPage4 z App.js
         if (typeof setLoading === 'function') setLoading(false);
     };
 
@@ -340,7 +337,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Formulár pre detaily tímov
         React.createElement(
             'form',
-            { onSubmit: handleFinalSubmit, className: 'space-y-4' },
+            { onSubmit: handleNextPage4ToPage5, className: 'space-y-4' },
             // Ak nie sú žiadne tímy vybrané, zobrazíme správu
             Object.keys(teamsDataFromPage4).length === 0 ? (
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a vyberte kategórie s počtom tímov.')
@@ -537,7 +534,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ))
             ),
 
-            // Ovládacie tlačidlá formulára (Späť a Registrovať sa)
+            // Ovládacie tlačidlá formulára (Späť a Ďalej)
             React.createElement(
                 'div',
                 { className: 'flex justify-between mt-6' },
@@ -556,15 +553,15 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'submit',
-                        className: nextButtonClasses,
-                        disabled: loading || !isRecaptchaReady || !isFormValidPage4 || Object.keys(categoriesData).length === 0,
-                        tabIndex: 21
+                        className: nextButtonClasses, 
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage4,
+                        tabIndex: 2
                     },
-                    // Zobrazenie načítavacieho spinnera počas registrácie
+                    // Zobrazenie načítavacieho spinnera počas prechodu
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
-                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
                             React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
