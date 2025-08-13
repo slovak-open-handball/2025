@@ -426,10 +426,10 @@ function TeamPackageSettings({
                                             return null;
                                         }
 
-                                        if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
-                                        if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
-                                        if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
-                                        if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+                                        if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
+                                        if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('obed');
+                                        if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('večera');
+                                        if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('občerstvenie');
 
                                         if (includedItems.length > 0) {
                                             const dateObj = new Date(date + 'T00:00:00');
