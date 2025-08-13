@@ -62,8 +62,6 @@ function TeamAccommodationAndArrival({
     tournamentStartDateDisplay, 
     generateTimeOptions 
 }) {
-    const db = getFirestore();
-
     // Lokálne stavy pre ubytovanie a príchod (aby sa zmeny prejavili lokálne pred handleChange)
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -611,17 +609,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         for (const categoryName in teamsDataFromPage4) {
             for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
                 // Validácia ubytovania pre každý tím
-                if (accommodationTypes.length > 0 && !team.accommodation?.type) {
+                // Check if accommodationTypes exist and if a type is selected, or if no types exist
+                if (accommodationTypes.length > 0 && (!team.accommodation?.type || team.accommodation.type.trim() === '')) {
                     return false;
                 }
-
                 // Validácia balíčka pre každý tím
-                if (packages.length > 0 && !team.packageId) {
+                // Check if packages exist and if a package is selected, or if no packages exist
+                if (packages.length > 0 && (!team.packageId || team.packageId.trim() === '')) {
                     return false;
                 }
 
                 // Validácia príchodu pre každý tím
-                if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time === '')) {
+                if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
                     return false;
                 }
             }
@@ -654,7 +653,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         try {
             // Pred odoslaním na handleSubmit, teamsDataFromPage4 už obsahuje všetky aktualizované údaje
             // Všetky konverzie a nastavenia prebiehajú už v handleChange funkciách v App.js
-            await handleSubmit(teamsDataFromPage4); 
+            await handleSubmit(); // handleSubmit from App.js now takes no arguments, it uses teamsDataFromPage4 state
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
