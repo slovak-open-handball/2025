@@ -18,7 +18,7 @@ const formatDateForDisplay = (dateOrTimestamp) => {
   if (dateOrTimestamp instanceof Timestamp) {
     date = dateOrTimestamp.toDate();
   } else if (dateOrTimestamp instanceof Date) {
-    date = dateOrTimestamp;
+    date = date;
   } else {
     return 'nezadané';
   }
@@ -79,6 +79,9 @@ function TournamentSettingsApp() {
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
   const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
   const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
+  // NOVINKA: Stavy pre dátum začiatku a konca turnaja
+  const [tournamentStartDate, setTournamentStartDate] = React.useState('');
+  const [tournamentEndDate, setTournamentEndDate] = React.useState('');
 
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
   const [showSizeModal, setShowSizeModal] = React.useState(false);
@@ -208,6 +211,9 @@ function TournamentSettingsApp() {
                 setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); 
                 setNumberOfPlayers(data.numberOfPlayers || 0);
                 setNumberOfImplementationTeam(data.numberOfImplementationTeam || 0);
+                // NOVINKA: Načítanie dátumu začiatku a konca turnaja
+                setTournamentStartDate(data.tournamentStart ? formatToDatetimeLocal(data.tournamentStart.toDate()) : '');
+                setTournamentEndDate(data.tournamentEnd ? formatToDatetimeLocal(data.tournamentEnd.toDate()) : '');
 
             } else {
                 setRegistrationStartDate('');
@@ -216,6 +222,9 @@ function TournamentSettingsApp() {
                 setRosterEditDeadline(''); 
                 setNumberOfPlayers(0);
                 setNumberOfImplementationTeam(0);
+                // NOVINKA: Inicializácia dátumu začiatku a konca turnaja, ak neexistujú
+                setTournamentStartDate('');
+                setTournamentEndDate('');
             }
           }, error => {
             showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); 
@@ -372,6 +381,9 @@ function TournamentSettingsApp() {
       const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
       const dataEditDead = dataEditDeadline ? new Date(dataEditDeadline) : null; 
       const rosterEditDead = rosterEditDeadline ? new Date(rosterEditDeadline) : null; 
+      // NOVINKA: Konverzia dátumu začiatku a konca turnaja na Date objekty
+      const tourStart = tournamentStartDate ? new Date(tournamentStartDate) : null;
+      const tourEnd = tournamentEndDate ? new Date(tournamentEndDate) : null;
 
       if (regStart && regEnd && regStart >= regEnd) {
         showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); 
@@ -385,6 +397,12 @@ function TournamentSettingsApp() {
         showNotification("Dátum uzávierky úprav súpisiek nemôže byť pred dátumom uzávierky úprav používateľských dát.", 'error');
         return;
       }
+      // NOVINKA: Validácia pre dátumy turnaja
+      if (tourStart && tourEnd && tourStart >= tourEnd) {
+        showNotification("Dátum začiatku turnaja musí byť pred dátumom konca turnaja.", 'error');
+        return;
+      }
+
 
       if (numberOfPlayers < 0) {
         showNotification("Počet hráčov nemôže byť záporný.", 'error');
@@ -412,6 +430,14 @@ function TournamentSettingsApp() {
       if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
           changes.push(`Uzávierka úprav súpisiek z '${formatDateForDisplay(oldData.rosterEditDeadline)}' na '${formatDateForDisplay(rosterEditDead)}'`);
       }
+      // NOVINKA: Sledovanie zmien pre dátumy turnaja
+      if ((oldData.tournamentStart ? oldData.tournamentStart.toMillis() : null) !== (tourStart ? Timestamp.fromDate(tourStart).toMillis() : null)) {
+          changes.push(`Dátum začiatku turnaja z '${formatDateForDisplay(oldData.tournamentStart)}' na '${formatDateForDisplay(tourStart)}'`);
+      }
+      if ((oldData.tournamentEnd ? oldData.tournamentEnd.toMillis() : null) !== (tourEnd ? Timestamp.fromDate(tourEnd).toMillis() : null)) {
+          changes.push(`Dátum konca turnaja z '${formatDateForDisplay(oldData.tournamentEnd)}' na '${formatDateForDisplay(tourEnd)}'`);
+      }
+
 
       if (oldData.numberOfPlayers !== numberOfPlayers) {
           changes.push(`Maximálny počet hráčov v tíme z '${oldData.numberOfPlayers || 0}' na '${numberOfPlayers}'`);
@@ -427,6 +453,9 @@ function TournamentSettingsApp() {
         rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, 
         numberOfPlayers: numberOfPlayers,
         numberOfImplementationTeam: numberOfImplementationTeam,
+        // NOVINKA: Uloženie dátumu začiatku a konca turnaja
+        tournamentStart: tourStart ? Timestamp.fromDate(tourStart) : null,
+        tournamentEnd: tourEnd ? Timestamp.fromDate(tourEnd) : null,
       });
       
       showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); 
@@ -705,6 +734,32 @@ function TournamentSettingsApp() {
           className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
           value: rosterEditDeadline,
           onChange: (e) => setRosterEditDeadline(e.target.value),
+        })
+      ),
+      {/* NOVINKA: Dátum a čas začiatku turnaja */}
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tournament-start' }, 'Dátum a čas - začiatok turnaja'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'tournament-start',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: tournamentStartDate,
+          onChange: (e) => setTournamentStartDate(e.target.value),
+        })
+      ),
+      {/* NOVINKA: Dátum a čas konca turnaja */}
+      React.createElement(
+        'div',
+        null,
+        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'tournament-end' }, 'Dátum a čas - koniec turnaja'),
+        React.createElement('input', {
+          type: 'datetime-local',
+          id: 'tournament-end',
+          className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+          value: tournamentEndDate,
+          onChange: (e) => setTournamentEndDate(e.target.value),
         })
       ),
       React.createElement(
