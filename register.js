@@ -659,7 +659,7 @@ function App() {
   };
 
   // NOVINKA: Pôvodná handleSubmit premenovaná na handleRegistrationSubmit
-  const handleRegistrationSubmit = async () => { // Volá sa z Page5Summary, už nepotrebuje event ani teamsDataToSave
+  const handleRegistrationSubmit = async () => { 
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
@@ -1105,7 +1105,7 @@ function App() {
                   setNotificationType: setNotificationType,
               }) : 
           page === 5 ? // NOVINKA: Stránka súhrnu
-              React.createElement(Page5Summary, {
+              React.createElement(Page5Form, {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore,
