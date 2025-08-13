@@ -88,7 +88,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'updateSettings') {
         changesMessage = `${notificationData.data.changesMade}`; 
       } else if (notificationData.type === 'createAccommodation') { 
-        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
+        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} (kapacita ${notificationData.data.capacity})'`;
       } else if (notificationData.type === 'editAccommodation') { 
         changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType} (kapacita: ${notificationData.data.originalCapacity})' na '${notificationData.data.newType} (kapacita: ${notificationData.data.newCapacity})'`;
       } else if (notificationData.type === 'deleteAccommodation') { 
@@ -96,7 +96,54 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'createPackage') {
         changesMessage = `Vytvorenie nového balíčka: '''${notificationData.data.name} s cenou ${notificationData.data.price}€'`;
       } else if (notificationData.type === 'editPackage') {
-        changesMessage = `Úprava balíčka: '${notificationData.data.originalName} (pôvodná cena: ${notificationData.data.originalPrice}€)' na '${notificationData.data.newName} (nová cena: ${notificationData.data.newPrice}€)'`;
+        // Podrobná správa pre zmenu balíčka
+        const originalPackage = notificationData.data.originalPackage;
+        const newPackage = notificationData.data.newPackage;
+        const changes = [];
+
+        if (originalPackage.name !== newPackage.name) {
+          changes.push(`Názov: '${originalPackage.name}' -> '${newPackage.name}'`);
+        }
+        if (originalPackage.price !== newPackage.price) {
+          changes.push(`Cena: ${originalPackage.price}€ -> ${newPackage.price}€`);
+        }
+
+        const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
+        // Získanie všetkých relevantných dátumov z oboch balíčkov (starého aj nového)
+        const allDates = new Set([...Object.keys(originalPackage.meals || {}), ...Object.keys(newPackage.meals || {})]);
+        const sortedDates = Array.from(allDates).sort();
+
+
+        sortedDates.forEach(date => {
+            mealTypes.forEach(mealType => {
+                const oldStatus = (originalPackage.meals && originalPackage.meals[date] && originalPackage.meals[date][mealType] === 1);
+                const newStatus = (newPackage.meals && newPackage.meals[date] && newPackage.meals[date][mealType] === 1);
+                const displayDate = new Date(date).toLocaleDateString('sk-SK');
+                const mealName = mealType === 'breakfast' ? 'Raňajky' : mealType === 'lunch' ? 'Obed' : mealType === 'dinner' ? 'Večera' : 'Občerstvenie';
+
+                if (oldStatus !== newStatus) {
+                    if (newStatus) {
+                        changes.push(`Pre ${displayDate} bol pridaný ${mealName}.`);
+                    } else {
+                        changes.push(`Pre ${displayDate} bolo odobraté ${mealName}.`);
+                    }
+                }
+            });
+        });
+
+        const oldParticipantCard = (originalPackage.meals && originalPackage.meals.participantCard === 1);
+        const newParticipantCard = (newPackage.meals && newPackage.meals.participantCard === 1);
+
+        if (oldParticipantCard !== newParticipantCard) {
+            if (newParticipantCard) {
+                changes.push('Účastnícka karta bola pridaná.');
+            } else {
+                changes.push('Účastnícka karta bola odobratá.');
+            }
+        }
+        
+        changesMessage = `Úprava balíčka '${originalPackage.name}':\n${changes.join('\n')}`;
+
       } else if (notificationData.type === 'deletePackage') {
         changesMessage = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       }
