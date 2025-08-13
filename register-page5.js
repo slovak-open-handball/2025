@@ -105,20 +105,32 @@ function TeamAccommodationAndArrival({
 
     const handleTimeSelectChange = (e) => {
         const { id, value } = e.target;
-        let newHours = arrivalHours;
-        let newMinutes = arrivalMinutes;
+        let currentHours = arrivalHours; 
+        let currentMinutes = arrivalMinutes;
 
-        if (id.includes('arrivalHours')) { // Changed to check for 'arrivalHours' in id
-            newHours = value;
+        if (id.includes('arrivalHours')) { 
+            currentHours = value;
             setArrivalHours(value);
-        } else if (id.includes('arrivalMinutes')) { // Changed to check for 'arrivalMinutes' in id
-            newMinutes = value;
+        } else if (id.includes('arrivalMinutes')) { 
+            currentMinutes = value;
             setArrivalMinutes(value);
         }
         
-        // Always construct the time string and update the parent state
-        const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
-        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString });
+        // Always construct the time string. If a part is empty, it means "not selected".
+        // The parent handleChange will receive this string.
+        let timeString = '';
+        if (currentHours && currentMinutes) {
+            timeString = `${currentHours}:${currentMinutes}`;
+        } else if (currentHours && currentMinutes === '') { // Only hours selected, minutes are empty
+            timeString = currentHours; // Just store hours, or whatever is preferred for partial input
+        } else if (currentHours === '' && currentMinutes) { // Only minutes selected, hours are empty
+            timeString = currentMinutes; // Just store minutes
+        }
+        // If both are empty, timeString remains ''
+
+        // Pass null to parent if timeString is empty to signify no time selected,
+        // otherwise pass the constructed time string.
+        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null });
     };
 
     return React.createElement(
@@ -220,7 +232,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalHours-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '',
+                                    value: arrivalHours || '', // Ensure it's controlled by state
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -233,7 +245,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalMinutes-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '',
+                                    value: arrivalMinutes || '', // Ensure it's controlled by state
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -272,7 +284,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalHours-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '',
+                                    value: arrivalHours || '', // Ensure it's controlled by state
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -285,7 +297,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalMinutes-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '',
+                                    value: arrivalMinutes || '', // Ensure it's controlled by state
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
