@@ -10,9 +10,9 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
-import { Page3Form } from './register-page3.js'; 
+import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
-import { Page5Form } from './register-page5.js';
+import { Page5Summary } from './register-page5.js'; // NOVINKA: Import pre Page5Summary
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -636,6 +636,21 @@ function App() {
     setLoading(false);
   };
 
+  // NOVINKA: Funkcia pre prechod z Page4 na Page5 (nová stránka súhrnu)
+  const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => { // Prijíma finálne dáta tímov z Page4Form
+    setLoading(true);
+    setNotificationMessage('');
+    setShowNotification(false);
+    setNotificationType('info');
+
+    // Aktualizujeme stav teamsDataFromPage4 v App komponente s finálnymi dátami z Page4Form
+    setTeamsDataFromPage4(teamsDataFromPage4Final);
+
+    // Prejdeme na stranu 5
+    setPage(5);
+    setLoading(false);
+  };
+
   const handlePrev = () => {
     setPage(prevPage => prevPage - 1); // Upravené pre prechod na predchádzajúcu stránku
     setNotificationMessage('');
@@ -643,8 +658,8 @@ function App() {
     setNotificationType('info');
   };
 
-  // NOVINKA: Pôvodná handleSubmit premenovaná na handleFinalSubmit
-  const handleFinalSubmit = async (teamsDataToSave) => { // Prijíma finálne dáta tímov z Page4Form
+  // NOVINKA: Pôvodná handleSubmit premenovaná na handleRegistrationSubmit
+  const handleRegistrationSubmit = async () => { // Volá sa z Page5Summary, už nepotrebuje event ani teamsDataToSave
     setLoading(true);
     setNotificationMessage('');
     setShowNotification(false);
@@ -732,6 +747,22 @@ function App() {
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
       console.log("App.js: Pokúšam sa zapísať údaje do Firestore pre UID:", user.uid, "do cesty:", userDocRef.path);
       try {
+        // Príprava dát pred odoslaním (konverzia prázdnych reťazcov na 0 pre teamsDataFromPage4)
+        // Toto bolo predtým v handleFinalSubmit v Page4Form, ale teraz je to potreba tu pred finálnym uložením
+        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
+        for (const categoryName in teamsDataToSaveFinal) {
+            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
+                ...team,
+                players: team.players === '' ? 0 : team.players,
+                womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
+                menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
+                tshirts: team.tshirts.map(tshirt => ({
+                    ...tshirt,
+                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                }))
+            }));
+        }
+
         await setDoc(userDocRef, {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -748,7 +779,7 @@ function App() {
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
-          teams: teamsDataToSave,
+          teams: teamsDataToSaveFinal, // Použijeme tu už prekonvertované dáta
         });
         console.log("App.js: Údaje používateľa úspešne zapísané do Firestore.");
       } catch (firestoreError) {
@@ -799,7 +830,7 @@ function App() {
               }
             },
             categories: formData.categories, // Pridanie kategórií do emailu
-            teams: teamsDataToSave, // NOVINKA: Pridanie finálnych dát o tímoch do emailu
+            teams: teamsDataFromPage4, // NOVINKA: Pridanie finálnych dát o tímoch do emailu (už prekonvertované)
           };
           console.log("App.js: Odosielam registračný e-mail s payloadom:", JSON.stringify(payload, null, 2)); // Pridané logovanie payloadu
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -869,7 +900,7 @@ function App() {
     } finally {
       setLoading(false);
       isRegisteringRef.current = false; // Reset referencie
-      console.log("App.js: handleFinalSubmit finished.");
+      console.log("App.js: handleRegistrationSubmit finished.");
     }
   };
 
@@ -1054,7 +1085,7 @@ function App() {
               React.createElement(Page4Form, {
                   formData: formData, 
                   handlePrev: handlePrev,
-                  handleSubmit: handleFinalSubmit, 
+                  handleNextPage4: handleNextPage4ToPage5, // Zmenený prop na handleNextPage4
                   loading: loading,
                   setLoading: setLoading,
                   notificationMessage: notificationMessage,
@@ -1072,6 +1103,18 @@ function App() {
                   setNotificationMessage: setNotificationMessage, 
                   setShowNotification: setShowNotification, 
                   setNotificationType: setNotificationType,
+              }) : 
+          page === 5 ? // NOVINKA: Stránka súhrnu
+              React.createElement(Page5Summary, {
+                  formData: formData,
+                  teamsDataFromPage4: teamsDataFromPage4,
+                  availableCategoriesMap: categoriesDataFromFirestore,
+                  handlePrev: handlePrev,
+                  handleSubmit: handleRegistrationSubmit, // Finálny submit z Page5
+                  loading: loading,
+                  notificationMessage: notificationMessage,
+                  closeNotification: closeNotification,
+                  NotificationModal: NotificationModal,
               }) : null
         )
       ) : isRegistrationClosed ? (
