@@ -63,16 +63,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     // Stavy pre ubytovanie
-    const [accommodationTypes, setAccommodationTypes] = React.useState([]); // Správny názov stavovej premennej
+    const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
-    const [accommodationCounts, setAccommodationCounts] = React.useState({}); // ZMENA: Inicializácia na prázdny objekt
+    const [accommodationCounts, setAccommodationCounts] = React.useState({});
 
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
-    const [arrivalTime, setArrivalTime] = React.useState(formData.arrival?.time || '');
+
+    // ZMENA: Robustnejšia inicializácia stavu pre hodiny a minúty
+    const [arrivalHours, setArrivalHours] = React.useState(() => {
+        const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
+        return initialTime ? initialTime.split(':')[0] : '';
+    });
+    const [arrivalMinutes, setArrivalMinutes] = React.useState(() => {
+        const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
+        return initialTime ? initialTime.split(':')[1] : '';
+    });
 
     // NOVINKA: Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
+
+    // Debugovacie výpisy do konzoly
+    console.log('Page5Form render cycle START');
+    console.log('formData.arrival.time:', formData.arrival?.time);
+    console.log('Initial arrivalHours calculated:', arrivalHours);
+    console.log('Initial arrivalMinutes calculated:', arrivalMinutes);
+    console.log('Page5Form render cycle END');
+
 
     // Načítanie dostupných typov ubytovania a ich kapacít
     React.useEffect(() => {
@@ -96,7 +113,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error');
                     setNotificationType('error');
                 });
 
@@ -105,7 +122,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeRegistrationSettings = onSnapshot(registrationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
-                        // ZMENA: Použitie importovaného Timestamp namiesto globálneho firebase.firestore.Timestamp
                         if (data.tournamentStart && data.tournamentStart instanceof Timestamp) {
                             const date = data.tournamentStart.toDate();
                             const formattedDate = date.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -122,7 +138,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/registrácie:", e);
-                setNotificationMessage("Chyba pri načítaní údajov.", 'error'); // Použitie lokálnej notifikácie
+                setNotificationMessage("Chyba pri načítaní údajov.", 'error');
                 setNotificationType('error');
             }
         };
@@ -137,7 +153,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeRegistrationSettings();
             }
         };
-    }, [db]); // db je závislosť, ak ju používate priamo v useEffect
+    }, [db]);
 
     // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
@@ -158,12 +174,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
-                    setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                    setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
                     setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
                 setNotificationType('error');
             }
         };
@@ -175,7 +191,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeCounts();
             }
         };
-    }, [db]); // db je závislosť, ak ju používate priamo v useEffect
+    }, [db]);
 
 
     const handleAccommodationChange = (e) => {
@@ -192,6 +208,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             setArrivalMinutes('');
             handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } });
         } else {
+            // Používame aktuálne hodnoty arrivalHours a arrivalMinutes, ktoré sú už v stave
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange({ target: { id: 'arrival', value: { type: newValue, time: timeString } } });
         }
@@ -434,7 +451,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement('select', {
                                     id: 'arrivalHours',
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours,
+                                    value: arrivalHours || '', // ZMENA: Defenzívna hodnota
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -447,7 +464,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement('select', {
                                     id: 'arrivalMinutes',
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes,
+                                    value: arrivalMinutes || '', // ZMENA: Defenzívna hodnota
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
