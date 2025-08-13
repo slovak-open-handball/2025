@@ -189,7 +189,22 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         }
         const packageDocRef = doc(db, 'settings', 'packages', 'list', currentPackageEdit.id);
         
-        // Posielame pôvodný a nový objekt balíčka pre detailnú notifikáciu
+        // Zabezpečenie, že currentPackageEdit je vždy objekt s očakávanými vlastnosťami
+        const originalPkgData = currentPackageEdit || {};
+        originalPkgData.meals = originalPkgData.meals || {}; // Zabezpečiť, že meals je objekt
+        originalPkgData.name = originalPkgData.name || ''; // Zabezpečiť, že name je reťazec
+        originalPkgData.price = originalPkgData.price || 0; // Zabezpečiť, že price je číslo
+
+        // Nový objekt balíčka pre porovnanie s predvolenými hodnotami, ak nejaké chýbajú
+        const newPkgData = { 
+            id: originalPkgData.id, // Použijeme ID z originálu
+            name: trimmedName,
+            price: newPackagePrice,
+            meals: mealsToSave,
+            refreshments: [], // Predpokladáme, že refreshments sa už samostatne nepoužívajú
+        };
+
+
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
@@ -202,14 +217,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             await sendAdminNotification({ 
                 type: 'editPackage', 
                 data: { 
-                    originalPackage: currentPackageEdit, 
-                    newPackage: { // Nový objekt balíčka pre porovnanie
-                        id: currentPackageEdit.id,
-                        name: trimmedName,
-                        price: newPackagePrice,
-                        meals: mealsToSave,
-                        refreshments: [],
-                    }
+                    originalPackage: originalPkgData, // Posielame upravený objekt
+                    newPackage: newPkgData, // Posielame nový objekt
                 } 
             });
         }
@@ -253,7 +262,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       if (typeof sendAdminNotification === 'function') {
         await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price } });
       }
-      handleCloseConfirmDeletePackageModal();
+      handleCloseConfirmDeleteAccommodationModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní balíčka: ${e.message}`, 'error');
     }
@@ -470,7 +479,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
         ),
 
-        // Nový checkbox pre Účastnícku kartu
         React.createElement(
             'div',
             { className: 'flex items-center mt-4 border-t border-gray-200 pt-4' },
