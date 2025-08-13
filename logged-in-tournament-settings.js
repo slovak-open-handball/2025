@@ -88,17 +88,17 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'updateSettings') {
         changesMessage = `${notificationData.data.changesMade}`; 
       } else if (notificationData.type === 'createAccommodation') { 
-        changesMessage = `Vytvorenie typu ubytovania: '${notificationData.data.type}' s kapacitou '${notificationData.data.capacity}'`;
+        changesMessage = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
       } else if (notificationData.type === 'editAccommodation') { 
-        changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType}' (kapacita: ${notificationData.data.originalCapacity}) na '${notificationData.data.newType}' (kapacita: ${notificationData.data.newCapacity})`;
+        changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType} (kapacita: ${notificationData.data.originalCapacity})' na '${notificationData.data.newType} (kapacita: ${notificationData.data.newCapacity})'`;
       } else if (notificationData.type === 'deleteAccommodation') { 
-        changesMessage = `Zmazanie typu ubytovania: '${notificationData.data.deletedType}' (kapacita: ${notificationData.data.deletedCapacity})`;
+        changesMessage = `Zmazanie typu ubytovania: '''${notificationData.data.deletedType} (kapacita: ${notificationData.data.deletedCapacity})'`;
       } else if (notificationData.type === 'createPackage') {
-        changesMessage = `Vytvorenie nového balíčka: '${notificationData.data.name}' s cenou ${notificationData.data.price}€`;
+        changesMessage = `Vytvorenie nového balíčka: '''${notificationData.data.name} s cenou ${notificationData.data.price}€'`;
       } else if (notificationData.type === 'editPackage') {
-        changesMessage = `Úprava balíčka: '${notificationData.data.originalName}' (pôvodná cena: ${notificationData.data.originalPrice}€) na '${notificationData.data.newName}' (nová cena: ${notificationData.data.newPrice}€)`;
+        changesMessage = `Úprava balíčka: '${notificationData.data.originalName} (pôvodná cena: ${notificationData.data.originalPrice}€)' na '${notificationData.data.newName} (nová cena: ${notificationData.data.newPrice}€)'`;
       } else if (notificationData.type === 'deletePackage') {
-        changesMessage = `Zmazanie balíčka: '${notificationData.data.deletedName}' (cena: ${notificationData.data.deletedPrice}€)`;
+        changesMessage = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       }
 
       await addDoc(notificationsCollectionRef, {
