@@ -599,8 +599,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         tournamentDays.map(date => {
                                             const mealsForDay = pkg.meals[date];
                                             const includedItems = [];
-                                            // Check only for valid date keys, exclude 'participantCard'
-                                            if (date === 'participantCard') return null; 
+                                            // Ensure the key is a valid date string, not 'participantCard'
+                                            if (date === 'participantCard' || isNaN(new Date(date).getTime())) {
+                                                return null; 
+                                            }
 
                                             if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
                                             if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
