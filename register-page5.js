@@ -1,6 +1,5 @@
 import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// NotificationModal Component pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, type = 'info' }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
@@ -13,8 +12,8 @@ function NotificationModal({ message, onClose, type = 'info' }) {
             }
             timerRef.current = setTimeout(() => {
                 setShow(false);
-                setTimeout(onClose, 500); // Nechaj chvíľu na animáciu, potom zavolaj onClose
-            }, 10000); // Zobrazí sa na 10 sekúnd
+                setTimeout(onClose, 500);
+            }, 10000);
         } else {
             setShow(false);
             if (timerRef.current) {
@@ -36,7 +35,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     if (type === 'success') {
         bgColorClass = 'bg-green-500';
     } else if (type === 'error') {
-        bgColorClass = 'bg-red-600'; // Nastavenie červenej farby pre chyby
+        bgColorClass = 'bg-red-600';
     } else {
         bgColorClass = 'bg-blue-500';
     }
@@ -62,19 +61,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         setNotificationType('info');
     };
 
-    // Stavy pre ubytovanie
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
 
-    // Stavy pre balíčky
     const [packages, setPackages] = React.useState([]);
     const [selectedPackageId, setSelectedPackageId] = React.useState(formData.packageId || '');
 
-    // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
 
-    // Robustnejšia inicializácia stavu pre hodiny a minúty (formData.arrival.time je zdrojom pravdy)
     const [arrivalHours, setArrivalHours] = React.useState(() => {
         const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
         return initialTime ? initialTime.split(':')[0] : '';
@@ -84,10 +79,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return initialTime ? initialTime.split(':')[1] : '';
     });
 
-    // Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
-    // Prepočet dátumov turnaja pre zobrazenie detailov balíčkov
     const getDaysBetween = (start, end) => {
         const dates = [];
         let currentDate = new Date(start);
@@ -108,7 +101,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [tournamentStartDate, tournamentEndDate]);
 
 
-    // Načítanie dostupných typov ubytovania, balíčkov a ich kapacít
     React.useEffect(() => {
         let unsubscribeAccommodation;
         let unsubscribeRegistrationSettings;
@@ -120,7 +112,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 return;
             }
             try {
-                // Listener pre nastavenia ubytovania
                 const accommodationDocRef = doc(window.db, 'settings', 'accommodation');
                 unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
@@ -135,7 +126,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
 
-                // Listener pre nastavenia balíčkov
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                     const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -147,7 +137,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setNotificationType('error');
                 });
 
-                // Listener pre registračné nastavenia (pre dátum začiatku turnaja)
                 const registrationDocRef = doc(window.db, 'settings', 'registration');
                 unsubscribeRegistrationSettings = onSnapshot(registrationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
@@ -188,7 +177,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
     }, [db]);
 
-    // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
         let unsubscribeCounts;
         const fetchAccommodationCounts = () => {
@@ -203,7 +191,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         const data = docSnapshot.data();
                         setAccommodationCounts(data || {});
                     } else {
-                        setAccommodationCounts({}); // Ak dokument neexistuje, predvolene prázdny objekt
+                        setAccommodationCounts({});
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
@@ -236,7 +224,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handlePackageChange = (e) => {
         const newPackageId = e.target.value;
         setSelectedPackageId(newPackageId);
-        // Nájdi kompletný objekt balíčka pre uloženie do formData
         const selectedPkg = packages.find(pkg => pkg.id === newPackageId);
         handleChange({ target: { id: 'package', value: selectedPkg || null } });
         handleChange({ target: { id: 'packageId', value: newPackageId } });
@@ -244,13 +231,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
-        setArrivalType(newValue); // Aktualizujeme lokálny stav pre typ dopravy
+        setArrivalType(newValue);
         if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
-            setArrivalHours(''); // Resetujeme hodiny a minúty, ak typ nie je vlak/autobus
+            setArrivalHours('');
             setArrivalMinutes('');
-            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } }); // Nastavíme čas na null v formData
+            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } });
         } else {
-            // Používame aktuálne hodnoty arrivalHours a arrivalMinutes, ktoré sú už v stave
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange({ target: { id: 'arrival', value: { type: newValue, time: timeString } } });
         }
@@ -275,17 +261,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const isFormValidPage5 = React.useMemo(() => {
-        // Kontrola, či je vybraný typ ubytovania (ak sú nejaké možnosti)
         if (accommodationTypes.length > 0 && !selectedAccommodation) {
             return false;
         }
 
-        // Kontrola, či je vybraný balíček (ak sú nejaké možnosti)
         if (packages.length > 0 && !selectedPackageId) {
             return false;
         }
 
-        // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
         if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!formData.arrival?.time || formData.arrival.time === '')) {
             return false;
         }
@@ -335,7 +318,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 packageDetails: selectedPkgDetails ? {
                     name: selectedPkgDetails.name,
                     price: selectedPkgDetails.price,
-                    meals: selectedPkgDetails.meals // Zahrnie všetky detaily stravovania
+                    meals: selectedPkgDetails.meals
                 } : null
             };
             
@@ -350,7 +333,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
     };
 
-    // Pomocné funkcie na generovanie <option> pre hodiny a minúty
     const generateTimeOptions = (limit) => {
         const options = [React.createElement('option', { key: "", value: "" }, "--")];
         for (let i = 0; i < limit; i++) {
@@ -433,7 +415,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 'div',
                 { className: 'border-t border-gray-200 pt-4 mt-4' },
                 React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber spôsobu príchodu na turnaj'),
-                // NOVINKA: Informačný text
                 React.createElement(
                     'p',
                     { className: 'text-sm text-gray-600 mb-4' },
@@ -442,7 +423,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement(
                     'div',
                     { className: 'mb-4 space-y-2' },
-                    // Vlaková doprava
                     React.createElement(
                         React.Fragment,
                         null,
@@ -462,7 +442,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         ),
                         arrivalType === 'vlaková doprava' && React.createElement(
                             'div',
-                            { className: 'ml-8 mb-4' }, // Odsadenie pre pole času
+                            { className: 'ml-8 mb-4' },
                             React.createElement(
                                 'p',
                                 { className: 'block text-gray-700 text-sm font-bold mb-2' },
@@ -500,7 +480,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             )
                         )
                     ),
-                    // Autobusová doprava
                     React.createElement(
                         React.Fragment,
                         null,
@@ -520,7 +499,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         ),
                         arrivalType === 'autobusová doprava' && React.createElement(
                             'div',
-                            { className: 'ml-8 mb-4' }, // Odsadenie pre pole času
+                            { className: 'ml-8 mb-4' },
                             React.createElement(
                                 'p',
                                 { className: 'block text-gray-700 text-sm font-bold mb-2' },
@@ -626,7 +605,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                    // Zobrazenie detailov balíčka
                                     (pkg.meals && Object.keys(pkg.meals).length > 0 && tournamentDays.length > 0) ? (
                                         tournamentDays.map(date => {
                                             const mealsForDay = pkg.meals[date];
