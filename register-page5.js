@@ -36,9 +36,9 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     if (type === 'success') {
         bgColorClass = 'bg-green-500';
     } else if (type === 'error') {
-        bgColorClass = 'bg-red-600'; // Nastavenie červenej pre chyby
+        bgColorClass = 'bg-red-600'; // Nastavenie červenej farby pre chyby
     } else {
-        bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+        bgColorClass = 'bg-blue-500';
     }
 
     return React.createElement(
@@ -51,42 +51,27 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4 }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady }) { // NOVINKA: isRecaptchaReady pridaný do propov
     const db = getFirestore();
 
-    const [accommodations, setAccommodations] = React.useState([]);
-    const [selectedAccommodationType, setSelectedAccommodationType] = React.useState(formData.accommodation?.type || '');
-    const [accommodationCounts, setAccommodationCounts] = React.useState({});
-    const [isAccommodationDataLoaded, setIsAccommodationDataLoaded] = React.useState(false);
+    const [notificationMessage, setNotificationMessage] = React.useState('');
+    const [notificationType, setNotificationType] = React.useState('info');
 
-    const [selectedArrivalType, setSelectedArrivalType] = React.useState(formData.arrival?.type || '');
-    const initialHours = formData.arrival?.time ? formData.arrival.time.split(':')[0] : '';
-    const initialMinutes = formData.arrival?.time ? formData.arrival.time.split(':')[1] : '';
-    const [arrivalHours, setArrivalHours] = React.useState(initialHours);
-    const [arrivalMinutes, setArrivalMinutes] = React.useState(initialMinutes);
+    const closeNotification = () => {
+        setNotificationMessage('');
+        setNotificationType('info');
+    };
+
+    // Stavy pre ubytovanie
+    const [accommodationTypes, setAccommodationTypes] = React.useState([]);
+    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
+
+    // Stavy pre príchod
+    const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
+    const [arrivalTime, setArrivalTime] = React.useState(formData.arrival?.time || '');
 
     // NOVINKA: Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
-
-    // Stavy pre lokálne notifikácie v tomto komponente
-    const [notificationMessage, setNotificationMessage] = React.useState('');
-    const [showNotification, setShowNotification] = React.useState(false);
-    const [notificationType, setNotificationType] = React.useState('info');
-
-    // Lokálna funkcia pre zatvorenie notifikácie
-    const closeLocalNotification = React.useCallback(() => {
-        setShowNotification(false);
-        setNotificationMessage('');
-        setNotificationType('info');
-    }, []);
-
-    // Lokálna funkcia pre odoslanie notifikácie
-    const dispatchLocalNotification = React.useCallback((message, type = 'info') => {
-        setNotificationMessage(message);
-        setShowNotification(true);
-        setNotificationType(type);
-    }, []);
-
 
     // Načítanie dostupných typov ubytovania a ich kapacít
     React.useEffect(() => {
@@ -104,15 +89,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
-                        setAccommodations(data.types || []);
+                        setAccommodationTypes(data.types || []);
                     } else {
-                        setAccommodations([]);
+                        setAccommodationTypes([]);
                     }
-                    setIsAccommodationDataLoaded(true);
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    dispatchLocalNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
-                    setIsAccommodationDataLoaded(true);
+                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                    setNotificationType('error');
                 });
 
                 // Listener pre registračné nastavenia (pre dátum začiatku turnaja)
@@ -137,7 +121,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/registrácie:", e);
-                dispatchLocalNotification("Chyba pri načítaní údajov.", 'error');
+                setNotificationMessage("Chyba pri načítaní údajov.", 'error'); // Použitie lokálnej notifikácie
+                setNotificationType('error');
             }
         };
 
@@ -151,7 +136,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeRegistrationSettings();
             }
         };
-    }, [db, dispatchLocalNotification]);
+    }, [db]); // db je závislosť, ak ju používate priamo v useEffect
 
     // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
@@ -172,11 +157,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
-                    dispatchLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                    setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                    setNotificationType('error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                dispatchLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error'); // Použitie lokálnej notifikácie
+                setNotificationType('error');
             }
         };
 
@@ -187,7 +174,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeCounts();
             }
         };
-    }, [db, dispatchLocalNotification]);
+    }, [db]); // db je závislosť, ak ju používate priamo v useEffect
 
 
     const handleAccommodationChange = (e) => {
@@ -228,25 +215,23 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const isFormValidPage5 = React.useMemo(() => {
-        if (!selectedAccommodationType) {
+        // Kontrola, či je vybraný typ ubytovania (ak sú nejaké možnosti)
+        if (accommodationTypes.length > 0 && !selectedAccommodationType) { // ZMENA: Používam selectedAccommodationType
             return false;
         }
 
-        if (!selectedArrivalType) {
+        // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
+        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) { // ZMENA: kontrolujem aj prázdny reťazec
             return false;
         }
-        if ((selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava')) {
-            if (!arrivalHours || !arrivalMinutes) {
-                return false;
-            }
-        }
+
         return true;
-    }, [selectedAccommodationType, selectedArrivalType, arrivalHours, arrivalMinutes]);
+    }, [selectedAccommodationType, accommodationTypes, arrivalType, arrivalTime]);
 
 
     const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-    ${!isFormValidPage5 || loading
+    ${!isFormValidPage5 || loading || !isRecaptchaReady // NOVINKA: Pridaný isRecaptchaReady do podmienky disabled
       ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
       : 'bg-blue-500 hover:bg-blue-700 text-white'
     }
@@ -256,12 +241,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            dispatchLocalNotification("Prosím, vyplňte všetky povinné polia.", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error'); // Použitie lokálnej notifikácie
+            setNotificationType('error');
             return;
         }
 
         if (setLoading) setLoading(true);
-        closeLocalNotification(); 
+        closeNotification(); // Použitie lokálnej funkcie na zatvorenie notifikácie
 
         try {
             const finalArrivalTime = (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava')
@@ -278,24 +264,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     time: finalArrivalTime
                 }
             };
-
-            let totalPeopleForCurrentRegistration = 0;
-            if (teamsDataFromPage4) {
-                for (const categoryName in teamsDataFromPage4) {
-                    if (teamsDataFromPage4[categoryName]) {
-                        for (const team of teamsDataFromPage4[categoryName]) {
-                            totalPeopleForCurrentRegistration += (parseInt(team.players, 10) || 0) +
-                                                                  (parseInt(team.womenTeamMembers, 10) || 0) +
-                                                                  (parseInt(team.menTeamMembers, 10) || 0);
-                        }
-                    }
-                }
-            }
             
+            // Predpokladáme, že handleSubmit je prop, ktorý volá finálne odoslanie z App.js
             await handleSubmit(finalFormData); 
 
+            // Logika aktualizácie počtov ubytovania
+            // Táto časť by sa mala ideálne presunúť do App.js alebo do funkcie,
+            // ktorú volá App.js po úspešnej registrácii, aby sa predišlo
+            // duplicitnej logike alebo asynchrónnym problémom.
+            // Zatiaľ to tu ponechávam, ale upozorňujem na to.
             const accommodationToUpdate = finalFormData.accommodation?.type;
-            if (accommodationToUpdate) {
+            if (accommodationToUpdate && accommodationToUpdate !== 'Bez ubytovania') { // Kontrola, aby sa neaktualizoval počet pre "Bez ubytovania"
                 const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
                 
                 const docSnap = await getDoc(accommodationCountsDocRef);
@@ -303,6 +282,19 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
                 if (docSnap.exists() && docSnap.data()[accommodationToUpdate] !== undefined) {
                     currentCount = docSnap.data()[accommodationToUpdate];
+                }
+
+                let totalPeopleForCurrentRegistration = 0;
+                if (teamsDataFromPage4) {
+                    for (const categoryName in teamsDataFromPage4) {
+                        if (teamsDataFromPage4[categoryName]) {
+                            for (const team of teamsDataFromPage4[categoryName]) {
+                                totalPeopleForCurrentRegistration += (parseInt(team.players, 10) || 0) +
+                                                                      (parseInt(team.womenTeamMembers, 10) || 0) +
+                                                                      (parseInt(team.menTeamMembers, 10) || 0);
+                            }
+                        }
+                    }
                 }
 
                 const newTotal = currentCount + totalPeopleForCurrentRegistration;
@@ -315,7 +307,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
             console.error("Chyba pri finalizácii registrácie alebo aktualizácii počtov ubytovania:", error);
-            dispatchLocalNotification(`Chyba pri registrácii: ${error.message}`, 'error');
+            setNotificationMessage(`Chyba pri registrácii: ${error.message}`, 'error'); // Použitie lokálnej notifikácie
+            setNotificationType('error');
             if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
             if (setLoading) setLoading(false);
@@ -336,7 +329,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeLocalNotification, type: notificationType }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
@@ -428,7 +421,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         }),
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
                     ),
-                    (selectedArrivalType === 'vlaková doprava') && React.createElement(
+                    (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava') && React.createElement(
                         'div',
                         { className: 'ml-8' }, // Odsadenie pre pole času
                         React.createElement(
@@ -481,45 +474,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         }),
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
                     ),
-                    (selectedArrivalType === 'autobusová doprava') && React.createElement(
-                        'div',
-                        { className: 'ml-8' },
-                        React.createElement(
-                            'p',
-                            { className: 'block text-gray-700 text-sm font-bold mb-2' },
-                            'Predpokladaný čas príchodu:'
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'flex space-x-4' },
-                            React.createElement(
-                                'div',
-                                { className: 'flex-1' },
-                                React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'),
-                                React.createElement('select', {
-                                    id: 'arrivalHours',
-                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours,
-                                    onChange: handleTimeSelectChange,
-                                    required: true,
-                                    disabled: loading,
-                                }, generateTimeOptions(24))
-                            ),
-                            React.createElement(
-                                'div',
-                                { className: 'flex-1' },
-                                React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'),
-                                React.createElement('select', {
-                                    id: 'arrivalMinutes',
-                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes,
-                                    onChange: handleTimeSelectChange,
-                                    required: true,
-                                    disabled: loading,
-                                }, generateTimeOptions(60))
-                            )
-                        )
-                    ),
                     React.createElement(
                         'label',
                         { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
@@ -569,7 +523,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'submit',
                         className: nextButtonClasses, 
-                        disabled: loading || !isRecaptchaReady || !isFormValidPage4,
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage5, // NOVINKA: isRecaptchaReady je tu používaný
                         tabIndex: 2
                     },
                     // Zobrazenie načítavacieho spinnera počas prechodu
