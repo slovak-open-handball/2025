@@ -442,7 +442,7 @@ function TeamPackageSettings({
                                     React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
                                 ),
                                 (pkg.meals && pkg.meals.participantCard === 1) &&
-                                    React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'Zahŕňa účastnícku kartu')
+                                    React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'zahŕňa účastnícku kartu')
                             )
                         )
                     ))
