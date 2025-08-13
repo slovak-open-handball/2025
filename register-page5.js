@@ -156,8 +156,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const handleAccommodationChange = (e) => {
-        setSelectedAccommodationType(e.target.value);
-        handleChange({ target: { id: 'accommodation', value: { type: e.target.value } } });
+        // Zmena: value je teraz selectedAccommodationType priamo
+        const newValue = e.target.value; 
+        setSelectedAccommodationType(newValue);
+        handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
 
     const isFormValidPage5 = selectedAccommodationType !== '';
@@ -261,34 +263,50 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement(
                     'div',
                     { className: 'mb-4' },
-                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'accommodationType' }, 'Typ ubytovania'),
+                    // Zmena zo selectboxu na zoznam radio buttonov
                     React.createElement(
-                        'select',
-                        {
-                            id: 'accommodationType',
-                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                            value: selectedAccommodationType,
-                            onChange: handleAccommodationChange,
-                            required: true,
-                            disabled: loading || !isAccommodationDataLoaded,
-                        },
-                        React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
-                        React.createElement('option', { value: 'Bez ubytovania', disabled: false }, `Bez ubytovania (${accommodationCounts["Bez ubytovania"] || 0} registrovaných)`)
-                        ,
+                        'div',
+                        { className: 'space-y-2' }, // Medzery medzi možnosťami
+                        // Možnosť "Bez ubytovania"
+                        React.createElement(
+                            'label',
+                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                            React.createElement('input', {
+                                type: 'radio',
+                                name: 'accommodationType',
+                                value: 'Bez ubytovania',
+                                checked: selectedAccommodationType === 'Bez ubytovania',
+                                onChange: handleAccommodationChange,
+                                className: 'form-radio h-5 w-5 text-blue-600',
+                                disabled: loading,
+                            }),
+                            React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania (${accommodationCounts["Bez ubytovania"] || 0} registrovaných)`)
+                        ),
+                        // Dynamické možnosti ubytovania z Firestore
                         accommodations.map((acc) => {
                             const currentCount = accommodationCounts[acc.type] || 0;
                             const isFull = currentCount >= acc.capacity;
+                            const isDisabled = isFull || loading;
+                            const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
+
                             return React.createElement(
-                                'option',
-                                {
-                                    key: acc.type,
-                                    value: acc.type,
-                                    disabled: isFull,
-                                    style: {
-                                        cursor: isFull ? 'not-allowed' : 'pointer'
-                                    }
+                                'label',
+                                { 
+                                    key: acc.type, 
+                                    className: labelClasses,
                                 },
-                                `${acc.type} (Kapacita: ${acc.capacity}, Registrovaných: ${currentCount})${isFull ? ' (naplnená kapacita)' : ''}`
+                                React.createElement('input', {
+                                    type: 'radio',
+                                    name: 'accommodationType',
+                                    value: acc.type,
+                                    checked: selectedAccommodationType === acc.type,
+                                    onChange: handleAccommodationChange,
+                                    className: 'form-radio h-5 w-5 text-blue-600',
+                                    disabled: isDisabled,
+                                }),
+                                React.createElement('span', { className: 'ml-3 text-gray-800' }, 
+                                    `${acc.type} (Kapacita: ${acc.capacity}, Registrovaných: ${currentCount})${isFull ? ' (naplnená kapacita)' : ''}`
+                                )
                             );
                         })
                     )
