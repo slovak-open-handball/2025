@@ -361,7 +361,7 @@ function TournamentSettingsApp() {
       const userEmail = user.email;
 
       if (notificationData.type === 'createSize') {
-        changesMessage = `Vytvorenie novej veľkosti trička: '${notificationData.data.newSizeValue}'`;
+        changesMessage = `Vytvorenie novej veľkosti trička: '''${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'editSize') {
         changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'deleteSize') {
