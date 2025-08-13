@@ -367,7 +367,7 @@ function TournamentSettingsApp() {
       } else if (notificationData.type === 'deleteSize') {
         changesMessage = `Zmazanie veľkosti trička: '${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
-        changesMessage = `Aktualizácia všeobecných nastavení: ${notificationData.data.changesMade}`;
+        changesMessage = ${notificationData.data.changesMade}`;
       }
 
       await addDoc(notificationsCollectionRef, {
