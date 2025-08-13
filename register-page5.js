@@ -599,6 +599,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         tournamentDays.map(date => {
                                             const mealsForDay = pkg.meals[date];
                                             const includedItems = [];
+                                            // Check only for valid date keys, exclude 'participantCard'
+                                            if (date === 'participantCard') return null; 
+
                                             if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
                                             if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
                                             if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
@@ -609,7 +612,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
                                             }
                                             return null;
-                                        }).filter(item => item !== null) // Filtrujeme, aby sa nezobrazovali null hodnoty z mapovania
+                                        }).filter(item => item !== null)
                                     ) : (
                                         React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
                                     ),
