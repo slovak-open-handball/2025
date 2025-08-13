@@ -729,10 +729,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
                 // Validácia šoférov pre "vlastná doprava"
                 if (team.arrival?.type === 'vlastná doprava') {
-                    const maleDrivers = parseInt(team.arrival?.drivers?.male, 10);
-                    const femaleDrivers = parseInt(team.arrival?.drivers?.female, 10);
-                    if (isNaN(maleDrivers) || maleDrivers < 0 || isNaN(femaleDrivers) || femaleDrivers < 0) {
-                        return false; // Neplatné alebo chýbajúce počty šoférov
+                    const maleDrivers = parseInt(team.arrival?.drivers?.male, 10) || 0; // Treat empty/NaN as 0
+                    const femaleDrivers = parseInt(team.arrival?.drivers?.female, 10) || 0; // Treat empty/NaN as 0
+
+                    if (maleDrivers < 0 || femaleDrivers < 0) {
+                        return false; // Počty šoférov nemôžu byť záporné
+                    }
+
+                    if (maleDrivers === 0 && femaleDrivers === 0) {
+                        return false; // Ak je vybraná "vlastná doprava", musí byť zadaný aspoň jeden šofér (muž alebo žena)
                     }
                 }
             }
@@ -756,7 +761,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification(); 
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod) a uistite sa, že vybrané ubytovanie nie je plne obsadené. Pre 'vlastnú dopravu' zadajte počet šoférov.", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod) a uistite sa, že vybrané ubytovanie nie je plne obsadené. Pre 'vlastnú dopravu' zadajte počet šoférov (aspoň jedného).", 'error');
             setNotificationType('error');
             setLoading(false); 
             return;
