@@ -104,14 +104,8 @@ function App() {
       ico: '',
       dic: '',
       icDph: '',
-    },
-    accommodation: {
-        type: ''
-    },
-    arrival: { // NOVINKA: Inicializácia dát o príchode
-        type: '',
-        time: null
     }
+    // accommodation, arrival, packageId, packageDetails are now per-team in teamsDataFromPage4
   });
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
@@ -133,7 +127,7 @@ function App() {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState('');
-  const [rosterEditDeadline, setRosterEditDeadline] = React.useState('');
+  const [rosterEditDeadline, setRosterEditDeadline] = React.React.useState('');
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
@@ -419,32 +413,42 @@ function App() {
     setNotificationType(type);
   }, [setNotificationMessage, setShowNotification, setNotificationType]);
 
-
+  // HandleChange pre hlavné formData a teamsDataFromPage4
   const handleChange = (e) => {
     const { id, value } = e.target;
-    if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
+
+    if (id === 'teamsDataFromPage4') {
+        // Spracovanie aktualizácií prichádzajúcich z TeamAccommodationAndArrival a TeamPackageSettings
+        setTeamsDataFromPage4(prevTeamsData => {
+            const newTeamsData = { ...prevTeamsData };
+            if (!newTeamsData[value.categoryName]) {
+                newTeamsData[value.categoryName] = [];
+            }
+            if (!newTeamsData[value.categoryName][value.teamIndex]) {
+                newTeamsData[value.categoryName][value.teamIndex] = {};
+            }
+            // Aktualizujeme konkrétne pole tímu
+            newTeamsData[value.categoryName][value.teamIndex] = {
+                ...newTeamsData[value.categoryName][value.teamIndex],
+                [value.field]: value.data
+            };
+            return newTeamsData;
+        });
+    } else if (id === 'billing') {
+      // Pôvodná logika pre fakturačné údaje
       setFormData(prev => ({
         ...prev,
         billing: {
-          ...prev.billing,
-          [id]: value
+          ...(prev.billing || {}), // Zabezpečí inicializáciu billing, ak chýba
+          ...value // value je už objekt {id: newValue}
         }
       }));
-    } else if (id === 'accommodation') {
-        setFormData(prev => ({
-            ...prev,
-            accommodation: value
-        }));
-    } else if (id === 'arrival') {
-        setFormData(prev => ({
-            ...prev,
-            arrival: value
-        }));
-    }
-    else {
+    } else {
+      // Pôvodná logika pre ostatné polia vo formData
       setFormData(prev => ({ ...prev, [id]: value }));
     }
   };
+
 
   const handleRoleChange = (e) => {
     setUserRole(e.target.value);
@@ -561,6 +565,7 @@ function App() {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
 
+            // Načítame existujúce dáta tímu pre zachovanie (ak existujú)
             const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
 
             return {
@@ -571,7 +576,12 @@ function App() {
                 menTeamMembers: existingTeamData.menTeamMembers !== undefined ? existingTeamData.menTeamMembers : '',
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
                     ? existingTeamData.tshirts
-                    : [{ size: '', quantity: '' }]
+                    : [{ size: '', quantity: '' }],
+                // NOVINKA: Inicializácia dát pre Page 5 (ubytovanie, príchod, balíček)
+                accommodation: existingTeamData.accommodation || { type: '' },
+                arrival: existingTeamData.arrival || { type: '', time: null },
+                packageId: existingTeamData.packageId || '',
+                packageDetails: existingTeamData.packageDetails || null
             };
         });
     });
@@ -688,7 +698,15 @@ function App() {
                 tshirts: team.tshirts.map(tshirt => ({
                     ...tshirt,
                     quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                }))
+                })),
+                // Konverzia a uloženie dát Page 5 (ubytovanie, príchod, balíček)
+                accommodation: team.accommodation || { type: 'Bez ubytovania' },
+                arrival: {
+                    type: team.arrival?.type || 'bez dopravy',
+                    time: team.arrival?.time || null
+                },
+                packageId: team.packageId || '',
+                packageDetails: team.packageDetails || null
             }));
         }
 
@@ -708,9 +726,7 @@ function App() {
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
-          teams: teamsDataToSaveFinal,
-          accommodation: formData.accommodation || { type: 'Bez ubytovania' }, // Používame formData.accommodation
-          arrival: formData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Uloženie dát o príchode
+          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -751,9 +767,7 @@ function App() {
               }
             },
             categories: formData.categories,
-            teams: teamsDataFromPage4,
-            accommodation: formData.accommodation || { type: 'Bez ubytovania' }, // Používame formData.accommodation
-            arrival: formData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Odoslanie dát o príchode do Apps Script
+            teams: teamsDataToSaveFinal, // Odosielame celú štruktúru tímov s novými dátami
           };
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
@@ -777,11 +791,9 @@ function App() {
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' },
-        accommodation: { type: '' },
-        arrival: { type: '', time: null }
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({});
+      setTeamsDataFromPage4({}); // Resetujeme tímy
       setPage(1);
 
       setTimeout(async () => {
@@ -826,16 +838,6 @@ function App() {
         return false;
     }
 
-    if (data.accommodation && data.accommodation.type.trim() !== '') {
-        return false;
-    }
-
-    // NOVINKA: Kontrola pre dáta o príchode
-    if (data.arrival && data.arrival.type.trim() !== '') {
-        return false;
-    }
-
-
     let hasSelectedCategories = false;
     if (selectedCategoryRows && selectedCategoryRows.length > 0) {
         hasSelectedCategories = selectedCategoryRows.some(row => row.categoryId && row.teams && row.teams > 0);
@@ -855,7 +857,11 @@ function App() {
                     (team.teamMembers !== undefined && team.teamMembers !== '') ||
                     (team.womenTeamMembers !== undefined && team.womenTeamMembers !== '') ||
                     (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
-                    (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== '')))
+                    (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== ''))) ||
+                    // NOVINKA: Kontrola pre dáta Page 5
+                    (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
+                    (team.arrival?.type && team.arrival.type.trim() !== '') ||
+                    (team.packageId && team.packageId.trim() !== '')
                 );
                 if (hasTeamDetails) {
                     break;
@@ -997,25 +1003,25 @@ function App() {
               React.createElement(Page5Form, {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4,
-                  availableCategoriesMap: categoriesDataFromFirestore,
+                  availableCategoriesMap: categoriesDataFromFirestore, // Provided for completeness, might not be used directly in Page5Form logic
                   handlePrev: handlePrev,
-                  handleSubmit: handleNextPage5ToPage6, // ZMENA: Prechod na Page 6
+                  handleSubmit: handleNextPage5ToPage6,
                   loading: loading,
                   setLoading: setLoading,
                   setRegistrationSuccess: setRegistrationSuccess,
-                  handleChange: handleChange,
-                  isRecaptchaReady: isRecaptchaReady, // NOVINKA: Odovzdanie isRecaptchaReady
-                  tournamentStartDate: registrationStartDate, // ODVETENIE: Odovzdávame registrationStartDate
-                  tournamentEndDate: registrationEndDate,     // ODVETENIE: Odovzdávame registrationEndDate
+                  handleChange: handleChange, // Use the updated handleChange that supports nested team data
+                  isRecaptchaReady: isRecaptchaReady,
+                  tournamentStartDate: registrationStartDate,
+                  tournamentEndDate: registrationEndDate,
               }) :
           page === 6 ? // NOVINKA: Renderovanie Page6Form
               React.createElement(Page6Form, {
                   formData: formData,
                   teamsDataFromPage4: teamsDataFromPage4,
                   handlePrev: handlePrev,
-                  handleSubmit: confirmFinalRegistration, // NOVINKA: Volanie finálneho odoslania
+                  handleSubmit: confirmFinalRegistration,
                   loading: loading,
-                  NotificationModal: NotificationModal, // Odovzdanie NotificationModal
+                  NotificationModal: NotificationModal,
                   notificationMessage: notificationMessage,
                   closeNotification: closeNotification,
               }) : null
