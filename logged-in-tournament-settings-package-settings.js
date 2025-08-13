@@ -1,8 +1,5 @@
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcie showNotification a sendAdminNotification sa očakávajú ako props z nadradeného komponentu.
-// Preto ich tu neimportujeme ani nedefinujeme.
-
 
 export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
   const [packages, setPackages] = React.useState([]);
@@ -14,12 +11,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const [showConfirmDeletePackageModal, setShowConfirmDeletePackageModal] = React.useState(false);
   const [packageToDelete, setPackageToDelete] = React.useState(null);
 
-  // packageMeals bude teraz obsahovať aj informácie o občerstvení (0 alebo 1)
   const [packageMeals, setPackageMeals] = React.useState({});
-  // packageRefreshments sa už nepoužíva pre túto logiku, ale ponechávam deklaráciu, ak by bolo v iných častiach kódu
   const [packageRefreshments, setPackageRefreshments] = React.useState([]);
 
-  // Nový stav pre ovládanie viditeľnosti stĺpca občerstvenia
   const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
 
 
@@ -27,7 +21,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     const dates = [];
     let currentDate = new Date(start);
     while (currentDate <= end) {
-      dates.push(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD
+      dates.push(currentDate.toISOString().split('T')[0]);
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return dates;
@@ -53,9 +47,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
             unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                 const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Zobraz balíčky v abecednom poradí podľa názvu
+                fetchedPackages.sort((a, b) => a.name.localeCompare(b.name));
                 setPackages(fetchedPackages);
             }, (error) => {
-                // Obranná kontrola pre showNotification
                 if (typeof showNotification === 'function') {
                     showNotification(`Chyba pri načítaní balíčkov: ${error.message}`, 'error');
                 } else {
@@ -63,7 +58,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                 }
             });
         } catch (e) {
-            // Obranná kontrola pre showNotification
             if (typeof showNotification === 'function') {
                 showNotification(`Chyba pri nastavovaní poslucháča pre balíčky: ${e.message}`, 'error');
             } else {
@@ -86,24 +80,21 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('add');
     setNewPackageName('');
     setNewPackagePrice(0);
-    setPackageMeals({}); // Reset na prázdny objekt pre nové balíčky
-    setPackageRefreshments([]); // Reset na prázdne pole
+    setPackageMeals({});
+    setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
-    setShowRefreshmentColumn(false); // Predvolene skryť pri pridávaní nového balíčka
+    setShowRefreshmentColumn(false);
   };
 
   const handleOpenEditPackageModal = (pkg) => {
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
-    // Pri editácii, ak meals chýbajú, inicializujte ich na prázdne objekty/polia
     setPackageMeals(pkg.meals || {});
-    // Stará štruktúra občerstvenia sa už nepoužíva
-    setPackageRefreshments([]); 
+    setPackageRefreshments([]);
     setCurrentPackageEdit(pkg);
     setShowPackageModal(true);
-    // Ak existuje aspoň jeden záznam s občerstvením, zobrazíme stĺpec
     const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
     setShowRefreshmentColumn(hasRefreshment);
   };
@@ -116,28 +107,25 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setPackageModalMode('add');
-    setShowRefreshmentColumn(false); // Skryť pri zatvorení modálu
+    setShowRefreshmentColumn(false);
   };
 
-  // Upravená funkcia pre zmenu stavu checkboxu pre jedlá A občerstvenie
   const handleMealChange = (date, mealType, isChecked) => {
     setPackageMeals(prevMeals => ({
       ...prevMeals,
       [date]: {
         ...(prevMeals[date] || {}),
-        [mealType]: isChecked ? 1 : 0 // Ak je začiarknuté, nastavíme 1, inak 0
+        [mealType]: isChecked ? 1 : 0
       }
     }));
   };
 
-  // Tieto funkcie sa už nebudú používať, pretože občerstvenie je teraz súčasťou packageMeals
-  const handleAddRefreshment = (date) => { /* Neaktívne */ };
-  const handleRemoveRefreshment = (date, itemIndex) => { /* Neaktívne */ };
-  const handleRefreshmentItemChange = (date, itemIndex, field, value) => { /* Neaktívne */ };
+  const handleAddRefreshment = (date) => { };
+  const handleRemoveRefreshment = (date, itemIndex) => { };
+  const handleRefreshmentItemChange = (date, itemIndex, field, value) => { };
 
 
   const handleSavePackage = async () => {
-    // Obranná kontrola
     if (typeof showNotification !== 'function') {
         console.error("DEBUG: showNotification prop is not a function in handleSavePackage!");
         return; 
@@ -161,16 +149,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       return;
     }
 
-    // Odstránená validácia pre packageRefreshments, pretože sa zmenila štruktúra
-    // for (const dayRefreshment of packageRefreshments) {
-    //     for (const item of dayRefreshment.items) {
-    //         if (!item.name.trim() || isNaN(item.price) || item.price < 0) {
-    //             showNotification("Každé občerstvenie musí mať názov a nezápornú cenu.", 'error');
-    //             return;
-    //         }
-    //     }
-    // }
-
 
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
 
@@ -183,8 +161,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals, // Uloží sa aj informácia o občerstvení tu
-          refreshments: [], // Občerstvenie sa už nebude ukladať samostatne
+          meals: packageMeals,
+          refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
@@ -200,8 +178,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals, // Uloží sa aj informácia o občerstvení tu
-          refreshments: [], // Občerstvenie sa už nebude ukladať samostatne
+          meals: packageMeals,
+          refreshments: [],
           updatedAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
@@ -226,7 +204,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const handleDeletePackage = async () => {
-    // Obranná kontrola
     if (typeof showNotification !== 'function') {
         console.error("DEBUG: showNotification prop is not a function in handleDeletePackage!");
         console.error("Chyba: Nemáte oprávnenie na zmazanie balíčka (showNotification not available).");
@@ -270,11 +247,29 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                 packages.map((pkg) => (
                     React.createElement(
                         'div',
-                        { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} (Cena: ${pkg.price}€)`),
+                        { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
+                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} (Cena: ${pkg.price}€)`),
                         React.createElement(
                             'div',
-                            { className: 'flex space-x-2' },
+                            { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
+                            Object.keys(pkg.meals || {}).sort().map(date => {
+                                const mealsForDay = pkg.meals[date];
+                                const includedItems = [];
+                                if (mealsForDay.breakfast === 1) includedItems.push('Raňajky');
+                                if (mealsForDay.lunch === 1) includedItems.push('Obed');
+                                if (mealsForDay.dinner === 1) includedItems.push('Večera');
+                                if (mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+
+                                if (includedItems.length > 0) {
+                                    const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                    return React.createElement('p', { key: date, className: 'ml-4' }, `${displayDate}: ${includedItems.join(', ')}`);
+                                }
+                                return null;
+                            })
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-2 mt-2 w-full md:w-auto md:mt-0 md:ml-auto justify-end' },
                             React.createElement(
                                 'button',
                                 {
@@ -323,13 +318,12 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         { className: 'modal-content' },
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, packageModalMode === 'add' ? 'Pridať nový balíček' : `Upraviť balíček: ${currentPackageEdit?.name}`),
         
-        // Nový label pre Názov balíčka
         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackageName' }, 'Názov balíčka'),
         React.createElement(
           'input',
           {
             type: 'text',
-            id: 'newPackageName', // Pridané ID pre label
+            id: 'newPackageName',
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
             placeholder: 'Zadajte názov balíčka',
             value: newPackageName,
@@ -337,17 +331,16 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           }
         ),
         
-        // Nový label a úprava pre Cenu balíčka s "€"
         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackagePrice' }, 'Cena balíčka'),
         React.createElement(
             'div',
-            { className: 'flex items-center mb-4' }, // Flexbox na zarovnanie inputu a "€"
+            { className: 'flex items-center mb-4' },
             React.createElement(
                 'input',
                 {
                   type: 'number',
-                  id: 'newPackagePrice', // Pridané ID pre label
-                  className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2', // Pridaný pravý margin
+                  id: 'newPackagePrice',
+                  className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2',
                   placeholder: 'Zadajte cenu balíčka',
                   value: newPackagePrice,
                   onChange: (e) => setNewPackagePrice(parseFloat(e.target.value) || 0),
@@ -355,17 +348,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                   step: 0.01
                 }
             ),
-            React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€') // Znak Euro
+            React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€')
         ),
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
         tournamentDays.length > 0 ? (
             React.createElement(
-                React.Fragment, // Použijeme Fragment na zoskupenie tabuľky a checkboxu
+                React.Fragment,
                 null,
                 React.createElement(
                     'div',
-                    { className: 'overflow-x-auto mb-4' }, // Pre responzívnosť tabuľky na menších obrazovkách
+                    { className: 'overflow-x-auto mb-4' },
                     React.createElement(
                         'table',
                         { className: 'min-w-full bg-white border border-gray-200 rounded-lg shadow-sm' },
@@ -375,11 +368,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                             React.createElement(
                                 'tr',
                                 { className: 'bg-gray-100' },
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-left text-sm font-semibold text-gray-600 w-1/4' }, 'Dátum'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'), 
-                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') 
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-left text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Dátum'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Raňajky'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Obed'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Večera'),
+                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Občerstvenie')
                             )
                         ),
                         React.createElement(
@@ -392,7 +385,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                     React.createElement('td', { className: 'py-2 px-1 border-b text-gray-700' },
                                         new Date(date).toLocaleDateString('sk-SK'),
                                         React.createElement('br'),
-                                        React.createElement('span', {className: 'text-xs text-gray-500'}, new Date(date).toLocaleDateString('sk-SK', { weekday: 'long' }))
+                                        React.createElement('span', {className: 'text-xs text-gray-500'}, new Date(date).toLocaleDateString('sk-SK', { weekday: 'short' }))
                                     ),
                                     React.createElement('td', { className: 'py-2 px-1 border-b text-center' },
                                         React.createElement('input', {
