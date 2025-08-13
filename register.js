@@ -744,10 +744,6 @@ function App() {
 
       dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
       setRegistrationSuccess(true);
-      // Pridané: Odhlásenie používateľa po úspešnej registrácii
-      if (authInstance && authInstance.currentUser) {
-          await signOut(authInstance);
-      }
 
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
@@ -760,9 +756,12 @@ function App() {
       setTeamsDataFromPage4({});
       setPage(1);
 
-      setTimeout(() => {
+      setTimeout(async () => { // ZMENA: async funkcia pre setTimeout
+        if (authInstance && authInstance.currentUser) {
+            await signOut(authInstance); // Odhlásenie tesne pred presmerovaním
+        }
         window.location.href = 'login.html';
-      }, 5000);
+      }, 20000);
 
     } catch (globalError) {
       let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
