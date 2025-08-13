@@ -328,7 +328,7 @@ function TournamentSettingsApp() {
     fetchTshirtSizes();
   }, [db, userProfileData]);
 
-  // NOVÉ: Funkcia na odoslanie notifikácie administrátorom
+  // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (notificationData) => {
     if (!db || !user || !user.email) { 
       console.error("Chyba: Databáza alebo používateľ nie je k dispozícii pre odoslanie notifikácie.");
@@ -342,7 +342,7 @@ function TournamentSettingsApp() {
       if (notificationData.type === 'createSize') {
         changesMessage = `Vytvorenie novej veľkosti trička: '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'editSize') {
-        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
+        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' z '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'deleteSize') {
         changesMessage = `Zmazanie veľkosti trička: '${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
@@ -407,23 +407,23 @@ function TournamentSettingsApp() {
 
       // Porovnanie a zber zmien
       if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
-          changes.push(`Dátum začiatku registrácie: '${formatTimestampForNotification(oldData.registrationStartDate)}' -> '${formatToDatetimeLocal(regStart)}'`);
+          changes.push(`Dátum začiatku registrácie: '${formatTimestampForNotification(oldData.registrationStartDate)}' z '${formatToDatetimeLocal(regStart)}'`);
       }
       if ((oldData.registrationEndDate ? oldData.registrationEndDate.toMillis() : null) !== (regEnd ? Timestamp.fromDate(regEnd).toMillis() : null)) {
-          changes.push(`Dátum konca registrácie: '${formatTimestampForNotification(oldData.registrationEndDate)}' -> '${formatToDatetimeLocal(regEnd)}'`);
+          changes.push(`Dátum konca registrácie: '${formatTimestampForNotification(oldData.registrationEndDate)}' z '${formatToDatetimeLocal(regEnd)}'`);
       }
       if ((oldData.dataEditDeadline ? oldData.dataEditDeadline.toMillis() : null) !== (dataEditDead ? Timestamp.fromDate(dataEditDead).toMillis() : null)) {
-          changes.push(`Uzávierka úprav dát: '${formatTimestampForNotification(oldData.dataEditDeadline)}' -> '${formatToDatetimeLocal(dataEditDead)}'`);
+          changes.push(`Uzávierka úprav dát: '${formatTimestampForNotification(oldData.dataEditDeadline)}' z '${formatToDatetimeLocal(dataEditDead)}'`);
       }
       if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
-          changes.push(`Uzávierka úprav súpisiek: '${formatTimestampForNotification(oldData.rosterEditDeadline)}' -> '${formatToDatetimeLocal(rosterEditDead)}'`);
+          changes.push(`Uzávierka úprav súpisiek: '${formatTimestampForNotification(oldData.rosterEditDeadline)}' z '${formatToDatetimeLocal(rosterEditDead)}'`);
       }
 
       if (oldData.numberOfPlayers !== numberOfPlayers) {
-          changes.push(`Maximálny počet hráčov v tíme: '${oldData.numberOfPlayers || 0}' -> '${numberOfPlayers}'`);
+          changes.push(`Maximálny počet hráčov v tíme: '${oldData.numberOfPlayers || 0}' z '${numberOfPlayers}'`);
       }
       if (oldData.numberOfImplementationTeam !== numberOfImplementationTeam) {
-          changes.push(`Maximálny počet členov realizačného tímu: '${oldData.numberOfImplementationTeam || 0}' -> '${numberOfImplementationTeam}'`);
+          changes.push(`Maximálny počet členov realizačného tímu: '${oldData.numberOfImplementationTeam || 0}' z '${numberOfImplementationTeam}'`);
       }
 
       await setDoc(settingsDocRef, {
