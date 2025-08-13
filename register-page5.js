@@ -568,9 +568,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'submit',
-                        className: nextButtonClasses,
-                        disabled: loading || !isFormValidPage5,
+                        className: nextButtonClasses, 
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage4,
+                        tabIndex: 2
                     },
+                    // Zobrazenie načítavacieho spinnera počas prechodu
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
