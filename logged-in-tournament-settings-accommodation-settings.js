@@ -173,7 +173,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
                     React.createElement(
                         'div',
                         { key: acc.type, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (Kapacita: ${acc.capacity})`),
+                        React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (kapacita: ${acc.capacity})`),
                         React.createElement(
                             'div',
                             { className: 'flex space-x-2' },
