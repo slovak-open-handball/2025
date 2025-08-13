@@ -50,6 +50,389 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
+// Komponent pre správu príchodu a ubytovania tímu
+function TeamAccommodationAndArrival({ 
+    team, 
+    categoryName, 
+    teamIndex, 
+    handleChange, 
+    loading, 
+    accommodationTypes, 
+    accommodationCounts, 
+    tournamentStartDateDisplay, 
+    generateTimeOptions 
+}) {
+    const db = getFirestore();
+
+    // Lokálne stavy pre ubytovanie a príchod (aby sa zmeny prejavili lokálne pred handleChange)
+    const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
+    const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
+    const [arrivalHours, setArrivalHours] = React.useState(() => {
+        const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
+        return initialTime ? initialTime.split(':')[0] : '';
+    });
+    const [arrivalMinutes, setArrivalMinutes] = React.useState(() => {
+        const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
+        return initialTime ? initialTime.split(':')[1] : '';
+    });
+
+    // Synchronizácia lokálnych stavov s propmi (pri zmene tímu)
+    React.useEffect(() => {
+        setSelectedAccommodation(team.accommodation?.type || '');
+        setArrivalType(team.arrival?.type || '');
+        const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
+        setArrivalHours(initialTime ? initialTime.split(':')[0] : '');
+        setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
+    }, [team.accommodation, team.arrival]);
+
+    const handleAccommodationChange = (e) => {
+        const newValue = e.target.value;
+        setSelectedAccommodation(newValue);
+        handleChange(categoryName, teamIndex, 'accommodation', { type: newValue });
+    };
+
+    const handleArrivalChange = (e) => {
+        const newValue = e.target.value;
+        setArrivalType(newValue);
+        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
+            setArrivalHours('');
+            setArrivalMinutes('');
+            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null });
+        } else {
+            const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
+            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString });
+        }
+    };
+
+    const handleTimeSelectChange = (e) => {
+        const { id, value } = e.target;
+        let newHours = arrivalHours;
+        let newMinutes = arrivalMinutes;
+
+        if (id === 'arrivalHours') {
+            newHours = value;
+            setArrivalHours(value);
+        } else if (id === 'arrivalMinutes') {
+            newMinutes = value;
+            setArrivalMinutes(value);
+        }
+        
+        const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
+        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString });
+    };
+
+    return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+            'div',
+            { className: 'border-t border-gray-200 pt-4 mt-4' },
+            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber typu ubytovania'),
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement(
+                    'div',
+                    { className: 'space-y-2' },
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: `accommodationType-${categoryName}-${teamIndex}`,
+                            value: 'Bez ubytovania',
+                            checked: selectedAccommodation === 'Bez ubytovania',
+                            onChange: handleAccommodationChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
+                    ),
+                    accommodationTypes.map((acc) => {
+                        const currentCount = accommodationCounts[acc.type] || 0;
+                        const isFull = currentCount >= acc.capacity;
+                        const isDisabled = isFull || loading;
+                        const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
+
+                        return React.createElement(
+                            'label',
+                            { 
+                                key: acc.type, 
+                                className: labelClasses,
+                            },
+                            React.createElement('input', {
+                                type: 'radio',
+                                name: `accommodationType-${categoryName}-${teamIndex}`,
+                                value: acc.type,
+                                checked: selectedAccommodation === acc.type,
+                                onChange: handleAccommodationChange,
+                                className: 'form-radio h-5 w-5 text-blue-600',
+                                disabled: isDisabled,
+                            }),
+                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 
+                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}` 
+                            )
+                        );
+                    })
+                )
+            )
+        ),
+
+        React.createElement(
+            'div',
+            { className: 'border-t border-gray-200 pt-4 mt-4' },
+            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber spôsobu príchodu na turnaj'),
+            React.createElement(
+                'p',
+                { className: 'text-sm text-gray-600 mb-4' },
+                `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${tournamentStartDateDisplay} do Žiliny. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
+            ),
+            React.createElement(
+                'div',
+                { className: 'mb-4 space-y-2' },
+                React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: `arrivalType-${categoryName}-${teamIndex}`,
+                            value: 'vlaková doprava',
+                            checked: arrivalType === 'vlaková doprava',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
+                    ),
+                    arrivalType === 'vlaková doprava' && React.createElement(
+                        'div',
+                        { className: 'ml-8 mb-4' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-4' },
+                            React.createElement(
+                                'div',
+                                { className: 'flex-1' },
+                                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `arrivalHours-${categoryName}-${teamIndex}` }, 'Hodina'),
+                                React.createElement('select', {
+                                    id: `arrivalHours-${categoryName}-${teamIndex}`,
+                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                    value: arrivalHours || '',
+                                    onChange: handleTimeSelectChange,
+                                    required: true,
+                                    disabled: loading,
+                                }, generateTimeOptions(24))
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'flex-1' },
+                                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `arrivalMinutes-${categoryName}-${teamIndex}` }, 'Minúta'),
+                                React.createElement('select', {
+                                    id: `arrivalMinutes-${categoryName}-${teamIndex}`,
+                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                    value: arrivalMinutes || '',
+                                    onChange: handleTimeSelectChange,
+                                    required: true,
+                                    disabled: loading,
+                                }, generateTimeOptions(60))
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: `arrivalType-${categoryName}-${teamIndex}`,
+                            value: 'autobusová doprava',
+                            checked: arrivalType === 'autobusová doprava',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
+                    ),
+                    arrivalType === 'autobusová doprava' && React.createElement(
+                        'div',
+                        { className: 'ml-8 mb-4' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-4' },
+                            React.createElement(
+                                'div',
+                                { className: 'flex-1' },
+                                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `arrivalHours-${categoryName}-${teamIndex}` }, 'Hodina'),
+                                React.createElement('select', {
+                                    id: `arrivalHours-${categoryName}-${teamIndex}`,
+                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                    value: arrivalHours || '',
+                                    onChange: handleTimeSelectChange,
+                                    required: true,
+                                    disabled: loading,
+                                }, generateTimeOptions(24))
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'flex-1' },
+                                React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `arrivalMinutes-${categoryName}-${teamIndex}` }, 'Minúta'),
+                                React.createElement('select', {
+                                    id: `arrivalMinutes-${categoryName}-${teamIndex}`,
+                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                    value: arrivalMinutes || '',
+                                    onChange: handleTimeSelectChange,
+                                    required: true,
+                                    disabled: loading,
+                                }, generateTimeOptions(60))
+                            )
+                        )
+                    )
+                ),
+                React.createElement(
+                    'label',
+                    { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                    React.createElement('input', {
+                        type: 'radio',
+                        name: `arrivalType-${categoryName}-${teamIndex}`,
+                        value: 'vlastná doprava',
+                        checked: arrivalType === 'vlastná doprava',
+                        onChange: handleArrivalChange,
+                        className: 'form-radio h-5 w-5 text-blue-600',
+                        disabled: loading,
+                    }),
+                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlastná doprava')
+                ),
+                React.createElement(
+                    'label',
+                    { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                    React.createElement('input', {
+                        type: 'radio',
+                        name: `arrivalType-${categoryName}-${teamIndex}`,
+                        value: 'bez dopravy',
+                        checked: arrivalType === 'bez dopravy',
+                        onChange: handleArrivalChange,
+                        className: 'form-radio h-5 w-5 text-blue-600',
+                        disabled: loading,
+                    }),
+                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Bez dopravy')
+                )
+            )
+        )
+    );
+}
+
+// Komponent pre výber balíčka tímu
+function TeamPackageSettings({ 
+    team, 
+    categoryName, 
+    teamIndex, 
+    handleChange, 
+    loading, 
+    packages, 
+    tournamentDays 
+}) {
+    const [selectedPackageId, setSelectedPackageId] = React.useState(team.packageId || '');
+
+    React.useEffect(() => {
+        setSelectedPackageId(team.packageId || '');
+    }, [team.packageId]);
+
+    const handlePackageChange = (e) => {
+        const newPackageId = e.target.value;
+        setSelectedPackageId(newPackageId);
+        const selectedPkg = packages.find(pkg => pkg.id === newPackageId);
+        handleChange(categoryName, teamIndex, 'packageId', newPackageId);
+        handleChange(categoryName, teamIndex, 'packageDetails', selectedPkg ? {
+            name: selectedPkg.name,
+            price: selectedPkg.price,
+            meals: selectedPkg.meals
+        } : null);
+    };
+
+    return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+            'div',
+            { className: 'border-t border-gray-200 pt-4 mt-4' },
+            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka (stravovanie a občerstvenie)'),
+            React.createElement(
+                'div',
+                { className: 'mb-4 space-y-2' },
+                packages.length > 0 ? (
+                    packages.map((pkg) => (
+                        React.createElement(
+                            'label',
+                            {
+                                key: pkg.id,
+                                className: `flex flex-col p-3 rounded-lg border cursor-pointer ${selectedPackageId === pkg.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} ${loading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors duration-200`,
+                            },
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center justify-between w-full' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center' },
+                                    React.createElement('input', {
+                                        type: 'radio',
+                                        name: `selectedPackage-${categoryName}-${teamIndex}`,
+                                        value: pkg.id,
+                                        checked: selectedPackageId === pkg.id,
+                                        onChange: handlePackageChange,
+                                        className: 'form-radio h-5 w-5 text-blue-600',
+                                        disabled: loading,
+                                    }),
+                                    React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
+                                ),
+                                React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price}€`)
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'ml-8 text-sm text-gray-600 mt-2' },
+                                (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
+                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
+                                        const mealsForDay = pkg.meals[date];
+                                        const includedItems = [];
+                                        
+                                        if (isNaN(new Date(date).getTime())) {
+                                            return null;
+                                        }
+
+                                        if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
+                                        if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
+                                        if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
+                                        if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+
+                                        if (includedItems.length > 0) {
+                                            const dateObj = new Date(date + 'T00:00:00');
+                                            const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                            return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
+                                        }
+                                        return null;
+                                    }).filter(item => item !== null)
+                                ) : (
+                                    React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
+                                ),
+                                (pkg.meals && pkg.meals.participantCard === 1) &&
+                                    React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'Zahŕňa účastnícku kartu')
+                            )
+                        )
+                    ))
+                ) : (
+                    React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
+                )
+            )
+        )
+    );
+}
+
+
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) {
     const db = getFirestore();
 
@@ -62,22 +445,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
-    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
-
     const [packages, setPackages] = React.useState([]);
-    const [selectedPackageId, setSelectedPackageId] = React.useState(formData.packageId || '');
-
-    const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
-
-    const [arrivalHours, setArrivalHours] = React.useState(() => {
-        const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
-        return initialTime ? initialTime.split(':')[0] : '';
-    });
-    const [arrivalMinutes, setArrivalMinutes] = React.useState(() => {
-        const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
-        return initialTime ? initialTime.split(':')[1] : '';
-    });
 
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
@@ -215,66 +584,50 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [db]);
 
 
-    const handleAccommodationChange = (e) => {
-        const newValue = e.target.value;
-        setSelectedAccommodation(newValue);
-        handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
-    };
-
-    const handlePackageChange = (e) => {
-        const newPackageId = e.target.value;
-        setSelectedPackageId(newPackageId);
-        const selectedPkg = packages.find(pkg => pkg.id === newPackageId);
-        handleChange({ target: { id: 'package', value: selectedPkg || null } });
-        handleChange({ target: { id: 'packageId', value: newPackageId } });
-    };
-
-    const handleArrivalChange = (e) => {
-        const newValue = e.target.value;
-        setArrivalType(newValue);
-        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
-            setArrivalHours('');
-            setArrivalMinutes('');
-            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } });
-        } else {
-            const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
-            handleChange({ target: { id: 'arrival', value: { type: newValue, time: timeString } } });
-        }
-    };
-
-    const handleTimeSelectChange = (e) => {
-        const { id, value } = e.target;
-        let newHours = arrivalHours;
-        let newMinutes = arrivalMinutes;
-
-        if (id === 'arrivalHours') {
-            newHours = value;
-            setArrivalHours(value);
-        } else if (id === 'arrivalMinutes') {
-            newMinutes = value;
-            setArrivalMinutes(value);
-        }
-        
-        const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
-        handleChange({ target: { id: 'arrival', value: { type: arrivalType, time: timeString } } });
+    // Nová handleChange funkcia pre aktualizáciu vnorených dát tímu
+    const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
+        // Toto volá pôvodnú handleChange z App.js, ktorá vie pracovať s teamsDataFromPage4
+        handleChange({
+            target: {
+                id: 'teamsDataFromPage4', // Špeciálny ID, ktorý App.js rozpozná
+                value: {
+                    categoryName: categoryName,
+                    teamIndex: teamIndex,
+                    field: field,
+                    data: value
+                }
+            }
+        });
     };
 
 
     const isFormValidPage5 = React.useMemo(() => {
-        if (accommodationTypes.length > 0 && !selectedAccommodation) {
+        // Ak nie sú žiadne tímy, formulár nie je platný
+        if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) {
             return false;
         }
 
-        if (packages.length > 0 && !selectedPackageId) {
-            return false;
-        }
+        // Iterujeme cez všetky tímy a kontrolujeme validáciu
+        for (const categoryName in teamsDataFromPage4) {
+            for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
+                // Validácia ubytovania pre každý tím
+                if (accommodationTypes.length > 0 && !team.accommodation?.type) {
+                    return false;
+                }
 
-        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!formData.arrival?.time || formData.arrival.time === '')) {
-            return false;
-        }
+                // Validácia balíčka pre každý tím
+                if (packages.length > 0 && !team.packageId) {
+                    return false;
+                }
 
+                // Validácia príchodu pre každý tím
+                if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time === '')) {
+                    return false;
+                }
+            }
+        }
         return true;
-    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time, packages, selectedPackageId]);
+    }, [teamsDataFromPage4, accommodationTypes, packages]);
 
 
     const nextButtonClasses = `
@@ -292,37 +645,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification(); 
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod).", 'error');
             setNotificationType('error');
             setLoading(false); 
             return;
         }
 
         try {
-            const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava')
-                                     ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
-                                     : null;
-            
-            const selectedPkgDetails = packages.find(pkg => pkg.id === selectedPackageId);
-
-            const updatedFormDataForNextPage = {
-                ...formData,
-                accommodation: {
-                    type: selectedAccommodation
-                },
-                arrival: {
-                    type: arrivalType,
-                    time: finalArrivalTime
-                },
-                packageId: selectedPackageId,
-                packageDetails: selectedPkgDetails ? {
-                    name: selectedPkgDetails.name,
-                    price: selectedPkgDetails.price,
-                    meals: selectedPkgDetails.meals
-                } : null
-            };
-            
-            await handleSubmit(updatedFormDataForNextPage); 
+            // Pred odoslaním na handleSubmit, teamsDataFromPage4 už obsahuje všetky aktualizované údaje
+            // Všetky konverzie a nastavenia prebiehajú už v handleChange funkciách v App.js
+            await handleSubmit(teamsDataFromPage4); 
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -351,289 +683,54 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - Ubytovanie a Príchod'
+            'Registrácia - Ubytovanie a Príchod Tímov'
         ),
 
         React.createElement(
             'form',
             { onSubmit: handlePage5Submit, className: 'space-y-4' },
-            React.createElement(
-                'div',
-                { className: 'border-t border-gray-200 pt-4 mt-4' },
-                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber typu ubytovania'),
-                React.createElement(
-                    'div',
-                    { className: 'mb-4' },
+            Object.keys(teamsDataFromPage4).length === 0 ? (
+                React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
+            ) : (
+                Object.keys(teamsDataFromPage4).map(categoryName => (
                     React.createElement(
                         'div',
-                        { className: 'space-y-2' },
-                        React.createElement(
-                            'label',
-                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                            React.createElement('input', {
-                                type: 'radio',
-                                name: 'accommodationType',
-                                value: 'Bez ubytovania',
-                                checked: selectedAccommodation === 'Bez ubytovania',
-                                onChange: handleAccommodationChange,
-                                className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: loading,
-                            }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
-                        ),
-                        accommodationTypes.map((acc) => {
-                            const currentCount = accommodationCounts[acc.type] || 0;
-                            const isFull = currentCount >= acc.capacity;
-                            const isDisabled = isFull || loading;
-                            const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
+                        { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
+                        React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
+                        (teamsDataFromPage4[categoryName] || []).filter(t => t).map((team, teamIndex) => (
+                            React.createElement(
+                                'div',
+                                { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
+                                React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
 
-                            return React.createElement(
-                                'label',
-                                { 
-                                    key: acc.type, 
-                                    className: labelClasses,
-                                },
-                                React.createElement('input', {
-                                    type: 'radio',
-                                    name: 'accommodationType',
-                                    value: acc.type,
-                                    checked: selectedAccommodation === acc.type,
-                                    onChange: handleAccommodationChange,
-                                    className: 'form-radio h-5 w-5 text-blue-600',
-                                    disabled: isDisabled,
+                                // Komponent pre ubytovanie a príchod tímu
+                                React.createElement(TeamAccommodationAndArrival, {
+                                    team: team,
+                                    categoryName: categoryName,
+                                    teamIndex: teamIndex,
+                                    handleChange: handleTeamDataChange,
+                                    loading: loading,
+                                    accommodationTypes: accommodationTypes,
+                                    accommodationCounts: accommodationCounts,
+                                    tournamentStartDateDisplay: tournamentStartDateDisplay,
+                                    generateTimeOptions: generateTimeOptions,
                                 }),
-                                React.createElement('span', { className: 'ml-3 text-gray-800' }, 
-                                    `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}` 
-                                )
-                            );
-                        })
-                    )
-                )
-            ),
 
-            React.createElement(
-                'div',
-                { className: 'border-t border-gray-200 pt-4 mt-4' },
-                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber spôsobu príchodu na turnaj'),
-                React.createElement(
-                    'p',
-                    { className: 'text-sm text-gray-600 mb-4' },
-                    `Ak budete prichádzať verejnou dopravou a je potrebné pre Vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${tournamentStartDateDisplay} do Žiliny. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 space-y-2' },
-                    React.createElement(
-                        React.Fragment,
-                        null,
-                        React.createElement(
-                            'label',
-                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                            React.createElement('input', {
-                                type: 'radio',
-                                name: 'arrivalType',
-                                value: 'vlaková doprava',
-                                checked: arrivalType === 'vlaková doprava',
-                                onChange: handleArrivalChange,
-                                className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: loading,
-                            }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
-                        ),
-                        arrivalType === 'vlaková doprava' && React.createElement(
-                            'div',
-                            { className: 'ml-8 mb-4' },
-                            React.createElement(
-                                'div',
-                                { className: 'flex space-x-4' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
-                                    React.createElement('select', {
-                                        id: 'arrivalHours',
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: arrivalHours || '',
-                                        onChange: handleTimeSelectChange,
-                                        required: true,
-                                        disabled: loading,
-                                    }, generateTimeOptions(24))
-                                ),
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
-                                    React.createElement('select', {
-                                        id: 'arrivalMinutes',
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: arrivalMinutes || '',
-                                        onChange: handleTimeSelectChange,
-                                        required: true,
-                                        disabled: loading,
-                                    }, generateTimeOptions(60))
-                                )
-                            )
-                        )
-                    ),
-                    React.createElement(
-                        React.Fragment,
-                        null,
-                        React.createElement(
-                            'label',
-                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                            React.createElement('input', {
-                                type: 'radio',
-                                name: 'arrivalType',
-                                value: 'autobusová doprava',
-                                checked: arrivalType === 'autobusová doprava',
-                                onChange: handleArrivalChange,
-                                className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: loading,
-                            }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
-                        ),
-                        arrivalType === 'autobusová doprava' && React.createElement(
-                            'div',
-                            { className: 'ml-8 mb-4' },
-                            React.createElement(
-                                'div',
-                                { className: 'flex space-x-4' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
-                                    React.createElement('select', {
-                                        id: 'arrivalHours',
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: arrivalHours || '',
-                                        onChange: handleTimeSelectChange,
-                                        required: true,
-                                        disabled: loading,
-                                    }, generateTimeOptions(24))
-                                ),
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
-                                    React.createElement('select', {
-                                        id: 'arrivalMinutes',
-                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                        value: arrivalMinutes || '',
-                                        onChange: handleTimeSelectChange,
-                                        required: true,
-                                        disabled: loading,
-                                    }, generateTimeOptions(60))
-                                )
-                            )
-                        )
-                    ),
-                    React.createElement(
-                        'label',
-                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'arrivalType',
-                            value: 'vlastná doprava',
-                            checked: arrivalType === 'vlastná doprava',
-                            onChange: handleArrivalChange,
-                            className: 'form-radio h-5 w-5 text-blue-600',
-                            disabled: loading,
-                        }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlastná doprava')
-                    ),
-                    React.createElement(
-                        'label',
-                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'arrivalType',
-                            value: 'bez dopravy',
-                            checked: arrivalType === 'bez dopravy',
-                            onChange: handleArrivalChange,
-                            className: 'form-radio h-5 w-5 text-blue-600',
-                            disabled: loading,
-                        }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Bez dopravy')
-                    )
-                )
-            ),
-
-            React.createElement(
-                'div',
-                { className: 'border-t border-gray-200 pt-4 mt-4' },
-                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber balíčka (stravovanie a občerstvenie)'),
-                React.createElement(
-                    'div',
-                    { className: 'mb-4 space-y-2' },
-                    packages.length > 0 ? (
-                        packages.map((pkg) => (
-                            React.createElement(
-                                'label',
-                                {
-                                    key: pkg.id,
-                                    className: `flex flex-col p-3 rounded-lg border cursor-pointer ${selectedPackageId === pkg.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} ${loading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors duration-200`,
-                                },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center justify-between w-full' },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center' },
-                                        React.createElement('input', {
-                                            type: 'radio',
-                                            name: 'selectedPackage',
-                                            value: pkg.id,
-                                            checked: selectedPackageId === pkg.id,
-                                            onChange: handlePackageChange,
-                                            className: 'form-radio h-5 w-5 text-blue-600',
-                                            disabled: loading,
-                                        }),
-                                        React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
-                                    ),
-                                    React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price}€`)
-                                ),
-                                React.createElement(
-                                    'div',
-                                    { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                    (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
-                                        // Combine dates from tournamentDays and pkg.meals keys
-                                        [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
-                                            const mealsForDay = pkg.meals[date];
-                                            const includedItems = [];
-                                            
-                                            // Make sure the key is a valid date string
-                                            if (isNaN(new Date(date).getTime())) {
-                                                return null;
-                                            }
-
-                                            if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
-                                            if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
-                                            if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
-                                            if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
-
-                                            if (includedItems.length > 0) {
-                                                const dateObj = new Date(date + 'T00:00:00'); // Ensure UTC for consistent day interpretation
-                                                const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
-                                                return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
-                                            }
-                                            return null;
-                                        }).filter(item => item !== null) // Filter out nulls from map
-                                    ) : (
-                                        React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
-                                    ),
-                                    // Display participant card separately if included
-                                    (pkg.meals && pkg.meals.participantCard === 1) &&
-                                        React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'Zahŕňa účastnícku kartu')
-                                )
+                                // Komponent pre výber balíčka tímu
+                                React.createElement(TeamPackageSettings, {
+                                    team: team,
+                                    categoryName: categoryName,
+                                    teamIndex: teamIndex,
+                                    handleChange: handleTeamDataChange,
+                                    loading: loading,
+                                    packages: packages,
+                                    tournamentDays: tournamentDays,
+                                })
                             )
                         ))
-                    ) : (
-                        React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
                     )
-                )
+                ))
             ),
-
-
             React.createElement(
                 'div',
                 { className: 'flex justify-between mt-6' },
