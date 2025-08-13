@@ -1005,6 +1005,8 @@ function App() {
                   setRegistrationSuccess: setRegistrationSuccess,
                   handleChange: handleChange,
                   isRecaptchaReady: isRecaptchaReady, // NOVINKA: Odovzdanie isRecaptchaReady
+                  tournamentStartDate: registrationStartDate, // ODVETENIE: Odovzdávame registrationStartDate
+                  tournamentEndDate: registrationEndDate,     // ODVETENIE: Odovzdávame registrationEndDate
               }) :
           page === 6 ? // NOVINKA: Renderovanie Page6Form
               React.createElement(Page6Form, {
