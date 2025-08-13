@@ -65,9 +65,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Stavy pre ubytovanie
     const [accommodationTypes, setAccommodationTypes] = React.useState([]); // Správny názov stavovej premennej
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
+    const [accommodationCounts, setAccommodationCounts] = React.useState({}); // ZMENA: Inicializácia na prázdny objekt
 
     // Stavy pre príchod
-    const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || ''); // ZMENA: Názov premennej je 'arrivalType'
+    const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
     const [arrivalTime, setArrivalTime] = React.useState(formData.arrival?.time || '');
 
     // NOVINKA: Stav pre dátum začiatku turnaja
@@ -210,7 +211,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         
         const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
-        handleChange({ target: { id: 'arrival', value: { type: arrivalType, time: timeString } } }); // ZMENA: Používam 'arrivalType'
+        handleChange({ target: { id: 'arrival', value: { type: arrivalType, time: timeString } } });
     };
 
 
@@ -221,7 +222,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
-        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) { // ZMENA: Používam 'arrivalType'
+        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) {
             return false;
         }
 
@@ -250,7 +251,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification();
 
         try {
-            const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') // ZMENA: Používam 'arrivalType'
+            const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava')
                                      ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
                                      : null;
 
@@ -260,7 +261,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     type: selectedAccommodation
                 },
                 arrival: {
-                    type: arrivalType, // ZMENA: Používam 'arrivalType'
+                    type: arrivalType,
                     time: finalArrivalTime
                 }
             };
@@ -408,14 +409,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             type: 'radio',
                             name: 'arrivalType',
                             value: 'vlaková doprava',
-                            checked: arrivalType === 'vlaková doprava', // ZMENA: Používam 'arrivalType'
+                            checked: arrivalType === 'vlaková doprava',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
                     ),
-                    (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && React.createElement( // ZMENA: Používam 'arrivalType'
+                    (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && React.createElement(
                         'div',
                         { className: 'ml-8' }, // Odsadenie pre pole času
                         React.createElement(
@@ -461,7 +462,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             type: 'radio',
                             name: 'arrivalType',
                             value: 'autobusová doprava',
-                            checked: arrivalType === 'autobusová doprava', // ZMENA: Používam 'arrivalType'
+                            checked: arrivalType === 'autobusová doprava',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
@@ -475,7 +476,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             type: 'radio',
                             name: 'arrivalType',
                             value: 'vlastná doprava',
-                            checked: arrivalType === 'vlastná doprava', // ZMENA: Používam 'arrivalType'
+                            checked: arrivalType === 'vlastná doprava',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
@@ -489,7 +490,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             type: 'radio',
                             name: 'arrivalType',
                             value: 'bez dopravy',
-                            checked: arrivalType === 'bez dopravy', // ZMENA: Používam 'arrivalType'
+                            checked: arrivalType === 'bez dopravy',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
