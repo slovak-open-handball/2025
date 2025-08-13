@@ -106,6 +106,10 @@ function App() {
     },
     accommodation: {
         type: ''
+    },
+    arrival: { // NOVINKA: Inicializácia dát o príchode
+        type: '',
+        time: null
     }
   });
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
@@ -430,7 +434,13 @@ function App() {
             ...prev,
             accommodation: value
         }));
-    } else {
+    } else if (id === 'arrival') { // NOVINKA: Handler pre dáta o príchode
+        setFormData(prev => ({
+            ...prev,
+            arrival: value
+        }));
+    }
+    else {
       setFormData(prev => ({ ...prev, [id]: value }));
     }
   };
@@ -685,7 +695,8 @@ function App() {
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
           teams: teamsDataToSaveFinal,
-          accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' }
+          accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' },
+          arrival: finalFormData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Uloženie dát o príchode
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -727,7 +738,8 @@ function App() {
             },
             categories: formData.categories,
             teams: teamsDataFromPage4,
-            accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' }
+            accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' },
+            arrival: finalFormData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Odoslanie dát o príchode do Apps Script
           };
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
@@ -750,7 +762,8 @@ function App() {
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' },
-        accommodation: { type: '' }
+        accommodation: { type: '' },
+        arrival: { type: '', time: null } // Resetovanie formulára
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
       setTeamsDataFromPage4({});
@@ -800,6 +813,12 @@ function App() {
     if (data.accommodation && data.accommodation.type.trim() !== '') {
         return false;
     }
+
+    // NOVINKA: Kontrola pre dáta o príchode
+    if (data.arrival && data.arrival.type.trim() !== '') {
+        return false;
+    }
+
 
     let hasSelectedCategories = false;
     if (selectedCategoryRows && selectedCategoryRows.length > 0) {
