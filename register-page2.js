@@ -38,9 +38,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
 
   // Kontrola, či sú všetky povinné polia vyplnené na Page2
   const isFormValidPage2 = formData.billing?.clubName.trim() !== '' &&
-                           (formData.billing?.ico.trim() !== '' ||
-                            formData.billing?.dic.trim() !== '' ||
-                            formData.billing?.icDph.trim() !== '') &&
+                           formData.billing?.ico.trim() !== '' && // IČO je teraz povinné
                            formData.street?.trim() !== '' && // Pridaná bezpečná navigácia
                            formData.houseNumber?.trim() !== '' && // Pridaná bezpečná navigácia
                            formData.city?.trim() !== '' && // Pridaná bezpečná navigácia
@@ -98,7 +96,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           { className: 'mb-4' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'ico' }, 
             'IČO',
-            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '*') // Zmenené na povinné
           ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
@@ -106,6 +104,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: formData.billing?.ico || '',
             onChange: handleBillingChange,
+            required: true, // Nastavené na povinné
             placeholder: 'Zadajte IČO (len čísla)',
             tabIndex: 10,
             disabled: loading
@@ -115,8 +114,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           'div',
           { className: 'mb-4' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'dic' }, 
-            'DIČ',
-            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+            'DIČ'
           ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering
@@ -124,6 +122,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: formData.billing?.dic || '',
             onChange: handleBillingChange,
+            required: false, // Nastavené na voliteľné
             placeholder: 'Zadajte DIČ (len čísla)',
             tabIndex: 11,
             disabled: loading
@@ -133,8 +132,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
           'div',
           { className: 'mb-4' },
           React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'icDph' }, 
-            'IČ DPH',
-            React.createElement('sup', { className: 'text-red-500 text-xs ml-1' }, '**')
+            'IČ DPH'
           ),
           React.createElement('input', {
             type: 'text', // Keep as text to allow filtering and uppercase conversion
@@ -142,6 +140,7 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
             className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
             value: formData.billing?.icDph || '',
             onChange: handleBillingChange,
+            required: false, // Nastavené na voliteľné
             placeholder: 'Zadajte IČ DPH (napr. SK1234567890)',
             tabIndex: 12,
             disabled: loading
@@ -256,7 +255,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
         'div',
         { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlami
         React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '*'), ' Povinné pole'),
-        React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '**'), ' Povinné aspoň jedno z polí IČO, DIČ, IČ DPH')
+        // Aktualizované vysvetlenie pre IČO, DIČ, IČ DPH
+        React.createElement('p', null, 'Pole DIČ a IČ DPH sú nepovinné.') 
       ),
       React.createElement(
         'div',
