@@ -1,6 +1,6 @@
 import { getFirestore, doc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, selectedCountryDialCode, NotificationModal, closeNotification }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, NotificationModal, closeNotification, handleChange }) {
     const db = getFirestore();
 
     const [accommodations, setAccommodations] = React.useState([]);
@@ -28,12 +28,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setIsAccommodationDataLoaded(true);
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    showNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
+                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.");
+                    setShowNotification(true);
+                    setNotificationType('error');
                     setIsAccommodationDataLoaded(true);
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie:", e);
-                showNotification("Chyba pri nastavovaní poslucháča pre ubytovanie.", 'error');
+                setNotificationMessage("Chyba pri nastavovaní poslucháča pre ubytovanie.");
+                setShowNotification(true);
+                setNotificationType('error');
                 setIsAccommodationDataLoaded(true);
             }
         };
@@ -45,81 +49,48 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeAccommodation();
             }
         };
-    }, []);
+    }, [db, setNotificationMessage, setShowNotification, setNotificationType]);
 
-    // Výpočet obsadenosti ubytovania
+    // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
-        let unsubscribeUsers;
-        const calculateAccommodationCounts = () => {
-            if (!window.db || !isAccommodationDataLoaded) {
-                setTimeout(calculateAccommodationCounts, 100);
+        let unsubscribeCounts;
+        const fetchAccommodationCounts = () => {
+            if (!window.db) {
+                setTimeout(fetchAccommodationCounts, 100);
                 return;
             }
-
             try {
-                const usersCollectionRef = collection(window.db, 'users');
-                unsubscribeUsers = onSnapshot(usersCollectionRef, (snapshot) => {
-                    const counts = { "Bez ubytovania": 0 }; // Inicializácia pre "Bez ubytovania"
-
-                    // Inicializácia počtov pre všetky dostupné ubytovania
-                    accommodations.forEach(acc => {
-                        counts[acc.type] = 0;
-                    });
-
-                    snapshot.forEach(userDoc => {
-                        const userData = userDoc.data();
-                        const selectedAccType = userData.accommodation?.type;
-                        const teamsData = userData.formData?.teamsDataFromPage4;
-
-                        if (selectedAccType && teamsData) {
-                            let totalPeopleForUser = 0;
-                            for (const categoryName in teamsData) {
-                                if (teamsData[categoryName]) {
-                                    for (const team of teamsData[categoryName]) {
-                                        totalPeopleForUser += (parseInt(team.players, 10) || 0) +
-                                                              (parseInt(team.womenTeamMembers, 10) || 0) +
-                                                              (parseInt(team.menTeamMembers, 10) || 0);
-                                    }
-                                }
-                            }
-                            counts[selectedAccType] = (counts[selectedAccType] || 0) + totalPeopleForUser;
-                        } else if (!selectedAccType) {
-                            // Ak používateľ nemá vybrané ubytovanie alebo vybral "Bez ubytovania"
-                            // Predpokladáme, že všetci takíto používatelia spadajú pod "Bez ubytovania"
-                            let totalPeopleForUser = 0;
-                            if (teamsData) {
-                                for (const categoryName in teamsData) {
-                                    if (teamsData[categoryName]) {
-                                        for (const team of teamsData[categoryName]) {
-                                            totalPeopleForUser += (parseInt(team.players, 10) || 0) +
-                                                                  (parseInt(team.womenTeamMembers, 10) || 0) +
-                                                                  (parseInt(team.menTeamMembers, 10) || 0);
-                                        }
-                                    }
-                                }
-                            }
-                            counts["Bez ubytovania"] += totalPeopleForUser;
-                        }
-                    });
-                    setAccommodationCounts(counts);
+                const accommodationCountsDocRef = doc(window.db, 'settings', 'accommodationCounts');
+                unsubscribeCounts = onSnapshot(accommodationCountsDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        setAccommodationCounts(data || {});
+                    } else {
+                        setAccommodationCounts({}); // Ak dokument neexistuje, predvolene prázdny objekt
+                    }
                 }, (error) => {
-                    console.error("Chyba pri načítaní používateľských dát pre obsadenosť ubytovania:", error);
-                    showNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                    console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
+                    setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.");
+                    setShowNotification(true);
+                    setNotificationType('error');
                 });
             } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre používateľov ubytovania:", e);
-                showNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
+                setNotificationMessage("Chyba pri načítaní údajov o obsadenosti ubytovania.");
+                setShowNotification(true);
+                setNotificationType('error');
             }
         };
 
-        calculateAccommodationCounts();
+        fetchAccommodationCounts();
 
         return () => {
-            if (unsubscribeUsers) {
-                unsubscribeUsers();
+            if (unsubscribeCounts) {
+                unsubscribeCounts();
             }
         };
-    }, [db, isAccommodationDataLoaded, accommodations]); // Záleží na načítaných ubytovaniach a DB
+    }, [db, setNotificationMessage, setShowNotification, setNotificationType]);
+
 
     const handleAccommodationChange = (e) => {
         setSelectedAccommodationType(e.target.value);
@@ -140,28 +111,31 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            showNotification("Prosím, vyberte typ ubytovania.", 'error');
+            setNotificationMessage("Prosím, vyberte typ ubytovania.");
+            setShowNotification(true);
+            setNotificationType('error');
             return;
         }
 
         setLoading(true);
+        setNotificationMessage('');
         setShowNotification(false);
         setNotificationType('info');
 
         try {
-            // Predpokladáme, že formData už obsahuje všetky potrebné údaje
-            // Vrátane formData.teamsDataFromPage4 a formData.selectedAccommodation
             const finalFormData = {
                 ...formData,
                 accommodation: {
-                    type: selectedAccommodationType // Zabezpečíme, že sa uloží aktuálne vybrané ubytovanie
+                    type: selectedAccommodationType
                 }
             };
-            await handleSubmit(finalFormData); // Odoslanie finálnych dát
-            setRegistrationSuccess(true); // Nastavíme úspešnú registráciu
+            await handleSubmit(finalFormData); 
+            setRegistrationSuccess(true); 
         } catch (error) {
             console.error("Chyba pri finalizácii registrácie:", error);
-            showNotification(`Chyba pri registrácii: ${error.message}`, 'error');
+            setNotificationMessage(`Chyba pri registrácii: ${error.message}`);
+            setShowNotification(true);
+            setNotificationType('error');
             setRegistrationSuccess(false);
         } finally {
             setLoading(false);
@@ -171,7 +145,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification }),
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
         React.createElement(
             'h2',
@@ -251,7 +225,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Odosielam...'
-                    ) : 'Registrovať sa'
+                    ) : 'Registrovať'
                 )
             )
         )
