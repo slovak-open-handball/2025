@@ -498,6 +498,13 @@ function App() {
         setLoading(false);
         return;
     }
+
+    // NOVINKA: Aktualizácia contactPhoneNumber s predvoľbou krajiny pred prechodom na ďalšiu stránku
+    setFormData(prev => ({ 
+        ...prev, 
+        contactPhoneNumber: `${selectedCountryDialCode}${prev.contactPhoneNumber}`
+    }));
+
     setPage(2);
     setLoading(false);
   };
@@ -630,7 +637,8 @@ function App() {
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
     isRegisteringRef.current = true;
 
-    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
+    // `formData.contactPhoneNumber` by už malo obsahovať predvoľbu vďaka `handleNext`
+    const fullPhoneNumber = formData.contactPhoneNumber;
 
     try {
       const authInstance = window.auth;
@@ -1030,10 +1038,10 @@ function App() {
       ) : isRegistrationClosed ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
           React.createElement(
             'h2',
-            { className: 'text-2xl font-bold mb-2 text-red-600' },
+            { className: 'text-2xl font-bold mb-4 text-red-600' },
             'Registrácia na turnaj je už ukončená.'
           ),
           React.createElement(
@@ -1054,7 +1062,7 @@ function App() {
       ) : (isRegistrationOpen === false && countdown) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
           React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
           registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
             React.createElement(
