@@ -302,7 +302,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                 return null;
                             }),
                             (pkg.meals && pkg.meals.participantCard === 1) &&
-                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'Zahŕňa účastnícku kartu')
+                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'zahŕňa účastnícku kartu')
                         ),
                         React.createElement(
                             'div',
@@ -488,7 +488,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                 checked: hasParticipantCard,
                 onChange: (e) => handleParticipantCardChange(e.target.checked),
             }),
-            React.createElement('label', { htmlFor: 'hasParticipantCard', className: 'ml-2 text-gray-700 font-bold' }, 'Zahŕňa účastnícku kartu')
+            React.createElement('label', { htmlFor: 'hasParticipantCard', className: 'ml-2 text-gray-700 font-bold' }, 'zahŕňa účastnícku kartu')
         ),
 
         React.createElement(
