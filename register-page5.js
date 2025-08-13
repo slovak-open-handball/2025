@@ -70,7 +70,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
 
-    // ZMENA: Robustnejšia inicializácia stavu pre hodiny a minúty (formData.arrival.time je zdrojom pravdy)
+    // Robustnejšia inicializácia stavu pre hodiny a minúty (formData.arrival.time je zdrojom pravdy)
     const [arrivalHours, setArrivalHours] = React.useState(() => {
         const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
         return initialTime ? initialTime.split(':')[0] : '';
@@ -80,10 +80,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return initialTime ? initialTime.split(':')[1] : '';
     });
 
-    // NOVINKA: Stav pre dátum začiatku turnaja
+    // Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
-    // Debugovacie výpisy do konzoly
+    // Debugovacie výpisy do konzoly (ponechané pre účely ladenia)
     console.log('Page5Form render cycle START');
     console.log('formData.arrival.type:', formData.arrival?.type);
     console.log('formData.arrival.time:', formData.arrival?.time);
@@ -240,7 +240,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
-        // ZMENA: Používame formData.arrival?.time namiesto lokálneho arrivalTime
+        // Používame formData.arrival?.time namiesto lokálneho arrivalTime, aby sme sa spoľahli na pravdivý stav
         if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!formData.arrival?.time || formData.arrival.time === '')) {
             return false;
         }
@@ -257,26 +257,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }
   `;
 
-    const handleRegistrationSubmit = async (e) => {
+    // ZMENA: Táto funkcia teraz len pripraví dáta a volá prop handleSubmit (ktorý je handleNextPage5ToPage6 z App.js)
+    const handlePage5Submit = async (e) => {
         e.preventDefault();
+
+        if (setLoading) setLoading(true); // Aktivujeme loader
+        closeNotification(); // Vymažeme predchádzajúce notifikácie
 
         if (!isFormValidPage5) {
             setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error');
             setNotificationType('error');
+            setLoading(false); // Vypneme loader pri chybe validácie
             return;
         }
 
-        if (setLoading) setLoading(true);
-        closeNotification();
-
         try {
-            // ZMENA: Používame aktuálne hodnoty arrivalHours a arrivalMinutes, ktoré sú už v stave
-            // namiesto formData.arrival.time, ktoré nemusí byť okamžite aktualizované v cykle
+            // Vytvoríme finálnu hodnotu času príchodu
             const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava')
                                      ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
                                      : null;
 
-            const finalFormData = {
+            // Skonštruujeme objekt formData s aktuálnymi dátami z Page5
+            const updatedFormDataForNextPage = {
                 ...formData,
                 accommodation: {
                     type: selectedAccommodation
@@ -287,47 +289,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             };
             
-            await handleSubmit(finalFormData); 
+            // VOLANIE PROP handleSubmit: Toto prenesie aktualizované dáta do App.js
+            // a zabezpečí prechod na Page 6. Finalizácia registrácie sa deje v App.js.
+            await handleSubmit(updatedFormDataForNextPage); 
 
-            const accommodationToUpdate = finalFormData.accommodation?.type;
-            if (accommodationToUpdate && accommodationToUpdate !== 'Bez ubytovania') {
-                const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
-                
-                const docSnap = await getDoc(accommodationCountsDocRef);
-                let currentCount = 0;
-
-                if (docSnap.exists() && docSnap.data()[accommodationToUpdate] !== undefined) {
-                    currentCount = docSnap.data()[accommodationToUpdate];
-                }
-
-                let totalPeopleForCurrentRegistration = 0;
-                if (teamsDataFromPage4) {
-                    for (const categoryName in teamsDataFromPage4) {
-                        if (teamsDataFromPage4[categoryName]) {
-                            for (const team of teamsDataFromPage4[categoryName]) {
-                                totalPeopleForCurrentRegistration += (parseInt(team.players, 10) || 0) +
-                                                                      (parseInt(team.womenTeamMembers, 10) || 0) +
-                                                                      (parseInt(team.menTeamMembers, 10) || 0);
-                            }
-                        }
-                    }
-                }
-
-                const newTotal = currentCount + totalPeopleForCurrentRegistration;
-
-                await setDoc(accommodationCountsDocRef, {
-                    [accommodationToUpdate]: newTotal
-                }, { merge: true });
-            }
-
-            if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
-            console.error("Chyba pri finalizácii registrácie alebo aktualizácii počtov ubytovania:", error);
-            setNotificationMessage(`Chyba pri registrácii: ${error.message}`, 'error');
+            console.error("Chyba pri spracovaní dát Page5:", error);
+            setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
             setNotificationType('error');
-            if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
-            if (setLoading) setLoading(false);
+            if (setLoading) setLoading(false); // Vždy vypneme loader
         }
     };
 
@@ -355,7 +326,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         React.createElement(
             'form',
-            { onSubmit: handleRegistrationSubmit, className: 'space-y-4' },
+            { onSubmit: handlePage5Submit, className: 'space-y-4' }, {/* ZMENA: Používame novú funkciu handlePage5Submit */}
             React.createElement(
                 'div',
                 { className: 'border-t border-gray-200 pt-4 mt-4' },
