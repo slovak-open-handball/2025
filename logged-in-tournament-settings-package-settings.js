@@ -47,7 +47,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
             unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
                 const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // Zobraz balíčky v abecednom poradí podľa názvu
                 fetchedPackages.sort((a, b) => a.name.localeCompare(b.name));
                 setPackages(fetchedPackages);
             }, (error) => {
@@ -248,7 +247,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                     React.createElement(
                         'div',
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} (Cena: ${pkg.price}€)`),
+                        // Zmenený formát zobrazenia názvu a ceny balíčka
+                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} - ${pkg.price}€`),
                         React.createElement(
                             'div',
                             { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
