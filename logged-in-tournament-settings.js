@@ -1043,7 +1043,6 @@ function TournamentSettingsApp() {
       )
     ),
 
-    {/* NOVÉ Modálne okno pre pridanie/úpravu typu ubytovania */}
     showAccommodationModal && React.createElement(
       'div',
       { className: 'modal' },
