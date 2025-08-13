@@ -1,11 +1,10 @@
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Importovanie pomocných funkcií z hlavného súboru
-const showNotification = window.showNotification;
-const sendAdminNotification = window.sendAdminNotification;
+// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
+// import { showNotification, sendAdminNotification } from './utils.js';
 
 
-export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate }) {
+export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
   const [packages, setPackages] = React.useState([]);
   const [showPackageModal, setShowPackageModal] = React.useState(false);
   const [currentPackageEdit, setCurrentPackageEdit] = React.useState(null);
@@ -65,7 +64,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     };
 
     fetchPackages();
-  }, [db, userProfileData]);
+  }, [db, userProfileData, showNotification]);
 
 
   const handleOpenAddPackageModal = () => {
