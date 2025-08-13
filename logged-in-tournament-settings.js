@@ -115,6 +115,16 @@ function TournamentSettingsApp() {
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false);
   const [sizeToDelete, setSizeToDelete] = React.useState(null);
 
+  // NOVÉ STAVY pre správu ubytovania
+  const [accommodations, setAccommodations] = React.useState([]);
+  const [showAccommodationModal, setShowAccommodationModal] = React.useState(false);
+  const [currentAccommodationEdit, setCurrentAccommodationEdit] = React.useState(null); // null pre pridanie, objekt pre úpravu
+  const [newAccommodationType, setNewAccommodationType] = React.useState('');
+  const [newAccommodationCapacity, setNewAccommodationCapacity] = React.useState(0);
+  const [accommodationModalMode, setAccommodationModalMode] = React.useState('add'); // 'add' alebo 'edit'
+  const [showConfirmDeleteAccommodationModal, setShowConfirmDeleteAccommodationModal] = React.useState(false);
+  const [accommodationToDelete, setAccommodationToDelete] = React.useState(null);
+
 
   // Stav pre indikáciu, či je registrácia aktívna (na základe dátumov)
   const isRegistrationOpen = React.useMemo(() => {
@@ -349,6 +359,56 @@ function TournamentSettingsApp() {
     fetchTshirtSizes();
   }, [db, userProfileData]);
 
+  // NOVÝ Effect pre načítanie ubytovacích kapacít
+  React.useEffect(() => {
+    let unsubscribeAccommodation;
+    const fetchAccommodation = async () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin') {
+        console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie ubytovania.");
+        return;
+      }
+
+      try {
+        console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia ubytovania.");
+        const accommodationDocRef = doc(db, 'settings', 'accommodation');
+        unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
+          console.log("TournamentSettingsApp: onSnapshot pre ubytovanie spustený.");
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("TournamentSettingsApp: Nastavenia ubytovania existujú, dáta:", data);
+            setAccommodations(data.types || []); // Predpokladáme, že typy sú uložené v poli 'types'
+          } else {
+            console.log("TournamentSettingsApp: Nastavenia ubytovania sa nenašli. Vytváram predvolené hodnoty.");
+            setDoc(accommodationDocRef, {
+              types: []
+            }).then(() => {
+              console.log("Predvolené typy ubytovania boli úspešne vytvorené.");
+            }).catch(e => {
+              console.error("Chyba pri vytváraní predvolených typov ubytovania:", e);
+              showNotification(`Chyba pri vytváraní predvolených typov ubytovania: ${e.message}`, 'error');
+            });
+            setAccommodations([]); // Zatiaľ prázdne, kým sa dokument nevytvorí a neaktualizuje onSnapshot
+          }
+        }, error => {
+          console.error("TournamentSettingsApp: Chyba pri načítaní nastavení ubytovania (onSnapshot error):", error);
+          showNotification(`Chyba pri načítaní ubytovania: ${error.message}`, 'error');
+        });
+
+        return () => {
+          if (unsubscribeAccommodation) {
+            console.log("TournamentSettingsApp: Ruším odber onSnapshot pre ubytovanie.");
+            unsubscribeAccommodation();
+          }
+        };
+      } catch (e) {
+        console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre ubytovanie (try-catch):", e);
+        showNotification(`Chyba pri nastavovaní poslucháča pre ubytovanie: ${e.message}`, 'error');
+      }
+    };
+
+    fetchAccommodation();
+  }, [db, userProfileData]);
+
   // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (notificationData) => {
     if (!db || !user || !user.email) { 
@@ -367,7 +427,13 @@ function TournamentSettingsApp() {
       } else if (notificationData.type === 'deleteSize') {
         changesMessage = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
-        changesMessage = `${notificationData.data.changesMade}`; // Odstránený prefix
+        changesMessage = `${notificationData.data.changesMade}`; 
+      } else if (notificationData.type === 'createAccommodation') { // NOVÁ notifikácia pre ubytovanie
+        changesMessage = `Vytvorenie typu ubytovania: '${notificationData.data.type}' s kapacitou '${notificationData.data.capacity}'`;
+      } else if (notificationData.type === 'editAccommodation') { // NOVÁ notifikácia pre ubytovanie
+        changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType}' (kapacita: ${notificationData.data.originalCapacity}) na '${notificationData.data.newType}' (kapacita: ${notificationData.data.newCapacity})`;
+      } else if (notificationData.type === 'deleteAccommodation') { // NOVÁ notifikácia pre ubytovanie
+        changesMessage = `Zmazanie typu ubytovania: '${notificationData.data.deletedType}' (kapacita: ${notificationData.data.deletedCapacity})`;
       }
 
       await addDoc(notificationsCollectionRef, {
@@ -573,6 +639,115 @@ function TournamentSettingsApp() {
     }
   };
 
+  // NOVÉ FUNKCIE pre správu ubytovania
+  const handleOpenAddAccommodationModal = () => {
+    setAccommodationModalMode('add');
+    setNewAccommodationType('');
+    setNewAccommodationCapacity(0);
+    setCurrentAccommodationEdit(null);
+    setShowAccommodationModal(true);
+  };
+
+  const handleOpenEditAccommodationModal = (accommodation) => {
+    setAccommodationModalMode('edit');
+    setNewAccommodationType(accommodation.type);
+    setNewAccommodationCapacity(accommodation.capacity);
+    setCurrentAccommodationEdit(accommodation);
+    setShowAccommodationModal(true);
+  };
+
+  const handleCloseAccommodationModal = () => {
+    setShowAccommodationModal(false);
+    setNewAccommodationType('');
+    setNewAccommodationCapacity(0);
+    setCurrentAccommodationEdit(null);
+    setAccommodationModalMode('add');
+  };
+
+  const handleSaveAccommodation = async () => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin' || !user) {
+      showNotification("Nemáte oprávnenie na zmenu nastavení ubytovania.", 'error');
+      return;
+    }
+
+    const trimmedType = newAccommodationType.trim();
+    if (!trimmedType) {
+      showNotification("Názov typu ubytovania nemôže byť prázdny.", 'error');
+      return;
+    }
+    if (newAccommodationCapacity < 0) {
+      showNotification("Kapacita ubytovania nemôže byť záporná.", 'error');
+      return;
+    }
+
+    const accommodationDocRef = doc(db, 'settings', 'accommodation');
+
+    try {
+      if (accommodationModalMode === 'add') {
+        // Kontrola duplicity pri pridávaní
+        if (accommodations.some(acc => acc.type === trimmedType)) {
+          showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
+          return;
+        }
+        await updateDoc(accommodationDocRef, {
+          types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
+        });
+        showNotification(`Typ ubytovania "${trimmedType}" úspešne pridaný!`, 'success');
+        await sendAdminNotification({ type: 'createAccommodation', data: { type: trimmedType, capacity: newAccommodationCapacity } });
+      } else if (accommodationModalMode === 'edit') {
+        // Kontrola duplicity pri úprave (nesmie sa zhodovať s iným typom, okrem seba samej)
+        if (trimmedType !== currentAccommodationEdit.type && accommodations.some(acc => acc.type === trimmedType)) {
+            showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
+            return;
+        }
+        // Najprv odstránime starú hodnotu a potom pridáme novú
+        await updateDoc(accommodationDocRef, {
+          types: arrayRemove(currentAccommodationEdit)
+        });
+        await updateDoc(accommodationDocRef, {
+          types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
+        });
+        showNotification(`Typ ubytovania "${currentAccommodationEdit.type}" úspešne zmenený na "${trimmedType}"!`, 'success');
+        await sendAdminNotification({ type: 'editAccommodation', data: { originalType: currentAccommodationEdit.type, originalCapacity: currentAccommodationEdit.capacity, newType: trimmedType, newCapacity: newAccommodationCapacity } });
+      }
+      handleCloseAccommodationModal();
+    } catch (e) {
+      console.error("Chyba pri ukladaní ubytovania:", e);
+      showNotification(`Chyba pri ukladaní ubytovania: ${e.message}`, 'error');
+    }
+  };
+
+  const handleOpenConfirmDeleteAccommodationModal = (accommodation) => {
+    setAccommodationToDelete(accommodation);
+    setShowConfirmDeleteAccommodationModal(true);
+  };
+
+  const handleCloseConfirmDeleteAccommodationModal = () => {
+    setShowConfirmDeleteAccommodationModal(false);
+    setAccommodationToDelete(null);
+  };
+
+  const handleDeleteAccommodation = async () => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin' || !user) {
+      showNotification("Nemáte oprávnenie na zmazanie ubytovania.", 'error');
+      return;
+    }
+    if (!accommodationToDelete) return;
+
+    try {
+      const accommodationDocRef = doc(db, 'settings', 'accommodation');
+      await updateDoc(accommodationDocRef, {
+        types: arrayRemove(accommodationToDelete)
+      });
+      showNotification(`Typ ubytovania "${accommodationToDelete.type}" úspešne zmazaný!`, 'success');
+      await sendAdminNotification({ type: 'deleteAccommodation', data: { deletedType: accommodationToDelete.type, deletedCapacity: accommodationToDelete.capacity } });
+      handleCloseConfirmDeleteAccommodationModal();
+    } catch (e) {
+      console.error("Chyba pri mazaní ubytovania:", e);
+      showNotification(`Chyba pri mazaní ubytovania: ${e.message}`, 'error');
+    }
+  };
+
 
   // Ak používateľ nie je admin, vrátime null, aby sa nič nevykreslilo
   if (!userProfileData || userProfileData.role !== 'admin') {
@@ -678,7 +853,7 @@ function TournamentSettingsApp() {
       )
     ),
 
-    // NOVÁ SEKCIA: Nastavenia veľkostí tričiek
+    // Sekcia: Nastavenia veľkostí tričiek
     React.createElement(
         'div',
         { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
@@ -735,6 +910,63 @@ function TournamentSettingsApp() {
         )
     ),
 
+    {/* NOVÁ SEKCIA: Nastavenia ubytovania */}
+    React.createElement(
+        'div',
+        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
+        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia ubytovania'),
+        React.createElement(
+            'div',
+            { className: 'space-y-3' }, // Pre medzery medzi jednotlivými typmi ubytovania
+            accommodations.length > 0 ? (
+                accommodations.map((acc, index) => (
+                    React.createElement(
+                        'div',
+                        { key: acc.type, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
+                        React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (Kapacita: ${acc.capacity})`),
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-2' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenEditAccommodationModal(acc),
+                                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Upraviť'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenConfirmDeleteAccommodationModal(acc),
+                                    className: 'bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Vymazať'
+                            )
+                        )
+                    )
+                ))
+            ) : (
+                React.createElement('p', { className: 'text-gray-500 text-center' }, 'Zatiaľ nie sú definované žiadne typy ubytovania.')
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex justify-center mt-4' }, // Zarovnanie tlačidla '+' na stred
+            React.createElement(
+                'button',
+                {
+                    type: 'button',
+                    onClick: handleOpenAddAccommodationModal,
+                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center'
+                },
+                React.createElement('span', { className: 'text-xl' }, '+')
+            )
+        )
+    ),
+
     // Modálne okno pre pridanie/úpravu veľkosti trička
     showSizeModal && React.createElement(
       'div',
@@ -778,7 +1010,7 @@ function TournamentSettingsApp() {
       )
     ),
 
-    // Modálne okno na potvrdenie zmazania
+    // Modálne okno na potvrdenie zmazania veľkosti trička
     showConfirmDeleteModal && React.createElement(
       'div',
       { className: 'modal' },
@@ -804,6 +1036,94 @@ function TournamentSettingsApp() {
             {
               type: 'button',
               onClick: handleDeleteSize,
+              className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zmazať'
+          )
+        )
+      )
+    ),
+
+    {/* NOVÉ Modálne okno pre pridanie/úpravu typu ubytovania */}
+    showAccommodationModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, accommodationModalMode === 'add' ? 'Pridať nový typ ubytovania' : `Upraviť typ ubytovania: ${currentAccommodationEdit?.type}`),
+        React.createElement(
+          'input',
+          {
+            type: 'text',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+            placeholder: 'Zadajte typ ubytovania (napr. Hotel, Škola)',
+            value: newAccommodationType,
+            onChange: (e) => setNewAccommodationType(e.target.value),
+          }
+        ),
+        React.createElement(
+            'input',
+            {
+              type: 'number',
+              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+              placeholder: 'Zadajte kapacitu',
+              value: newAccommodationCapacity,
+              onChange: (e) => setNewAccommodationCapacity(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
+              min: 0,
+            }
+          ),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleCloseAccommodationModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleSaveAccommodation,
+              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            accommodationModalMode === 'add' ? 'Pridať' : 'Uložiť'
+          )
+        )
+      )
+    ),
+
+    {/* NOVÉ Modálne okno na potvrdenie zmazania ubytovania */}
+    showConfirmDeleteAccommodationModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Potvrdiť zmazanie'),
+        React.createElement('p', { className: 'text-gray-700 mb-6' }, `Naozaj chcete zmazať typ ubytovania "${accommodationToDelete?.type}" (kapacita: ${accommodationToDelete?.capacity})?`),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleCloseConfirmDeleteAccommodationModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleDeleteAccommodation,
               className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
             },
             'Zmazať'
