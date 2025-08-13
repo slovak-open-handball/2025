@@ -403,6 +403,14 @@ function App() {
     setNotificationType('info'); 
   };
 
+  // Nová funkcia pre odosielanie notifikácií, ktorá obalí settery
+  const dispatchNotification = React.useCallback((message, type = 'info') => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setNotificationType(type);
+  }, [setNotificationMessage, setShowNotification, setNotificationType]);
+
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
@@ -429,18 +437,14 @@ function App() {
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
-      setNotificationMessage("reCAPTCHA API nie je načítané alebo pripravené.");
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification("reCAPTCHA API nie je načítané alebo pripravené.", 'error'); // Použitie dispatchNotification
       return null;
     }
     try {
       const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
-      setNotificationMessage(`Chyba reCAPTCHA: ${e.message}`);
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification(`Chyba reCAPTCHA: ${e.message}`, 'error'); // Použitie dispatchNotification
       return null;
     }
   };
@@ -448,31 +452,23 @@ function App() {
   const handleNext = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
 
     if (!isRecaptchaReady) {
-      setNotificationMessage('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.');
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.', 'error'); // Použitie dispatchNotification
       setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setNotificationMessage('Heslá sa nezhodujú.');
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification('Heslá sa nezhodujú.', 'error'); // Použitie dispatchNotification
       setLoading(false);
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(formData.password)) {
-      setNotificationMessage('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.');
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.', 'error'); // Použitie dispatchNotification
       setLoading(false);
       return;
     }
@@ -489,24 +485,18 @@ function App() {
   const handleNextPage2ToPage3 = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
 
     const { clubName, ico, dic, icDph } = formData.billing;
 
     if (!clubName.trim()) {
-        setNotificationMessage('Oficiálny názov klubu je povinný.');
-        setShowNotification(true);
-        setNotificationType('error');
+        dispatchNotification('Oficiálny názov klubu je povinný.', 'error'); // Použitie dispatchNotification
         setLoading(false);
         return;
     }
 
     if (!ico.trim()) {
-      setNotificationMessage('IČO je povinné.');
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification('IČO je povinné.', 'error'); // Použitie dispatchNotification
       setLoading(false);
       return;
     }
@@ -514,9 +504,7 @@ function App() {
     if (icDph) {
       const icDphRegex = /^[A-Z]{2}[0-9]+$/;
       if (!icDphRegex.test(icDph)) {
-        setNotificationMessage('IČ DPH musí zažínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).');
-        setShowNotification(true);
-        setNotificationType('error');
+        dispatchNotification('IČ DPH musí zažínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).', 'error'); // Použitie dispatchNotification
         setLoading(false);
         return;
       }
@@ -524,9 +512,7 @@ function App() {
 
     const postalCodeClean = formData.postalCode.replace(/\s/g, '');
     if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
-      setNotificationMessage('PSČ musí mať presne 5 číslic.');
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification('PSČ musí mať presne 5 číslic.', 'error'); // Použitie dispatchNotification
       setLoading(false);
       return;
     }
@@ -537,9 +523,7 @@ function App() {
 
   const handleNextPage3ToPage4 = async (categoriesDataFromPage3) => {
     setLoading(true);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
 
     const transformedCategories = {};
     categoriesDataFromPage3.forEach(row => {
@@ -589,9 +573,7 @@ function App() {
 
   const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => { 
     setLoading(true);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
 
     setTeamsDataFromPage4(teamsDataFromPage4Final);
 
@@ -601,16 +583,12 @@ function App() {
 
   const handlePrev = () => {
     setPage(prevPage => prevPage - 1); 
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
   };
 
   const handleRegistrationSubmit = async (finalFormData) => { 
     setLoading(true);
-    setNotificationMessage('');
-    setShowNotification(false);
-    setNotificationType('info');
+    dispatchNotification('', 'info'); // Vynulovanie notifikácií
     isRegisteringRef.current = true; 
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
@@ -620,9 +598,7 @@ function App() {
       const firestoreDb = window.db;
 
       if (!authInstance || !firestoreDb) {
-        setNotificationMessage('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.');
-        setShowNotification(true);
-        setNotificationType('error');
+        dispatchNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error'); 
         return; 
       }
 
@@ -630,15 +606,11 @@ function App() {
       try {
         recaptchaToken = await getRecaptchaToken('register_user');
         if (!recaptchaToken) {
-          setNotificationMessage('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.');
-          setShowNotification(true);
-          setNotificationType('error');
+          dispatchNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error'); 
           return; 
         }
       } catch (recaptchaError) {
-          setNotificationMessage(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`);
-          setShowNotification(true);
-          setNotificationType('error');
+          dispatchNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error'); 
           return;
       }
 
@@ -648,9 +620,7 @@ function App() {
         user = userCredential.user;
 
         if (!user || !user.uid) {
-          setNotificationMessage('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.');
-          setShowNotification(true);
-          setNotificationType('error');
+          dispatchNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error'); 
           return; 
         }
 
@@ -674,9 +644,7 @@ function App() {
           } else {
               authErrorMessage = authError.message || authErrorMessage;
           }
-          setNotificationMessage(authErrorMessage);
-          setShowNotification(true);
-          setNotificationType('error');
+          dispatchNotification(authErrorMessage, 'error'); 
           return;
       }
 
@@ -722,9 +690,7 @@ function App() {
           } else {
               firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
           }
-          setNotificationMessage(firestoreErrorMessage);
-          setShowNotification(true);
-          setNotificationType('error');
+          dispatchNotification(firestoreErrorMessage, 'error'); 
           try {
               if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
                   await authInstance.currentUser.delete(); 
@@ -772,9 +738,7 @@ function App() {
 
       await new Promise(resolve => setTimeout(resolve, 200)); 
 
-      setNotificationMessage(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`);
-      setShowNotification(true);
-      setNotificationType('success'); 
+      dispatchNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success'); 
       setRegistrationSuccess(true); 
 
       setFormData({
@@ -794,9 +758,7 @@ function App() {
 
     } catch (globalError) { 
       let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      setNotificationMessage(errorMessage);
-      setShowNotification(true);
-      setNotificationType('error');
+      dispatchNotification(errorMessage, 'error'); 
     } finally {
       setLoading(false);
       isRegisteringRef.current = false; 
@@ -997,9 +959,7 @@ function App() {
                   handleSubmit: handleRegistrationSubmit, 
                   loading: loading,
                   setLoading: setLoading, 
-                  notificationMessage: notificationMessage, 
-                  setShowNotification: setShowNotification, 
-                  setNotificationType: setNotificationType, 
+                  dispatchNotification: dispatchNotification, // ODOSIELANIE NOVEJ FUNKCIE
                   setRegistrationSuccess: setRegistrationSuccess,
                   closeNotification: closeNotification,
                   handleChange: handleChange, 
