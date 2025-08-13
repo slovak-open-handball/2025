@@ -189,19 +189,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         }
         const packageDocRef = doc(db, 'settings', 'packages', 'list', currentPackageEdit.id);
         
-        // Zabezpečenie, že currentPackageEdit je vždy objekt s očakávanými vlastnosťami
         const originalPkgData = currentPackageEdit || {};
-        originalPkgData.meals = originalPkgData.meals || {}; // Zabezpečiť, že meals je objekt
-        originalPkgData.name = originalPkgData.name || ''; // Zabezpečiť, že name je reťazec
-        originalPkgData.price = originalPkgData.price || 0; // Zabezpečiť, že price je číslo
+        originalPkgData.meals = originalPkgData.meals || {}; 
+        originalPkgData.name = originalPkgData.name || ''; 
+        originalPkgData.price = originalPkgData.price || 0; 
 
-        // Nový objekt balíčka pre porovnanie s predvolenými hodnotami, ak nejaké chýbajú
         const newPkgData = { 
-            id: originalPkgData.id, // Použijeme ID z originálu
+            id: originalPkgData.id, 
             name: trimmedName,
             price: newPackagePrice,
             meals: mealsToSave,
-            refreshments: [], // Predpokladáme, že refreshments sa už samostatne nepoužívajú
+            refreshments: [], 
         };
 
 
@@ -217,8 +215,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             await sendAdminNotification({ 
                 type: 'editPackage', 
                 data: { 
-                    originalPackage: originalPkgData, // Posielame upravený objekt
-                    newPackage: newPkgData, // Posielame nový objekt
+                    originalPackage: originalPkgData, 
+                    newPackage: newPkgData, 
                 } 
             });
         }
@@ -262,7 +260,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       if (typeof sendAdminNotification === 'function') {
         await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price } });
       }
-      handleCloseConfirmDeleteAccommodationModal();
+      // Opravené volanie: voláme správnu funkciu pre zatvorenie modalu balíčkov
+      handleCloseConfirmDeletePackageModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní balíčka: ${e.message}`, 'error');
     }
