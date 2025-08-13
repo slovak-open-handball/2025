@@ -290,10 +290,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                             Object.keys(pkg.meals || {}).sort().map(date => {
                                 const mealsForDay = pkg.meals[date];
                                 const includedItems = [];
-                                if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
-                                if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
-                                if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
-                                if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+                                if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('raňajky');
+                                if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('obed');
+                                if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('večera');
+                                if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('občerstvenie');
 
                                 if (includedItems.length > 0) {
                                     const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
@@ -406,10 +406,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                 'tr',
                                 { className: 'bg-gray-100' },
                                 React.createElement('th', { className: 'py-2 px-1 border-b text-left text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Dátum'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Raňajky'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Obed'),
-                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Večera'),
-                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'Občerstvenie')
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'raňajky'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'obed'),
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'večera'),
+                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600 whitespace-nowrap' }, 'občerstvenie')
                             )
                         ),
                         React.createElement(
