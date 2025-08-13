@@ -1,6 +1,57 @@
 import { getFirestore, doc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, NotificationModal, closeNotification, handleChange }) {
+// NotificationModal Component pre zobrazovanie dočasných správ (presunutý sem)
+function NotificationModal({ message, onClose, type = 'info' }) {
+    const [show, setShow] = React.useState(false);
+    const timerRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (message) {
+            setShow(true);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+            timerRef.current = setTimeout(() => {
+                setShow(false);
+                setTimeout(onClose, 500); // Nechaj chvíľu na animáciu, potom zavolaj onClose
+            }, 10000); // Zobrazí sa na 10 sekúnd
+        } else {
+            setShow(false);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+            }
+        }
+
+        return () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [message, onClose]);
+
+    if (!show && !message) return null;
+
+    let bgColorClass;
+    if (type === 'success') {
+        bgColorClass = 'bg-green-500';
+    } else if (type === 'error') {
+        bgColorClass = 'bg-red-600'; // Nastavenie červenej pre chyby
+    } else {
+        bgColorClass = 'bg-blue-500'; // Predvolená modrá pre info
+    }
+
+    return React.createElement(
+        'div',
+        {
+            className: `fixed bottom-4 right-4 ${bgColorClass} text-white p-4 rounded-lg shadow-lg transition-transform transform ${show ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}`,
+            style: { zIndex: 1000 }
+        },
+        React.createElement('p', { className: 'font-semibold' }, message)
+    );
+}
+
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange }) {
     const db = getFirestore();
 
     const [accommodations, setAccommodations] = React.useState([]);
@@ -8,12 +59,24 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
     const [isAccommodationDataLoaded, setIsAccommodationDataLoaded] = React.useState(false);
 
-    // Lokálna funkcia pre zobrazenie notifikácií v tomto module, ktorá využíva props z rodičovského komponentu
-    const showLocalNotification = React.useCallback((message, type = 'success') => {
-        if (setNotificationMessage) setNotificationMessage(message);
-        if (setShowNotification) setShowNotification(true);
-        if (setNotificationType) setNotificationType(type);
-    }, [setNotificationMessage, setShowNotification, setNotificationType]);
+    // Stavy pre lokálne notifikácie v tomto komponente
+    const [notificationMessage, setNotificationMessage] = React.useState('');
+    const [showNotification, setShowNotification] = React.useState(false);
+    const [notificationType, setNotificationType] = React.useState('info');
+
+    // Lokálna funkcia pre zatvorenie notifikácie
+    const closeLocalNotification = React.useCallback(() => {
+        setShowNotification(false);
+        setNotificationMessage('');
+        setNotificationType('info');
+    }, []);
+
+    // Lokálna funkcia pre odoslanie notifikácie
+    const dispatchLocalNotification = React.useCallback((message, type = 'info') => {
+        setNotificationMessage(message);
+        setShowNotification(true);
+        setNotificationType(type);
+    }, []);
 
 
     // Načítanie dostupných typov ubytovania a ich kapacít
@@ -36,12 +99,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setIsAccommodationDataLoaded(true);
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    showLocalNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
+                    dispatchLocalNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
                     setIsAccommodationDataLoaded(true);
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie:", e);
-                showLocalNotification("Chyba pri nastavovaní poslucháča pre ubytovanie.", 'error');
+                dispatchLocalNotification("Chyba pri nastavovaní poslucháča pre ubytovanie.", 'error');
                 setIsAccommodationDataLoaded(true);
             }
         };
@@ -53,7 +116,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeAccommodation();
             }
         };
-    }, [db, showLocalNotification]);
+    }, [db, dispatchLocalNotification]);
 
     // Načítanie agregovaných počtov obsadenosti ubytovania z /settings/accommodationCounts
     React.useEffect(() => {
@@ -74,11 +137,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní počtov obsadenosti ubytovania:", error);
-                    showLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                    dispatchLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
                 });
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre počty ubytovania:", e);
-                showLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                dispatchLocalNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
             }
         };
 
@@ -89,7 +152,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeCounts();
             }
         };
-    }, [db, showLocalNotification]);
+    }, [db, dispatchLocalNotification]);
 
 
     const handleAccommodationChange = (e) => {
@@ -111,14 +174,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            showLocalNotification("Prosím, vyberte typ ubytovania.", 'error');
+            dispatchLocalNotification("Prosím, vyberte typ ubytovania.", 'error');
             return;
         }
 
         if (setLoading) setLoading(true);
-        // Pri odoslaní formulára vynulujeme notifikácie cez rodičovskú funkciu (closeNotification)
-        // namiesto priameho nastavovania stavov notificationMessage atď.
-        if (closeNotification) closeNotification(); 
+        // Vynulovanie lokálnych notifikácií
+        closeLocalNotification(); 
 
         try {
             const finalFormData = {
@@ -131,7 +193,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
             console.error("Chyba pri finalizácii registrácie:", error);
-            showLocalNotification(`Chyba pri registrácii: ${error.message}`, 'error');
+            dispatchLocalNotification(`Chyba pri registrácii: ${error.message}`, 'error');
             if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
             if (setLoading) setLoading(false);
@@ -141,7 +203,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     return React.createElement(
         React.Fragment,
         null,
-        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
+        // Používame lokálny NotificationModal a lokálne stavy
+        React.createElement(NotificationModal, { message: notificationMessage, onClose: closeLocalNotification, type: notificationType }),
 
         React.createElement(
             'h2',
