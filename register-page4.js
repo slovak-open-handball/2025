@@ -556,9 +556,9 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'submit',
-                        className: registerButtonClasses,
-                        disabled: loading || !isRecaptchaReady || !isFormValidPage4, // Aktualizovaná podmienka
-                        tabIndex: 2
+                        className: nextButtonClasses,
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage4 || Object.keys(categoriesData).length === 0,
+                        tabIndex: 21
                     },
                     // Zobrazenie načítavacieho spinnera počas registrácie
                     loading ? React.createElement(
