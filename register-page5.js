@@ -444,17 +444,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             'div',
                             { className: 'ml-8 mb-4' },
                             React.createElement(
-                                'p',
-                                { className: 'block text-gray-700 text-sm font-bold mb-2' },
-                                'Predpokladaný čas príchodu:'
-                            ),
-                            React.createElement(
                                 'div',
                                 { className: 'flex space-x-4' },
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1' },
-                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
                                     React.createElement('select', {
                                         id: 'arrivalHours',
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
@@ -467,7 +462,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1' },
-                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
                                     React.createElement('select', {
                                         id: 'arrivalMinutes',
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
@@ -501,17 +496,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             'div',
                             { className: 'ml-8 mb-4' },
                             React.createElement(
-                                'p',
-                                { className: 'block text-gray-700 text-sm font-bold mb-2' },
-                                'Predpokladaný čas príchodu:'
-                            ),
-                            React.createElement(
                                 'div',
                                 { className: 'flex space-x-4' },
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1' },
-                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
                                     React.createElement('select', {
                                         id: 'arrivalHours',
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
@@ -524,7 +514,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1' },
-                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
                                     React.createElement('select', {
                                         id: 'arrivalMinutes',
                                         className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
@@ -607,9 +597,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     { className: 'ml-8 text-sm text-gray-600 mt-2' },
                                     (pkg.meals && Object.keys(pkg.meals).length > 0 && tournamentDays.length > 0) ? (
                                         tournamentDays.map(date => {
-                                            // Pre každý deň overíme, či je to dátum (nie 'participantCard')
                                             if (isNaN(new Date(date).getTime())) {
-                                                return null; // Ignorujeme non-date kľúče ako 'participantCard'
+                                                return null;
                                             }
 
                                             const mealsForDay = pkg.meals[date];
