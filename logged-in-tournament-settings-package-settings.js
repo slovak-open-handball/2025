@@ -375,11 +375,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                             React.createElement(
                                 'tr',
                                 { className: 'bg-gray-100' },
-                                React.createElement('th', { className: 'py-2 px-4 border-b text-left text-sm font-semibold text-gray-600' }, 'Dátum'),
-                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
-                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
-                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'),
-                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') // Podmienený stĺpec
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-left text-sm font-semibold text-gray-600 w-1/4' }, 'Dátum'), {/* Adjusted padding and width */}
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'), {/* Adjusted padding */}
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'), {/* Adjusted padding */}
+                                React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'), {/* Adjusted padding */}
+                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-1 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') // Podmienený stĺpec, Adjusted padding
                             )
                         ),
                         React.createElement(
@@ -389,8 +389,12 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                 React.createElement(
                                     'tr',
                                     { key: date, className: 'hover:bg-gray-50' },
-                                    React.createElement('td', { className: 'py-2 px-4 border-b text-gray-700' }, new Date(date).toLocaleDateString('sk-SK')),
-                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-gray-700' }, {/* Adjusted padding */}
+                                        new Date(date).toLocaleDateString('sk-SK'),
+                                        React.createElement('br'),
+                                        React.createElement('span', {className: 'text-xs text-gray-500'}, new Date(date).toLocaleDateString('sk-SK', { weekday: 'long' }))
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' }, {/* Adjusted padding */}
                                         React.createElement('input', {
                                             type: 'checkbox',
                                             className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
@@ -398,7 +402,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                             onChange: (e) => handleMealChange(date, 'breakfast', e.target.checked),
                                         })
                                     ),
-                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' }, {/* Adjusted padding */}
                                         React.createElement('input', {
                                             type: 'checkbox',
                                             className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
@@ -406,7 +410,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                             onChange: (e) => handleMealChange(date, 'lunch', e.target.checked),
                                         })
                                     ),
-                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                    React.createElement('td', { className: 'py-2 px-1 border-b text-center' }, {/* Adjusted padding */}
                                         React.createElement('input', {
                                             type: 'checkbox',
                                             className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
@@ -414,7 +418,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                             onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
                                         })
                                     ),
-                                    showRefreshmentColumn && React.createElement('td', { className: 'py-2 px-4 border-b text-center' }, // Podmienená bunka
+                                    showRefreshmentColumn && React.createElement('td', { className: 'py-2 px-1 border-b text-center' }, {/* Adjusted padding */}
                                         React.createElement('input', {
                                             type: 'checkbox',
                                             className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
