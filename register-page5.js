@@ -51,7 +51,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady }) { // NOVINKA: isRecaptchaReady pridaný do propov
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady }) {
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -64,7 +64,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Stavy pre ubytovanie
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
-    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
+    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || ''); // Používame selectedAccommodation
 
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
@@ -179,13 +179,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
-        setSelectedAccommodationType(newValue);
+        setSelectedAccommodation(newValue); // Používame setSelectedAccommodation
         handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
 
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
-        setSelectedArrivalType(newValue);
+        setArrivalType(newValue);
         if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
@@ -216,22 +216,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const isFormValidPage5 = React.useMemo(() => {
         // Kontrola, či je vybraný typ ubytovania (ak sú nejaké možnosti)
-        if (accommodationTypes.length > 0 && !selectedAccommodationType) { // ZMENA: Používam selectedAccommodationType
+        if (accommodationTypes.length > 0 && !selectedAccommodation) { // ZMENA: Používam selectedAccommodation
             return false;
         }
 
         // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
-        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) { // ZMENA: kontrolujem aj prázdny reťazec
+        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) {
             return false;
         }
 
         return true;
-    }, [selectedAccommodationType, accommodationTypes, arrivalType, arrivalTime]);
+    }, [selectedAccommodation, accommodationTypes, arrivalType, arrivalTime]); // ZMENA: selectedAccommodation v závislostiach
 
 
     const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-    ${!isFormValidPage5 || loading || !isRecaptchaReady // NOVINKA: Pridaný isRecaptchaReady do podmienky disabled
+    ${!isFormValidPage5 || loading || !isRecaptchaReady
       ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
       : 'bg-blue-500 hover:bg-blue-700 text-white'
     }
@@ -241,13 +241,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error'); // Použitie lokálnej notifikácie
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error');
             setNotificationType('error');
             return;
         }
 
         if (setLoading) setLoading(true);
-        closeNotification(); // Použitie lokálnej funkcie na zatvorenie notifikácie
+        closeNotification();
 
         try {
             const finalArrivalTime = (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava')
@@ -257,7 +257,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const finalFormData = {
                 ...formData,
                 accommodation: {
-                    type: selectedAccommodationType
+                    type: selectedAccommodation
                 },
                 arrival: {
                     type: selectedArrivalType,
@@ -265,16 +265,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             };
             
-            // Predpokladáme, že handleSubmit je prop, ktorý volá finálne odoslanie z App.js
             await handleSubmit(finalFormData); 
 
-            // Logika aktualizácie počtov ubytovania
-            // Táto časť by sa mala ideálne presunúť do App.js alebo do funkcie,
-            // ktorú volá App.js po úspešnej registrácii, aby sa predišlo
-            // duplicitnej logike alebo asynchrónnym problémom.
-            // Zatiaľ to tu ponechávam, ale upozorňujem na to.
             const accommodationToUpdate = finalFormData.accommodation?.type;
-            if (accommodationToUpdate && accommodationToUpdate !== 'Bez ubytovania') { // Kontrola, aby sa neaktualizoval počet pre "Bez ubytovania"
+            if (accommodationToUpdate && accommodationToUpdate !== 'Bez ubytovania') {
                 const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
                 
                 const docSnap = await getDoc(accommodationCountsDocRef);
@@ -307,7 +301,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
             console.error("Chyba pri finalizácii registrácie alebo aktualizácii počtov ubytovania:", error);
-            setNotificationMessage(`Chyba pri registrácii: ${error.message}`, 'error'); // Použitie lokálnej notifikácie
+            setNotificationMessage(`Chyba pri registrácii: ${error.message}`, 'error');
             setNotificationType('error');
             if (setRegistrationSuccess) setRegistrationSuccess(false);
         } finally {
@@ -357,7 +351,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 type: 'radio',
                                 name: 'accommodationType',
                                 value: 'Bez ubytovania',
-                                checked: selectedAccommodationType === 'Bez ubytovania',
+                                checked: selectedAccommodation === 'Bez ubytovania', // ZMENA: Používam selectedAccommodation
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
                                 disabled: loading,
@@ -380,7 +374,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     type: 'radio',
                                     name: 'accommodationType',
                                     value: acc.type,
-                                    checked: selectedAccommodationType === acc.type,
+                                    checked: selectedAccommodation === acc.type, // ZMENA: Používam selectedAccommodation
                                     onChange: handleAccommodationChange,
                                     className: 'form-radio h-5 w-5 text-blue-600',
                                     disabled: isDisabled,
@@ -523,7 +517,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'submit',
                         className: nextButtonClasses, 
-                        disabled: loading || !isRecaptchaReady || !isFormValidPage5, // NOVINKA: isRecaptchaReady je tu používaný
+                        disabled: loading || !isRecaptchaReady || !isFormValidPage5, // isRecaptchaReady je tu používaný
                         tabIndex: 2
                     },
                     // Zobrazenie načítavacieho spinnera počas prechodu
