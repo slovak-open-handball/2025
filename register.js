@@ -5,14 +5,14 @@
 
 // Tieto konštanty sú definované v <head> register.html a sú prístupné globálne.
 const RECAPTCHA_SITE_KEY = "6LdJbn8rAAAAAO4C50qXTWva6ePzDlOfYwBDEDwa";
-const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec"; 
+const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2fU0s4bVri_CTOMOTNeNi4tE0YxeekgtJncr-fPvGCGo3igXJfZlJR4Vq1Gwz4g/exec";
 
 // Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
-import { Page5Form } from './register-page5.js'; 
+import { Page5Form } from './register-page5.js';
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -31,8 +31,8 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component pre zobrazovanie dočasných správ
-function NotificationModal({ message, onClose, type = 'info' }) { 
+// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form)
+function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
 
@@ -45,7 +45,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
       timerRef.current = setTimeout(() => {
         setShow(false);
         setTimeout(onClose, 500);
-      }, 10000); 
+      }, 10000);
     } else {
       setShow(false);
       if (timerRef.current) {
@@ -67,9 +67,9 @@ function NotificationModal({ message, onClose, type = 'info' }) {
   if (type === 'success') {
     bgColorClass = 'bg-green-500';
   } else if (type === 'error') {
-    bgColorClass = 'bg-red-600'; 
+    bgColorClass = 'bg-red-600';
   } else {
-    bgColorClass = 'bg-blue-500'; 
+    bgColorClass = 'bg-blue-500';
   }
 
   return React.createElement(
@@ -81,6 +81,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     React.createElement('p', { className: 'font-semibold' }, message)
   );
 }
+
 
 // Hlavný App komponent
 function App() {
@@ -103,34 +104,37 @@ function App() {
       dic: '',
       icDph: '',
     },
-    accommodation: { 
+    accommodation: {
         type: ''
     }
   });
   const [selectedCategoryRows, setSelectedCategoryRows] = React.useState([{ categoryId: '', teams: 1 }]);
   const [teamsDataFromPage4, setTeamsDataFromPage4] = React.useState({});
 
-  const [userRole, setUserRole] = React.useState('user'); 
+  const [userRole, setUserRole] = React.useState('user');
   const [loading, setLoading] = React.useState(false);
+
+  // Notifikačné stavy zostávajú v App komponente pre jeho vlastné notifikácie
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [showNotification, setShowNotification] = React.useState(false);
-  const [notificationType, setNotificationType] = React.useState('info'); 
+  const [notificationType, setNotificationType] = React.useState('info');
+
   const [isCountryCodeModalOpen, setIsCountryCodeModalOpen] = React.useState(false);
   const [selectedCountryDialCode, setSelectedCountryDialCode] = React.useState('+421');
-  const [registrationSuccess, setRegistrationSuccess] = React.useState(false); 
+  const [registrationSuccess, setRegistrationSuccess] = React.useState(false);
 
-  const [isAuthReady, setIsAuthReady] = React.useState(false); 
+  const [isAuthReady, setIsAuthReady] = React.useState(false);
 
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
-  const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
-  const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
+  const [dataEditDeadline, setDataEditDeadline] = React.useState('');
+  const [rosterEditDeadline, setRosterEditDeadline] = React.useState('');
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
-  const [categoriesExist, setCategoriesExist] = React.useState(true); 
-  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({}); 
+  const [categoriesExist, setCategoriesExist] = React.useState(true);
+  const [categoriesDataFromFirestore, setCategoriesDataFromFirestore] = React.useState({});
 
   const [countdown, setCountdown] = React.useState(null);
   const [forceRegistrationCheck, setForceRegistrationCheck] = React.useState(0);
@@ -141,7 +145,7 @@ function App() {
 
   const [isRecaptchaReady, setIsRecaptchaReady] = React.useState(false);
 
-  const isRegisteringRef = React.useRef(false); 
+  const isRegisteringRef = React.useRef(false);
 
   const countdownIntervalRef = React.useRef(null);
 
@@ -196,7 +200,7 @@ function App() {
 
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }, [registrationStartDate]);
-  
+
   const calculateTimeLeftToEnd = React.useCallback(() => {
       const now = new Date();
       const endDate = registrationEndDate ? new Date(registrationEndDate) : null;
@@ -238,7 +242,7 @@ function App() {
       }
 
       const unsubscribe = onAuthStateChanged(window.auth, (currentUser) => {
-        setIsAuthReady(true); 
+        setIsAuthReady(true);
         if (window.hideGlobalLoader) {
           window.hideGlobalLoader();
         }
@@ -259,7 +263,7 @@ function App() {
         window.hideGlobalLoader();
       }
     }
-  }, []); 
+  }, []);
 
   React.useEffect(() => {
     if (typeof window.db === 'undefined' || !isAuthReady) {
@@ -272,16 +276,16 @@ function App() {
           const data = docSnapshot.data();
           setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
           setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
-          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
-          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); 
+          setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : '');
+          setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : '');
           setNumberOfPlayersInTeam(data.numberOfPlayers || 0);
           setNumberOfImplementationTeamMembers(data.numberOfImplementationTeam || 0);
 
       } else {
           setRegistrationStartDate('');
           setRegistrationEndDate('');
-          setDataEditDeadline(''); 
-          setRosterEditDeadline(''); 
+          setDataEditDeadline('');
+          setRosterEditDeadline('');
           setNumberOfPlayersInTeam(0);
           setNumberOfImplementationTeamMembers(0);
       }
@@ -294,16 +298,16 @@ function App() {
     });
 
     const categoriesDocRef = doc(collection(window.db, 'settings'), 'categories');
-    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => { 
-      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) { 
+    const unsubscribeCategories = onSnapshot(categoriesDocRef, docSnapshot => {
+      if (docSnapshot.exists() && Object.keys(docSnapshot.data()).length > 0) {
         setCategoriesExist(true);
-        setCategoriesDataFromFirestore(docSnapshot.data()); 
+        setCategoriesDataFromFirestore(docSnapshot.data());
       } else {
         setCategoriesExist(false);
-        setCategoriesDataFromFirestore({}); 
+        setCategoriesDataFromFirestore({});
       }
     }, error => {
-      setCategoriesExist(false); 
+      setCategoriesExist(false);
       setCategoriesDataFromFirestore({});
       setNotificationMessage(`Chyba pri načítaní kategórií: ${error.message}`);
       setShowNotification(true);
@@ -315,7 +319,7 @@ function App() {
       unsubscribeSettings();
       unsubscribeCategories();
     };
-  }, [isAuthReady]); 
+  }, [isAuthReady]);
 
   React.useEffect(() => {
     const updateCountdown = () => {
@@ -325,7 +329,7 @@ function App() {
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
             }
-            setForceRegistrationCheck(prev => prev + 1); 
+            setForceRegistrationCheck(prev => prev + 1);
         }
     };
 
@@ -378,7 +382,7 @@ function App() {
   React.useEffect(() => {
     const interval = setInterval(() => {
       setPeriodicRefreshKey(prev => prev + 1);
-    }, 60 * 1000); 
+    }, 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -400,11 +404,11 @@ function App() {
   const closeNotification = () => {
     setShowNotification(false);
     setNotificationMessage('');
-    setNotificationType('info'); 
+    setNotificationType('info');
   };
 
-  // Nová funkcia pre odosielanie notifikácií, ktorá obalí settery
-  const dispatchNotification = React.useCallback((message, type = 'info') => {
+  // Funkcia pre odosielanie notifikácií pre App komponent a Page1/Page2
+  const dispatchAppNotification = React.useCallback((message, type = 'info') => {
     setNotificationMessage(message);
     setShowNotification(true);
     setNotificationType(type);
@@ -415,16 +419,16 @@ function App() {
     const { id, value } = e.target;
     if (id === 'clubName' || id === 'ico' || id === 'dic' || id === 'icDph') {
       setFormData(prev => ({
-        ...prev, 
-        billing: { 
+        ...prev,
+        billing: {
           ...prev.billing,
           [id]: value
         }
       }));
-    } else if (id === 'accommodation') { 
+    } else if (id === 'accommodation') {
         setFormData(prev => ({
             ...prev,
-            accommodation: value 
+            accommodation: value
         }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
@@ -437,14 +441,14 @@ function App() {
 
   const getRecaptchaToken = async (action) => {
     if (typeof grecaptcha === 'undefined' || !grecaptcha.execute) {
-      dispatchNotification("reCAPTCHA API nie je načítané alebo pripravené.", 'error'); // Použitie dispatchNotification
+      dispatchAppNotification("reCAPTCHA API nie je načítané alebo pripravené.", 'error');
       return null;
     }
     try {
       const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
-      dispatchNotification(`Chyba reCAPTCHA: ${e.message}`, 'error'); // Použitie dispatchNotification
+      dispatchAppNotification(`Chyba reCAPTCHA: ${e.message}`, 'error');
       return null;
     }
   };
@@ -452,23 +456,23 @@ function App() {
   const handleNext = async (e) => {
     e.preventDefault();
     setLoading(true);
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
     if (!isRecaptchaReady) {
-      dispatchNotification('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.', 'error'); // Použitie dispatchNotification
+      dispatchAppNotification('reCAPTCHA sa ešte nenačítalo. Skúste to prosím znova.', 'error');
       setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      dispatchNotification('Heslá sa nezhodujú.', 'error'); // Použitie dispatchNotification
+      dispatchAppNotification('Heslá sa nezhodujú.', 'error');
       setLoading(false);
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(formData.password)) {
-      dispatchNotification('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.', 'error'); // Použitie dispatchNotification
+      dispatchAppNotification('Heslo musí obsahovať aspoň jedno malé písmeno, jedno veľké písmeno a jednu číslicu.', 'error');
       setLoading(false);
       return;
     }
@@ -476,27 +480,27 @@ function App() {
     const recaptchaToken = await getRecaptchaToken('page_transition');
     if (!recaptchaToken) {
         setLoading(false);
-        return; 
+        return;
     }
     setPage(2);
-    setLoading(false); 
+    setLoading(false);
   };
 
   const handleNextPage2ToPage3 = async (e) => {
     e.preventDefault();
     setLoading(true);
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
     const { clubName, ico, dic, icDph } = formData.billing;
 
     if (!clubName.trim()) {
-        dispatchNotification('Oficiálny názov klubu je povinný.', 'error'); // Použitie dispatchNotification
+        dispatchAppNotification('Oficiálny názov klubu je povinný.', 'error');
         setLoading(false);
         return;
     }
 
     if (!ico.trim()) {
-      dispatchNotification('IČO je povinné.', 'error'); // Použitie dispatchNotification
+      dispatchAppNotification('IČO je povinné.', 'error');
       setLoading(false);
       return;
     }
@@ -504,7 +508,7 @@ function App() {
     if (icDph) {
       const icDphRegex = /^[A-Z]{2}[0-9]+$/;
       if (!icDphRegex.test(icDph)) {
-        dispatchNotification('IČ DPH musí zažínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).', 'error'); // Použitie dispatchNotification
+        dispatchAppNotification('IČ DPH musí zažínať dvoma veľkými písmenami a nasledovať číslicami (napr. SK1234567890).', 'error');
         setLoading(false);
         return;
       }
@@ -512,7 +516,7 @@ function App() {
 
     const postalCodeClean = formData.postalCode.replace(/\s/g, '');
     if (postalCodeClean.length !== 5 || !/^\d{5}$/.test(postalCodeClean)) {
-      dispatchNotification('PSČ musí mať presne 5 číslic.', 'error'); // Použitie dispatchNotification
+      dispatchAppNotification('PSČ musí mať presne 5 číslic.', 'error');
       setLoading(false);
       return;
     }
@@ -523,7 +527,7 @@ function App() {
 
   const handleNextPage3ToPage4 = async (categoriesDataFromPage3) => {
     setLoading(true);
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
     const transformedCategories = {};
     categoriesDataFromPage3.forEach(row => {
@@ -537,7 +541,7 @@ function App() {
         }
     });
 
-    const newTeamsDataForPage4 = {}; 
+    const newTeamsDataForPage4 = {};
     const clubName = formData.billing.clubName || '';
 
     Object.keys(transformedCategories).forEach(categoryName => {
@@ -545,13 +549,13 @@ function App() {
         newTeamsDataForPage4[categoryName] = Array.from({ length: numTeams }).map((_, teamIndex) => {
             const suffix = numTeams > 1 ? ` ${String.fromCharCode('A'.charCodeAt(0) + teamIndex)}` : '';
             const generatedTeamName = `${clubName}${suffix}`;
-            
+
             const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
 
             return {
-                teamName: generatedTeamName, 
-                players: existingTeamData.players !== undefined ? existingTeamData.players : '', 
-                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '', 
+                teamName: generatedTeamName,
+                players: existingTeamData.players !== undefined ? existingTeamData.players : '',
+                teamMembers: existingTeamData.teamMembers !== undefined ? existingTeamData.teamMembers : '',
                 womenTeamMembers: existingTeamData.womenTeamMembers !== undefined ? existingTeamData.womenTeamMembers : '',
                 menTeamMembers: existingTeamData.menTeamMembers !== undefined ? existingTeamData.menTeamMembers : '',
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
@@ -560,20 +564,20 @@ function App() {
             };
         });
     });
-    setTeamsDataFromPage4(newTeamsDataForPage4); 
+    setTeamsDataFromPage4(newTeamsDataForPage4);
 
     setFormData(prev => ({
         ...prev,
-        categories: transformedCategories 
+        categories: transformedCategories
     }));
 
     setPage(4);
     setLoading(false);
   };
 
-  const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => { 
+  const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => {
     setLoading(true);
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
     setTeamsDataFromPage4(teamsDataFromPage4Final);
 
@@ -582,14 +586,14 @@ function App() {
   };
 
   const handlePrev = () => {
-    setPage(prevPage => prevPage - 1); 
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
+    setPage(prevPage => prevPage - 1);
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
   };
 
-  const handleRegistrationSubmit = async (finalFormData) => { 
+  const handleRegistrationSubmit = async (finalFormData) => {
     setLoading(true);
-    dispatchNotification('', 'info'); // Vynulovanie notifikácií
-    isRegisteringRef.current = true; 
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
+    isRegisteringRef.current = true;
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
@@ -598,19 +602,19 @@ function App() {
       const firestoreDb = window.db;
 
       if (!authInstance || !firestoreDb) {
-        dispatchNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error'); 
-        return; 
+        dispatchAppNotification('Kritická chyba: Firebase SDK nie je inicializované. Skúste to prosím znova alebo kontaktujte podporu.', 'error');
+        return;
       }
 
       let recaptchaToken = null;
       try {
         recaptchaToken = await getRecaptchaToken('register_user');
         if (!recaptchaToken) {
-          dispatchNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error'); 
-          return; 
+          dispatchAppNotification('Overenie reCAPTCHA zlyhalo. Skúste to prosím znova.', 'error');
+          return;
         }
       } catch (recaptchaError) {
-          dispatchNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error'); 
+          dispatchAppNotification(`Chyba reCAPTCHA: ${recaptchaError.message || "Neznáma chyba."}`, 'error');
           return;
       }
 
@@ -620,8 +624,8 @@ function App() {
         user = userCredential.user;
 
         if (!user || !user.uid) {
-          dispatchNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error'); 
-          return; 
+          dispatchAppNotification('Chyba pri vytváraní používateľského účtu (UID chýba). Skúste to prosím znova.', 'error');
+          return;
         }
 
       } catch (authError) {
@@ -644,13 +648,13 @@ function App() {
           } else {
               authErrorMessage = authError.message || authErrorMessage;
           }
-          dispatchNotification(authErrorMessage, 'error'); 
+          dispatchAppNotification(authErrorMessage, 'error');
           return;
       }
 
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
       try {
-        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
+        const teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4));
         for (const categoryName in teamsDataToSaveFinal) {
             teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
                 ...team,
@@ -680,8 +684,8 @@ function App() {
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
-          teams: teamsDataToSaveFinal, 
-          accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' } 
+          teams: teamsDataToSaveFinal,
+          accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' }
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -690,10 +694,10 @@ function App() {
           } else {
               firestoreErrorMessage = firestoreError.message || firestoreErrorMessage;
           }
-          dispatchNotification(firestoreErrorMessage, 'error'); 
+          dispatchAppNotification(firestoreErrorMessage, 'error');
           try {
               if (user && authInstance && authInstance.currentUser && authInstance.currentUser.uid === user.uid) {
-                  await authInstance.currentUser.delete(); 
+                  await authInstance.currentUser.delete();
               }
           } catch (deleteError) {
           }
@@ -707,13 +711,13 @@ function App() {
             firstName: formData.firstName,
             lastName: formData.lastName,
             contactPhoneNumber: fullPhoneNumber,
-            isAdmin: false, 
-            billing: { 
+            isAdmin: false,
+            billing: {
               clubName: formData.billing.clubName,
               ico: formData.billing.ico,
               dic: formData.billing.dic,
               icDph: formData.billing.icDph,
-              address: { 
+              address: {
                 street: formData.street,
                 houseNumber: formData.houseNumber,
                 zipCode: formData.postalCode,
@@ -721,13 +725,13 @@ function App() {
                 country: formData.country
               }
             },
-            categories: formData.categories, 
-            teams: teamsDataFromPage4, 
-            accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' } 
+            categories: formData.categories,
+            teams: teamsDataFromPage4,
+            accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' }
           };
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', 
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
@@ -736,32 +740,36 @@ function App() {
       } catch (emailError) {
       }
 
-      await new Promise(resolve => setTimeout(resolve, 200)); 
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      dispatchNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success'); 
-      setRegistrationSuccess(true); 
+      dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
+      setRegistrationSuccess(true);
+      // Pridané: Odhlásenie používateľa po úspešnej registrácii
+      if (authInstance && authInstance.currentUser) {
+          await signOut(authInstance);
+      }
 
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' },
-        accommodation: { type: '' } 
+        accommodation: { type: '' }
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
-      setTeamsDataFromPage4({}); 
-      setPage(1); 
+      setTeamsDataFromPage4({});
+      setPage(1);
 
       setTimeout(() => {
         window.location.href = 'login.html';
-      }, 5000); 
+      }, 5000);
 
-    } catch (globalError) { 
+    } catch (globalError) {
       let errorMessage = 'Registrácia zlyhala neočakávanou chybou. Skúste to prosím neskôr.';
-      dispatchNotification(errorMessage, 'error'); 
+      dispatchAppNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
-      isRegisteringRef.current = false; 
+      isRegisteringRef.current = false;
     }
   };
 
@@ -789,8 +797,8 @@ function App() {
         data.billing.icDph.trim() !== '') {
         return false;
     }
-    
-    if (data.accommodation && data.accommodation.type.trim() !== '') { 
+
+    if (data.accommodation && data.accommodation.type.trim() !== '') {
         return false;
     }
 
@@ -815,7 +823,7 @@ function App() {
                     (team.menTeamMembers !== undefined && team.menTeamMembers !== '') ||
                     (team.tshirts && team.tshirts.some(t => t.size.trim() !== '' || (t.quantity !== undefined && t.quantity !== '')))
                 );
-                if (hasTeamDetails) { 
+                if (hasTeamDetails) {
                     break;
                 }
             }
@@ -826,11 +834,11 @@ function App() {
     }
 
 
-    return true; 
+    return true;
   };
 
   const hasAnyPage1Data = !isPage1FormDataEmpty(formData);
-  const now = new Date(); 
+  const now = new Date();
 
   const registrationStartDateObj = registrationStartDate ? new Date(registrationStartDate) : null;
   const registrationEndDateObj = registrationEndDate ? new Date(registrationEndDate) : null;
@@ -838,6 +846,7 @@ function App() {
   return React.createElement(
     'div',
     { className: 'min-h-screen flex items-center justify-center bg-gray-100 p-4' },
+    // NotificationModal pre App komponent zostáva tu
     !registrationSuccess && React.createElement(NotificationModal, { message: notificationMessage, onClose: closeNotification, type: notificationType }),
 
     !settingsLoaded || !isAuthReady ? (
@@ -853,27 +862,27 @@ function App() {
     ) : registrationSuccess ? (
       React.createElement(
         'div',
-        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' }, 
+        { className: 'bg-green-700 text-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
         React.createElement(
           'h2',
-          { className: 'text-2xl font-bold mb-4 text-white' }, 
+          { className: 'text-2xl font-bold mb-4 text-white' },
           'Registrácia úspešná!'
         ),
         React.createElement(
           'p',
-          { className: 'text-white' }, 
-          notificationMessage 
+          { className: 'text-white' },
+          notificationMessage
         ),
         React.createElement(
           'p',
-          { className: 'text-gray-200 text-sm mt-4' }, 
+          { className: 'text-gray-200 text-sm mt-4' },
           'Budete automaticky presmerovaní na prihlasovaciu stránku.'
         )
       )
     ) : (
       (isRegistrationOpen || (isRegistrationClosed && hasAnyPage1Data)) ? (
         React.createElement(
-          'div', 
+          'div',
           { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md' },
           page === 1 ?
             React.createElement(Page1Form, {
@@ -881,29 +890,29 @@ function App() {
               handleChange: handleChange,
               handleNext: handleNext,
               loading: loading,
-              notificationMessage: notificationMessage, 
+              notificationMessage: notificationMessage,
               closeNotification: closeNotification,
               isCountryCodeModalOpen: isCountryCodeModalOpen,
               setIsCountryCodeModalOpen: setIsCountryCodeModalOpen,
               setSelectedCountryDialCode: setSelectedCountryDialCode,
               selectedCountryDialCode: selectedCountryDialCode,
               NotificationModal: NotificationModal,
-              isRegistrationOpen: isRegistrationOpen, 
+              isRegistrationOpen: isRegistrationOpen,
               countdownMessage: countdown,
               registrationStartDate: registrationStartDate,
               isRecaptchaReady: isRecaptchaReady,
-              isRegistrationClosed: isRegistrationClosed, 
-              registrationEndDate: registrationEndDate, 
-              hasAnyPage1Data: hasAnyPage1Data 
+              isRegistrationClosed: isRegistrationClosed,
+              registrationEndDate: registrationEndDate,
+              hasAnyPage1Data: hasAnyPage1Data
             }) :
           page === 2 ?
             React.createElement(Page2Form, {
               formData: formData,
               handleChange: handleChange,
               handlePrev: handlePrev,
-              handleSubmit: handleNextPage2ToPage3, 
+              handleSubmit: handleNextPage2ToPage3,
               loading: loading,
-              notificationMessage: notificationMessage, 
+              notificationMessage: notificationMessage,
               closeNotification: closeNotification,
               userRole: userRole,
               handleRoleChange: handleRoleChange,
@@ -913,25 +922,7 @@ function App() {
               React.createElement(Page3Form, {
                   formData: formData,
                   handlePrev: handlePrev,
-                  handleNextPage3: handleNextPage3ToPage4, 
-                  loading: loading,
-                  setLoading: setLoading, 
-                  notificationMessage: notificationMessage,
-                  setShowNotification: setShowNotification,
-                  setNotificationType: setNotificationType,
-                  setRegistrationSuccess: setRegistrationSuccess,
-                  isRecaptchaReady: isRecaptchaReady,
-                  selectedCountryDialCode: selectedCountryDialCode,
-                  NotificationModal: NotificationModal,
-                  availableCategoriesMap: categoriesDataFromFirestore, 
-                  selectedCategoryRows: selectedCategoryRows, 
-                  setSelectedCategoryRows: setSelectedCategoryRows, 
-              }) :
-          page === 4 ?
-              React.createElement(Page4Form, {
-                  formData: formData, 
-                  handlePrev: handlePrev,
-                  handleNextPage4: handleNextPage4ToPage5, 
+                  handleNextPage3: handleNextPage3ToPage4,
                   loading: loading,
                   setLoading: setLoading,
                   notificationMessage: notificationMessage,
@@ -941,37 +932,59 @@ function App() {
                   isRecaptchaReady: isRecaptchaReady,
                   selectedCountryDialCode: selectedCountryDialCode,
                   NotificationModal: NotificationModal,
-                  numberOfPlayersLimit: numberOfPlayersInTeam, 
-                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers, 
-                  teamsDataFromPage4: teamsDataFromPage4, 
-                  setTeamsDataFromPage4: setTeamsDataFromPage4, 
-                  closeNotification: closeNotification, 
-                  setNotificationMessage: setNotificationMessage, 
-                  setShowNotification: setShowNotification, 
-                  setNotificationType: setNotificationType,
-              }) : 
-          page === 5 ? 
-              React.createElement(Page5Form, { 
+                  availableCategoriesMap: categoriesDataFromFirestore,
+                  selectedCategoryRows: selectedCategoryRows,
+                  setSelectedCategoryRows: setSelectedCategoryRows,
+              }) :
+          page === 4 ?
+              React.createElement(Page4Form, {
                   formData: formData,
-                  teamsDataFromPage4: teamsDataFromPage4, 
+                  handlePrev: handlePrev,
+                  handleNextPage4: handleNextPage4ToPage5,
+                  loading: loading,
+                  setLoading: setLoading,
+                  notificationMessage: notificationMessage,
+                  setShowNotification: setShowNotification,
+                  setNotificationType: setNotificationType,
+                  setRegistrationSuccess: setRegistrationSuccess,
+                  isRecaptchaReady: isRecaptchaReady,
+                  selectedCountryDialCode: selectedCountryDialCode,
+                  NotificationModal: NotificationModal,
+                  numberOfPlayersLimit: numberOfPlayersInTeam,
+                  numberOfTeamMembersLimit: numberOfImplementationTeamMembers,
+                  teamsDataFromPage4: teamsDataFromPage4,
+                  setTeamsDataFromPage4: setTeamsDataFromPage4,
+                  closeNotification: closeNotification,
+                  setNotificationMessage: setNotificationMessage,
+                  setShowNotification: setShowNotification,
+                  setNotificationType: setNotificationType,
+              }) :
+          page === 5 ?
+              React.createElement(Page5Form, {
+                  formData: formData,
+                  teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore,
                   handlePrev: handlePrev,
-                  handleSubmit: handleRegistrationSubmit, 
+                  handleSubmit: handleRegistrationSubmit,
                   loading: loading,
-                  setLoading: setLoading, 
-                  dispatchNotification: dispatchNotification, // ODOSIELANIE NOVEJ FUNKCIE
+                  setLoading: setLoading,
+                  // Tieto props už Page5Form nepotrebuje, pretože notifikácie spravuje sám
+                  // notificationMessage: notificationMessage,
+                  // setShowNotification: setShowNotification,
+                  // setNotificationType: setNotificationType,
+                  // dispatchNotification: dispatchNotification,
                   setRegistrationSuccess: setRegistrationSuccess,
-                  closeNotification: closeNotification,
-                  handleChange: handleChange, 
+                  // closeNotification: closeNotification, // closeNotification tiež presúvame
+                  handleChange: handleChange,
               }) : null
         )
       ) : isRegistrationClosed ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, 
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement(
             'h2',
-            { className: 'text-2xl font-bold mb-2 text-red-600' }, 
+            { className: 'text-2xl font-bold mb-2 text-red-600' },
             'Registrácia na turnaj je už ukončená.'
           ),
           React.createElement(
@@ -992,19 +1005,19 @@ function App() {
       ) : (isRegistrationOpen === false && countdown) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' }, 
-          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'), 
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
+          React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
           registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
             React.createElement(
               React.Fragment,
               null,
               React.createElement(
                 'p',
-                { className: 'text-md text-gray-700 mt-2' }, 
-                'Registrácia sa spustí ', 
+                { className: 'text-md text-gray-700 mt-2' },
+                'Registrácia sa spustí ',
                 React.createElement(
                   'span',
-                  { style: { whiteSpace: 'nowrap' } }, 
+                  { style: { whiteSpace: 'nowrap' } },
                   'dňa ',
                   registrationStartDateObj.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' }),
                   ' o ',
@@ -1031,7 +1044,7 @@ function initializeRegistrationApp() {
   if (appInitialized) {
     return;
   }
-  
+
   if (!globalDataUpdatedReceived || !categoriesLoadedReceived) {
     return;
   }
@@ -1039,7 +1052,7 @@ function initializeRegistrationApp() {
   const rootElement = document.getElementById('root');
   if (rootElement) {
     const root = ReactDOM.createRoot(rootElement);
-    appInitialized = true; 
+    appInitialized = true;
 
     root.render(React.createElement(App, null));
 
@@ -1049,12 +1062,12 @@ function initializeRegistrationApp() {
 }
 
 window.addEventListener('globalDataUpdated', () => {
-  globalDataUpdatedReceived = true; 
+  globalDataUpdatedReceived = true;
   initializeRegistrationApp();
 });
 
 window.addEventListener('categoriesLoaded', () => {
-  categoriesLoadedReceived = true; 
+  categoriesLoadedReceived = true;
   initializeRegistrationApp();
 });
 
