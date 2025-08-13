@@ -640,7 +640,7 @@ function TournamentSettingsApp() {
                 {
                     type: 'button',
                     onClick: handleOpenAddSizeModal,
-                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center' // Pridané w-12, h-12, flex, items-center, justify-center
                 },
                 React.createElement('span', { className: 'text-xl' }, '+')
             )
