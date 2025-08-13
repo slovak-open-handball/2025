@@ -15,7 +15,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const [packageRefreshments, setPackageRefreshments] = React.useState([]);
 
   const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
-  // Nový stav pre účastnícku kartu
   const [hasParticipantCard, setHasParticipantCard] = React.useState(false);
 
 
@@ -86,7 +85,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
     setShowRefreshmentColumn(false);
-    setHasParticipantCard(false); // Reset pre nový balíček
+    setHasParticipantCard(false);
   };
 
   const handleOpenEditPackageModal = (pkg) => {
@@ -99,7 +98,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setShowPackageModal(true);
     const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
     setShowRefreshmentColumn(hasRefreshment);
-    setHasParticipantCard(pkg.meals?.participantCard === 1); // Načítanie stavu účastníckej karty
+    setHasParticipantCard(pkg.meals?.participantCard === 1);
   };
 
   const handleClosePackageModal = () => {
@@ -111,7 +110,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setCurrentPackageEdit(null);
     setPackageModalMode('add');
     setShowRefreshmentColumn(false);
-    setHasParticipantCard(false); // Reset pri zatvorení
+    setHasParticipantCard(false);
   };
 
   const handleMealChange = (date, mealType, isChecked) => {
@@ -124,10 +123,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     }));
   };
 
-  // Handler pre zmenu stavu účastníckej karty
   const handleParticipantCardChange = (isChecked) => {
     setHasParticipantCard(isChecked);
-    // Uložíme stav účastníckej karty do packageMeals objektu pre konzistentnosť
     setPackageMeals(prevMeals => ({
       ...prevMeals,
       participantCard: isChecked ? 1 : 0
@@ -167,7 +164,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
 
     try {
-      // Pripravíme objekt meals, ktorý bude obsahovať aj participantCard
       const mealsToSave = { ...packageMeals, participantCard: hasParticipantCard ? 1 : 0 };
 
       if (packageModalMode === 'add') {
@@ -178,7 +174,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: mealsToSave, // Uložíme nový objekt meals
+          meals: mealsToSave,
           refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
         });
@@ -192,16 +188,30 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             return;
         }
         const packageDocRef = doc(db, 'settings', 'packages', 'list', currentPackageEdit.id);
+        
+        // Posielame pôvodný a nový objekt balíčka pre detailnú notifikáciu
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: mealsToSave, // Uložíme aktualizovaný objekt meals
+          meals: mealsToSave,
           refreshments: [],
           updatedAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
         if (typeof sendAdminNotification === 'function') {
-            await sendAdminNotification({ type: 'editPackage', data: { originalName: currentPackageEdit.name, originalPrice: currentPackageEdit.price, newName: trimmedName, newPrice: newPackagePrice } });
+            await sendAdminNotification({ 
+                type: 'editPackage', 
+                data: { 
+                    originalPackage: currentPackageEdit, 
+                    newPackage: { // Nový objekt balíčka pre porovnanie
+                        id: currentPackageEdit.id,
+                        name: trimmedName,
+                        price: newPackagePrice,
+                        meals: mealsToSave,
+                        refreshments: [],
+                    }
+                } 
+            });
         }
       }
       handleClosePackageModal();
