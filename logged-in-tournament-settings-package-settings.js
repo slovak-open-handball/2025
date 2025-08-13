@@ -283,7 +283,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                     React.createElement(
                         'div',
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} - ${pkg.price}€`),
+                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} - ${pkg.price} €`),
                         React.createElement(
                             'div',
                             { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
@@ -471,7 +471,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         checked: showRefreshmentColumn,
                         onChange: (e) => setShowRefreshmentColumn(e.target.checked),
                     }),
-                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'Zobraziť stĺpec Občerstvenie')
+                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'Zobraziť stĺpec občerstvenie')
                 )
             )
         ) : (
@@ -523,7 +523,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         'div',
         { className: 'modal-content' },
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Potvrdiť zmazanie'),
-        React.createElement('p', { className: 'text-gray-700 mb-6' }, `Naozaj chcete zmazať balíček "${packageToDelete?.name}" (cena: ${packageToDelete?.price}€)?`),
+        React.createElement('p', { className: 'text-gray-700 mb-6' }, `Naozaj chcete zmazať balíček "${packageToDelete?.name}" (cena: ${packageToDelete?.price} €)?`),
         React.createElement(
           'div',
           { className: 'flex justify-end space-x-3' },
