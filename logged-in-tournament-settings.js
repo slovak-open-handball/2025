@@ -1,13 +1,7 @@
-// logged-in-tournament-settings.js
-// Tento súbor predpokladá, že Firebase SDK verzie 9.x.x je inicializovaný v authentication.js
-// a globálne funkcie ako window.auth, window.db, window.showGlobalLoader sú dostupné.
-
-// Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
-// Helper funkcia pre formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -18,7 +12,6 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Helper funkcia pre formátovanie objektu Date/Timestamp na 'DD. MM. YYYY HH:mm hod.' pre zobrazenie v notifikáciách
 const formatDateForDisplay = (dateOrTimestamp) => {
   let date;
   if (!dateOrTimestamp) return 'nezadané';
@@ -39,94 +32,73 @@ const formatDateForDisplay = (dateOrTimestamp) => {
   return `${day}. ${month}. ${year} ${hours}:${minutes} hod.`;
 };
 
-/**
- * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
- * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách.
- * Používa štýly z logged-in-my-data.js (farba pozadia) a nemá ikonu.
- */
 const showNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification'); 
     
-    // Ak element ešte neexistuje, vytvoríme ho a pridáme do tela dokumentu
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
         document.body.appendChild(notificationElement);
     }
 
-    // Základné triedy pre pozíciu a prechod, rovnaké ako v logged-in-my-data.js
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
 
-    // Nastavíme farbu pozadia na základe typu notifikácie
     if (type === 'success') {
-        typeClasses = 'bg-green-500 text-white'; // Zelená pre úspech (ako v logged-in-my-data.js)
+        typeClasses = 'bg-green-500 text-white';
     } else if (type === 'error') {
-        typeClasses = 'bg-red-500 text-white'; // Červená pre chybu (ako v logged-in-my-data.js)
+        typeClasses = 'bg-red-500 text-white';
     } else {
-        typeClasses = 'bg-blue-500 text-white'; // Predvolená modrá pre info
+        typeClasses = 'bg-blue-500 text-white';
     }
 
-    // Nastavíme triedy elementu
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
-    // Nastavíme textContent namiesto innerHTML, aby sa zabránilo vkladaniu SVG ikony
     notificationElement.textContent = message;
 
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
     }, 10);
 
-    // Skrytie notifikácie po 5 sekundách (ako v logged-in-my-data.js)
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
     }, 5000);
 };
 
 
-// Main React komponent pre stránku nastavení turnaja
 function TournamentSettingsApp() {
-  // Získame referencie na Firebase služby pomocou getAuth() a getFirestore()
   const auth = getAuth(); 
   const db = getFirestore();     
 
-  // Lokálny stav pre aktuálneho používateľa a jeho profilové dáta
   const [user, setUser] = React.useState(null); 
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
-  // Stavy pre nastavenia dátumu a času
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
-  // Stavy pre počet hráčov a členov realizačného tímu
   const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
   const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
 
-  // Stavy pre správu veľkostí tričiek
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
   const [showSizeModal, setShowSizeModal] = React.useState(false);
-  const [currentSizeEdit, setCurrentSizeEdit] = React.useState(null); // null pre pridanie, string pre úpravu
+  const [currentSizeEdit, setCurrentSizeEdit] = React.useState(null); 
   const [newSizeValue, setNewSizeValue] = React.useState('');
-  const [modalMode, setModalMode] = React.useState('add'); // 'add' alebo 'edit'
+  const [modalMode, setModalMode] = React.useState('add'); 
 
-  // Stavy pre modálne okno na potvrdenie zmazania
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false);
   const [sizeToDelete, setSizeToDelete] = React.useState(null);
 
-  // NOVÉ STAVY pre správu ubytovania
   const [accommodations, setAccommodations] = React.useState([]);
   const [showAccommodationModal, setShowAccommodationModal] = React.useState(false);
-  const [currentAccommodationEdit, setCurrentAccommodationEdit] = React.useState(null); // null pre pridanie, objekt pre úpravu
+  const [currentAccommodationEdit, setCurrentAccommodationEdit] = React.useState(null); 
   const [newAccommodationType, setNewAccommodationType] = React.useState('');
   const [newAccommodationCapacity, setNewAccommodationCapacity] = React.useState(0);
-  const [accommodationModalMode, setAccommodationModalMode] = React.useState('add'); // 'add' alebo 'edit'
+  const [accommodationModalMode, setAccommodationModalMode] = React.useState('add'); 
   const [showConfirmDeleteAccommodationModal, setShowConfirmDeleteAccommodationModal] = React.useState(false);
   const [accommodationToDelete, setAccommodationToDelete] = React.useState(null);
 
 
-  // Stav pre indikáciu, či je registrácia aktívna (na základe dátumov)
   const isRegistrationOpen = React.useMemo(() => {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -135,37 +107,30 @@ function TournamentSettingsApp() {
     const isRegStartValid = regStart instanceof Date && !isNaN(regStart);
     const isRegEndValid = regEnd instanceof Date && !isNaN(regEnd);
 
-    // Registrácia je otvorená, ak aktuálny čas je medzi dátumom začiatku a konca (vrátane, ak dátumy existujú)
     return (isRegStartValid ? now >= regStart : true) && (isRegEndValid ? now <= regEnd : true);
   }, [registrationStartDate, registrationEndDate]);
 
-  // Stav pre indikáciu, či majú byť polia zablokované (od začiatku registrácie ďalej)
   const isFrozenForEditing = React.useMemo(() => {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
-    // Je zablokované, ak regStart existuje a aktuálny čas je >= regStart
     return regStart instanceof Date && !isNaN(regStart) && now >= regStart;
   }, [registrationStartDate]);
 
 
-  // Effect pre inicializáciu a sledovanie globálneho stavu autentifikácie a profilu
   React.useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
-      setIsAuthReady(true); // Auth je pripravené
+      setIsAuthReady(true); 
       if (!currentUser) {
-        console.log("TournamentSettingsApp: Používateľ nie je prihlásený, presmerovávam na login.html.");
         window.location.href = 'login.html';
       }
     });
 
-    // Listener pre globalDataUpdated z authentication.js
     const handleGlobalDataUpdated = (event) => {
       setUserProfileData(event.detail);
     };
     window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
 
-    // Počiatočné nastavenie, ak už sú dáta dostupné
     if (window.isGlobalAuthReady) {
         setIsAuthReady(true);
         setUser(auth.currentUser);
@@ -178,146 +143,111 @@ function TournamentSettingsApp() {
       unsubscribeAuth();
       window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
     };
-  }, [auth]); // Závisí od auth inštancie
+  }, [auth]); 
 
-  // Effect pre načítanie používateľských dát z Firestore a kontrolu roly
   React.useEffect(() => {
     let unsubscribeUserDoc;
 
     if (user && db && isAuthReady) {
-      console.log(`TournamentSettingsApp: Pokúšam sa načítať používateľský dokument pre UID: ${user.uid}`);
 
       try {
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
-          console.log("TournamentSettingsApp: onSnapshot pre používateľský dokument spustený.");
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data();
-            console.log("TournamentSettingsApp: Používateľský dokument existuje, dáta:", userData);
 
-            // Ak používateľ nie je admin, presmerujeme ho
             if (userData.role !== 'admin') {
-                console.log("TournamentSettingsApp: Používateľ nie je admin, presmerovávam na logged-in-my-data.html.");
                 window.location.href = 'logged-in-my-data.html';
                 return; 
             }
 
-            setUserProfileData(userData); // Update userProfileData state
+            setUserProfileData(userData); 
           } else {
-            console.warn("TournamentSettingsApp: Používateľský dokument sa nenašiel pre UID:", user.uid);
-            showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); // Používame lokálnu showNotification
-            auth.signOut(); // Odhlásiť používateľa
+            showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); 
+            auth.signOut(); 
             setUser(null);
             setUserProfileData(null);
           }
         }, error => {
-          console.error("TournamentSettingsApp: Chyba pri načítaní používateľských dát z Firestore (onSnapshot error):", error);
-          showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); // Používame lokálnu showNotification
+          showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); 
           auth.signOut();
           setUser(null);
           setUserProfileData(null);
         });
       } catch (e) {
-        console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre používateľské dáta (try-catch):", e);
-        showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); // Používame lokálnu showNotification
+        showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); 
         auth.signOut();
         setUser(null);
         setUserProfileData(null);
       }
     } 
-    // Ak je autentifikácia pripravená, ale používateľ je null (nie je prihlásený),
-    // loader zostane viditeľný, kým neprebehne presmerovanie v onAuthStateChanged.
     else if (isAuthReady && user === null) {
-        console.log("TournamentSettingsApp: Auth je pripravené, ale používateľ nie je prihlásený. Loader zostáva zobrazený.");
     }
 
     return () => {
       if (unsubscribeUserDoc) {
-        console.log("TournamentSettingsApp: Ruším odber onSnapshot pre používateľský dokument.");
         unsubscribeUserDoc();
       }
     };
   }, [user, db, isAuthReady, auth]);
 
-  // Effect pre načítanie nastavení (spustí sa po inicializácii DB a Auth a ak je používateľ admin)
   React.useEffect(() => {
     let unsubscribeSettings;
     const fetchSettings = async () => {
-      // Načítavanie nastavení spustíme len vtedy, ak je používateľ admin.
-      // Ak userProfileData ešte nie je k dispozícii alebo používateľ nie je admin,
-      // loader zostane viditeľný vďaka hlavnému loading stavu a podmienke vykresľovania.
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
-        console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie nastavení.");
         return; 
       }
       try {
-          console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia registrácie.");
           const settingsDocRef = doc(db, 'settings', 'registration');
           unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
-            console.log("TournamentSettingsApp: onSnapshot pre nastavenia registrácie spustený.");
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
-                console.log("TournamentSettingsApp: Nastavenia registrácie existujú, dáta:", data);
                 setRegistrationStartDate(data.registrationStartDate ? formatToDatetimeLocal(data.registrationStartDate.toDate()) : '');
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
                 setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
-                setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); // Načítanie nového dátumu
-                // NOVINKA: Načítanie počtu hráčov a členov realizačného tímu
+                setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); 
                 setNumberOfPlayers(data.numberOfPlayers || 0);
                 setNumberOfImplementationTeam(data.numberOfImplementationTeam || 0);
 
             } else {
-                console.log("TournamentSettingsApp: Nastavenia registrácie sa nenašli v Firestore. Používajú sa predvolené prázdne hodnoty.");
                 setRegistrationStartDate('');
                 setRegistrationEndDate('');
                 setDataEditDeadline(''); 
-                setRosterEditDeadline(''); // Predvolená prázdna hodnota pre nový dátum
-                // NOVINKA: Predvolené hodnoty pre počet hráčov a členov realizačného tímu
+                setRosterEditDeadline(''); 
                 setNumberOfPlayers(0);
                 setNumberOfImplementationTeam(0);
             }
           }, error => {
-            console.error("TournamentSettingsApp: Chyba pri načítaní nastavení registrácie (onSnapshot error):", error);
-            showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); // Používame lokálnu showNotification
+            showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); 
           });
 
           return () => {
             if (unsubscribeSettings) {
-                console.log("TournamentSettingsApp: Ruším odber onSnapshot pre nastavenia registrácie.");
                 unsubscribeSettings();
             }
           };
       } catch (e) {
-          console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre nastavenia registrácie (try-catch):", e);
-          showNotification(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
+          showNotification(`Chyba pri nastavovaní poslucháča pre nastavenia: ${e.message}`, 'error'); 
       }
     };
 
     fetchSettings();
-  }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu)
+  }, [db, userProfileData]); 
 
-  // Effect pre načítanie veľkostí tričiek
   React.useEffect(() => {
     let unsubscribeTshirtSizes;
     const fetchTshirtSizes = async () => {
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
-        console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie veľkostí tričiek.");
         return;
       }
 
       try {
-        console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia veľkostí tričiek.");
         const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
         unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, docSnapshot => {
-          console.log("TournamentSettingsApp: onSnapshot pre veľkosti tričiek spustený.");
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            console.log("TournamentSettingsApp: Nastavenia veľkostí tričiek existujú, dáta:", data);
-            // Predpokladáme, že veľkosti sú uložené v poli 'sizes'
             setTshirtSizes(data.sizes || []);
           } else {
-            console.log("TournamentSettingsApp: Nastavenia veľkostí tričiek sa nenašli. Vytváram predvolené hodnoty.");
-            // Vytvorenie dokumentu s predvolenými hodnotami, ak neexistuje
             setDoc(tshirtSizesDocRef, {
               sizes: [
                 '134 - 140',
@@ -332,26 +262,21 @@ function TournamentSettingsApp() {
                 'XXXL'
               ]
             }).then(() => {
-              console.log("Predvolené veľkosti tričiek boli úspešne vytvorené.");
             }).catch(e => {
-              console.error("Chyba pri vytváraní predvolených veľkostí tričiek:", e);
               showNotification(`Chyba pri vytváraní predvolených veľkostí tričiek: ${e.message}`, 'error');
             });
-            setTshirtSizes([]); // Zatiaľ prázdne, kým sa dokument nevytvorí a neaktualizuje onSnapshot
+            setTshirtSizes([]); 
           }
         }, error => {
-          console.error("TournamentSettingsApp: Chyba pri načítaní nastavení veľkostí tričiek (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní veľkostí tričiek: ${error.message}`, 'error');
         });
 
         return () => {
           if (unsubscribeTshirtSizes) {
-            console.log("TournamentSettingsApp: Ruším odber onSnapshot pre veľkosti tričiek.");
             unsubscribeTshirtSizes();
           }
         };
       } catch (e) {
-        console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre veľkosti tričiek (try-catch):", e);
         showNotification(`Chyba pri nastavovaní poslucháča pre veľkosti tričiek: ${e.message}`, 'error');
       }
     };
@@ -359,49 +284,38 @@ function TournamentSettingsApp() {
     fetchTshirtSizes();
   }, [db, userProfileData]);
 
-  // NOVÝ Effect pre načítanie ubytovacích kapacít
   React.useEffect(() => {
     let unsubscribeAccommodation;
     const fetchAccommodation = async () => {
       if (!db || !userProfileData || userProfileData.role !== 'admin') {
-        console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie ubytovania.");
         return;
       }
 
       try {
-        console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia ubytovania.");
         const accommodationDocRef = doc(db, 'settings', 'accommodation');
         unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
-          console.log("TournamentSettingsApp: onSnapshot pre ubytovanie spustený.");
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            console.log("TournamentSettingsApp: Nastavenia ubytovania existujú, dáta:", data);
-            setAccommodations(data.types || []); // Predpokladáme, že typy sú uložené v poli 'types'
+            setAccommodations(data.types || []); 
           } else {
-            console.log("TournamentSettingsApp: Nastavenia ubytovania sa nenašli. Vytváram predvolené hodnoty.");
             setDoc(accommodationDocRef, {
               types: []
             }).then(() => {
-              console.log("Predvolené typy ubytovania boli úspešne vytvorené.");
             }).catch(e => {
-              console.error("Chyba pri vytváraní predvolených typov ubytovania:", e);
               showNotification(`Chyba pri vytváraní predvolených typov ubytovania: ${e.message}`, 'error');
             });
-            setAccommodations([]); // Zatiaľ prázdne, kým sa dokument nevytvorí a neaktualizuje onSnapshot
+            setAccommodations([]); 
           }
         }, error => {
-          console.error("TournamentSettingsApp: Chyba pri načítaní nastavení ubytovania (onSnapshot error):", error);
           showNotification(`Chyba pri načítaní ubytovania: ${error.message}`, 'error');
         });
 
         return () => {
           if (unsubscribeAccommodation) {
-            console.log("TournamentSettingsApp: Ruším odber onSnapshot pre ubytovanie.");
             unsubscribeAccommodation();
           }
         };
       } catch (e) {
-        console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre ubytovanie (try-catch):", e);
         showNotification(`Chyba pri nastavovaní poslucháča pre ubytovanie: ${e.message}`, 'error');
       }
     };
@@ -409,10 +323,8 @@ function TournamentSettingsApp() {
     fetchAccommodation();
   }, [db, userProfileData]);
 
-  // Funkcia na odoslanie notifikácie administrátorom
   const sendAdminNotification = async (notificationData) => {
     if (!db || !user || !user.email) { 
-      console.error("Chyba: Databáza alebo používateľ nie je k dispozícii pre odoslanie notifikácie.");
       return;
     }
     try {
@@ -428,11 +340,11 @@ function TournamentSettingsApp() {
         changesMessage = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
         changesMessage = `${notificationData.data.changesMade}`; 
-      } else if (notificationData.type === 'createAccommodation') { // NOVÁ notifikácia pre ubytovanie
+      } else if (notificationData.type === 'createAccommodation') { 
         changesMessage = `Vytvorenie typu ubytovania: '${notificationData.data.type}' s kapacitou '${notificationData.data.capacity}'`;
-      } else if (notificationData.type === 'editAccommodation') { // NOVÁ notifikácia pre ubytovanie
+      } else if (notificationData.type === 'editAccommodation') { 
         changesMessage = `Zmena ubytovania z: '${notificationData.data.originalType}' (kapacita: ${notificationData.data.originalCapacity}) na '${notificationData.data.newType}' (kapacita: ${notificationData.data.newCapacity})`;
-      } else if (notificationData.type === 'deleteAccommodation') { // NOVÁ notifikácia pre ubytovanie
+      } else if (notificationData.type === 'deleteAccommodation') { 
         changesMessage = `Zmazanie typu ubytovania: '${notificationData.data.deletedType}' (kapacita: ${notificationData.data.deletedCapacity})`;
       }
 
@@ -442,9 +354,7 @@ function TournamentSettingsApp() {
         timestamp: Timestamp.fromDate(new Date()),
         recipientId: 'all_admins'
       });
-      console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
     } catch (e) {
-      console.error("TournamentSettingsApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
       showNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
     }
   };
@@ -490,7 +400,6 @@ function TournamentSettingsApp() {
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
       let changes = [];
 
-      // Porovnanie a zber zmien
       if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
           changes.push(`Dátum začiatku registrácie z '${formatDateForDisplay(oldData.registrationStartDate)}' na '${formatDateForDisplay(regStart)}'`);
       }
@@ -532,12 +441,10 @@ function TournamentSettingsApp() {
       }
 
     } catch (e) {
-      console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
       showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); 
     }
   };
 
-  // Funkcie pre správu veľkostí tričiek
   const handleOpenAddSizeModal = () => {
     setModalMode('add');
     setNewSizeValue('');
@@ -575,7 +482,6 @@ function TournamentSettingsApp() {
 
     try {
       if (modalMode === 'add') {
-        // Kontrola duplicity pri pridávaní
         if (tshirtSizes.includes(trimmedNewSize)) {
           showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
           return;
@@ -586,12 +492,10 @@ function TournamentSettingsApp() {
         showNotification(`Veľkosť "${trimmedNewSize}" úspešne pridaná!`, 'success');
         await sendAdminNotification({ type: 'createSize', data: { newSizeValue: trimmedNewSize } });
       } else if (modalMode === 'edit') {
-        // Kontrola duplicity pri úprave (nesmie sa zhodovať s inou veľkosťou, okrem seba samej)
         if (trimmedNewSize !== currentSizeEdit && tshirtSizes.includes(trimmedNewSize)) {
             showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
             return;
         }
-        // Najprv odstránime starú hodnotu a potom pridáme novú
         await updateDoc(tshirtSizesDocRef, {
           sizes: arrayRemove(currentSizeEdit)
         });
@@ -603,7 +507,6 @@ function TournamentSettingsApp() {
       }
       handleCloseSizeModal();
     } catch (e) {
-      console.error("Chyba pri ukladaní veľkosti trička:", e);
       showNotification(`Chyba pri ukladaní veľkosti trička: ${e.message}`, 'error');
     }
   };
@@ -634,12 +537,10 @@ function TournamentSettingsApp() {
       await sendAdminNotification({ type: 'deleteSize', data: { deletedSize: sizeToDelete } });
       handleCloseConfirmDeleteModal();
     } catch (e) {
-      console.error("Chyba pri mazaní veľkosti trička:", e);
       showNotification(`Chyba pri mazaní veľkosti trička: ${e.message}`, 'error');
     }
   };
 
-  // NOVÉ FUNKCIE pre správu ubytovania
   const handleOpenAddAccommodationModal = () => {
     setAccommodationModalMode('add');
     setNewAccommodationType('');
@@ -684,7 +585,6 @@ function TournamentSettingsApp() {
 
     try {
       if (accommodationModalMode === 'add') {
-        // Kontrola duplicity pri pridávaní
         if (accommodations.some(acc => acc.type === trimmedType)) {
           showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
           return;
@@ -695,12 +595,10 @@ function TournamentSettingsApp() {
         showNotification(`Typ ubytovania "${trimmedType}" úspešne pridaný!`, 'success');
         await sendAdminNotification({ type: 'createAccommodation', data: { type: trimmedType, capacity: newAccommodationCapacity } });
       } else if (accommodationModalMode === 'edit') {
-        // Kontrola duplicity pri úprave (nesmie sa zhodovať s iným typom, okrem seba samej)
         if (trimmedType !== currentAccommodationEdit.type && accommodations.some(acc => acc.type === trimmedType)) {
             showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
             return;
         }
-        // Najprv odstránime starú hodnotu a potom pridáme novú
         await updateDoc(accommodationDocRef, {
           types: arrayRemove(currentAccommodationEdit)
         });
@@ -712,7 +610,6 @@ function TournamentSettingsApp() {
       }
       handleCloseAccommodationModal();
     } catch (e) {
-      console.error("Chyba pri ukladaní ubytovania:", e);
       showNotification(`Chyba pri ukladaní ubytovania: ${e.message}`, 'error');
     }
   };
@@ -743,27 +640,24 @@ function TournamentSettingsApp() {
       await sendAdminNotification({ type: 'deleteAccommodation', data: { deletedType: accommodationToDelete.type, deletedCapacity: accommodationToDelete.capacity } });
       handleCloseConfirmDeleteAccommodationModal();
     } catch (e) {
-      console.error("Chyba pri mazaní ubytovania:", e);
       showNotification(`Chyba pri mazaní ubytovania: ${e.message}`, 'error');
     }
   };
 
 
-  // Ak používateľ nie je admin, vrátime null, aby sa nič nevykreslilo
   if (!userProfileData || userProfileData.role !== 'admin') {
     return null; 
   }
 
-  // Ak sa dostaneme sem, user je prihlásený, userProfileData sú načítané a rola je admin.
   return React.createElement(
     'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto space-y-8' }, // Pridaný space-y-8 pre medzery medzi sekciami
+    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto space-y-8' }, 
     React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
       'Nastavenia turnaja'
     ),
     React.createElement(
       'form',
-      { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm' }, // Sekcia pre registračné nastavenia
+      { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm' }, 
       React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Všeobecné nastavenia registrácie'),
       React.createElement(
         'div',
@@ -820,12 +714,11 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-players',
-          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isFrozenForEditing
           className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
           value: numberOfPlayers,
-          onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
-          min: 0, // Minimálna hodnota
-          disabled: isFrozenForEditing, // Zablokovanie inputu, ak už registrácia začala alebo skončila
+          onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), 
+          min: 0, 
+          disabled: isFrozenForEditing, 
         })
       ),
       React.createElement(
@@ -835,12 +728,11 @@ function TournamentSettingsApp() {
         React.createElement('input', {
           type: 'number',
           id: 'number-of-implementation-team',
-          // Triedy a disabled stav sú určené pre povolenie/zablokovanie na základe isFrozenForEditing
           className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
           value: numberOfImplementationTeam,
-          onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
-          min: 0, // Minimálna hodnota
-          disabled: isFrozenForEditing, // Zablokovanie inputu, ak už registrácia začala alebo skončila
+          onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), 
+          min: 0, 
+          disabled: isFrozenForEditing, 
         })
       ),
       React.createElement(
@@ -853,14 +745,13 @@ function TournamentSettingsApp() {
       )
     ),
 
-    // Sekcia: Nastavenia veľkostí tričiek
     React.createElement(
         'div',
-        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
+        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, 
         React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia veľkostí tričiek'),
         React.createElement(
             'div',
-            { className: 'space-y-3' }, // Pre medzery medzi jednotlivými veľkosťami
+            { className: 'space-y-3' }, 
             tshirtSizes.length > 0 ? (
                 tshirtSizes.map((size, index) => (
                     React.createElement(
@@ -897,13 +788,13 @@ function TournamentSettingsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-center mt-4' }, // Zarovnanie tlačidla '+' na stred
+            { className: 'flex justify-center mt-4' }, 
             React.createElement(
                 'button',
                 {
                     type: 'button',
                     onClick: handleOpenAddSizeModal,
-                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center' // Pridané w-12, h-12, flex, items-center, justify-center
+                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center' 
                 },
                 React.createElement('span', { className: 'text-xl' }, '+')
             )
@@ -912,11 +803,11 @@ function TournamentSettingsApp() {
 
     React.createElement(
         'div',
-        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
+        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, 
         React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia ubytovania'),
         React.createElement(
             'div',
-            { className: 'space-y-3' }, // Pre medzery medzi jednotlivými typmi ubytovania
+            { className: 'space-y-3' }, 
             accommodations.length > 0 ? (
                 accommodations.map((acc, index) => (
                     React.createElement(
@@ -953,7 +844,7 @@ function TournamentSettingsApp() {
         ),
         React.createElement(
             'div',
-            { className: 'flex justify-center mt-4' }, // Zarovnanie tlačidla '+' na stred
+            { className: 'flex justify-center mt-4' }, 
             React.createElement(
                 'button',
                 {
@@ -966,7 +857,6 @@ function TournamentSettingsApp() {
         )
     ),
 
-    // Modálne okno pre pridanie/úpravu veľkosti trička
     showSizeModal && React.createElement(
       'div',
       { className: 'modal' },
@@ -1009,7 +899,6 @@ function TournamentSettingsApp() {
       )
     ),
 
-    // Modálne okno na potvrdenie zmazania veľkosti trička
     showConfirmDeleteModal && React.createElement(
       'div',
       { className: 'modal' },
@@ -1067,7 +956,7 @@ function TournamentSettingsApp() {
               className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
               placeholder: 'Zadajte kapacitu',
               value: newAccommodationCapacity,
-              onChange: (e) => setNewAccommodationCapacity(parseInt(e.target.value) || 0), // Prevod na číslo, default 0
+              onChange: (e) => setNewAccommodationCapacity(parseInt(e.target.value) || 0), 
               min: 0,
             }
           ),
@@ -1131,5 +1020,4 @@ function TournamentSettingsApp() {
   );
 }
 
-// Explicitne sprístupniť komponent globálne
 window.TournamentSettingsApp = TournamentSettingsApp;
