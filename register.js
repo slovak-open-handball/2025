@@ -582,7 +582,7 @@ function App() {
                     : [{ size: '', quantity: '' }],
                 // NOVINKA: Inicializácia dát pre Page 5 (ubytovanie, príchod, balíček)
                 accommodation: existingTeamData.accommodation || { type: '' },
-                arrival: existingTeamData.arrival || { type: '', time: null },
+                arrival: existingTeamData.arrival || { type: '', time: null, drivers: { male: '', female: '' } }, // Pridané defaultné hodnoty pre drivers
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null
             };
@@ -708,7 +708,8 @@ function App() {
                 accommodation: team.accommodation || { type: 'Bez ubytovania' },
                 arrival: {
                     type: team.arrival?.type || 'bez dopravy',
-                    time: team.arrival?.time || null
+                    time: team.arrival?.time || null,
+                    drivers: team.arrival?.drivers || { male: '', female: '' } // Pridané ukladanie počtu šoférov
                 },
                 packageId: team.packageId || '',
                 packageDetails: team.packageDetails || null
@@ -877,7 +878,10 @@ function App() {
                     // NOVINKA: Kontrola pre dáta Page 5
                     (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
                     (team.arrival?.type && team.arrival.type.trim() !== '') ||
-                    (team.packageId && team.packageId.trim() !== '')
+                    (team.packageId && team.packageId.trim() !== '') ||
+                    // NOVINKA: Kontrola pre šoférov v Page 5
+                    (team.arrival?.drivers?.male !== undefined && team.arrival.drivers.male !== '') ||
+                    (team.arrival?.drivers?.female !== undefined && team.arrival.drivers.female !== '')
                 );
                 if (hasTeamDetails) {
                     break;
