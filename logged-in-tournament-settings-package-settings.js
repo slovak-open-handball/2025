@@ -15,6 +15,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const [packageRefreshments, setPackageRefreshments] = React.useState([]);
 
   const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
+  // Nový stav pre účastnícku kartu
+  const [hasParticipantCard, setHasParticipantCard] = React.useState(false);
 
 
   const getDaysBetween = (start, end) => {
@@ -84,6 +86,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
     setShowRefreshmentColumn(false);
+    setHasParticipantCard(false); // Reset pre nový balíček
   };
 
   const handleOpenEditPackageModal = (pkg) => {
@@ -96,6 +99,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setShowPackageModal(true);
     const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
     setShowRefreshmentColumn(hasRefreshment);
+    setHasParticipantCard(pkg.meals?.participantCard === 1); // Načítanie stavu účastníckej karty
   };
 
   const handleClosePackageModal = () => {
@@ -107,6 +111,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setCurrentPackageEdit(null);
     setPackageModalMode('add');
     setShowRefreshmentColumn(false);
+    setHasParticipantCard(false); // Reset pri zatvorení
   };
 
   const handleMealChange = (date, mealType, isChecked) => {
@@ -116,6 +121,16 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         ...(prevMeals[date] || {}),
         [mealType]: isChecked ? 1 : 0
       }
+    }));
+  };
+
+  // Handler pre zmenu stavu účastníckej karty
+  const handleParticipantCardChange = (isChecked) => {
+    setHasParticipantCard(isChecked);
+    // Uložíme stav účastníckej karty do packageMeals objektu pre konzistentnosť
+    setPackageMeals(prevMeals => ({
+      ...prevMeals,
+      participantCard: isChecked ? 1 : 0
     }));
   };
 
@@ -152,6 +167,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
 
     try {
+      // Pripravíme objekt meals, ktorý bude obsahovať aj participantCard
+      const mealsToSave = { ...packageMeals, participantCard: hasParticipantCard ? 1 : 0 };
+
       if (packageModalMode === 'add') {
         if (packages.some(pkg => pkg.name === trimmedName)) {
           showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
@@ -160,7 +178,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals,
+          meals: mealsToSave, // Uložíme nový objekt meals
           refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
         });
@@ -177,7 +195,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals,
+          meals: mealsToSave, // Uložíme aktualizovaný objekt meals
           refreshments: [],
           updatedAt: Timestamp.fromDate(new Date())
         });
@@ -247,7 +265,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                     React.createElement(
                         'div',
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
-                        // Zmenený formát zobrazenia názvu a ceny balíčka
                         React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} - ${pkg.price}€`),
                         React.createElement(
                             'div',
@@ -255,17 +272,19 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                             Object.keys(pkg.meals || {}).sort().map(date => {
                                 const mealsForDay = pkg.meals[date];
                                 const includedItems = [];
-                                if (mealsForDay.breakfast === 1) includedItems.push('Raňajky');
-                                if (mealsForDay.lunch === 1) includedItems.push('Obed');
-                                if (mealsForDay.dinner === 1) includedItems.push('Večera');
-                                if (mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+                                if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
+                                if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
+                                if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
+                                if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
 
                                 if (includedItems.length > 0) {
                                     const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                     return React.createElement('p', { key: date, className: 'ml-4' }, `${displayDate}: ${includedItems.join(', ')}`);
                                 }
                                 return null;
-                            })
+                            }),
+                            (pkg.meals && pkg.meals.participantCard === 1) &&
+                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'Zahŕňa účastnícku kartu')
                         ),
                         React.createElement(
                             'div',
@@ -439,6 +458,20 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             )
         ) : (
             React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
+        ),
+
+        // Nový checkbox pre Účastnícku kartu
+        React.createElement(
+            'div',
+            { className: 'flex items-center mt-4 border-t border-gray-200 pt-4' },
+            React.createElement('input', {
+                type: 'checkbox',
+                id: 'hasParticipantCard',
+                className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                checked: hasParticipantCard,
+                onChange: (e) => handleParticipantCardChange(e.target.checked),
+            }),
+            React.createElement('label', { htmlFor: 'hasParticipantCard', className: 'ml-2 text-gray-700 font-bold' }, 'Zahŕňa účastnícku kartu')
         ),
 
         React.createElement(
