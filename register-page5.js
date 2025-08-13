@@ -152,13 +152,13 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `accommodationType-${categoryName}-${teamIndex}`,
-                            value: 'Bez ubytovania',
-                            checked: selectedAccommodation === 'Bez ubytovania',
+                            value: 'bez ubytovania',
+                            checked: selectedAccommodation === 'bez ubytovania',
                             onChange: handleAccommodationChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`) 
                     ),
                     // Zobrazenie typov ubytovania zoradených abecedne
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
@@ -222,7 +222,7 @@ function TeamAccommodationAndArrival({
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'vlaková doprava')
                     ),
                     arrivalType === 'vlaková doprava' && React.createElement(
                         'div',
@@ -274,7 +274,7 @@ function TeamAccommodationAndArrival({
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'autobusová doprava')
                     ),
                     arrivalType === 'autobusová doprava' && React.createElement(
                         'div',
@@ -323,7 +323,7 @@ function TeamAccommodationAndArrival({
                         className: 'form-radio h-5 w-5 text-blue-600',
                         disabled: loading,
                     }),
-                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlastná doprava')
+                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'vlastná doprava')
                 ),
                 React.createElement(
                     'label',
@@ -337,7 +337,7 @@ function TeamAccommodationAndArrival({
                         className: 'form-radio h-5 w-5 text-blue-600',
                         disabled: loading,
                     }),
-                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Bez dopravy')
+                    React.createElement('span', { className: 'ml-3 text-gray-800' }, 'bez dopravy')
                 )
             )
         )
@@ -635,11 +635,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 // Validácia ubytovania pre každý tím
                 // Check if accommodationTypes exist and if a type is selected, or if no types exist
                 if (accommodationTypes.length > 0 && (!team.accommodation?.type || team.accommodation.type.trim() === '')) {
-                    // Ak je ubytovanie vyžadované (existujú typy okrem "Bez ubytovania")
+                    // Ak je ubytovanie vyžadované (existujú typy okrem "bez ubytovania")
                     // A zároveň nie je vybraný typ ubytovania
                     // Alebo je vybraný typ ubytovania, ktorý je už plne obsadený
                     const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation?.type);
-                    if (team.accommodation?.type !== 'Bez ubytovania' && selectedAccType) {
+                    if (team.accommodation?.type !== 'bez ubytovania' && selectedAccType) {
                         const currentCount = accommodationCounts[selectedAccType.type] || 0;
                         if (currentCount >= selectedAccType.capacity) {
                             return false; // Vybrané ubytovanie je plné
