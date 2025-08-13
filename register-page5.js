@@ -83,15 +83,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
-    // Debugovacie výpisy do konzoly (ponechané pre účely ladenia)
-    console.log('Page5Form render cycle START');
-    console.log('formData.arrival.type:', formData.arrival?.type);
-    console.log('formData.arrival.time:', formData.arrival?.time);
-    console.log('Current arrivalHours state:', arrivalHours);
-    console.log('Current arrivalMinutes state:', arrivalMinutes);
-    console.log('Page5Form render cycle END');
-
-
     // Načítanie dostupných typov ubytovania a ich kapacít
     React.useEffect(() => {
         let unsubscribeAccommodation;
