@@ -1,11 +1,10 @@
 import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Importovanie pomocných funkcií z hlavného súboru
-const showNotification = window.showNotification;
-const sendAdminNotification = window.sendAdminNotification;
+// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
+// import { showNotification, sendAdminNotification } from './utils.js';
 
 
-export function TShirtSizeSettings({ db, userProfileData }) {
+export function TShirtSizeSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
   const [showSizeModal, setShowSizeModal] = React.useState(false);
   const [currentSizeEdit, setCurrentSizeEdit] = React.useState(null); 
@@ -63,7 +62,7 @@ export function TShirtSizeSettings({ db, userProfileData }) {
     };
 
     fetchTshirtSizes();
-  }, [db, userProfileData]);
+  }, [db, userProfileData, showNotification]);
 
   const handleOpenAddSizeModal = () => {
     setModalMode('add');
