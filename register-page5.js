@@ -326,7 +326,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         React.createElement(
             'form',
-            { onSubmit: handlePage5Submit, className: 'space-y-4' }, {/* ZMENA: Používame novú funkciu handlePage5Submit */}
+            { onSubmit: handlePage5Submit, className: 'space-y-4' },
             React.createElement(
                 'div',
                 { className: 'border-t border-gray-200 pt-4 mt-4' },
