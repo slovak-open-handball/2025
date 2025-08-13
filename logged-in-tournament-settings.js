@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, window.showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -83,14 +83,14 @@ function TournamentSettingsApp() {
   const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
   const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
 
-  // NOVÉ: Stavy pre správu veľkostí tričiek
+  // Stavy pre správu veľkostí tričiek
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
   const [showSizeModal, setShowSizeModal] = React.useState(false);
   const [currentSizeEdit, setCurrentSizeEdit] = React.useState(null); // null pre pridanie, string pre úpravu
   const [newSizeValue, setNewSizeValue] = React.useState('');
   const [modalMode, setModalMode] = React.useState('add'); // 'add' alebo 'edit'
 
-  // NOVÉ: Stavy pre modálne okno na potvrdenie zmazania
+  // Stavy pre modálne okno na potvrdenie zmazania
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false);
   const [sizeToDelete, setSizeToDelete] = React.useState(null);
 
@@ -265,7 +265,7 @@ function TournamentSettingsApp() {
     fetchSettings();
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu)
 
-  // NOVÉ: Effect pre načítanie veľkostí tričiek
+  // Effect pre načítanie veľkostí tričiek
   React.useEffect(() => {
     let unsubscribeTshirtSizes;
     const fetchTshirtSizes = async () => {
@@ -328,11 +328,45 @@ function TournamentSettingsApp() {
     fetchTshirtSizes();
   }, [db, userProfileData]);
 
+  // NOVÉ: Funkcia na odoslanie notifikácie administrátorom
+  const sendAdminNotification = async (notificationData) => {
+    if (!db || !user || !user.email) { 
+      console.error("Chyba: Databáza alebo používateľ nie je k dispozícii pre odoslanie notifikácie.");
+      return;
+    }
+    try {
+      const notificationsCollectionRef = collection(db, 'notifications');
+      let changesMessage = '';
+      const userEmail = user.email;
+
+      if (notificationData.type === 'createSize') {
+        changesMessage = `Vytvorenie novej veľkosti trička: '${notificationData.data.newSizeValue}'`;
+      } else if (notificationData.type === 'editSize') {
+        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
+      } else if (notificationData.type === 'deleteSize') {
+        changesMessage = `Zmazanie veľkosti trička: '${notificationData.data.deletedSize}'`;
+      } else if (notificationData.type === 'updateSettings') {
+        changesMessage = `Aktualizácia všeobecných nastavení: ${notificationData.data.changesMade}`;
+      }
+
+      await addDoc(notificationsCollectionRef, {
+        userEmail: userEmail,
+        changes: changesMessage,
+        timestamp: Timestamp.fromDate(new Date()),
+        recipientId: 'all_admins'
+      });
+      console.log("Notifikácia pre administrátorov úspešne uložená do Firestore.");
+    } catch (e) {
+      console.error("TournamentSettingsApp: Chyba pri ukladaní notifikácie pre administrátorov:", e);
+      showNotification(`Chyba pri ukladaní notifikácie pre administrátorov: ${e.message}`, 'error');
+    }
+  };
+
 
   const handleUpdateRegistrationSettings = async (e) => {
     e.preventDefault();
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      showNotification("Nemáte oprávnenie na zmenu nastavení registrácie.", 'error'); // Používame lokálnu showNotification
+    if (!db || !userProfileData || userProfileData.role !== 'admin' || !user) {
+      showNotification("Nemáte oprávnenie na zmenu nastavení registrácie.", 'error'); 
       return;
     }
     
@@ -340,23 +374,21 @@ function TournamentSettingsApp() {
       const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
       const regEnd = registrationEndDate ? new Date(registrationEndDate) : null;
       const dataEditDead = dataEditDeadline ? new Date(dataEditDeadline) : null; 
-      const rosterEditDead = rosterEditDeadline ? new Date(rosterEditDeadline) : null; // Nový dátum
+      const rosterEditDead = rosterEditDeadline ? new Date(rosterEditDeadline) : null; 
 
       if (regStart && regEnd && regStart >= regEnd) {
-        showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
+        showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); 
         return;
       }
       if (dataEditDead && regEnd && dataEditDead < regEnd) {
-        showNotification("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
+        showNotification("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.", 'error'); 
         return;
       }
-      // Validácia pre rosterEditDeadline
       if (rosterEditDead && dataEditDead && rosterEditDead < dataEditDead) {
         showNotification("Dátum uzávierky úprav súpisiek nemôže byť pred dátumom uzávierky úprav používateľských dát.", 'error');
         return;
       }
 
-      // Validácia pre numberOfPlayers a numberOfImplementationTeam
       if (numberOfPlayers < 0) {
         showNotification("Počet hráčov nemôže byť záporný.", 'error');
         return;
@@ -366,27 +398,61 @@ function TournamentSettingsApp() {
         return;
       }
 
-
       const settingsDocRef = doc(db, 'settings', 'registration');
+      const oldSettingsDoc = await getDoc(settingsDocRef);
+      const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
+      let changes = [];
+
+      const formatTimestampForNotification = (ts) => ts ? formatToDatetimeLocal(ts.toDate()) : 'nezadané';
+
+      // Porovnanie a zber zmien
+      if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
+          changes.push(`Dátum začiatku registrácie: '${formatTimestampForNotification(oldData.registrationStartDate)}' -> '${formatToDatetimeLocal(regStart)}'`);
+      }
+      if ((oldData.registrationEndDate ? oldData.registrationEndDate.toMillis() : null) !== (regEnd ? Timestamp.fromDate(regEnd).toMillis() : null)) {
+          changes.push(`Dátum konca registrácie: '${formatTimestampForNotification(oldData.registrationEndDate)}' -> '${formatToDatetimeLocal(regEnd)}'`);
+      }
+      if ((oldData.dataEditDeadline ? oldData.dataEditDeadline.toMillis() : null) !== (dataEditDead ? Timestamp.fromDate(dataEditDead).toMillis() : null)) {
+          changes.push(`Uzávierka úprav dát: '${formatTimestampForNotification(oldData.dataEditDeadline)}' -> '${formatToDatetimeLocal(dataEditDead)}'`);
+      }
+      if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
+          changes.push(`Uzávierka úprav súpisiek: '${formatTimestampForNotification(oldData.rosterEditDeadline)}' -> '${formatToDatetimeLocal(rosterEditDead)}'`);
+      }
+
+      if (oldData.numberOfPlayers !== numberOfPlayers) {
+          changes.push(`Maximálny počet hráčov v tíme: '${oldData.numberOfPlayers || 0}' -> '${numberOfPlayers}'`);
+      }
+      if (oldData.numberOfImplementationTeam !== numberOfImplementationTeam) {
+          changes.push(`Maximálny počet členov realizačného tímu: '${oldData.numberOfImplementationTeam || 0}' -> '${numberOfImplementationTeam}'`);
+      }
+
       await setDoc(settingsDocRef, {
         registrationStartDate: regStart ? Timestamp.fromDate(regStart) : null,
         registrationEndDate: regEnd ? Timestamp.fromDate(regEnd) : null,
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
-        rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, // Uloženie nového dátumu
-        // Uloženie počtu hráčov a členov realizačného tímu
+        rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, 
         numberOfPlayers: numberOfPlayers,
         numberOfImplementationTeam: numberOfImplementationTeam,
       });
       
-      showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); // Používame lokálnu showNotification
+      showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); 
+
+      if (changes.length > 0) {
+          await sendAdminNotification({
+              type: 'updateSettings',
+              data: {
+                  changesMade: changes.join('; ')
+              }
+          });
+      }
 
     } catch (e) {
       console.error("TournamentSettingsApp: Chyba pri aktualizácii nastavení registrácie:", e);
-      showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); // Používame lokálnu showNotification
+      showNotification(`Chyba pri aktualizácii nastavenia: ${e.message}`, 'error'); 
     }
   };
 
-  // NOVÉ: Funkcie pre správu veľkostí tričiek
+  // Funkcie pre správu veľkostí tričiek
   const handleOpenAddSizeModal = () => {
     setModalMode('add');
     setNewSizeValue('');
@@ -409,7 +475,7 @@ function TournamentSettingsApp() {
   };
 
   const handleSaveSize = async () => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+    if (!db || !userProfileData || userProfileData.role !== 'admin' || !user) {
       showNotification("Nemáte oprávnenie na zmenu nastavení veľkostí tričiek.", 'error');
       return;
     }
@@ -433,6 +499,7 @@ function TournamentSettingsApp() {
           sizes: arrayUnion(trimmedNewSize)
         });
         showNotification(`Veľkosť "${trimmedNewSize}" úspešne pridaná!`, 'success');
+        await sendAdminNotification({ type: 'createSize', data: { newSizeValue: trimmedNewSize } });
       } else if (modalMode === 'edit') {
         // Kontrola duplicity pri úprave (nesmie sa zhodovať s inou veľkosťou, okrem seba samej)
         if (trimmedNewSize !== currentSizeEdit && tshirtSizes.includes(trimmedNewSize)) {
@@ -447,6 +514,7 @@ function TournamentSettingsApp() {
           sizes: arrayUnion(trimmedNewSize)
         });
         showNotification(`Veľkosť "${currentSizeEdit}" úspešne zmenená na "${trimmedNewSize}"!`, 'success');
+        await sendAdminNotification({ type: 'editSize', data: { originalSize: currentSizeEdit, newSizeValue: trimmedNewSize } });
       }
       handleCloseSizeModal();
     } catch (e) {
@@ -466,7 +534,7 @@ function TournamentSettingsApp() {
   };
 
   const handleDeleteSize = async () => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+    if (!db || !userProfileData || userProfileData.role !== 'admin' || !user) {
       showNotification("Nemáte oprávnenie na zmazanie veľkosti trička.", 'error');
       return;
     }
@@ -478,6 +546,7 @@ function TournamentSettingsApp() {
         sizes: arrayRemove(sizeToDelete)
       });
       showNotification(`Veľkosť "${sizeToDelete}" úspešne zmazaná!`, 'success');
+      await sendAdminNotification({ type: 'deleteSize', data: { deletedSize: sizeToDelete } });
       handleCloseConfirmDeleteModal();
     } catch (e) {
       console.error("Chyba pri mazaní veľkosti trička:", e);
@@ -647,7 +716,7 @@ function TournamentSettingsApp() {
         )
     ),
 
-    // NOVÉ: Modálne okno pre pridanie/úpravu veľkosti trička
+    // Modálne okno pre pridanie/úpravu veľkosti trička
     showSizeModal && React.createElement(
       'div',
       { className: 'modal' },
@@ -690,7 +759,7 @@ function TournamentSettingsApp() {
       )
     ),
 
-    // NOVÉ: Modálne okno na potvrdenie zmazania
+    // Modálne okno na potvrdenie zmazania
     showConfirmDeleteModal && React.createElement(
       'div',
       { className: 'modal' },
