@@ -14,7 +14,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const [showConfirmDeletePackageModal, setShowConfirmDeletePackageModal] = React.useState(false);
   const [packageToDelete, setPackageToDelete] = React.useState(null);
 
+  // packageMeals bude teraz obsahovať aj informácie o občerstvení (0 alebo 1)
   const [packageMeals, setPackageMeals] = React.useState({});
+  // packageRefreshments sa už nepoužíva pre túto logiku, ale ponechávam deklaráciu, ak by bolo v iných častiach kódu
   const [packageRefreshments, setPackageRefreshments] = React.useState([]);
 
 
@@ -82,7 +84,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setNewPackageName('');
     setNewPackagePrice(0);
     setPackageMeals({}); // Reset na prázdny objekt pre nové balíčky
-    setPackageRefreshments([]);
+    setPackageRefreshments([]); // Reset na prázdne pole
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
   };
@@ -91,9 +93,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
-    // Pri editácii, ak meals alebo refreshments chýbajú, inicializujte ich na prázdne objekty/polia
+    // Pri editácii, ak meals chýbajú, inicializujte ich na prázdne objekty/polia
     setPackageMeals(pkg.meals || {});
-    setPackageRefreshments(pkg.refreshments || []);
+    // Stará štruktúra občerstvenia sa už nepoužíva
+    setPackageRefreshments([]); 
     setCurrentPackageEdit(pkg);
     setShowPackageModal(true);
   };
@@ -108,7 +111,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('add');
   };
 
-  // Upravená funkcia pre zmenu stavu checkboxu pre jedlá
+  // Upravená funkcia pre zmenu stavu checkboxu pre jedlá A občerstvenie
   const handleMealChange = (date, mealType, isChecked) => {
     setPackageMeals(prevMeals => ({
       ...prevMeals,
@@ -119,39 +122,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     }));
   };
 
-  const handleAddRefreshment = (date) => {
-    setPackageRefreshments(prevRefreshments => {
-      const existingDay = prevRefreshments.find(r => r.date === date);
-      if (existingDay) {
-        return prevRefreshments.map(r => 
-          r.date === date ? { ...r, items: [...r.items, { name: '', price: 0 }] } : r
-        );
-      } else {
-        return [...prevRefreshments, { date: date, items: [{ name: '', price: 0 }] }];
-      }
-    });
-  };
+  // Tieto funkcie sa už nebudú používať, pretože občerstvenie je teraz súčasťou packageMeals
+  const handleAddRefreshment = (date) => { /* Neaktívne */ };
+  const handleRemoveRefreshment = (date, itemIndex) => { /* Neaktívne */ };
+  const handleRefreshmentItemChange = (date, itemIndex, field, value) => { /* Neaktívne */ };
 
-  const handleRemoveRefreshment = (date, itemIndex) => {
-    setPackageRefreshments(prevRefreshments => {
-      return prevRefreshments.map(r => 
-        r.date === date ? { ...r, items: r.items.filter((_, idx) => idx !== itemIndex) } : r
-      ).filter(r => r.items.length > 0);
-    });
-  };
-
-  const handleRefreshmentItemChange = (date, itemIndex, field, value) => {
-    setPackageRefreshments(prevRefreshments => {
-      return prevRefreshments.map(r => 
-        r.date === date ? {
-          ...r,
-          items: r.items.map((item, idx) => 
-            idx === itemIndex ? { ...item, [field]: field === 'price' ? parseFloat(value) || 0 : value } : item
-          )
-        } : r
-      );
-    });
-  };
 
   const handleSavePackage = async () => {
     // Obranná kontrola
@@ -178,14 +153,15 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       return;
     }
 
-    for (const dayRefreshment of packageRefreshments) {
-        for (const item of dayRefreshment.items) {
-            if (!item.name.trim() || isNaN(item.price) || item.price < 0) {
-                showNotification("Každé občerstvenie musí mať názov a nezápornú cenu.", 'error');
-                return;
-            }
-        }
-    }
+    // Odstránená validácia pre packageRefreshments, pretože sa zmenila štruktúra
+    // for (const dayRefreshment of packageRefreshments) {
+    //     for (const item of dayRefreshment.items) {
+    //         if (!item.name.trim() || isNaN(item.price) || item.price < 0) {
+    //             showNotification("Každé občerstvenie musí mať názov a nezápornú cenu.", 'error');
+    //             return;
+    //         }
+    //     }
+    // }
 
 
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
@@ -199,8 +175,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals,
-          refreshments: packageRefreshments,
+          meals: packageMeals, // Uloží sa aj informácia o občerstvení tu
+          refreshments: [], // Občerstvenie sa už nebude ukladať samostatne
           createdAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
@@ -216,8 +192,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
-          meals: packageMeals,
-          refreshments: packageRefreshments,
+          meals: packageMeals, // Uloží sa aj informácia o občerstvení tu
+          refreshments: [], // Občerstvenie sa už nebude ukladať samostatne
           updatedAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
@@ -391,7 +367,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                             React.createElement('th', { className: 'py-2 px-4 border-b text-left text-sm font-semibold text-gray-600' }, 'Dátum'),
                             React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
                             React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera')
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'),
+                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') // Nový stĺpec
                         )
                     ),
                     React.createElement(
@@ -425,6 +402,14 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                         checked: packageMeals[date]?.dinner === 1,
                                         onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
                                     })
+                                ),
+                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' }, // Nová bunka pre občerstvenie
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                        checked: packageMeals[date]?.refreshment === 1, // Používa 'refreshment' key
+                                        onChange: (e) => handleMealChange(date, 'refreshment', e.target.checked), // Ukladá do 'refreshment'
+                                    })
                                 )
                             )
                         ))
@@ -435,61 +420,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
         ),
 
-        React.createElement('h5', { className: 'font-medium mt-4 mb-2 text-gray-700' }, 'Občerstvenie:'),
-        (packageRefreshments.map((dayRefreshment, dayIndex) => (
-            React.createElement('div', { key: dayIndex, className: 'mb-4 p-3 border rounded-lg bg-gray-50' },
-                React.createElement('h6', { className: 'font-bold mb-2' }, `Občerstvenie pre: ${new Date(dayRefreshment.date).toLocaleDateString('sk-SK')}`),
-                dayRefreshment.items.map((item, itemIndex) => (
-                    React.createElement(
-                        'div',
-                        { key: itemIndex, className: 'flex space-x-2 mb-2 items-center' },
-                        React.createElement('input', {
-                            type: 'text',
-                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline flex-grow',
-                            placeholder: 'Názov občerstvenia',
-                            value: item.name,
-                            onChange: (e) => handleRefreshmentItemChange(dayRefreshment.date, itemIndex, 'name', e.target.value),
-                        }),
-                        React.createElement('input', {
-                            type: 'number',
-                            className: 'shadow border rounded-lg py-1 px-2 text-gray-700 focus:outline-none focus:shadow-outline w-24',
-                            placeholder: 'Cena (€)',
-                            value: item.price,
-                            onChange: (e) => handleRefreshmentItemChange(dayRefreshment.date, itemIndex, 'price', e.target.value),
-                            min: 0,
-                            step: 0.01,
-                        }),
-                        React.createElement(
-                            'button',
-                            {
-                                type: 'button',
-                                onClick: () => handleRemoveRefreshment(dayRefreshment.date, itemIndex),
-                                className: 'bg-red-500 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center'
-                            },
-                            '-'
-                        )
-                    )
-                )),
-                React.createElement(
-                    'button',
-                    {
-                        type: 'button',
-                        onClick: () => handleAddRefreshment(dayRefreshment.date),
-                        className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-lg mt-2'
-                    },
-                    'Pridať občerstvenie pre tento deň'
-                )
-            ))
-        )),
-        tournamentDays.length > 0 && React.createElement(
-            'button',
-            {
-                type: 'button',
-                onClick: () => handleAddRefreshment(tournamentDays[0]), // Predpokladáme, že občerstvenie môžete pridať k prvému dňu, ak ešte nie je žiadne
-                className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg mt-4'
-            },
-            'Pridať deň pre občerstvenie'
-        ),
+        // Pôvodná sekcia občerstvenia (už sa nepoužíva, je zakomentovaná alebo odstránená)
+        // React.createElement('h5', { className: 'font-medium mt-4 mb-2 text-gray-700' }, 'Občerstvenie:'),
+        // ... (predchádzajúci kód pre občerstvenie, ktorý sa už nepoužíva)
 
         React.createElement(
           'div',
