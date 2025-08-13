@@ -127,7 +127,7 @@ function App() {
   const [registrationStartDate, setRegistrationStartDate] = React.useState('');
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState('');
-  const [rosterEditDeadline, setRosterEditDeadline] = React.React.useState('');
+  const [rosterEditDeadline, setRosterEditDeadline] = React.useState('');
   const [numberOfPlayersInTeam, setNumberOfPlayersInTeam] = React.useState(0);
   const [numberOfImplementationTeamMembers, setNumberOfImplementationTeamMembers] = React.useState(0);
 
