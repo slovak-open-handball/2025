@@ -1,6 +1,6 @@
 import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// NotificationModal Component pre zobrazovanie dočasných správ (presunutý sem)
+// NotificationModal Component pre zobrazovanie dočasných správ
 function NotificationModal({ message, onClose, type = 'info' }) {
     const [show, setShow] = React.useState(false);
     const timerRef = React.useRef(null);
@@ -51,7 +51,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) {
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -66,6 +66,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
+
+    // Stavy pre balíčky
+    const [packages, setPackages] = React.useState([]);
+    const [selectedPackageId, setSelectedPackageId] = React.useState(formData.packageId || '');
 
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
@@ -83,10 +87,32 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Stav pre dátum začiatku turnaja
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
-    // Načítanie dostupných typov ubytovania a ich kapacít
+    // Prepočet dátumov turnaja pre zobrazenie detailov balíčkov
+    const getDaysBetween = (start, end) => {
+        const dates = [];
+        let currentDate = new Date(start);
+        while (currentDate <= end) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        return dates;
+    };
+
+    const tournamentDays = React.useMemo(() => {
+        const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
+        const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
+        if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+            return getDaysBetween(startDate, endDate);
+        }
+        return [];
+    }, [tournamentStartDate, tournamentEndDate]);
+
+
+    // Načítanie dostupných typov ubytovania, balíčkov a ich kapacít
     React.useEffect(() => {
         let unsubscribeAccommodation;
         let unsubscribeRegistrationSettings;
+        let unsubscribePackages;
 
         const fetchSettings = () => {
             if (!window.db) {
@@ -106,6 +132,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
                     setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error');
+                    setNotificationType('error');
+                });
+
+                // Listener pre nastavenia balíčkov
+                const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
+                unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
+                    const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    fetchedPackages.sort((a, b) => a.name.localeCompare(b.name));
+                    setPackages(fetchedPackages);
+                }, (error) => {
+                    console.error("Chyba pri načítaní balíčkov:", error);
+                    setNotificationMessage("Chyba pri načítaní balíčkov.", 'error');
                     setNotificationType('error');
                 });
 
@@ -129,7 +167,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 });
 
             } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/registrácie:", e);
+                console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
                 setNotificationMessage("Chyba pri načítaní údajov.", 'error');
                 setNotificationType('error');
             }
@@ -140,6 +178,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return () => {
             if (unsubscribeAccommodation) {
                 unsubscribeAccommodation();
+            }
+            if (unsubscribePackages) {
+                unsubscribePackages();
             }
             if (unsubscribeRegistrationSettings) {
                 unsubscribeRegistrationSettings();
@@ -192,6 +233,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
 
+    const handlePackageChange = (e) => {
+        const newPackageId = e.target.value;
+        setSelectedPackageId(newPackageId);
+        // Nájdi kompletný objekt balíčka pre uloženie do formData
+        const selectedPkg = packages.find(pkg => pkg.id === newPackageId);
+        handleChange({ target: { id: 'package', value: selectedPkg || null } });
+        handleChange({ target: { id: 'packageId', value: newPackageId } });
+    };
+
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
         setArrivalType(newValue); // Aktualizujeme lokálny stav pre typ dopravy
@@ -230,14 +280,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             return false;
         }
 
+        // Kontrola, či je vybraný balíček (ak sú nejaké možnosti)
+        if (packages.length > 0 && !selectedPackageId) {
+            return false;
+        }
+
         // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
-        // Používame formData.arrival?.time namiesto lokálneho arrivalTime, aby sme sa spoľahli na pravdivý stav
         if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!formData.arrival?.time || formData.arrival.time === '')) {
             return false;
         }
 
         return true;
-    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time]);
+    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time, packages, selectedPackageId]);
 
 
     const nextButtonClasses = `
@@ -248,27 +302,26 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }
   `;
 
-    // ZMENA: Táto funkcia teraz len pripraví dáta a volá prop handleSubmit (ktorý je handleNextPage5ToPage6 z App.js)
     const handlePage5Submit = async (e) => {
         e.preventDefault();
 
-        if (setLoading) setLoading(true); // Aktivujeme loader
-        closeNotification(); // Vymažeme predchádzajúce notifikácie
+        if (setLoading) setLoading(true); 
+        closeNotification(); 
 
         if (!isFormValidPage5) {
             setNotificationMessage("Prosím, vyplňte všetky povinné polia.", 'error');
             setNotificationType('error');
-            setLoading(false); // Vypneme loader pri chybe validácie
+            setLoading(false); 
             return;
         }
 
         try {
-            // Vytvoríme finálnu hodnotu času príchodu
             const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava')
                                      ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
                                      : null;
+            
+            const selectedPkgDetails = packages.find(pkg => pkg.id === selectedPackageId);
 
-            // Skonštruujeme objekt formData s aktuálnymi dátami z Page5
             const updatedFormDataForNextPage = {
                 ...formData,
                 accommodation: {
@@ -277,11 +330,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 arrival: {
                     type: arrivalType,
                     time: finalArrivalTime
-                }
+                },
+                packageId: selectedPackageId,
+                packageDetails: selectedPkgDetails ? {
+                    name: selectedPkgDetails.name,
+                    price: selectedPkgDetails.price,
+                    meals: selectedPkgDetails.meals // Zahrnie všetky detaily stravovania
+                } : null
             };
             
-            // VOLANIE PROP handleSubmit: Toto prenesie aktualizované dáta do App.js
-            // a zabezpečí prechod na Page 6. Finalizácia registrácie sa deje v App.js.
             await handleSubmit(updatedFormDataForNextPage); 
 
         } catch (error) {
@@ -289,7 +346,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
             setNotificationType('error');
         } finally {
-            if (setLoading) setLoading(false); // Vždy vypneme loader
+            if (setLoading) setLoading(false);
         }
     };
 
@@ -534,6 +591,74 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
             React.createElement(
                 'div',
+                { className: 'border-t border-gray-200 pt-4 mt-4' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber balíčka (stravovanie a občerstvenie)'),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 space-y-2' },
+                    packages.length > 0 ? (
+                        packages.map((pkg) => (
+                            React.createElement(
+                                'label',
+                                {
+                                    key: pkg.id,
+                                    className: `flex flex-col p-3 rounded-lg border cursor-pointer ${selectedPackageId === pkg.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} ${loading ? 'opacity-70 cursor-not-allowed' : ''} transition-colors duration-200`,
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between w-full' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center' },
+                                        React.createElement('input', {
+                                            type: 'radio',
+                                            name: 'selectedPackage',
+                                            value: pkg.id,
+                                            checked: selectedPackageId === pkg.id,
+                                            onChange: handlePackageChange,
+                                            className: 'form-radio h-5 w-5 text-blue-600',
+                                            disabled: loading,
+                                        }),
+                                        React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
+                                    ),
+                                    React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price}€`)
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'ml-8 text-sm text-gray-600 mt-2' },
+                                    // Zobrazenie detailov balíčka
+                                    (pkg.meals && Object.keys(pkg.meals).length > 0 && tournamentDays.length > 0) ? (
+                                        tournamentDays.map(date => {
+                                            const mealsForDay = pkg.meals[date];
+                                            const includedItems = [];
+                                            if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
+                                            if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
+                                            if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
+                                            if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
+
+                                            if (includedItems.length > 0) {
+                                                const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                                return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
+                                            }
+                                            return null;
+                                        })
+                                    ) : (
+                                        React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
+                                    ),
+                                    (pkg.meals && pkg.meals.participantCard === 1) &&
+                                        React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'Zahŕňa účastnícku kartu')
+                                )
+                            )
+                        ))
+                    ) : (
+                        React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
+                    )
+                )
+            ),
+
+
+            React.createElement(
+                'div',
                 { className: 'flex justify-between mt-6' },
                 React.createElement(
                     'button',
@@ -553,7 +678,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         disabled: loading || !isRecaptchaReady || !isFormValidPage5,
                         tabIndex: 2
                     },
-                    // Zobrazenie načítavacieho spinnera počas prechodu
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
