@@ -246,7 +246,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         return true;
-    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time]); // ZMENA: Pridaný formData.arrival?.time do závislostí
+    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time]);
 
 
     const nextButtonClasses = `
@@ -423,72 +423,121 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement(
                     'div',
                     { className: 'mb-4 space-y-2' },
+                    // Vlaková doprava
                     React.createElement(
-                        'label',
-                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'arrivalType',
-                            value: 'vlaková doprava',
-                            checked: arrivalType === 'vlaková doprava',
-                            onChange: handleArrivalChange,
-                            className: 'form-radio h-5 w-5 text-blue-600',
-                            disabled: loading,
-                        }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
-                    ),
-                    (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && React.createElement(
-                        'div',
-                        { className: 'ml-8' }, // Odsadenie pre pole času
+                        React.Fragment,
+                        null,
                         React.createElement(
-                            'p',
-                            { className: 'block text-gray-700 text-sm font-bold mb-2' },
-                            'Predpokladaný čas príchodu:'
+                            'label',
+                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                            React.createElement('input', {
+                                type: 'radio',
+                                name: 'arrivalType',
+                                value: 'vlaková doprava',
+                                checked: arrivalType === 'vlaková doprava',
+                                onChange: handleArrivalChange,
+                                className: 'form-radio h-5 w-5 text-blue-600',
+                                disabled: loading,
+                            }),
+                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
                         ),
-                        React.createElement(
+                        arrivalType === 'vlaková doprava' && React.createElement(
                             'div',
-                            { className: 'flex space-x-4' },
+                            { className: 'ml-8 mb-4' }, // Odsadenie pre pole času
                             React.createElement(
-                                'div',
-                                { className: 'flex-1' },
-                                React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'), // Skrytý label pre prístupnosť
-                                React.createElement('select', {
-                                    id: 'arrivalHours',
-                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '',
-                                    onChange: handleTimeSelectChange,
-                                    required: true,
-                                    disabled: loading,
-                                }, generateTimeOptions(24))
+                                'p',
+                                { className: 'block text-gray-700 text-sm font-bold mb-2' },
+                                'Predpokladaný čas príchodu:'
                             ),
                             React.createElement(
                                 'div',
-                                { className: 'flex-1' },
-                                React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'), // Skrytý label pre prístupnosť
-                                React.createElement('select', {
-                                    id: 'arrivalMinutes',
-                                    className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '',
-                                    onChange: handleTimeSelectChange,
-                                    required: true,
-                                    disabled: loading,
-                                }, generateTimeOptions(60))
+                                { className: 'flex space-x-4' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1' },
+                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'),
+                                    React.createElement('select', {
+                                        id: 'arrivalHours',
+                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        value: arrivalHours || '',
+                                        onChange: handleTimeSelectChange,
+                                        required: true,
+                                        disabled: loading,
+                                    }, generateTimeOptions(24))
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1' },
+                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                                    React.createElement('select', {
+                                        id: 'arrivalMinutes',
+                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        value: arrivalMinutes || '',
+                                        onChange: handleTimeSelectChange,
+                                        required: true,
+                                        disabled: loading,
+                                    }, generateTimeOptions(60))
+                                )
                             )
                         )
                     ),
+                    // Autobusová doprava
                     React.createElement(
-                        'label',
-                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'arrivalType',
-                            value: 'autobusová doprava',
-                            checked: arrivalType === 'autobusová doprava',
-                            onChange: handleArrivalChange,
-                            className: 'form-radio h-5 w-5 text-blue-600',
-                            disabled: loading,
-                        }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
+                        React.Fragment,
+                        null,
+                        React.createElement(
+                            'label',
+                            { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                            React.createElement('input', {
+                                type: 'radio',
+                                name: 'arrivalType',
+                                value: 'autobusová doprava',
+                                checked: arrivalType === 'autobusová doprava',
+                                onChange: handleArrivalChange,
+                                className: 'form-radio h-5 w-5 text-blue-600',
+                                disabled: loading,
+                            }),
+                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
+                        ),
+                        arrivalType === 'autobusová doprava' && React.createElement(
+                            'div',
+                            { className: 'ml-8 mb-4' }, // Odsadenie pre pole času
+                            React.createElement(
+                                'p',
+                                { className: 'block text-gray-700 text-sm font-bold mb-2' },
+                                'Predpokladaný čas príchodu:'
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'flex space-x-4' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1' },
+                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalHours' }, 'Hodina'),
+                                    React.createElement('select', {
+                                        id: 'arrivalHours',
+                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        value: arrivalHours || '',
+                                        onChange: handleTimeSelectChange,
+                                        required: true,
+                                        disabled: loading,
+                                    }, generateTimeOptions(24))
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1' },
+                                    React.createElement('label', { className: 'sr-only', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                                    React.createElement('select', {
+                                        id: 'arrivalMinutes',
+                                        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                        value: arrivalMinutes || '',
+                                        onChange: handleTimeSelectChange,
+                                        required: true,
+                                        disabled: loading,
+                                    }, generateTimeOptions(60))
+                                )
+                            )
+                        )
                     ),
                     React.createElement(
                         'label',
