@@ -1,7 +1,7 @@
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
-// import { showNotification, sendAdminNotification } from './utils.js';
+// Funkcie showNotification a sendAdminNotification sa očakávajú ako props z nadradeného komponentu.
+// Preto ich tu neimportujeme ani nedefinujeme.
 
 
 export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
@@ -50,10 +50,20 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                 const fetchedPackages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setPackages(fetchedPackages);
             }, (error) => {
-                showNotification(`Chyba pri načítaní balíčkov: ${error.message}`, 'error');
+                // Obranná kontrola pre showNotification
+                if (typeof showNotification === 'function') {
+                    showNotification(`Chyba pri načítaní balíčkov: ${error.message}`, 'error');
+                } else {
+                    console.error("Chyba pri načítaní balíčkov a showNotification nie je funkcia:", error);
+                }
             });
         } catch (e) {
-            showNotification(`Chyba pri nastavovaní poslucháča pre balíčky: ${e.message}`, 'error');
+            // Obranná kontrola pre showNotification
+            if (typeof showNotification === 'function') {
+                showNotification(`Chyba pri nastavovaní poslucháča pre balíčky: ${e.message}`, 'error');
+            } else {
+                console.error("Chyba pri nastavovaní poslucháča pre balíčky a showNotification nie je funkcia:", e);
+            }
         }
 
         return () => {
@@ -142,6 +152,15 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const handleSavePackage = async () => {
+    // Obranná kontrola
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleSavePackage!");
+        return; 
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleSavePackage!");
+    }
+
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmenu nastavení balíčkov.", 'error');
       return;
@@ -183,7 +202,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           createdAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
-        await sendAdminNotification({ type: 'createPackage', data: { name: trimmedName, price: newPackagePrice } });
+        if (typeof sendAdminNotification === 'function') {
+            await sendAdminNotification({ type: 'createPackage', data: { name: trimmedName, price: newPackagePrice } });
+        }
       } else if (packageModalMode === 'edit') {
         if (trimmedName !== currentPackageEdit.name && packages.some(pkg => pkg.name === trimmedName)) {
             showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
@@ -198,7 +219,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           updatedAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
-        await sendAdminNotification({ type: 'editPackage', data: { originalName: currentPackageEdit.name, originalPrice: currentPackageEdit.price, newName: trimmedName, newPrice: newPackagePrice } });
+        if (typeof sendAdminNotification === 'function') {
+            await sendAdminNotification({ type: 'editPackage', data: { originalName: currentPackageEdit.name, originalPrice: currentPackageEdit.price, newName: trimmedName, newPrice: newPackagePrice } });
+        }
       }
       handleClosePackageModal();
     } catch (e) {
@@ -217,6 +240,16 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const handleDeletePackage = async () => {
+    // Obranná kontrola
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleDeletePackage!");
+        console.error("Chyba: Nemáte oprávnenie na zmazanie balíčka (showNotification not available).");
+        return; 
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleDeletePackage!");
+    }
+
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmazanie balíčka.", 'error');
       return;
@@ -227,7 +260,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       const packageDocRef = doc(db, 'settings', 'packages', 'list', packageToDelete.id);
       await deleteDoc(packageDocRef);
       showNotification(`Balíček "${packageToDelete.name}" úspešne zmazaný!`, 'success');
-      await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price } });
+      if (typeof sendAdminNotification === 'function') {
+        await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price } });
+      }
       handleCloseConfirmDeletePackageModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní balíčka: ${e.message}`, 'error');
