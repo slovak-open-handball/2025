@@ -12,7 +12,7 @@ import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js'
 import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
-import { Page5Summary } from './register-page5.js'; // NOVINKA: Import pre Page5Summary
+import { Page5Summary } from './register-page5.js';
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
