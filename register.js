@@ -13,7 +13,7 @@ import { Page2Form } from './register-page2.js';
 import { Page3Form } from './register-page3.js';
 import { Page4Form } from './register-page4.js';
 import { Page5Form } from './register-page5.js';
-import { Page6Form } from './register-page6.js';
+import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -32,7 +32,7 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form)
+// NotificationModal Component pre zobrazovanie dočasných správ (teraz už NIE JE definovaný tu, ale v Page5Form a Page6Form)
 function NotificationModal({ message, onClose, type = 'info' }) {
   const [show, setShow] = React.useState(false);
   const timerRef = React.useRef(null);
@@ -435,7 +435,7 @@ function App() {
             ...prev,
             accommodation: value
         }));
-    } else if (id === 'arrival') { // NOVINKA: Handler pre dáta o príchode
+    } else if (id === 'arrival') {
         setFormData(prev => ({
             ...prev,
             arrival: value
@@ -596,12 +596,25 @@ function App() {
     setLoading(false);
   };
 
+  // NOVINKA: Funkcia na prechod z Page 5 na Page 6
+  const handleNextPage5ToPage6 = async () => {
+    setLoading(true);
+    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
+
+    // Validácia Page5 (ubytovanie a príchod) sa vykoná priamo v Page5Form
+    // Pokiaľ by tu bola nejaká dodatočná validácia, pridajte ju sem.
+
+    setPage(6); // Prechod na Page 6 (súhrn)
+    setLoading(false);
+  };
+
   const handlePrev = () => {
     setPage(prevPage => prevPage - 1);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
   };
 
-  const handleRegistrationSubmit = async (finalFormData) => {
+  // NOVINKA: Nová funkcia pre finálne odoslanie registrácie (volaná z Page6Form)
+  const confirmFinalRegistration = async () => {
     setLoading(true);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
     isRegisteringRef.current = true;
@@ -696,8 +709,8 @@ function App() {
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
           teams: teamsDataToSaveFinal,
-          accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' },
-          arrival: finalFormData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Uloženie dát o príchode
+          accommodation: formData.accommodation || { type: 'Bez ubytovania' }, // Používame formData.accommodation
+          arrival: formData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Uloženie dát o príchode
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -739,8 +752,8 @@ function App() {
             },
             categories: formData.categories,
             teams: teamsDataFromPage4,
-            accommodation: finalFormData.accommodation || { type: 'Bez ubytovania' },
-            arrival: finalFormData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Odoslanie dát o príchode do Apps Script
+            accommodation: formData.accommodation || { type: 'Bez ubytovania' }, // Používame formData.accommodation
+            arrival: formData.arrival || { type: 'bez dopravy', time: null } // NOVINKA: Odoslanie dát o príchode do Apps Script
           };
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
@@ -758,21 +771,22 @@ function App() {
       dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
       setRegistrationSuccess(true);
 
+      // Resetovanie formulára a prechod na prvú stránku po úspešnej registrácii
       setFormData({
         firstName: '', lastName: '', email: '', contactPhoneNumber: '',
         password: '', confirmPassword: '', houseNumber: '', country: '',
         city: '', postalCode: '', street: '',
         billing: { clubName: '', ico: '', dic: '', icDph: '' },
         accommodation: { type: '' },
-        arrival: { type: '', time: null } // Resetovanie formulára
+        arrival: { type: '', time: null }
       });
       setSelectedCategoryRows([{ categoryId: '', teams: 1 }]);
       setTeamsDataFromPage4({});
       setPage(1);
 
-      setTimeout(async () => { // ZMENA: async funkcia pre setTimeout
+      setTimeout(async () => {
         if (authInstance && authInstance.currentUser) {
-            await signOut(authInstance); // Odhlásenie tesne pred presmerovaním
+            await signOut(authInstance);
         }
         window.location.href = 'login.html';
       }, 20000);
@@ -785,6 +799,7 @@ function App() {
       isRegisteringRef.current = false;
     }
   };
+
 
   const isPage1FormDataEmpty = (data) => {
     if (data.firstName.trim() !== '' ||
@@ -984,17 +999,22 @@ function App() {
                   teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore,
                   handlePrev: handlePrev,
-                  handleSubmit: handleRegistrationSubmit,
+                  handleSubmit: handleNextPage5ToPage6, // ZMENA: Prechod na Page 6
                   loading: loading,
                   setLoading: setLoading,
-                  // Tieto props už Page5Form nepotrebuje, pretože notifikácie spravuje sám
-                  // notificationMessage: notificationMessage,
-                  // setShowNotification: setShowNotification,
-                  // setNotificationType: setNotificationType,
-                  // dispatchNotification: dispatchNotification,
                   setRegistrationSuccess: setRegistrationSuccess,
-                  // closeNotification: closeNotification, // closeNotification tiež presúvame
                   handleChange: handleChange,
+              }) :
+          page === 6 ? // NOVINKA: Renderovanie Page6Form
+              React.createElement(Page6Form, {
+                  formData: formData,
+                  teamsDataFromPage4: teamsDataFromPage4,
+                  handlePrev: handlePrev,
+                  handleSubmit: confirmFinalRegistration, // NOVINKA: Volanie finálneho odoslania
+                  loading: loading,
+                  NotificationModal: NotificationModal, // Odovzdanie NotificationModal
+                  notificationMessage: notificationMessage,
+                  closeNotification: closeNotification,
               }) : null
         )
       ) : isRegistrationClosed ? (
