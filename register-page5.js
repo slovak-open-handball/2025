@@ -73,6 +73,10 @@ function TeamAccommodationAndArrival({
         const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
         return initialTime ? initialTime.split(':')[1] : '';
     });
+    // Nové stavy pre počet šoférov
+    const [maleDrivers, setMaleDrivers] = React.useState(team.arrival?.drivers?.male || '');
+    const [femaleDrivers, setFemaleDrivers] = React.useState(team.arrival?.drivers?.female || '');
+
 
     // Synchronizácia lokálnych stavov s propmi (pri zmene tímu)
     React.useEffect(() => {
@@ -81,6 +85,9 @@ function TeamAccommodationAndArrival({
         const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
         setArrivalHours(initialTime ? initialTime.split(':')[0] : '');
         setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
+        // Synchronizácia stavov šoférov
+        setMaleDrivers(team.arrival?.drivers?.male || '');
+        setFemaleDrivers(team.arrival?.drivers?.female || '');
     }, [team.accommodation, team.arrival]);
 
     const handleAccommodationChange = (e) => {
@@ -92,14 +99,19 @@ function TeamAccommodationAndArrival({
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
         setArrivalType(newValue);
-        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
+        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava' && newValue !== 'vlastná doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
-            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null });
-        } else {
+            setMaleDrivers(''); // Reset driver counts
+            setFemaleDrivers(''); // Reset driver counts
+            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
+        } else if (newValue === 'vlastná doprava') {
+             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: { male: maleDrivers, female: femaleDrivers } });
+        }
+        else {
             // Ensure time is updated correctly when arrival type changes to time-based
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
-            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString });
+            handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString, drivers: null });
         }
     };
 
@@ -130,7 +142,28 @@ function TeamAccommodationAndArrival({
 
         // Pass null to parent if timeString is empty to signify no time selected,
         // otherwise pass the constructed time string.
-        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null });
+        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null, drivers: { male: maleDrivers, female: femaleDrivers } });
+    };
+
+    // Handler pre zmeny počtu šoférov
+    const handleDriverChange = (field, value) => {
+        const parsedValue = parseInt(value, 10);
+        const driverCount = isNaN(parsedValue) || parsedValue < 0 ? '' : parsedValue;
+
+        if (field === 'male') {
+            setMaleDrivers(driverCount);
+        } else {
+            setFemaleDrivers(driverCount);
+        }
+        // Update the parent's state for drivers
+        handleChange(categoryName, teamIndex, 'arrival', {
+            type: arrivalType,
+            time: arrivalType === 'vlastná doprava' ? null : team.arrival?.time, // Time is not relevant for own transport
+            drivers: {
+                male: field === 'male' ? driverCount : maleDrivers,
+                female: field === 'female' ? driverCount : femaleDrivers,
+            }
+        });
     };
 
     return React.createElement(
@@ -324,6 +357,41 @@ function TeamAccommodationAndArrival({
                         disabled: loading,
                     }),
                     React.createElement('span', { className: 'ml-3 text-gray-800' }, 'vlastná doprava')
+                ),
+                // Nové inputboxy pre počet šoférov pre "vlastná doprava"
+                arrivalType === 'vlastná doprava' && React.createElement(
+                    'div',
+                    { className: 'ml-8 mb-4 space-y-4' }, // Pridané odsadenie a medzery
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `maleDrivers-${categoryName}-${teamIndex}` }, 'Počet šoférov (muži)'),
+                        React.createElement('input', {
+                            type: 'number',
+                            id: `maleDrivers-${categoryName}-${teamIndex}`,
+                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                            value: maleDrivers,
+                            onChange: (e) => handleDriverChange('male', e.target.value),
+                            placeholder: 'Zadajte počet mužov',
+                            min: 0,
+                            disabled: loading,
+                        })
+                    ),
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: `femaleDrivers-${categoryName}-${teamIndex}` }, 'Počet šoférov (ženy)'),
+                        React.createElement('input', {
+                            type: 'number',
+                            id: `femaleDrivers-${categoryName}-${teamIndex}`,
+                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                            value: femaleDrivers,
+                            onChange: (e) => handleDriverChange('female', e.target.value),
+                            placeholder: 'Zadajte počet žien',
+                            min: 0,
+                            disabled: loading,
+                        })
+                    )
                 ),
                 React.createElement(
                     'label',
@@ -659,6 +727,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
                     return false;
                 }
+                // Validácia šoférov pre "vlastná doprava"
+                if (team.arrival?.type === 'vlastná doprava') {
+                    const maleDrivers = parseInt(team.arrival?.drivers?.male, 10);
+                    const femaleDrivers = parseInt(team.arrival?.drivers?.female, 10);
+                    if (isNaN(maleDrivers) || maleDrivers < 0 || isNaN(femaleDrivers) || femaleDrivers < 0) {
+                        return false; // Neplatné alebo chýbajúce počty šoférov
+                    }
+                }
             }
         }
         return true;
@@ -680,7 +756,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification(); 
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod) a uistite sa, že vybrané ubytovanie nie je plne obsadené.", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod) a uistite sa, že vybrané ubytovanie nie je plne obsadené. Pre 'vlastnú dopravu' zadajte počet šoférov.", 'error');
             setNotificationType('error');
             setLoading(false); 
             return;
