@@ -736,7 +736,6 @@ function TournamentSettingsApp() {
           onChange: (e) => setRosterEditDeadline(e.target.value),
         })
       ),
-      {/* NOVINKA: Dátum a čas začiatku turnaja */}
       React.createElement(
         'div',
         null,
@@ -749,7 +748,6 @@ function TournamentSettingsApp() {
           onChange: (e) => setTournamentStartDate(e.target.value),
         })
       ),
-      {/* NOVINKA: Dátum a čas konca turnaja */}
       React.createElement(
         'div',
         null,
