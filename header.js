@@ -260,7 +260,23 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    // Podmienka pre zobrazenie hlavičky
+    // NOVÁ PODMIENKA: Ak je stránka register.html, zachováme pôvodnú farbu hlavičky
+    if (window.location.pathname.includes('register.html')) {
+        headerElement.style.backgroundColor = '#1D4ED8'; // Nastavte pevnú farbu (napr. pôvodnú modrú)
+        headerElement.classList.remove('invisible'); // Zabezpečiť, že hlavička je viditeľná
+        // Zobrazenie/skrytie odkazov pre registračnú stránku
+        authLink.classList.remove('hidden');
+        profileLink.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+        // Skryť odkaz "Registrácia na turnaj" na samotnej registračnej stránke, aby sa necyklovalo
+        const registerLink = document.getElementById('register-link');
+        if (registerLink) {
+            registerLink.classList.add('hidden');
+        }
+        return; // Ukončíme funkciu, aby sa nepoužila dynamická farba a logika pre ostatné stránky
+    }
+
+    // Podmienka pre zobrazenie hlavičky pre ostatné stránky
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
         if (userProfileData) {
             authLink.classList.add('hidden');
