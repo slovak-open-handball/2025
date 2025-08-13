@@ -18,6 +18,27 @@ const formatToDatetimeLocal = (date) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+// Helper funkcia pre formátovanie objektu Date/Timestamp na 'DD. MM. YYYY HH:mm hod.' pre zobrazenie v notifikáciách
+const formatDateForDisplay = (dateOrTimestamp) => {
+  let date;
+  if (!dateOrTimestamp) return 'nezadané';
+  if (dateOrTimestamp instanceof Timestamp) {
+    date = dateOrTimestamp.toDate();
+  } else if (dateOrTimestamp instanceof Date) {
+    date = dateOrTimestamp;
+  } else {
+    return 'nezadané';
+  }
+
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+
+  return `${day}. ${month}. ${year} ${hours}:${minutes} hod.`;
+};
+
 /**
  * Lokálna funkcia pre zobrazenie notifikácií v tomto module.
  * Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách.
@@ -342,7 +363,7 @@ function TournamentSettingsApp() {
       if (notificationData.type === 'createSize') {
         changesMessage = `Vytvorenie novej veľkosti trička: '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'editSize') {
-        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' z '${notificationData.data.newSizeValue}'`;
+        changesMessage = `Zmena veľkosti trička z: '${notificationData.data.originalSize}' na '${notificationData.data.newSizeValue}'`;
       } else if (notificationData.type === 'deleteSize') {
         changesMessage = `Zmazanie veľkosti trička: '${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
@@ -403,27 +424,25 @@ function TournamentSettingsApp() {
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
       let changes = [];
 
-      const formatTimestampForNotification = (ts) => ts ? formatToDatetimeLocal(ts.toDate()) : 'nezadané';
-
       // Porovnanie a zber zmien
       if ((oldData.registrationStartDate ? oldData.registrationStartDate.toMillis() : null) !== (regStart ? Timestamp.fromDate(regStart).toMillis() : null)) {
-          changes.push(`Dátum začiatku registrácie: '${formatTimestampForNotification(oldData.registrationStartDate)}' z '${formatToDatetimeLocal(regStart)}'`);
+          changes.push(`Dátum začiatku registrácie z '${formatDateForDisplay(oldData.registrationStartDate)}' na '${formatDateForDisplay(regStart)}'`);
       }
       if ((oldData.registrationEndDate ? oldData.registrationEndDate.toMillis() : null) !== (regEnd ? Timestamp.fromDate(regEnd).toMillis() : null)) {
-          changes.push(`Dátum konca registrácie: '${formatTimestampForNotification(oldData.registrationEndDate)}' z '${formatToDatetimeLocal(regEnd)}'`);
+          changes.push(`Dátum konca registrácie z '${formatDateForDisplay(oldData.registrationEndDate)}' na '${formatDateForDisplay(regEnd)}'`);
       }
       if ((oldData.dataEditDeadline ? oldData.dataEditDeadline.toMillis() : null) !== (dataEditDead ? Timestamp.fromDate(dataEditDead).toMillis() : null)) {
-          changes.push(`Uzávierka úprav dát: '${formatTimestampForNotification(oldData.dataEditDeadline)}' z '${formatToDatetimeLocal(dataEditDead)}'`);
+          changes.push(`Uzávierka úprav dát z '${formatDateForDisplay(oldData.dataEditDeadline)}' na '${formatDateForDisplay(dataEditDead)}'`);
       }
       if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
-          changes.push(`Uzávierka úprav súpisiek: '${formatTimestampForNotification(oldData.rosterEditDeadline)}' z '${formatToDatetimeLocal(rosterEditDead)}'`);
+          changes.push(`Uzávierka úprav súpisiek z '${formatDateForDisplay(oldData.rosterEditDeadline)}' na '${formatDateForDisplay(rosterEditDead)}'`);
       }
 
       if (oldData.numberOfPlayers !== numberOfPlayers) {
-          changes.push(`Maximálny počet hráčov v tíme: '${oldData.numberOfPlayers || 0}' z '${numberOfPlayers}'`);
+          changes.push(`Maximálny počet hráčov v tíme z '${oldData.numberOfPlayers || 0}' na '${numberOfPlayers}'`);
       }
       if (oldData.numberOfImplementationTeam !== numberOfImplementationTeam) {
-          changes.push(`Maximálny počet členov realizačného tímu: '${oldData.numberOfImplementationTeam || 0}' z '${numberOfImplementationTeam}'`);
+          changes.push(`Maximálny počet členov realizačného tímu z '${oldData.numberOfImplementationTeam || 0}' na '${numberOfImplementationTeam}'`);
       }
 
       await setDoc(settingsDocRef, {
