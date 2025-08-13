@@ -1,8 +1,7 @@
 import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcie sú teraz odovzdávané ako props, takže ich už netreba importovať
-// import { showNotification, sendAdminNotification } from './utils.js';
-
+// Funkcie showNotification a sendAdminNotification sa očakávajú ako props z nadradeného komponentu.
+// Preto ich tu neimportujeme ani nedefinujeme.
 
 export function TShirtSizeSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
   const [tshirtSizes, setTshirtSizes] = React.useState([]);
@@ -42,13 +41,25 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
                 'XXXL'
               ]
             }).then(() => {
+              // Notifikácia pri úspešnom vytvorení predvolených veľkostí
+              if (typeof showNotification === 'function') {
+                showNotification("Predvolené veľkosti tričiek boli vytvorené.", 'success');
+              }
             }).catch(e => {
-              showNotification(`Chyba pri vytváraní predvolených veľkostí tričiek: ${e.message}`, 'error');
+              if (typeof showNotification === 'function') {
+                showNotification(`Chyba pri vytváraní predvolených veľkostí tričiek: ${e.message}`, 'error');
+              } else {
+                console.error("Chyba pri vytváraní predvolených veľkostí tričiek a showNotification nie je funkcia:", e);
+              }
             });
             setTshirtSizes([]); 
           }
         }, error => {
-          showNotification(`Chyba pri načítaní veľkostí tričiek: ${error.message}`, 'error');
+          if (typeof showNotification === 'function') {
+            showNotification(`Chyba pri načítaní veľkostí tričiek: ${error.message}`, 'error');
+          } else {
+            console.error("Chyba pri načítaní veľkostí tričiek a showNotification nie je funkcia:", error);
+          }
         });
 
         return () => {
@@ -57,12 +68,16 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
           }
         };
       } catch (e) {
-        showNotification(`Chyba pri nastavovaní poslucháča pre veľkosti tričiek: ${e.message}`, 'error');
+        if (typeof showNotification === 'function') {
+          showNotification(`Chyba pri nastavovaní poslucháča pre veľkosti tričiek: ${e.message}`, 'error');
+        } else {
+          console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek a showNotification nie je funkcia:", e);
+        }
       }
     };
 
     fetchTshirtSizes();
-  }, [db, userProfileData, showNotification]);
+  }, [db, userProfileData, showNotification]); // Zabezpečujeme re-render ak sa zmení showNotification (ak by sa menilo)
 
   const handleOpenAddSizeModal = () => {
     setModalMode('add');
@@ -86,6 +101,15 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
   };
 
   const handleSaveSize = async () => {
+    // Obranná kontrola
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleSaveSize!");
+        return; 
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleSaveSize!");
+    }
+
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmenu nastavení veľkostí tričiek.", 'error');
       return;
@@ -109,7 +133,9 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
           sizes: arrayUnion(trimmedNewSize)
         });
         showNotification(`Veľkosť "${trimmedNewSize}" úspešne pridaná!`, 'success');
-        await sendAdminNotification({ type: 'createSize', data: { newSizeValue: trimmedNewSize } });
+        if (typeof sendAdminNotification === 'function') {
+            await sendAdminNotification({ type: 'createSize', data: { newSizeValue: trimmedNewSize } });
+        }
       } else if (modalMode === 'edit') {
         if (trimmedNewSize !== currentSizeEdit && tshirtSizes.includes(trimmedNewSize)) {
             showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
@@ -122,7 +148,9 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
           sizes: arrayUnion(trimmedNewSize)
         });
         showNotification(`Veľkosť "${currentSizeEdit}" úspešne zmenená na "${trimmedNewSize}"!`, 'success');
-        await sendAdminNotification({ type: 'editSize', data: { originalSize: currentSizeEdit, newSizeValue: trimmedNewSize } });
+        if (typeof sendAdminNotification === 'function') {
+            await sendAdminNotification({ type: 'editSize', data: { originalSize: currentSizeEdit, newSizeValue: trimmedNewSize } });
+        }
       }
       handleCloseSizeModal();
     } catch (e) {
@@ -141,6 +169,18 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
   };
 
   const handleDeleteSize = async () => {
+    // Obranná kontrola (toto je riadok 160, ak je kód nekomprimovaný)
+    if (typeof showNotification !== 'function') {
+        console.error("DEBUG: showNotification prop is not a function in handleDeleteSize!");
+        // Ak showNotification nie je funkcia, aspoň zalogujeme chybu
+        console.error("Chyba: Nemáte oprávnenie na zmazanie veľkosti trička (showNotification not available).");
+        return; // Zastaví ďalšie vykonávanie funkcie
+    }
+    if (typeof sendAdminNotification !== 'function') {
+        console.error("DEBUG: sendAdminNotification prop is not a function in handleDeleteSize!");
+    }
+
+
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmazanie veľkosti trička.", 'error');
       return;
@@ -153,7 +193,9 @@ export function TShirtSizeSettings({ db, userProfileData, showNotification, send
         sizes: arrayRemove(sizeToDelete)
       });
       showNotification(`Veľkosť "${sizeToDelete}" úspešne zmazaná!`, 'success');
-      await sendAdminNotification({ type: 'deleteSize', data: { deletedSize: sizeToDelete } });
+      if (typeof sendAdminNotification === 'function') {
+        await sendAdminNotification({ type: 'deleteSize', data: { deletedSize: sizeToDelete } });
+      }
       handleCloseConfirmDeleteModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní veľkosti trička: ${e.message}`, 'error');
