@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component pre zobrazovanie dočasných správ (presunutý sem)
 function NotificationModal({ message, onClose, type = 'info' }) {
@@ -120,7 +120,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeRegistrationSettings = onSnapshot(registrationDocRef, (docSnapshot) => {
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
-                        if (data.tournamentStart && data.tournamentStart instanceof firebase.firestore.Timestamp) {
+                        // ZMENA: Použitie importovaného Timestamp namiesto globálneho firebase.firestore.Timestamp
+                        if (data.tournamentStart && data.tournamentStart instanceof Timestamp) {
                             const date = data.tournamentStart.toDate();
                             const formattedDate = date.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' });
                             setTournamentStartDateDisplay(formattedDate);
