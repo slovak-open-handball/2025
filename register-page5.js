@@ -1,4 +1,4 @@
-import { getFirestore, doc, onSnapshot, collection, query, getDocs, FieldValue, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, query, getDoc, FieldValue, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component pre zobrazovanie dočasných správ (presunutý sem)
 function NotificationModal({ message, onClose, type = 'info' }) {
