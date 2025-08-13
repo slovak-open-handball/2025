@@ -595,15 +595,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                    (pkg.meals && Object.keys(pkg.meals).length > 0 && tournamentDays.length > 0) ? (
+                                    (pkg.meals && tournamentDays.length > 0) ? (
                                         tournamentDays.map(date => {
                                             const mealsForDay = pkg.meals[date];
                                             const includedItems = [];
-                                            // Ensure the key is a valid date string, not 'participantCard'
-                                            if (date === 'participantCard' || isNaN(new Date(date).getTime())) {
-                                                return null; 
-                                            }
-
+                                            
                                             if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
                                             if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
                                             if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
