@@ -17,6 +17,7 @@ import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6For
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
+// OPRAVENÁ CHYBA: Zmenené '=>' na 'from'
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -285,8 +286,8 @@ function App() {
           setRegistrationEndDate('');
           setDataEditDeadline('');
           setRosterEditDeadline('');
-          setNumberOfPlayersInTeam(0);
-          setNumberOfImplementationTeamMembers(0);
+          setNumberOfPlayers(0);
+          setNumberOfImplementationTeam(0);
       }
       setSettingsLoaded(true);
     }, error => {
@@ -461,7 +462,7 @@ function App() {
       return null;
     }
     try {
-      const token = await grecaptcha.execute(RECAPTcha_SITE_KEY, { action: action });
+      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
       dispatchAppNotification(`Chyba reCAPTCHA: ${e.message}`, 'error');
