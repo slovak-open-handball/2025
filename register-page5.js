@@ -1,38 +1,172 @@
-// register-page5.js
-// Obsahuje komponent pre zhrnutie zadaných údajov pred finálnou registráciou.
+import { getFirestore, doc, onSnapshot, collection, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-export function Page5Summary({ formData, teamsDataFromPage4, availableCategoriesMap, handlePrev, handleSubmit, loading, NotificationModal, notificationMessage, closeNotification }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, selectedCountryDialCode, NotificationModal, closeNotification }) {
+    const db = getFirestore();
 
-    // Funkcia na nájdenie názvu kategórie podľa ID
-    const getCategoryNameById = (categoryId) => {
-        return availableCategoriesMap[categoryId] || 'Neznáma kategória';
-    };
+    const [accommodations, setAccommodations] = React.useState([]);
+    const [selectedAccommodationType, setSelectedAccommodationType] = React.useState(formData.accommodation?.type || '');
+    const [accommodationCounts, setAccommodationCounts] = React.useState({});
+    const [isAccommodationDataLoaded, setIsAccommodationDataLoaded] = React.useState(false);
 
-    // Helper funkcia pre formátovanie telefónneho čísla, ak už nie je formátované
-    const formatPhoneNumberForDisplay = (phoneNumber) => {
-        // Ak už obsahuje medzery, predpokladáme, že je formátované
-        if (phoneNumber.includes(' ')) {
-            return phoneNumber;
-        }
-        // Inak formátujeme
-        let formatted = '';
-        for (let i = 0; i < phoneNumber.length; i++) {
-            formatted += phoneNumber[i];
-            if ((i + 1) % 3 === 0 && i + 1 < phoneNumber.length) {
-                formatted += ' ';
+    // Načítanie dostupných typov ubytovania a ich kapacít
+    React.useEffect(() => {
+        let unsubscribeAccommodation;
+        const fetchAccommodationSettings = () => {
+            if (!window.db) {
+                setTimeout(fetchAccommodationSettings, 100);
+                return;
             }
-        }
-        return formatted;
+            try {
+                const accommodationDocRef = doc(window.db, 'settings', 'accommodation');
+                unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        setAccommodations(data.types || []);
+                    } else {
+                        setAccommodations([]);
+                    }
+                    setIsAccommodationDataLoaded(true);
+                }, (error) => {
+                    console.error("Chyba pri načítaní nastavení ubytovania:", error);
+                    showNotification("Chyba pri načítaní nastavení ubytovania.", 'error');
+                    setIsAccommodationDataLoaded(true);
+                });
+            } catch (e) {
+                console.error("Chyba pri nastavovaní poslucháča pre ubytovanie:", e);
+                showNotification("Chyba pri nastavovaní poslucháča pre ubytovanie.", 'error');
+                setIsAccommodationDataLoaded(true);
+            }
+        };
+
+        fetchAccommodationSettings();
+
+        return () => {
+            if (unsubscribeAccommodation) {
+                unsubscribeAccommodation();
+            }
+        };
+    }, []);
+
+    // Výpočet obsadenosti ubytovania
+    React.useEffect(() => {
+        let unsubscribeUsers;
+        const calculateAccommodationCounts = () => {
+            if (!window.db || !isAccommodationDataLoaded) {
+                setTimeout(calculateAccommodationCounts, 100);
+                return;
+            }
+
+            try {
+                const usersCollectionRef = collection(window.db, 'users');
+                unsubscribeUsers = onSnapshot(usersCollectionRef, (snapshot) => {
+                    const counts = { "Bez ubytovania": 0 }; // Inicializácia pre "Bez ubytovania"
+
+                    // Inicializácia počtov pre všetky dostupné ubytovania
+                    accommodations.forEach(acc => {
+                        counts[acc.type] = 0;
+                    });
+
+                    snapshot.forEach(userDoc => {
+                        const userData = userDoc.data();
+                        const selectedAccType = userData.accommodation?.type;
+                        const teamsData = userData.formData?.teamsDataFromPage4;
+
+                        if (selectedAccType && teamsData) {
+                            let totalPeopleForUser = 0;
+                            for (const categoryName in teamsData) {
+                                if (teamsData[categoryName]) {
+                                    for (const team of teamsData[categoryName]) {
+                                        totalPeopleForUser += (parseInt(team.players, 10) || 0) +
+                                                              (parseInt(team.womenTeamMembers, 10) || 0) +
+                                                              (parseInt(team.menTeamMembers, 10) || 0);
+                                    }
+                                }
+                            }
+                            counts[selectedAccType] = (counts[selectedAccType] || 0) + totalPeopleForUser;
+                        } else if (!selectedAccType) {
+                            // Ak používateľ nemá vybrané ubytovanie alebo vybral "Bez ubytovania"
+                            // Predpokladáme, že všetci takíto používatelia spadajú pod "Bez ubytovania"
+                            let totalPeopleForUser = 0;
+                            if (teamsData) {
+                                for (const categoryName in teamsData) {
+                                    if (teamsData[categoryName]) {
+                                        for (const team of teamsData[categoryName]) {
+                                            totalPeopleForUser += (parseInt(team.players, 10) || 0) +
+                                                                  (parseInt(team.womenTeamMembers, 10) || 0) +
+                                                                  (parseInt(team.menTeamMembers, 10) || 0);
+                                        }
+                                    }
+                                }
+                            }
+                            counts["Bez ubytovania"] += totalPeopleForUser;
+                        }
+                    });
+                    setAccommodationCounts(counts);
+                }, (error) => {
+                    console.error("Chyba pri načítaní používateľských dát pre obsadenosť ubytovania:", error);
+                    showNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+                });
+            } catch (e) {
+                console.error("Chyba pri nastavovaní poslucháča pre používateľov ubytovania:", e);
+                showNotification("Chyba pri načítaní údajov o obsadenosti ubytovania.", 'error');
+            }
+        };
+
+        calculateAccommodationCounts();
+
+        return () => {
+            if (unsubscribeUsers) {
+                unsubscribeUsers();
+            }
+        };
+    }, [db, isAccommodationDataLoaded, accommodations]); // Záleží na načítaných ubytovaniach a DB
+
+    const handleAccommodationChange = (e) => {
+        setSelectedAccommodationType(e.target.value);
+        handleChange({ target: { id: 'accommodation', value: { type: e.target.value } } });
     };
 
-    // CSS triedy pre tlačidlo registrácie
-    const registerButtonClasses = `
-        font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
-        ${loading
-            ? 'bg-white text-green-500 border border-green-500 cursor-not-allowed'
-            : 'bg-green-500 hover:bg-green-700 text-white'
+    const isFormValidPage5 = selectedAccommodationType !== '';
+
+    const nextButtonClasses = `
+    font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
+    ${!isFormValidPage5 || loading
+      ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+      : 'bg-blue-500 hover:bg-blue-700 text-white'
+    }
+  `;
+
+    const handleRegistrationSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!isFormValidPage5) {
+            showNotification("Prosím, vyberte typ ubytovania.", 'error');
+            return;
         }
-    `;
+
+        setLoading(true);
+        setShowNotification(false);
+        setNotificationType('info');
+
+        try {
+            // Predpokladáme, že formData už obsahuje všetky potrebné údaje
+            // Vrátane formData.teamsDataFromPage4 a formData.selectedAccommodation
+            const finalFormData = {
+                ...formData,
+                accommodation: {
+                    type: selectedAccommodationType // Zabezpečíme, že sa uloží aktuálne vybrané ubytovanie
+                }
+            };
+            await handleSubmit(finalFormData); // Odoslanie finálnych dát
+            setRegistrationSuccess(true); // Nastavíme úspešnú registráciu
+        } catch (error) {
+            console.error("Chyba pri finalizácii registrácie:", error);
+            showNotification(`Chyba pri registrácii: ${error.message}`, 'error');
+            setRegistrationSuccess(false);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return React.createElement(
         React.Fragment,
@@ -42,68 +176,53 @@ export function Page5Summary({ formData, teamsDataFromPage4, availableCategories
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Zhrnutie registrácie'
+            'Registrácia - Ubytovanie'
         ),
+
         React.createElement(
-            'div',
-            { className: 'space-y-6' }, // Väčšie medzery medzi sekciami
-            // Osobné údaje
+            'form',
+            { onSubmit: handleRegistrationSubmit, className: 'space-y-4' },
             React.createElement(
                 'div',
-                { className: 'bg-gray-50 p-4 rounded-lg shadow-sm' },
-                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-700' }, 'Osobné údaje'),
-                React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Meno: '), `${formData.firstName} ${formData.lastName}`),
-                React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'E-mail: '), formData.email),
-                React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Tel. číslo: '), formatPhoneNumberForDisplay(formData.contactPhoneNumber)),
-            ),
-
-            // Fakturačné údaje
-            React.createElement(
-                'div',
-                { className: 'bg-gray-50 p-4 rounded-lg shadow-sm' },
-                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-700' }, 'Fakturačné údaje'),
-                React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Názov klubu: '), formData.billing?.clubName),
-                formData.billing?.ico && React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'IČO: '), formData.billing.ico),
-                formData.billing?.dic && React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'DIČ: '), formData.billing.dic),
-                formData.billing?.icDph && React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'IČ DPH: '), formData.billing.icDph),
-                React.createElement('p', { className: 'text-gray-700' }, React.createElement('strong', null, 'Adresa: '), `${formData.street} ${formData.houseNumber}, ${formData.postalCode} ${formData.city}, ${formData.country}`),
-            ),
-
-            // Kategórie a tímy
-            Object.keys(teamsDataFromPage4).length > 0 && React.createElement(
-                'div',
-                { className: 'bg-gray-50 p-4 rounded-lg shadow-sm' },
-                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-700' }, 'Kategórie a tímy'),
-                Object.keys(teamsDataFromPage4).map(categoryName => (
+                { className: 'border-t border-gray-200 pt-4 mt-4' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber typu ubytovania'),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'accommodationType' }, 'Typ ubytovania'),
                     React.createElement(
-                        'div',
-                        { key: categoryName, className: 'mb-4 border-b border-gray-200 pb-2 last:border-b-0' },
-                        React.createElement('h4', { className: 'text-lg font-medium text-gray-800' }, `Kategória: ${categoryName}`),
-                        (teamsDataFromPage4[categoryName] || []).map((team, teamIndex) => (
-                            React.createElement(
-                                'div',
-                                { key: `${categoryName}-${teamIndex}-summary`, className: 'ml-4 mt-2 p-3 bg-white rounded-md shadow-sm' },
-                                React.createElement('p', { className: 'font-semibold text-blue-700' }, `Tím ${teamIndex + 1}: ${team.teamName}`),
-                                React.createElement('p', { className: 'text-gray-700 text-sm' }, React.createElement('strong', null, 'Počet hráčov: '), team.players),
-                                React.createElement('p', { className: 'text-gray-700 text-sm' }, React.createElement('strong', null, 'Realizačný tím (ženy): '), team.womenTeamMembers),
-                                React.createElement('p', { className: 'text-gray-700 text-sm' }, React.createElement('strong', null, 'Realizačný tím (muži): '), team.menTeamMembers),
-                                team.tshirts && team.tshirts.length > 0 && React.createElement(
-                                    'div',
-                                    { className: 'mt-2' },
-                                    React.createElement('p', { className: 'font-medium text-gray-700 text-sm' }, 'Tričká:'),
-                                    React.createElement('ul', { className: 'list-disc list-inside text-gray-700 text-sm' },
-                                        team.tshirts.map((tshirt, tsIndex) => (
-                                            tshirt.size && tshirt.quantity > 0 && React.createElement('li', { key: tsIndex }, `${tshirt.size}: ${tshirt.quantity} ks`)
-                                        ))
-                                    )
-                                )
-                            )
-                        ))
+                        'select',
+                        {
+                            id: 'accommodationType',
+                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                            value: selectedAccommodationType,
+                            onChange: handleAccommodationChange,
+                            required: true,
+                            disabled: loading || !isAccommodationDataLoaded,
+                        },
+                        React.createElement('option', { value: '' }, 'Vyberte typ ubytovania'),
+                        React.createElement('option', { value: 'Bez ubytovania', disabled: false }, `Bez ubytovania (${accommodationCounts["Bez ubytovania"] || 0} registrovaných)`)
+                        ,
+                        accommodations.map((acc) => {
+                            const currentCount = accommodationCounts[acc.type] || 0;
+                            const isFull = currentCount >= acc.capacity;
+                            return React.createElement(
+                                'option',
+                                {
+                                    key: acc.type,
+                                    value: acc.type,
+                                    disabled: isFull,
+                                    style: {
+                                        cursor: isFull ? 'not-allowed' : 'pointer'
+                                    }
+                                },
+                                `${acc.type} (Kapacita: ${acc.capacity}, Registrovaných: ${currentCount})${isFull ? ' (naplnená kapacita)' : ''}`
+                            );
+                        })
                     )
-                ))
+                )
             ),
 
-            // Ovládacie tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-between mt-6' },
@@ -121,19 +240,18 @@ export function Page5Summary({ formData, teamsDataFromPage4, availableCategories
                     'button',
                     {
                         type: 'submit',
-                        onClick: handleSubmit, // Volá finálny submit (registráciu)
-                        className: registerButtonClasses,
-                        disabled: loading,
+                        className: nextButtonClasses,
+                        disabled: loading || !isFormValidPage5,
                     },
                     loading ? React.createElement(
                         'div',
                         { className: 'flex items-center justify-center' },
-                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-green-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
+                        React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
                             React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
-                        'Registrujem...'
-                    ) : 'Registrovať'
+                        'Odosielam...'
+                    ) : 'Registrovať sa'
                 )
             )
         )
