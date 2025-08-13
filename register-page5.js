@@ -280,7 +280,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 className: 'form-radio h-5 w-5 text-blue-600',
                                 disabled: loading,
                             }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania (${accommodationCounts["Bez ubytovania"] || 0} registrovaných)`)
+                            // ZMENA: Odstránený text s počtom registrovaných
+                            React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
                         ),
                         // Dynamické možnosti ubytovania z Firestore
                         accommodations.map((acc) => {
@@ -304,8 +305,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     className: 'form-radio h-5 w-5 text-blue-600',
                                     disabled: isDisabled,
                                 }),
+                                // ZMENA: Odstránený text s kapacitou a počtom registrovaných
                                 React.createElement('span', { className: 'ml-3 text-gray-800' }, 
-                                    `${acc.type} (Kapacita: ${acc.capacity}, Registrovaných: ${currentCount})${isFull ? ' (naplnená kapacita)' : ''}`
+                                    `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}` 
                                 )
                             );
                         })
