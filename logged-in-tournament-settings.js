@@ -1096,7 +1096,6 @@ function TournamentSettingsApp() {
       )
     ),
 
-    {/* NOVÉ Modálne okno na potvrdenie zmazania ubytovania */}
     showConfirmDeleteAccommodationModal && React.createElement(
       'div',
       { className: 'modal' },
