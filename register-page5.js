@@ -160,7 +160,8 @@ function TeamAccommodationAndArrival({
                         }),
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
                     ),
-                    accommodationTypes.map((acc) => {
+                    // Zobrazenie typov ubytovania zoradených abecedne
+                    accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
                         // Získanie aktuálneho počtu pre daný typ ubytovania
                         const currentCount = accommodationCounts[acc.type] || 0;
                         // Skontrolujte, či je kapacita plná
@@ -377,12 +378,7 @@ function TeamPackageSettings({
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
-            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka'),
-            React.createElement(
-                'p',
-                { className: 'text-sm text-gray-600 mb-4' },
-                `Uvedená cena je pre jednu osobu.`
-            ),
+            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka (stravovanie a občerstvenie)'),
             React.createElement(
                 'div',
                 { className: 'mb-4 space-y-2' },
@@ -717,7 +713,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - strana 5'
+            'Registrácia - Ubytovanie a Príchod Tímov'
         ),
 
         React.createElement(
