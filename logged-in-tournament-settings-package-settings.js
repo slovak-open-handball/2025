@@ -19,6 +19,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   // packageRefreshments sa už nepoužíva pre túto logiku, ale ponechávam deklaráciu, ak by bolo v iných častiach kódu
   const [packageRefreshments, setPackageRefreshments] = React.useState([]);
 
+  // Nový stav pre ovládanie viditeľnosti stĺpca občerstvenia
+  const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
+
 
   const getDaysBetween = (start, end) => {
     const dates = [];
@@ -87,6 +90,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageRefreshments([]); // Reset na prázdne pole
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
+    setShowRefreshmentColumn(false); // Predvolene skryť pri pridávaní nového balíčka
   };
 
   const handleOpenEditPackageModal = (pkg) => {
@@ -99,6 +103,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageRefreshments([]); 
     setCurrentPackageEdit(pkg);
     setShowPackageModal(true);
+    // Ak existuje aspoň jeden záznam s občerstvením, zobrazíme stĺpec
+    const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
+    setShowRefreshmentColumn(hasRefreshment);
   };
 
   const handleClosePackageModal = () => {
@@ -109,6 +116,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setPackageModalMode('add');
+    setShowRefreshmentColumn(false); // Skryť pri zatvorení modálu
   };
 
   // Upravená funkcia pre zmenu stavu checkboxu pre jedlá A občerstvenie
@@ -353,76 +361,88 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
         tournamentDays.length > 0 ? (
             React.createElement(
-                'div',
-                { className: 'overflow-x-auto' }, // Pre responzívnosť tabuľky na menších obrazovkách
+                React.Fragment, // Použijeme Fragment na zoskupenie tabuľky a checkboxu
+                null,
                 React.createElement(
-                    'table',
-                    { className: 'min-w-full bg-white border border-gray-200 rounded-lg shadow-sm' },
+                    'div',
+                    { className: 'overflow-x-auto mb-4' }, // Pre responzívnosť tabuľky na menších obrazovkách
                     React.createElement(
-                        'thead',
-                        null,
+                        'table',
+                        { className: 'min-w-full bg-white border border-gray-200 rounded-lg shadow-sm' },
                         React.createElement(
-                            'tr',
-                            { className: 'bg-gray-100' },
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-left text-sm font-semibold text-gray-600' }, 'Dátum'),
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'),
-                            React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') // Nový stĺpec
-                        )
-                    ),
-                    React.createElement(
-                        'tbody',
-                        null,
-                        tournamentDays.map(date => (
+                            'thead',
+                            null,
                             React.createElement(
                                 'tr',
-                                { key: date, className: 'hover:bg-gray-50' },
-                                React.createElement('td', { className: 'py-2 px-4 border-b text-gray-700' }, new Date(date).toLocaleDateString('sk-SK')),
-                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
-                                        checked: packageMeals[date]?.breakfast === 1,
-                                        onChange: (e) => handleMealChange(date, 'breakfast', e.target.checked),
-                                    })
-                                ),
-                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
-                                        checked: packageMeals[date]?.lunch === 1,
-                                        onChange: (e) => handleMealChange(date, 'lunch', e.target.checked),
-                                    })
-                                ),
-                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
-                                        checked: packageMeals[date]?.dinner === 1,
-                                        onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
-                                    })
-                                ),
-                                React.createElement('td', { className: 'py-2 px-4 border-b text-center' }, // Nová bunka pre občerstvenie
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
-                                        checked: packageMeals[date]?.refreshment === 1, // Používa 'refreshment' key
-                                        onChange: (e) => handleMealChange(date, 'refreshment', e.target.checked), // Ukladá do 'refreshment'
-                                    })
+                                { className: 'bg-gray-100' },
+                                React.createElement('th', { className: 'py-2 px-4 border-b text-left text-sm font-semibold text-gray-600' }, 'Dátum'),
+                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Raňajky'),
+                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Obed'),
+                                React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Večera'),
+                                showRefreshmentColumn && React.createElement('th', { className: 'py-2 px-4 border-b text-center text-sm font-semibold text-gray-600' }, 'Občerstvenie') // Podmienený stĺpec
+                            )
+                        ),
+                        React.createElement(
+                            'tbody',
+                            null,
+                            tournamentDays.map(date => (
+                                React.createElement(
+                                    'tr',
+                                    { key: date, className: 'hover:bg-gray-50' },
+                                    React.createElement('td', { className: 'py-2 px-4 border-b text-gray-700' }, new Date(date).toLocaleDateString('sk-SK')),
+                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.breakfast === 1,
+                                            onChange: (e) => handleMealChange(date, 'breakfast', e.target.checked),
+                                        })
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.lunch === 1,
+                                            onChange: (e) => handleMealChange(date, 'lunch', e.target.checked),
+                                        })
+                                    ),
+                                    React.createElement('td', { className: 'py-2 px-4 border-b text-center' },
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.dinner === 1,
+                                            onChange: (e) => handleMealChange(date, 'dinner', e.target.checked),
+                                        })
+                                    ),
+                                    showRefreshmentColumn && React.createElement('td', { className: 'py-2 px-4 border-b text-center' }, // Podmienená bunka
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                                            checked: packageMeals[date]?.refreshment === 1,
+                                            onChange: (e) => handleMealChange(date, 'refreshment', e.target.checked),
+                                        })
+                                    )
                                 )
                             )
                         ))
                     )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center mt-4' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'toggleRefreshmentColumn',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                        checked: showRefreshmentColumn,
+                        onChange: (e) => setShowRefreshmentColumn(e.target.checked),
+                    }),
+                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'Zobraziť stĺpec Občerstvenie')
                 )
             )
         ) : (
             React.createElement('p', { className: 'text-gray-500 text-center' }, 'Pre konfiguráciu stravovania najprv nastavte dátumy začiatku a konca turnaja vo všeobecných nastaveniach.')
         ),
-
-        // Pôvodná sekcia občerstvenia (už sa nepoužíva, je zakomentovaná alebo odstránená)
-        // React.createElement('h5', { className: 'font-medium mt-4 mb-2 text-gray-700' }, 'Občerstvenie:'),
-        // ... (predchádzajúci kód pre občerstvenie, ktorý sa už nepoužíva)
 
         React.createElement(
           'div',
