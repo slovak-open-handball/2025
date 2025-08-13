@@ -253,10 +253,8 @@ export function Page2Form({ formData, handleChange, handlePrev, handleSubmit, lo
 
       React.createElement(
         'div',
-        { className: 'text-sm text-gray-600 mt-4 mb-2' }, // Vysvetlivky nad tlačidlami
+        { className: 'text-sm text-gray-600 mt-4 mb-2' },
         React.createElement('p', null, React.createElement('sup', { className: 'text-red-500 text-xs' }, '*'), ' Povinné pole'),
-        // Aktualizované vysvetlenie pre IČO, DIČ, IČ DPH
-        React.createElement('p', null, 'Pole DIČ a IČ DPH sú nepovinné.') 
       ),
       React.createElement(
         'div',
