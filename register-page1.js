@@ -461,7 +461,6 @@ function App() {
       return null;
     }
     try {
-      // Oprava: Zmena RECAPTcha_SITE_KEY na RECAPTCHA_SITE_KEY
       const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
       return token;
     } catch (e) {
