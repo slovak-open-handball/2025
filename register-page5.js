@@ -97,6 +97,7 @@ function TeamAccommodationAndArrival({
             setArrivalMinutes('');
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null });
         } else {
+            // Ensure time is updated correctly when arrival type changes to time-based
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString });
         }
@@ -107,14 +108,15 @@ function TeamAccommodationAndArrival({
         let newHours = arrivalHours;
         let newMinutes = arrivalMinutes;
 
-        if (id === 'arrivalHours') {
+        if (id.includes('arrivalHours')) { // Changed to check for 'arrivalHours' in id
             newHours = value;
             setArrivalHours(value);
-        } else if (id === 'arrivalMinutes') {
+        } else if (id.includes('arrivalMinutes')) { // Changed to check for 'arrivalMinutes' in id
             newMinutes = value;
             setArrivalMinutes(value);
         }
         
+        // Always construct the time string and update the parent state
         const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
         handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString });
     };
