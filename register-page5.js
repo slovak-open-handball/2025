@@ -83,7 +83,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const getDaysBetween = (start, end) => {
         const dates = [];
-        let currentDate = new Date(start);
+        let currentDate = new Date(start); 
         while (currentDate <= end) {
             dates.push(currentDate.toISOString().split('T')[0]);
             currentDate.setDate(currentDate.getDate() + 1);
@@ -595,25 +595,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                    (pkg.meals && tournamentDays.length > 0) ? (
-                                        tournamentDays.map(date => {
+                                    (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
+                                        // Combine dates from tournamentDays and pkg.meals keys
+                                        [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
                                             const mealsForDay = pkg.meals[date];
                                             const includedItems = [];
                                             
+                                            // Make sure the key is a valid date string
+                                            if (isNaN(new Date(date).getTime())) {
+                                                return null;
+                                            }
+
                                             if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
                                             if (mealsForDay && mealsForDay.lunch === 1) includedItems.push('Obed');
                                             if (mealsForDay && mealsForDay.dinner === 1) includedItems.push('Večera');
                                             if (mealsForDay && mealsForDay.refreshment === 1) includedItems.push('Občerstvenie');
 
                                             if (includedItems.length > 0) {
-                                                const displayDate = new Date(date).toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                                const dateObj = new Date(date + 'T00:00:00'); // Ensure UTC for consistent day interpretation
+                                                const displayDate = dateObj.toLocaleDateString('sk-SK', { weekday: 'short', day: 'numeric', month: 'numeric' });
                                                 return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
                                             }
                                             return null;
-                                        }).filter(item => item !== null)
+                                        }).filter(item => item !== null) // Filter out nulls from map
                                     ) : (
                                         React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
                                     ),
+                                    // Display participant card separately if included
                                     (pkg.meals && pkg.meals.participantCard === 1) &&
                                         React.createElement('p', { className: 'font-bold text-gray-700 mt-1' }, 'Zahŕňa účastnícku kartu')
                                 )
