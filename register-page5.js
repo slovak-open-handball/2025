@@ -51,13 +51,17 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4 }) { // Pridaný teamsDataFromPage4 ako prop
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4 }) {
     const db = getFirestore();
 
     const [accommodations, setAccommodations] = React.useState([]);
     const [selectedAccommodationType, setSelectedAccommodationType] = React.useState(formData.accommodation?.type || '');
     const [accommodationCounts, setAccommodationCounts] = React.useState({});
     const [isAccommodationDataLoaded, setIsAccommodationDataLoaded] = React.useState(false);
+
+    // NOVINKA: Stavy pre výber príchodu na turnaj
+    const [selectedArrivalType, setSelectedArrivalType] = React.useState(formData.arrival?.type || '');
+    const [arrivalTime, setArrivalTime] = React.useState(formData.arrival?.time || '');
 
     // Stavy pre lokálne notifikácie v tomto komponente
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -156,13 +160,47 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const handleAccommodationChange = (e) => {
-        // Zmena: value je teraz selectedAccommodationType priamo
         const newValue = e.target.value; 
         setSelectedAccommodationType(newValue);
         handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
 
-    const isFormValidPage5 = selectedAccommodationType !== '';
+    // NOVINKA: Handler pre zmenu typu príchodu
+    const handleArrivalChange = (e) => {
+        const newValue = e.target.value;
+        setSelectedArrivalType(newValue);
+        // Reset času príchodu, ak sa zmení typ dopravy na taký, ktorý čas nevyžaduje
+        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
+            setArrivalTime('');
+        }
+        handleChange({ target: { id: 'arrival', value: { type: newValue, time: (newValue === 'vlaková doprava' || newValue === 'autobusová doprava' ? arrivalTime : '') } } });
+    };
+
+    // NOVINKA: Handler pre zmenu času príchodu
+    const handleArrivalTimeChange = (e) => {
+        const newTime = e.target.value;
+        setArrivalTime(newTime);
+        handleChange({ target: { id: 'arrival', value: { type: selectedArrivalType, time: newTime } } });
+    };
+
+
+    // NOVINKA: Validácia pre Page5
+    const isFormValidPage5 = React.useMemo(() => {
+        // Validácia ubytovania
+        if (!selectedAccommodationType) {
+            return false;
+        }
+
+        // Validácia príchodu
+        if (!selectedArrivalType) {
+            return false;
+        }
+        if ((selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava') && !arrivalTime) {
+            return false; // Čas príchodu je povinný pre vlak/autobus
+        }
+        return true;
+    }, [selectedAccommodationType, selectedArrivalType, arrivalTime]);
+
 
     const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
@@ -176,7 +214,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         e.preventDefault();
 
         if (!isFormValidPage5) {
-            dispatchLocalNotification("Prosím, vyberte typ ubytovania.", 'error');
+            dispatchLocalNotification("Prosím, vyplňte všetky povinné polia.", 'error'); // Všeobecnejšia správa pre všetky povinné polia
             return;
         }
 
@@ -189,12 +227,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ...formData,
                 accommodation: {
                     type: selectedAccommodationType
+                },
+                arrival: { // NOVINKA: Pridanie údajov o príchode do finalFormData
+                    type: selectedArrivalType,
+                    time: (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava') ? arrivalTime : null
                 }
             };
 
             // Vypočítaj celkový počet ľudí pre túto registráciu z teamsDataFromPage4
             let totalPeopleForCurrentRegistration = 0;
-            if (teamsDataFromPage4) { // Používame teamsDataFromPage4 namiesto formData.teams
+            if (teamsDataFromPage4) {
                 for (const categoryName in teamsDataFromPage4) {
                     if (teamsDataFromPage4[categoryName]) {
                         for (const team of teamsDataFromPage4[categoryName]) {
@@ -206,15 +248,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             }
             
-            // Pred odoslaním na registráciu, aktualizujeme počty ubytovania
-            // Až po úspešnej registrácii rodičom sa aktualizuje accommodationCounts
             await handleSubmit(finalFormData); 
 
             const accommodationToUpdate = finalFormData.accommodation?.type;
             if (accommodationToUpdate) {
                 const accommodationCountsDocRef = doc(db, 'settings', 'accommodationCounts');
                 
-                // Získajte aktuálny stav dokumentu a počtu
                 const docSnap = await getDoc(accommodationCountsDocRef);
                 let currentCount = 0;
 
@@ -224,12 +263,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
                 const newTotal = currentCount + totalPeopleForCurrentRegistration;
 
-                // Aktualizujte dokument pomocou setDoc s merge: true
                 await setDoc(accommodationCountsDocRef, {
                     [accommodationToUpdate]: newTotal
-                }, { merge: true }); // Toto zabezpečí, že sa aktualizuje len dané pole, alebo sa vytvorí, ak neexistuje
+                }, { merge: true });
             }
-
 
             if (setRegistrationSuccess) setRegistrationSuccess(true); 
         } catch (error) {
@@ -244,13 +281,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     return React.createElement(
         React.Fragment,
         null,
-        // Používame lokálny NotificationModal a lokálne stavy
         React.createElement(NotificationModal, { message: notificationMessage, onClose: closeLocalNotification, type: notificationType }),
 
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - Ubytovanie'
+            'Registrácia - Ubytovanie a Príchod' // Upravený nadpis
         ),
 
         React.createElement(
@@ -263,11 +299,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement(
                     'div',
                     { className: 'mb-4' },
-                    // Zmena zo selectboxu na zoznam radio buttonov
                     React.createElement(
                         'div',
-                        { className: 'space-y-2' }, // Medzery medzi možnosťami
-                        // Možnosť "Bez ubytovania"
+                        { className: 'space-y-2' },
                         React.createElement(
                             'label',
                             { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
@@ -280,10 +314,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 className: 'form-radio h-5 w-5 text-blue-600',
                                 disabled: loading,
                             }),
-                            // ZMENA: Odstránený text s počtom registrovaných
                             React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
                         ),
-                        // Dynamické možnosti ubytovania z Firestore
                         accommodations.map((acc) => {
                             const currentCount = accommodationCounts[acc.type] || 0;
                             const isFull = currentCount >= acc.capacity;
@@ -305,12 +337,112 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     className: 'form-radio h-5 w-5 text-blue-600',
                                     disabled: isDisabled,
                                 }),
-                                // ZMENA: Odstránený text s kapacitou a počtom registrovaných
                                 React.createElement('span', { className: 'ml-3 text-gray-800' }, 
                                     `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}` 
                                 )
                             );
                         })
+                    )
+                )
+            ),
+
+            // NOVINKA: Sekcia pre výber príchodu na turnaj
+            React.createElement(
+                'div',
+                { className: 'border-t border-gray-200 pt-4 mt-4' },
+                React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Výber spôsobu príchodu na turnaj'),
+                React.createElement(
+                    'div',
+                    { className: 'mb-4 space-y-2' },
+                    // Možnosť Vlaková doprava
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'arrivalType',
+                            value: 'vlaková doprava',
+                            checked: selectedArrivalType === 'vlaková doprava',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlaková doprava')
+                    ),
+                    (selectedArrivalType === 'vlaková doprava') && React.createElement(
+                        'div',
+                        { className: 'ml-8' }, // Odsadenie pre pole času
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalTimeTrain' }, 'Čas príchodu (napr. 14:30)'),
+                        React.createElement('input', {
+                            type: 'text',
+                            id: 'arrivalTimeTrain',
+                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                            value: arrivalTime,
+                            onChange: handleArrivalTimeChange,
+                            placeholder: 'HH:MM',
+                            required: true,
+                            disabled: loading,
+                        })
+                    ),
+                    // Možnosť Autobusová doprava
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'arrivalType',
+                            value: 'autobusová doprava',
+                            checked: selectedArrivalType === 'autobusová doprava',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Autobusová doprava')
+                    ),
+                    (selectedArrivalType === 'autobusová doprava') && React.createElement(
+                        'div',
+                        { className: 'ml-8' }, // Odsadenie pre pole času
+                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalTimeBus' }, 'Čas príchodu (napr. 14:30)'),
+                        React.createElement('input', {
+                            type: 'text',
+                            id: 'arrivalTimeBus',
+                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                            value: arrivalTime,
+                            onChange: handleArrivalTimeChange,
+                            placeholder: 'HH:MM',
+                            required: true,
+                            disabled: loading,
+                        })
+                    ),
+                    // Možnosť Vlastná doprava
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'arrivalType',
+                            value: 'vlastná doprava',
+                            checked: selectedArrivalType === 'vlastná doprava',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Vlastná doprava')
+                    ),
+                    // Možnosť Bez dopravy
+                    React.createElement(
+                        'label',
+                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'arrivalType',
+                            value: 'bez dopravy',
+                            checked: selectedArrivalType === 'bez dopravy',
+                            onChange: handleArrivalChange,
+                            className: 'form-radio h-5 w-5 text-blue-600',
+                            disabled: loading,
+                        }),
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'Bez dopravy')
                     )
                 )
             ),
