@@ -44,13 +44,12 @@
         }
         /* Štýly pre hlavnú oblasť obsahu, aby sa prispôsobila ľavému menu */
         #main-content-area {
-            /* Pôvodné margin-left: 256px; je teraz riadené flex-shrink-0 v logged-in-my-data.html */
             padding: 1rem;
             flex-grow: 1;
         }
         @media (max-width: 768px) {
             #main-content-area {
-                margin-left: 0; /* Na mobiloch sa menu nezobrazuje ako pevné vľavo */
+                margin-left: 0;
             }
         }
     </style>
@@ -63,39 +62,37 @@
     <div id="header-placeholder"></div>
     <!-- Tento placeholder bol pridaný pre vloženie obsahu ľavého menu -->
     <div id="menu-placeholder"></div>
-    <main id="main-content-area" class="flex-grow flex"> <!-- Pridaná trieda 'flex' pre správne usporiadanie -->
-        <!-- Sem sme pridali triedu pre plynulú animáciu -->
-        <div class="flex-shrink-0 w-16 transition-all duration-300"></div> <!-- Pomocný div, ktorý vytvára priestor pre zbalené menu -->
+    <main id="main-content-area" class="flex-grow flex">
+        <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
         <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Obsah aplikácie bude vykreslený tu -->
             <div class="flex justify-center pt-16">
                 <div class="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500"></div>
             </div>
         </div>
     </main>
 
-    <!-- Globálny element pre notifikácie - ODSTRÁNENÝ Z TOHTO SÚBORU. 
-         Bude vytvorený a spravovaný globálnou funkciou window.showGlobalNotification. -->
-
     <!-- Načítanie hlavných JavaScript súborov ako modulov. -->
-    <!-- Dôležité: authentication.js sa musí načítať ako prvý! -->
     <script type="module" src="loader.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="header.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
+    
+    <!-- Načítanie nových komponentov nastavení -->
+    <script type="module" src="logged-in-tournament-settings-general-registration-settings.js"></script>
+    <script type="module" src="logged-in-tournament-settings-t-shirt-size-settings.js"></script>
+    <script type="module" src="logged-in-tournament-settings-accommodation-settings.js"></script>
+    <script type="module" src="logged-in-tournament-settings-package-settings.js"></script>
+    
     <!-- Načítanie hlavného skriptu pre túto stránku -->
     <script type="module" src="logged-in-tournament-settings.js"></script>
 
     <script>
-        // Funkcia na kontrolu pripravenosti globálnych dát a vykreslenie React aplikácie
         const checkReadyAndRender = () => {
-            // Kontrola, či sú React a ReactDOM načítané
             if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
                 console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                 return;
             }
-            // Kontrola, či je komponent TournamentSettingsApp definovaný
             if (typeof TournamentSettingsApp === 'undefined') {
                 console.error("Chyba: Komponent TournamentSettingsApp nie je definovaný. Skontrolujte logged-in-tournament-settings.js.");
                 document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
@@ -104,22 +101,14 @@
 
             const rootElement = document.getElementById('root');
             if (rootElement) {
-                // Čakáme, kým je isGlobalAuthReady true a kým sa načíta globalUserProfileData
-                // a kým sú načítané všetky potrebné globálne funkcie
                 if (window.isGlobalAuthReady && window.globalUserProfileData !== undefined && 
                     typeof window.auth !== 'undefined' && typeof window.db !== 'undefined' &&
                     typeof TournamentSettingsApp !== 'undefined') {
                     
-                    // Skryjeme globálny loader, ak je zobrazený - toto sa už spravuje v komponente
-                    // if (window.hideGlobalLoader) {
-                    //     window.hideGlobalLoader();
-                    // }
-
                     const root = ReactDOM.createRoot(rootElement);
                     root.render(React.createElement(TournamentSettingsApp, null));
                     console.log("logged-in-tournament-settings.html: React App vykreslená.");
                 } else {
-                    // Ak ešte nie je pripravené, skúste znova po krátkom oneskorení
                     setTimeout(checkReadyAndRender, 100);
                 }
             } else {
@@ -127,12 +116,9 @@
             }
         };
 
-        // Spustenie globálneho loaderu hneď na začiatku
-        // Toto sa spustí okamžite, nezávisle od Reactu a Firebase
         if (typeof window.showGlobalLoader === 'function') {
             window.showGlobalLoader();
         } else {
-            // Ak loader ešte nie je k dispozícii, počkáme a potom ho spustíme
             document.addEventListener('DOMContentLoaded', () => {
                 if (typeof window.showGlobalLoader === 'function') {
                     window.showGlobalLoader();
@@ -140,7 +126,6 @@
             });
         }
         
-        // Spustíme kontrolu a renderovanie po načítaní DOM
         document.addEventListener('DOMContentLoaded', checkReadyAndRender);
     </script>
 </body>
