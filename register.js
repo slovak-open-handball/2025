@@ -461,7 +461,7 @@ function App() {
       return null;
     }
     try {
-      const token = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: action });
+      const token = await grecaptcha.execute(RECAPTcha_SITE_KEY, { action: action });
       return token;
     } catch (e) {
       dispatchAppNotification(`Chyba reCAPTCHA: ${e.message}`, 'error');
@@ -498,13 +498,6 @@ function App() {
         setLoading(false);
         return;
     }
-
-    // NOVINKA: Aktualizácia contactPhoneNumber s predvoľbou krajiny pred prechodom na ďalšiu stránku
-    setFormData(prev => ({ 
-        ...prev, 
-        contactPhoneNumber: `${selectedCountryDialCode}${prev.contactPhoneNumber}`
-    }));
-
     setPage(2);
     setLoading(false);
   };
@@ -637,8 +630,7 @@ function App() {
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
     isRegisteringRef.current = true;
 
-    // `formData.contactPhoneNumber` by už malo obsahovať predvoľbu vďaka `handleNext`
-    const fullPhoneNumber = formData.contactPhoneNumber;
+    const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
 
     try {
       const authInstance = window.auth;
@@ -754,6 +746,10 @@ function App() {
           return;
       }
 
+      // Volanie Google Apps Scriptu na odoslanie e-mailu
+      // POZNÁMKA: Pri mode: 'no-cors' prehliadač nedokáže čítať odpoveď zo servera,
+      // takže nemôžeme potvrdiť úspešnosť odoslania e-mailu na strane klienta.
+      // E-mailová funkcia by mala byť odladená a testovaná na strane Apps Scriptu.
       try {
           const payload = {
             action: 'sendRegistrationEmail',
@@ -780,18 +776,25 @@ function App() {
           };
           const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Zachovanie no-cors režimu
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json', // Táto hlavička je prehliadačom ignorovaná v no-cors režime
             },
             body: JSON.stringify(payload)
           });
+          // Vzhľadom na 'no-cors' režim nemôžeme overiť 'response.ok' ani čítať 'response.json()'.
+          // Ak sa sem dostaneme, požiadavka bola odoslaná, ale jej výsledok je neznámy.
+          console.log('E-mailová požiadavka odoslaná (status neznámy kvôli no-cors).');
       } catch (emailError) {
+          console.error('Chyba pri odosielaní e-mailovej požiadavky (nemožno potvrdiť, či bol e-mail odoslaný):', emailError);
+          // V no-cors režime sa táto chyba objaví len pri sieťových problémoch, nie pri chybách na serveri Apps Scriptu.
       }
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu bolo odoslané na e-mailovú adresu ${formData.email}.`, 'success');
+      // Notifikácia pre používateľa je zobrazená, hoci stav e-mailu je neznámy.
+      // Dôležité je, že dáta sú už uložené vo Firestore.
+      dispatchAppNotification(`Ďakujeme za Vašu registráciu na turnaj Slovak Open Handball. Potvrdenie o zaregistrovaní Vášho klubu by malo byť odoslané na e-mailovú adresu ${formData.email}.`, 'success');
       setRegistrationSuccess(true);
 
       // Resetovanie formulára a prechod na prvú stránku po úspešnej registrácii
@@ -1038,10 +1041,10 @@ function App() {
       ) : isRegistrationClosed ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement(
             'h2',
-            { className: 'text-2xl font-bold mb-4 text-red-600' },
+            { className: 'text-2xl font-bold mb-2 text-red-600' },
             'Registrácia na turnaj je už ukončená.'
           ),
           React.createElement(
@@ -1062,7 +1065,7 @@ function App() {
       ) : (isRegistrationOpen === false && countdown) ? (
         React.createElement(
           'div',
-          { className: 'bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center' },
+          { className: 'bg-white p-8 rounded-lg shadow-md w-auto max-w-fit mx-auto text-center' },
           React.createElement('h2', { className: 'text-2xl font-bold mb-2' }, 'Registračný formulár'),
           registrationStartDateObj && !isNaN(registrationStartDateObj) && now < registrationStartDateObj && (
             React.createElement(
