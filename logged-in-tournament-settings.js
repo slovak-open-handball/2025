@@ -910,7 +910,6 @@ function TournamentSettingsApp() {
         )
     ),
 
-    {/* NOVÁ SEKCIA: Nastavenia ubytovania */}
     React.createElement(
         'div',
         { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
