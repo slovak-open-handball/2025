@@ -712,7 +712,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - Ubytovanie a Príchod Tímov'
+            'Registrácia - strana 5'
         ),
 
         React.createElement(
