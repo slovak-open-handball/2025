@@ -61,7 +61,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // NOVINKA: Stavy pre výber príchodu na turnaj
     const [selectedArrivalType, setSelectedArrivalType] = React.useState(formData.arrival?.type || '');
-    const [arrivalTime, setArrivalTime] = React.useState(formData.arrival?.time || '');
+    // Rozdelenie arrivalTime na hodiny a minúty pre select boxy
+    const initialHours = formData.arrival?.time ? formData.arrival.time.split(':')[0] : '';
+    const initialMinutes = formData.arrival?.time ? formData.arrival.time.split(':')[1] : '';
+    const [arrivalHours, setArrivalHours] = React.useState(initialHours);
+    const [arrivalMinutes, setArrivalMinutes] = React.useState(initialMinutes);
 
     // Stavy pre lokálne notifikácie v tomto komponente
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -160,7 +164,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const handleAccommodationChange = (e) => {
-        const newValue = e.target.value; 
+        const newValue = e.target.value;
         setSelectedAccommodationType(newValue);
         handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
@@ -171,16 +175,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         setSelectedArrivalType(newValue);
         // Reset času príchodu, ak sa zmení typ dopravy na taký, ktorý čas nevyžaduje
         if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
-            setArrivalTime('');
+            setArrivalHours('');
+            setArrivalMinutes('');
+            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } });
+        } else {
+             // Ak prechádzame na vlak/autobus, aktualizujeme formulár s aktuálnymi hodnotami hodín/minút
+            const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
+            handleChange({ target: { id: 'arrival', value: { type: newValue, time: timeString } } });
         }
-        handleChange({ target: { id: 'arrival', value: { type: newValue, time: (newValue === 'vlaková doprava' || newValue === 'autobusová doprava' ? arrivalTime : '') } } });
     };
 
     // NOVINKA: Handler pre zmenu času príchodu
-    const handleArrivalTimeChange = (e) => {
-        const newTime = e.target.value;
-        setArrivalTime(newTime);
-        handleChange({ target: { id: 'arrival', value: { type: selectedArrivalType, time: newTime } } });
+    const handleTimeSelectChange = (e) => {
+        const { id, value } = e.target;
+        let newHours = arrivalHours;
+        let newMinutes = arrivalMinutes;
+
+        if (id === 'arrivalHours') {
+            newHours = value;
+            setArrivalHours(value);
+        } else if (id === 'arrivalMinutes') {
+            newMinutes = value;
+            setArrivalMinutes(value);
+        }
+        
+        // Ak sú obe hodnoty vybrané, vytvoríme časový reťazec
+        const timeString = (newHours && newMinutes) ? `${newHours}:${newMinutes}` : '';
+        handleChange({ target: { id: 'arrival', value: { type: selectedArrivalType, time: timeString } } });
     };
 
 
@@ -195,11 +216,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         if (!selectedArrivalType) {
             return false;
         }
-        if ((selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava') && !arrivalTime) {
-            return false; // Čas príchodu je povinný pre vlak/autobus
+        if ((selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava')) {
+            // Pre vlak/autobus musí byť vybraná hodina aj minúta
+            if (!arrivalHours || !arrivalMinutes) {
+                return false;
+            }
         }
         return true;
-    }, [selectedAccommodationType, selectedArrivalType, arrivalTime]);
+    }, [selectedAccommodationType, selectedArrivalType, arrivalHours, arrivalMinutes]);
 
 
     const nextButtonClasses = `
@@ -223,6 +247,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeLocalNotification(); 
 
         try {
+            // Vytvorenie reťazca času z hodín a minút pre uloženie
+            const finalArrivalTime = (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava')
+                                     ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
+                                     : null;
+
             const finalFormData = {
                 ...formData,
                 accommodation: {
@@ -230,7 +259,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 },
                 arrival: { // NOVINKA: Pridanie údajov o príchode do finalFormData
                     type: selectedArrivalType,
-                    time: (selectedArrivalType === 'vlaková doprava' || selectedArrivalType === 'autobusová doprava') ? arrivalTime : null
+                    time: finalArrivalTime
                 }
             };
 
@@ -277,6 +306,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (setLoading) setLoading(false);
         }
     };
+
+    // Pomocné funkcie na generovanie <option> pre hodiny a minúty
+    const generateTimeOptions = (limit) => {
+        const options = [<option key="" value="">--</option>]; // Predvolená prázdna možnosť
+        for (let i = 0; i < limit; i++) {
+            const value = i.toString().padStart(2, '0');
+            options.push(<option key={value} value={value}>{value}</option>);
+        }
+        return options;
+    };
+
 
     return React.createElement(
         React.Fragment,
@@ -371,18 +411,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     ),
                     (selectedArrivalType === 'vlaková doprava') && React.createElement(
                         'div',
-                        { className: 'ml-8' }, // Odsadenie pre pole času
-                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalTimeTrain' }, 'Čas príchodu (napr. 14:30)'),
-                        React.createElement('input', {
-                            type: 'text',
-                            id: 'arrivalTimeTrain',
-                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                            value: arrivalTime,
-                            onChange: handleArrivalTimeChange,
-                            placeholder: 'HH:MM',
-                            required: true,
-                            disabled: loading,
-                        })
+                        { className: 'ml-8 flex space-x-4' }, // Odsadenie pre pole času, flex pre select boxy
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
+                            React.createElement('select', {
+                                id: 'arrivalHours',
+                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                value: arrivalHours,
+                                onChange: handleTimeSelectChange,
+                                required: true,
+                                disabled: loading,
+                            }, generateTimeOptions(24)) // 0-23 hodín
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                            React.createElement('select', {
+                                id: 'arrivalMinutes',
+                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                value: arrivalMinutes,
+                                onChange: handleTimeSelectChange,
+                                required: true,
+                                disabled: loading,
+                            }, generateTimeOptions(60)) // 0-59 minút
+                        )
                     ),
                     // Možnosť Autobusová doprava
                     React.createElement(
@@ -401,18 +456,33 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     ),
                     (selectedArrivalType === 'autobusová doprava') && React.createElement(
                         'div',
-                        { className: 'ml-8' }, // Odsadenie pre pole času
-                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalTimeBus' }, 'Čas príchodu (napr. 14:30)'),
-                        React.createElement('input', {
-                            type: 'text',
-                            id: 'arrivalTimeBus',
-                            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                            value: arrivalTime,
-                            onChange: handleArrivalTimeChange,
-                            placeholder: 'HH:MM',
-                            required: true,
-                            disabled: loading,
-                        })
+                        { className: 'ml-8 flex space-x-4' }, // Odsadenie pre pole času, flex pre select boxy
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalHours' }, 'Hodina'),
+                            React.createElement('select', {
+                                id: 'arrivalHours',
+                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                value: arrivalHours,
+                                onChange: handleTimeSelectChange,
+                                required: true,
+                                disabled: loading,
+                            }, generateTimeOptions(24)) // 0-23 hodín
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrivalMinutes' }, 'Minúta'),
+                            React.createElement('select', {
+                                id: 'arrivalMinutes',
+                                className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+                                value: arrivalMinutes,
+                                onChange: handleTimeSelectChange,
+                                required: true,
+                                disabled: loading,
+                            }, generateTimeOptions(60)) // 0-59 minút
+                        )
                     ),
                     // Možnosť Vlastná doprava
                     React.createElement(
