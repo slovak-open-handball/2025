@@ -332,7 +332,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
         React.createElement(
             'h2',
             { className: 'text-2xl font-bold mb-6 text-center text-gray-800' },
-            'Registrácia - Detaily tímov'
+            'Registrácia - strana 4'
         ),
         // Formulár pre detaily tímov
         React.createElement(
