@@ -378,7 +378,12 @@ function TeamPackageSettings({
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
-            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka (stravovanie a občerstvenie)'),
+            React.createElement('h4', { className: 'text-lg font-bold mb-4 text-gray-700' }, 'Výber balíčka'),
+            React.createElement(
+                'p',
+                { className: 'text-sm text-gray-600 mb-4' },
+                `Uvedená cena je pre jednu osobu.`
+            ),
             React.createElement(
                 'div',
                 { className: 'mb-4 space-y-2' },
