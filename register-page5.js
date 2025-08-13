@@ -51,7 +51,7 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4 }) { // Pridaný teamsDataFromPage4 ako prop
     const db = getFirestore();
 
     const [accommodations, setAccommodations] = React.useState([]);
@@ -190,13 +190,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             };
 
-            // Vypočítaj celkový počet ľudí pre túto registráciu
+            // Vypočítaj celkový počet ľudí pre túto registráciu z teamsDataFromPage4
             let totalPeopleForCurrentRegistration = 0;
-            const teamsData = formData.teams; 
-            if (teamsData) {
-                for (const categoryName in teamsData) {
-                    if (teamsData[categoryName]) {
-                        for (const team of teamsData[categoryName]) {
+            if (teamsDataFromPage4) { // Používame teamsDataFromPage4 namiesto formData.teams
+                for (const categoryName in teamsDataFromPage4) {
+                    if (teamsDataFromPage4[categoryName]) {
+                        for (const team of teamsDataFromPage4[categoryName]) {
                             totalPeopleForCurrentRegistration += (parseInt(team.players, 10) || 0) +
                                                                   (parseInt(team.womenTeamMembers, 10) || 0) +
                                                                   (parseInt(team.menTeamMembers, 10) || 0);
