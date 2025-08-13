@@ -1366,7 +1366,6 @@ function TournamentSettingsApp() {
       )
     ),
 
-    {/* NOVÉ: Modálne okno pre balíčky */}
     showPackageModal && React.createElement(
       'div',
       { className: 'modal' },
