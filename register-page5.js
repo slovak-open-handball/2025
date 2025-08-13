@@ -309,7 +309,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Pomocné funkcie na generovanie <option> pre hodiny a minúty
     const generateTimeOptions = (limit) => {
-        const options = [<option key="" value="">--</option>]; // Predvolená prázdna možnosť
+        const options = [<option key="" value="">--</option>];
         for (let i = 0; i < limit; i++) {
             const value = i.toString().padStart(2, '0');
             options.push(<option key={value} value={value}>{value}</option>);
