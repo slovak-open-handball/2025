@@ -63,8 +63,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     // Stavy pre ubytovanie
-    const [accommodationTypes, setAccommodationTypes] = React.useState([]);
-    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || ''); // Používame selectedAccommodation
+    const [accommodationTypes, setAccommodationTypes] = React.useState([]); // Správny názov stavovej premennej
+    const [selectedAccommodation, setSelectedAccommodation] = React.useState(formData.accommodation?.type || '');
 
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
@@ -179,7 +179,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
-        setSelectedAccommodation(newValue); // Používame setSelectedAccommodation
+        setSelectedAccommodation(newValue);
         handleChange({ target: { id: 'accommodation', value: { type: newValue } } });
     };
 
@@ -216,7 +216,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const isFormValidPage5 = React.useMemo(() => {
         // Kontrola, či je vybraný typ ubytovania (ak sú nejaké možnosti)
-        if (accommodationTypes.length > 0 && !selectedAccommodation) { // ZMENA: Používam selectedAccommodation
+        if (accommodationTypes.length > 0 && !selectedAccommodation) {
             return false;
         }
 
@@ -226,7 +226,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         return true;
-    }, [selectedAccommodation, accommodationTypes, arrivalType, arrivalTime]); // ZMENA: selectedAccommodation v závislostiach
+    }, [selectedAccommodation, accommodationTypes, arrivalType, arrivalTime]);
 
 
     const nextButtonClasses = `
@@ -351,14 +351,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 type: 'radio',
                                 name: 'accommodationType',
                                 value: 'Bez ubytovania',
-                                checked: selectedAccommodation === 'Bez ubytovania', // ZMENA: Používam selectedAccommodation
+                                checked: selectedAccommodation === 'Bez ubytovania',
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
                                 disabled: loading,
                             }),
                             React.createElement('span', { className: 'ml-3 text-gray-800' }, `Bez ubytovania`) 
                         ),
-                        accommodations.map((acc) => {
+                        accommodationTypes.map((acc) => { // ZMENA: Používam 'accommodationTypes'
                             const currentCount = accommodationCounts[acc.type] || 0;
                             const isFull = currentCount >= acc.capacity;
                             const isDisabled = isFull || loading;
@@ -374,7 +374,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     type: 'radio',
                                     name: 'accommodationType',
                                     value: acc.type,
-                                    checked: selectedAccommodation === acc.type, // ZMENA: Používam selectedAccommodation
+                                    checked: selectedAccommodation === acc.type,
                                     onChange: handleAccommodationChange,
                                     className: 'form-radio h-5 w-5 text-blue-600',
                                     disabled: isDisabled,
@@ -516,7 +516,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'button',
                     {
                         type: 'submit',
-                        className: nextButtonClasses, 
+                        className: nextButtonClasses,
                         disabled: loading || !isRecaptchaReady || !isFormValidPage5, // isRecaptchaReady je tu používaný
                         tabIndex: 2
                     },
