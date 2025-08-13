@@ -1,7 +1,7 @@
 import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Pomocné funkcie (ponechané v hlavnom súbore, pretože sú spoločné pre viacero komponentov)
+// Všetky pomocné funkcie sú teraz priamo v tomto súbore
 const formatToDatetimeLocal = (date) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -69,11 +69,9 @@ const showNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const sendAdminNotification = async (notificationData) => {
-    const db = getFirestore(); // Získame referenciu na db vo vnútri funkcie
-    const auth = getAuth(); // Získame referenciu na auth vo vnútri funkcie
-
+const sendAdminNotification = async (db, auth, notificationData) => {
     if (!db || !auth.currentUser || !auth.currentUser.email) { 
+      console.warn("sendAdminNotification: Nemám prístup k databáze alebo k používateľovi.");
       return;
     }
     try {
@@ -114,14 +112,8 @@ const sendAdminNotification = async (notificationData) => {
     }
 };
 
-// Exportovanie pomocných funkcií, aby boli dostupné v iných moduloch
-window.formatToDatetimeLocal = formatToDatetimeLocal;
-window.formatDateForDisplay = formatDateForDisplay;
-window.showNotification = showNotification;
-window.sendAdminNotification = sendAdminNotification;
 
-
-// Import nových komponentov
+// Import komponentov nastavení
 import { GeneralRegistrationSettings } from './logged-in-tournament-settings-general-registration-settings.js';
 import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size-settings.js';
 import { AccommodationSettings } from './logged-in-tournament-settings-accommodation-settings.js';
@@ -136,7 +128,6 @@ function TournamentSettingsApp() {
   const [userProfileData, setUserProfileData] = React.useState(null); 
   const [isAuthReady, setIsAuthReady] = React.useState(false); 
 
-  // Stavy pre dátumy turnaja (nutné pre balíčky, zostávajú tu)
   const [tournamentStartDate, setTournamentStartDate] = React.useState('');
   const [tournamentEndDate, setTournamentEndDate] = React.useState('');
 
@@ -215,7 +206,6 @@ function TournamentSettingsApp() {
     };
   }, [user, db, isAuthReady, auth]);
 
-    // Načítanie dátumov turnaja pre odovzdanie do PackageSettings
     React.useEffect(() => {
         let unsubscribeSettings;
         const fetchTournamentDates = () => {
@@ -262,34 +252,40 @@ function TournamentSettingsApp() {
       'Nastavenia turnaja'
     ),
     
-    // Všeobecné nastavenia registrácie
     React.createElement(GeneralRegistrationSettings, {
         db: db,
         userProfileData: userProfileData,
-        tournamentStartDate: tournamentStartDate, // Odovzdávame pre synchronizáciu
-        setTournamentStartDate: setTournamentStartDate, // Odovzdávame pre synchronizáciu
-        tournamentEndDate: tournamentEndDate, // Odovzdávame pre synchronizáciu
-        setTournamentEndDate: setTournamentEndDate, // Odovzdávame pre synchronizáciu
+        tournamentStartDate: tournamentStartDate,
+        setTournamentStartDate: setTournamentStartDate,
+        tournamentEndDate: tournamentEndDate,
+        setTournamentEndDate: setTournamentEndDate,
+        showNotification: showNotification,
+        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
+        formatDateForDisplay: formatDateForDisplay, // Pridávame format funkcie ako props
+        formatToDatetimeLocal: formatToDatetimeLocal,
     }),
 
-    // Nastavenia veľkostí tričiek
     React.createElement(TShirtSizeSettings, {
         db: db,
         userProfileData: userProfileData,
+        showNotification: showNotification,
+        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
     }),
 
-    // Nastavenia ubytovania
     React.createElement(AccommodationSettings, {
         db: db,
         userProfileData: userProfileData,
+        showNotification: showNotification,
+        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
     }),
 
-    // Nastavenia balíčkov
     React.createElement(PackageSettings, {
         db: db,
         userProfileData: userProfileData,
         tournamentStartDate: tournamentStartDate,
         tournamentEndDate: tournamentEndDate,
+        showNotification: showNotification,
+        sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
     })
   );
 }
