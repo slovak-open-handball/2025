@@ -412,7 +412,7 @@ function TeamPackageSettings({
                                     }),
                                     React.createElement('span', { className: 'ml-3 font-semibold text-gray-800' }, pkg.name)
                                 ),
-                                React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price}€`)
+                                React.createElement('span', { className: 'font-bold text-gray-900' }, `${pkg.price} €`)
                             ),
                             React.createElement(
                                 'div',
