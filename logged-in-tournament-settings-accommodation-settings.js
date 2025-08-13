@@ -26,7 +26,9 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            setAccommodations(data.types || []); 
+            // Zoradenie ubytovní abecedne podľa názvu (type)
+            const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
+            setAccommodations(sortedAccommodations); 
           } else {
             setDoc(accommodationDocRef, {
               types: []
