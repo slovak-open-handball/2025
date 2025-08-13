@@ -597,10 +597,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     { className: 'ml-8 text-sm text-gray-600 mt-2' },
                                     (pkg.meals && Object.keys(pkg.meals).length > 0 && tournamentDays.length > 0) ? (
                                         tournamentDays.map(date => {
-                                            if (isNaN(new Date(date).getTime())) {
-                                                return null;
-                                            }
-
                                             const mealsForDay = pkg.meals[date];
                                             const includedItems = [];
                                             if (mealsForDay && mealsForDay.breakfast === 1) includedItems.push('Raňajky');
@@ -613,7 +609,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                 return React.createElement('p', { key: date }, `${displayDate}: ${includedItems.join(', ')}`);
                                             }
                                             return null;
-                                        })
+                                        }).filter(item => item !== null) // Filtrujeme, aby sa nezobrazovali null hodnoty z mapovania
                                     ) : (
                                         React.createElement('p', null, 'Žiadne stravovanie definované pre tento balíček.')
                                     ),
