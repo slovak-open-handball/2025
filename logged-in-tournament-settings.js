@@ -15,12 +15,20 @@ const formatToDatetimeLocal = (date) => {
 const formatDateForDisplay = (dateOrTimestamp) => {
   let date;
   if (!dateOrTimestamp) return 'nezadané';
+  
+  // Pridana kontrola pre Firebase Timestamp
   if (dateOrTimestamp instanceof Timestamp) {
     date = dateOrTimestamp.toDate();
   } else if (dateOrTimestamp instanceof Date) {
-    date = date;
+    date = dateOrTimestamp;
   } else {
+    // Ak to nie je ani Timestamp, ani Date, je to neplatný vstup
     return 'nezadané';
+  }
+
+  // Dôležitá kontrola: Overenie, či je objekt Date platný (nie "Invalid Date")
+  if (isNaN(date.getTime())) {
+      return 'nezadané';
   }
 
   const day = date.getDate().toString().padStart(2, '0');
@@ -736,6 +744,7 @@ function TournamentSettingsApp() {
           onChange: (e) => setRosterEditDeadline(e.target.value),
         })
       ),
+      {/* NOVINKA: Dátum a čas začiatku turnaja */}
       React.createElement(
         'div',
         null,
@@ -748,6 +757,7 @@ function TournamentSettingsApp() {
           onChange: (e) => setTournamentStartDate(e.target.value),
         })
       ),
+      {/* NOVINKA: Dátum a čas konca turnaja */}
       React.createElement(
         'div',
         null,
