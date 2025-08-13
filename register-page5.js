@@ -70,7 +70,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Stavy pre príchod
     const [arrivalType, setArrivalType] = React.useState(formData.arrival?.type || '');
 
-    // ZMENA: Robustnejšia inicializácia stavu pre hodiny a minúty
+    // ZMENA: Robustnejšia inicializácia stavu pre hodiny a minúty (formData.arrival.time je zdrojom pravdy)
     const [arrivalHours, setArrivalHours] = React.useState(() => {
         const initialTime = typeof formData.arrival?.time === 'string' ? formData.arrival.time : '';
         return initialTime ? initialTime.split(':')[0] : '';
@@ -85,9 +85,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Debugovacie výpisy do konzoly
     console.log('Page5Form render cycle START');
+    console.log('formData.arrival.type:', formData.arrival?.type);
     console.log('formData.arrival.time:', formData.arrival?.time);
-    console.log('Initial arrivalHours calculated:', arrivalHours);
-    console.log('Initial arrivalMinutes calculated:', arrivalMinutes);
+    console.log('Current arrivalHours state:', arrivalHours);
+    console.log('Current arrivalMinutes state:', arrivalMinutes);
     console.log('Page5Form render cycle END');
 
 
@@ -202,11 +203,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
-        setArrivalType(newValue);
+        setArrivalType(newValue); // Aktualizujeme lokálny stav pre typ dopravy
         if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava') {
-            setArrivalHours('');
+            setArrivalHours(''); // Resetujeme hodiny a minúty, ak typ nie je vlak/autobus
             setArrivalMinutes('');
-            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } });
+            handleChange({ target: { id: 'arrival', value: { type: newValue, time: null } } }); // Nastavíme čas na null v formData
         } else {
             // Používame aktuálne hodnoty arrivalHours a arrivalMinutes, ktoré sú už v stave
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
@@ -239,12 +240,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Kontrola pre čas príchodu, ak je typ dopravy vlak alebo autobus
-        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!arrivalTime || arrivalTime === '')) {
+        // ZMENA: Používame formData.arrival?.time namiesto lokálneho arrivalTime
+        if ((arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava') && (!formData.arrival?.time || formData.arrival.time === '')) {
             return false;
         }
 
         return true;
-    }, [selectedAccommodation, accommodationTypes, arrivalType, arrivalTime]);
+    }, [selectedAccommodation, accommodationTypes, arrivalType, formData.arrival?.time]); // ZMENA: Pridaný formData.arrival?.time do závislostí
 
 
     const nextButtonClasses = `
@@ -268,6 +270,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification();
 
         try {
+            // ZMENA: Používame aktuálne hodnoty arrivalHours a arrivalMinutes, ktoré sú už v stave
+            // namiesto formData.arrival.time, ktoré nemusí byť okamžite aktualizované v cykle
             const finalArrivalTime = (arrivalType === 'vlaková doprava' || arrivalType === 'autobusová doprava')
                                      ? (arrivalHours && arrivalMinutes ? `${arrivalHours}:${arrivalMinutes}` : null)
                                      : null;
@@ -451,7 +455,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement('select', {
                                     id: 'arrivalHours',
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '', // ZMENA: Defenzívna hodnota
+                                    value: arrivalHours || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -464,7 +468,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement('select', {
                                     id: 'arrivalMinutes',
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '', // ZMENA: Defenzívna hodnota
+                                    value: arrivalMinutes || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
