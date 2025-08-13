@@ -3,7 +3,7 @@
 // a globálne funkcie ako window.auth, window.db, window.showGlobalLoader sú dostupné.
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
-import { getFirestore, doc, onSnapshot, setDoc, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 
@@ -79,11 +79,23 @@ function TournamentSettingsApp() {
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
-  // NOVINKA: Stavy pre počet hráčov a členov realizačného tímu
+  // Stavy pre počet hráčov a členov realizačného tímu
   const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
   const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
 
-  // NOVINKA: Stav pre indikáciu, či je registrácia aktívna (na základe dátumov)
+  // NOVÉ: Stavy pre správu veľkostí tričiek
+  const [tshirtSizes, setTshirtSizes] = React.useState([]);
+  const [showSizeModal, setShowSizeModal] = React.useState(false);
+  const [currentSizeEdit, setCurrentSizeEdit] = React.useState(null); // null pre pridanie, string pre úpravu
+  const [newSizeValue, setNewSizeValue] = React.useState('');
+  const [modalMode, setModalMode] = React.useState('add'); // 'add' alebo 'edit'
+
+  // NOVÉ: Stavy pre modálne okno na potvrdenie zmazania
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = React.useState(false);
+  const [sizeToDelete, setSizeToDelete] = React.useState(null);
+
+
+  // Stav pre indikáciu, či je registrácia aktívna (na základe dátumov)
   const isRegistrationOpen = React.useMemo(() => {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -96,7 +108,7 @@ function TournamentSettingsApp() {
     return (isRegStartValid ? now >= regStart : true) && (isRegEndValid ? now <= regEnd : true);
   }, [registrationStartDate, registrationEndDate]);
 
-  // NOVINKA: Stav pre indikáciu, či majú byť polia zablokované (od začiatku registrácie ďalej)
+  // Stav pre indikáciu, či majú byť polia zablokované (od začiatku registrácie ďalej)
   const isFrozenForEditing = React.useMemo(() => {
     const now = new Date();
     const regStart = registrationStartDate ? new Date(registrationStartDate) : null;
@@ -253,6 +265,69 @@ function TournamentSettingsApp() {
     fetchSettings();
   }, [db, userProfileData]); // Závisí od db a userProfileData (pre rolu)
 
+  // NOVÉ: Effect pre načítanie veľkostí tričiek
+  React.useEffect(() => {
+    let unsubscribeTshirtSizes;
+    const fetchTshirtSizes = async () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin') {
+        console.log("TournamentSettingsApp: Čakám na DB alebo admin rolu pre načítanie veľkostí tričiek.");
+        return;
+      }
+
+      try {
+        console.log("TournamentSettingsApp: Pokúšam sa načítať nastavenia veľkostí tričiek.");
+        const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
+        unsubscribeTshirtSizes = onSnapshot(tshirtSizesDocRef, docSnapshot => {
+          console.log("TournamentSettingsApp: onSnapshot pre veľkosti tričiek spustený.");
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("TournamentSettingsApp: Nastavenia veľkostí tričiek existujú, dáta:", data);
+            // Predpokladáme, že veľkosti sú uložené v poli 'sizes'
+            setTshirtSizes(data.sizes || []);
+          } else {
+            console.log("TournamentSettingsApp: Nastavenia veľkostí tričiek sa nenašli. Vytváram predvolené hodnoty.");
+            // Vytvorenie dokumentu s predvolenými hodnotami, ak neexistuje
+            setDoc(tshirtSizesDocRef, {
+              sizes: [
+                '134 - 140',
+                '146 - 152',
+                '158 - 164',
+                'XS',
+                'S',
+                'M',
+                'L',
+                'XL',
+                'XXL',
+                'XXXL'
+              ]
+            }).then(() => {
+              console.log("Predvolené veľkosti tričiek boli úspešne vytvorené.");
+            }).catch(e => {
+              console.error("Chyba pri vytváraní predvolených veľkostí tričiek:", e);
+              showNotification(`Chyba pri vytváraní predvolených veľkostí tričiek: ${e.message}`, 'error');
+            });
+            setTshirtSizes([]); // Zatiaľ prázdne, kým sa dokument nevytvorí a neaktualizuje onSnapshot
+          }
+        }, error => {
+          console.error("TournamentSettingsApp: Chyba pri načítaní nastavení veľkostí tričiek (onSnapshot error):", error);
+          showNotification(`Chyba pri načítaní veľkostí tričiek: ${error.message}`, 'error');
+        });
+
+        return () => {
+          if (unsubscribeTshirtSizes) {
+            console.log("TournamentSettingsApp: Ruším odber onSnapshot pre veľkosti tričiek.");
+            unsubscribeTshirtSizes();
+          }
+        };
+      } catch (e) {
+        console.error("TournamentSettingsApp: Chyba pri nastavovaní onSnapshot pre veľkosti tričiek (try-catch):", e);
+        showNotification(`Chyba pri nastavovaní poslucháča pre veľkosti tričiek: ${e.message}`, 'error');
+      }
+    };
+
+    fetchTshirtSizes();
+  }, [db, userProfileData]);
+
 
   const handleUpdateRegistrationSettings = async (e) => {
     e.preventDefault();
@@ -275,13 +350,13 @@ function TournamentSettingsApp() {
         showNotification("Dátum uzávierky úprav dát nemôže byť pred dátumom konca registrácie.", 'error'); // Používame lokálnu showNotification
         return;
       }
-      // NOVINKA: Validácia pre rosterEditDeadline
+      // Validácia pre rosterEditDeadline
       if (rosterEditDead && dataEditDead && rosterEditDead < dataEditDead) {
         showNotification("Dátum uzávierky úprav súpisiek nemôže byť pred dátumom uzávierky úprav používateľských dát.", 'error');
         return;
       }
 
-      // NOVINKA: Validácia pre numberOfPlayers a numberOfImplementationTeam
+      // Validácia pre numberOfPlayers a numberOfImplementationTeam
       if (numberOfPlayers < 0) {
         showNotification("Počet hráčov nemôže byť záporný.", 'error');
         return;
@@ -298,7 +373,7 @@ function TournamentSettingsApp() {
         registrationEndDate: regEnd ? Timestamp.fromDate(regEnd) : null,
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
         rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, // Uloženie nového dátumu
-        // NOVINKA: Uloženie počtu hráčov a členov realizačného tímu
+        // Uloženie počtu hráčov a členov realizačného tímu
         numberOfPlayers: numberOfPlayers,
         numberOfImplementationTeam: numberOfImplementationTeam,
       });
@@ -311,6 +386,106 @@ function TournamentSettingsApp() {
     }
   };
 
+  // NOVÉ: Funkcie pre správu veľkostí tričiek
+  const handleOpenAddSizeModal = () => {
+    setModalMode('add');
+    setNewSizeValue('');
+    setCurrentSizeEdit(null);
+    setShowSizeModal(true);
+  };
+
+  const handleOpenEditSizeModal = (size) => {
+    setModalMode('edit');
+    setNewSizeValue(size);
+    setCurrentSizeEdit(size);
+    setShowSizeModal(true);
+  };
+
+  const handleCloseSizeModal = () => {
+    setShowSizeModal(false);
+    setNewSizeValue('');
+    setCurrentSizeEdit(null);
+    setModalMode('add');
+  };
+
+  const handleSaveSize = async () => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmenu nastavení veľkostí tričiek.", 'error');
+      return;
+    }
+
+    const trimmedNewSize = newSizeValue.trim();
+    if (!trimmedNewSize) {
+      showNotification("Názov veľkosti nemôže byť prázdny.", 'error');
+      return;
+    }
+
+    const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
+
+    try {
+      if (modalMode === 'add') {
+        // Kontrola duplicity pri pridávaní
+        if (tshirtSizes.includes(trimmedNewSize)) {
+          showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
+          return;
+        }
+        await updateDoc(tshirtSizesDocRef, {
+          sizes: arrayUnion(trimmedNewSize)
+        });
+        showNotification(`Veľkosť "${trimmedNewSize}" úspešne pridaná!`, 'success');
+      } else if (modalMode === 'edit') {
+        // Kontrola duplicity pri úprave (nesmie sa zhodovať s inou veľkosťou, okrem seba samej)
+        if (trimmedNewSize !== currentSizeEdit && tshirtSizes.includes(trimmedNewSize)) {
+            showNotification(`Veľkosť "${trimmedNewSize}" už existuje.`, 'error');
+            return;
+        }
+        // Najprv odstránime starú hodnotu a potom pridáme novú
+        await updateDoc(tshirtSizesDocRef, {
+          sizes: arrayRemove(currentSizeEdit)
+        });
+        await updateDoc(tshirtSizesDocRef, {
+          sizes: arrayUnion(trimmedNewSize)
+        });
+        showNotification(`Veľkosť "${currentSizeEdit}" úspešne zmenená na "${trimmedNewSize}"!`, 'success');
+      }
+      handleCloseSizeModal();
+    } catch (e) {
+      console.error("Chyba pri ukladaní veľkosti trička:", e);
+      showNotification(`Chyba pri ukladaní veľkosti trička: ${e.message}`, 'error');
+    }
+  };
+
+  const handleOpenConfirmDeleteModal = (size) => {
+    setSizeToDelete(size);
+    setShowConfirmDeleteModal(true);
+  };
+
+  const handleCloseConfirmDeleteModal = () => {
+    setShowConfirmDeleteModal(false);
+    setSizeToDelete(null);
+  };
+
+  const handleDeleteSize = async () => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmazanie veľkosti trička.", 'error');
+      return;
+    }
+    if (!sizeToDelete) return;
+
+    try {
+      const tshirtSizesDocRef = doc(db, 'settings', 'sizeTshirts');
+      await updateDoc(tshirtSizesDocRef, {
+        sizes: arrayRemove(sizeToDelete)
+      });
+      showNotification(`Veľkosť "${sizeToDelete}" úspešne zmazaná!`, 'success');
+      handleCloseConfirmDeleteModal();
+    } catch (e) {
+      console.error("Chyba pri mazaní veľkosti trička:", e);
+      showNotification(`Chyba pri mazaní veľkosti trička: ${e.message}`, 'error');
+    }
+  };
+
+
   // Ak používateľ nie je admin, vrátime null, aby sa nič nevykreslilo
   if (!userProfileData || userProfileData.role !== 'admin') {
     return null; 
@@ -319,13 +494,14 @@ function TournamentSettingsApp() {
   // Ak sa dostaneme sem, user je prihlásený, userProfileData sú načítané a rola je admin.
   return React.createElement(
     'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto' }, // Tieto štýly sú teraz tu
+    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto space-y-8' }, // Pridaný space-y-8 pre medzery medzi sekciami
     React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
       'Nastavenia turnaja'
     ),
     React.createElement(
       'form',
-      { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4' },
+      { onSubmit: handleUpdateRegistrationSettings, className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm' }, // Sekcia pre registračné nastavenia
+      React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Všeobecné nastavenia registrácie'),
       React.createElement(
         'div',
         null,
@@ -411,6 +587,140 @@ function TournamentSettingsApp() {
           className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition-colors duration-200',
         },
         'Aktualizovať nastavenia'
+      )
+    ),
+
+    // NOVÁ SEKCIA: Nastavenia veľkostí tričiek
+    React.createElement(
+        'div',
+        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, // Oddelená sekcia s margin-top
+        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia veľkostí tričiek'),
+        React.createElement(
+            'div',
+            { className: 'space-y-3' }, // Pre medzery medzi jednotlivými veľkosťami
+            tshirtSizes.length > 0 ? (
+                tshirtSizes.map((size, index) => (
+                    React.createElement(
+                        'div',
+                        { key: size, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
+                        React.createElement('span', { className: 'text-gray-800 font-medium' }, size),
+                        React.createElement(
+                            'div',
+                            { className: 'flex space-x-2' },
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenEditSizeModal(size),
+                                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Upraviť'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    type: 'button',
+                                    onClick: () => handleOpenConfirmDeleteModal(size),
+                                    className: 'bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                                },
+                                'Vymazať'
+                            )
+                        )
+                    )
+                ))
+            ) : (
+                React.createElement('p', { className: 'text-gray-500 text-center' }, 'Zatiaľ nie sú definované žiadne veľkosti tričiek.')
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: 'flex justify-center mt-4' }, // Zarovnanie tlačidla '+' na stred
+            React.createElement(
+                'button',
+                {
+                    type: 'button',
+                    onClick: handleOpenAddSizeModal,
+                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                },
+                React.createElement('span', { className: 'text-xl' }, '+')
+            )
+        )
+    ),
+
+    // NOVÉ: Modálne okno pre pridanie/úpravu veľkosti trička
+    showSizeModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, modalMode === 'add' ? 'Pridať novú veľkosť' : `Upraviť veľkosť: ${currentSizeEdit}`),
+        React.createElement(
+          'input',
+          {
+            type: 'text',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+            placeholder: 'Zadajte názov veľkosti (napr. S, M, 134-140)',
+            value: newSizeValue,
+            onChange: (e) => setNewSizeValue(e.target.value),
+          }
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleCloseSizeModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleSaveSize,
+              className: 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            modalMode === 'add' ? 'Pridať' : 'Uložiť'
+          )
+        )
+      )
+    ),
+
+    // NOVÉ: Modálne okno na potvrdenie zmazania
+    showConfirmDeleteModal && React.createElement(
+      'div',
+      { className: 'modal' },
+      React.createElement(
+        'div',
+        { className: 'modal-content' },
+        React.createElement('h3', { className: 'text-xl font-bold mb-4' }, 'Potvrdiť zmazanie'),
+        React.createElement('p', { className: 'text-gray-700 mb-6' }, `Naozaj chcete zmazať veľkosť "${sizeToDelete}"?`),
+        React.createElement(
+          'div',
+          { className: 'flex justify-end space-x-3' },
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleCloseConfirmDeleteModal,
+              className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zrušiť'
+          ),
+          React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: handleDeleteSize,
+              className: 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200'
+            },
+            'Zmazať'
+          )
+        )
       )
     )
   );
