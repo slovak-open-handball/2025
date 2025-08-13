@@ -1,7 +1,54 @@
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoading, notificationMessage, setShowNotification, setNotificationType, setRegistrationSuccess, isRecaptchaReady, selectedCountryDialCode, NotificationModal, numberOfPlayersLimit, numberOfTeamMembersLimit, teamsDataFromPage4, setTeamsDataFromPage4, closeNotification }) {
 
-    // Rozšírený zoznam veľkostí tričiek
-    const TSHIRT_SIZES = ['134 - 140', '146 - 152', '158 - 164', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    // Získame referenciu na Firebase Firestore
+    const db = getFirestore();
+
+    // Stav pre dynamicky načítané veľkosti tričiek z Firestore
+    const [tshirtSizes, setTshirtSizes] = React.useState([]);
+
+    // Effect pre načítanie veľkostí tričiek z Firestore
+    React.useEffect(() => {
+        let unsubscribe;
+        const fetchTshirtSizes = () => {
+            // Predpokladáme, že window.db je už inicializované z authentication.js
+            if (!window.db) {
+                console.log("Firestore DB nie je zatiaľ k dispozícii pre veľkosti tričiek.");
+                // Skúste znova po krátkom oneskorení, ak db ešte nie je k dispozícii
+                setTimeout(fetchTshirtSizes, 100);
+                return;
+            }
+            try {
+                const tshirtSizesDocRef = doc(window.db, 'settings', 'sizeTshirts');
+                unsubscribe = onSnapshot(tshirtSizesDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const data = docSnapshot.data();
+                        // Nastavíme stav s veľkosťami tričiek z poľa 'sizes'
+                        setTshirtSizes(data.sizes || []);
+                    } else {
+                        console.warn("Dokument /settings/sizeTshirts neexistuje. Používa sa prázdne pole pre veľkosti tričiek.");
+                        setTshirtSizes([]);
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítaní veľkostí tričiek:", error);
+                    // Tu by ste mohli zobraziť notifikáciu používateľovi, ak je to potrebné
+                });
+            } catch (e) {
+                console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
+            }
+        };
+
+        fetchTshirtSizes();
+
+        // Cleanup funkcia pre odhlásenie sa z onSnapshot
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí iba raz pri mountnutí komponentu
+
 
     // Spracovanie zmeny detailov tímu (napr. názov, počet hráčov, počet žien/mužov v realizačnom tíme)
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
@@ -108,7 +155,8 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
             .filter((tshirt, idx) => idx !== currentIndex && tshirt.size !== '')
             .map(tshirt => tshirt.size);
 
-        return TSHIRT_SIZES.filter(size => !selectedSizesInOtherRows.includes(size));
+        // Používame dynamicky načítané veľkosti tričiek
+        return tshirtSizes.filter(size => !selectedSizesInOtherRows.includes(size));
     };
 
     // Vytvorenie správy o validácii tričiek pre každý tím
@@ -427,7 +475,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                                     disabled: isTshirtSectionDisabled, 
                                                 },
                                                 React.createElement('option', { value: '' }, 'Vyberte'), 
-                                                // Mapovanie dostupných veľkostí
+                                                // Mapovanie dostupných veľkostí (teraz z načítaného stavu)
                                                 getAvailableTshirtSizeOptions(team.tshirts, tshirtIndex).map(size => (
                                                     React.createElement('option', { key: size, value: size }, size)
                                                 ))
@@ -521,7 +569,7 @@ export function Page4Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Registrujem...'
-                    ) : 'Registrovať sa'
+                    ) : 'Registrovať'
                 )
             )
         )
