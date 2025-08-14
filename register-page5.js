@@ -871,9 +871,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
-            // After removing an entry, immediately update the parent state to reflect the change
-            // This is crucial for enabling/disabling the "Ďalej" button and "+" button correctly.
-            updateParentTeamsData(updatedEntries); 
+            // Removed direct call to updateParentTeamsData here.
+            // Parent state will only be updated on form submission (handlePage5Submit).
             return updatedEntries;
         });
     };
@@ -1345,7 +1344,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         'div',
                         { className: 'flex items-center justify-center' },
                         React.createElement('svg', { className: 'animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500', xmlns: 'http://www.w3.org/2000/svg', fill: 'none', viewBox: '0 0 24 24' },
-                            React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '12', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
+                            React.createElement('circle', { className: 'opacity-25', cx: '12', cy: '10', r: '10', stroke: 'currentColor', strokeWidth: '4' }),
                             React.createElement('path', { className: 'opacity-75', fill: 'currentColor', d: 'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' })
                         ),
                         'Ďalej...'
