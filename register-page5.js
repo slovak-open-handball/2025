@@ -278,7 +278,6 @@ function TeamAccommodationAndArrival({
                                     value: arrivalHours || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
-                                    disabled: loading,
                                 }, generateTimeOptions(24))
                             ),
                             React.createElement(
@@ -291,7 +290,6 @@ function TeamAccommodationAndArrival({
                                     value: arrivalMinutes || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
-                                    disabled: loading,
                                 }, generateTimeOptions(60))
                             )
                         )
@@ -626,11 +624,42 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return teams;
     }, [teamsDataFromPage4]);
 
-    const getAvailableGenderOptions = () => [
-        { value: '', label: 'Vyberte' },
-        { value: 'male', label: 'Muži' },
-        { value: 'female', label: 'Ženy' }
-    ];
+    const getAvailableGenderOptions = (currentEntry) => {
+        const allOptions = [
+            { value: '', label: 'Vyberte' },
+            { value: 'male', label: 'Muži' },
+            { value: 'female', label: 'Ženy' }
+        ];
+
+        // Ak tím pre aktuálny záznam ešte nie je vybraný alebo je neplatný, zobraz všetky možnosti.
+        if (!currentEntry || currentEntry.categoryName === '' || currentEntry.teamIndex === null) {
+            return allOptions;
+        }
+
+        const currentTeamId = `${currentEntry.categoryName}-${currentEntry.teamIndex}`;
+        const usedGendersForCurrentTeam = new Set();
+
+        // Prejdi všetky *ostatné* záznamy šoférov a zisti, aké pohlavia sú už pre tento tím obsadené.
+        driverEntries.forEach(entry => {
+            if (entry.id !== currentEntry.id && entry.categoryName && entry.teamIndex !== null && entry.gender !== '') {
+                if (`${entry.categoryName}-${entry.teamIndex}` === currentTeamId) {
+                    usedGendersForCurrentTeam.add(entry.gender);
+                }
+            }
+        });
+
+        // Filtruj možnosti pohlavia:
+        // - Vždy zobraz placeholder.
+        // - Zobraz pohlavie, ak ešte nie je obsadené pre tento tím.
+        // - Ak aktuálny záznam už má vybrané pohlavie, vždy túto možnosť zobraz (aby sa dala upraviť/zrušiť).
+        return allOptions.filter(option => {
+            if (option.value === '') {
+                return true;
+            }
+            return !usedGendersForCurrentTeam.has(option.value) || option.value === currentEntry.gender;
+        });
+    };
+
 
     const getAvailableTeamOptions = (currentEntry = null) => {
         const usedTeamGenderCombinations = new Set();
@@ -684,7 +713,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return {
                         ...entry,
                         categoryName: catName || '',
-                        teamIndex: teamIdx
+                        teamIndex: teamIdx,
+                        // Ak sa zmení tím, resetujeme pohlavie a počet, aby sa vynútil nový výber
+                        gender: '',
+                        count: ''
                     };
                 } else {
                     return {
@@ -761,19 +793,20 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         const aggregatedDrivers = {};
-        const usedCombinations = new Set();
+        const usedCombinations = new Set(); // Pre kontrolu duplicitných kombinácií tím-pohlavie
 
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
+            // Ak je count neplatný alebo <= 0, záznam je neplatný
             if (isNaN(count) || count <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) {
-                return false;
+                return false; // Neúplný alebo neplatný záznam o šoférovi
             }
 
             const teamId = `${entry.categoryName}-${entry.teamIndex}`;
             const comboKey = `${teamId}-${entry.gender}`;
 
             if (usedCombinations.has(comboKey)) {
-                return false;
+                return false; // Nájdeme duplicitnú kombináciu tím-pohlavie
             }
             usedCombinations.add(comboKey);
 
@@ -787,6 +820,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         }
 
+        // Skontrolujte, či každý tím s "vlastná doprava" má priradeného aspoň jedného šoféra
         const teamsRequiringDrivers = teamsWithOwnTransport.map(team => team.id);
         const teamsWithAssignedDrivers = new Set();
         
@@ -798,9 +832,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const teamId of teamsRequiringDrivers) {
             if (!teamsWithAssignedDrivers.has(teamId)) {
-                return false;
+                return false; // Tím s vlastnou dopravou nemá priradených žiadnych šoférov
             }
             const assigned = aggregatedDrivers[teamId];
+            // Ak tím nemá žiadnych šoférov alebo súčet šoférov je 0
             if (!assigned || (assigned.male === 0 && assigned.female === 0)) {
                 return false;
             }
@@ -958,11 +993,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
-                            { key: entry.id, className: 'flex items-center space-x-2 mb-4 w-full' },
+                            { key: entry.id, className: 'flex items-start space-x-2 mb-4 w-full' }, {/* Použité items-start */}
                             React.createElement(
-                                'div', 
+                                'div', // Main content area (Team select + Count/Gender)
                                 { className: 'flex flex-col flex-grow space-y-2' },
-                                React.createElement(
+                                React.createElement( // Team Select row
                                     'div',
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
@@ -979,7 +1014,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     ))
                                     )
                                 ),
-                                React.createElement( 
+                                React.createElement( // Count and Gender row
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
                                     React.createElement('div', { className: 'w-24 flex-shrink-0' },
@@ -995,7 +1030,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: loading,
                                         })
                                     ),
-                                    React.createElement('div', { className: 'flex-1 min-w-[100px]' },
+                                    React.createElement('div', { className: 'flex-1 min-w-[100px] max-w-[120px]' }, {/* Zmena na max-w na kontrolu šírky */}
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Pohlavie'),
                                         React.createElement('select', {
                                             className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
@@ -1003,18 +1038,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                             required: true,
                                             disabled: loading,
-                                        }, getAvailableGenderOptions().map(opt => (
+                                        }, getAvailableGenderOptions(entry).map(opt => ( {/* Odovzdanie entry do getAvailableGenderOptions */}
                                             React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
                                         )))
                                     )
                                 )
                             ),
-                            React.createElement(
+                            React.createElement( // Delete Button
                                 'button',
                                 {
                                     type: 'button',
                                     onClick: () => handleRemoveDriverEntry(entry.id),
-                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ml-2 ${driverEntries.length === 0 ? 'invisible' : ''}`,
+                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ml-2 mt-auto mb-auto ${driverEntries.length === 0 ? 'invisible' : ''}`, {/* mt-auto mb-auto pre vertikálne centrovanie */}
                                     disabled: loading,
                                 },
                                 '-'
