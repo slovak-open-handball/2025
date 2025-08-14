@@ -993,28 +993,29 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
-                            { key: entry.id, className: 'flex items-start space-x-2 mb-4 w-full' }, {/* Použité items-start */}
+                            { key: entry.id, className: 'flex items-start space-x-2 mb-4 w-full' },
                             React.createElement(
-                                'div', // Main content area (Team select + Count/Gender)
+                                'div', 
                                 { className: 'flex flex-col flex-grow space-y-2' },
-                                React.createElement( // Team Select row
+                                React.createElement( 
                                     'div',
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
                                     React.createElement('select', {
-                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal',
+                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal h-auto', // Pridané h-auto
                                         value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
                                         onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
                                         required: true,
                                         disabled: loading,
+                                        style: { minHeight: '4rem' } // Pridané minHeight pre zobrazenie dvoch riadkov
                                     },
                                     React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
                                     getAvailableTeamOptions(entry).map(team => (
-                                        React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
+                                        React.createElement('option', { key: team.id, value: team.id, className: 'whitespace-normal' }, `${team.teamName} (${team.categoryName})`) // Pridané whitespace-normal
                                     ))
                                     )
                                 ),
-                                React.createElement( // Count and Gender row
+                                React.createElement( 
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
                                     React.createElement('div', { className: 'w-24 flex-shrink-0' },
@@ -1030,7 +1031,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: loading,
                                         })
                                     ),
-                                    React.createElement('div', { className: 'flex-1 min-w-[100px] max-w-[120px]' }, {/* Zmena na max-w na kontrolu šírky */}
+                                    React.createElement('div', { className: 'flex-1 min-w-[100px] max-w-[120px]' }, 
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Pohlavie'),
                                         React.createElement('select', {
                                             className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
@@ -1038,18 +1039,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                             required: true,
                                             disabled: loading,
-                                        }, getAvailableGenderOptions(entry).map(opt => ( {/* Odovzdanie entry do getAvailableGenderOptions */}
+                                        }, getAvailableGenderOptions(entry).map(opt => ( 
                                             React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
                                         )))
                                     )
                                 )
                             ),
-                            React.createElement( // Delete Button
+                            React.createElement( 
                                 'button',
                                 {
                                     type: 'button',
                                     onClick: () => handleRemoveDriverEntry(entry.id),
-                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ml-2 mt-auto mb-auto ${driverEntries.length === 0 ? 'invisible' : ''}`, {/* mt-auto mb-auto pre vertikálne centrovanie */}
+                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ml-2 mt-auto mb-auto ${driverEntries.length === 0 ? 'invisible' : ''}`,
                                     disabled: loading,
                                 },
                                 '-'
