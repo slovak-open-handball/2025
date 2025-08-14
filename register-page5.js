@@ -1072,7 +1072,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     'div',
                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
-                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Tu môžete pridať informácie o šoféroch pre tímy, ktoré zvolili "vlastnú dopravu".'),
+                    React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu.'),
                     
                     driverEntries.map((entry) => (
                         React.createElement(
@@ -1103,7 +1103,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                             value: entry.count,
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
-                                            placeholder: '00',
+                                            placeholder: 'Zadajte počet',
                                             min: 1,
                                             required: true,
                                             disabled: loading,
