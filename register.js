@@ -455,6 +455,9 @@ function App() {
                     [value.field]: value.data
                 };
             }
+            console.log("handleChange - prevTeamsData:", prevTeamsData); // DEBUG
+            console.log("handleChange - value:", value); // DEBUG
+            console.log("handleChange - newTeamsData (after update):", newTeamsData); // DEBUG
             return newTeamsData;
         });
     } else if (id === 'billing') {
@@ -571,12 +574,13 @@ function App() {
     const transformedCategories = {};
     categoriesDataFromPage3.forEach(row => {
         const categoryName = categoriesDataFromFirestore[row.categoryId];
-        if (categoryName) {
+        // NOVINKA: Skontrolujte, či categoryName je platný reťazec
+        if (categoryName && typeof categoryName === 'string' && categoryName.trim() !== '') {
             transformedCategories[categoryName] = {
                 numberOfTeams: row.teams
             };
         } else {
-            console.warn(`register.js: Názov kategórie pre ID ${row.categoryId} sa nenašiel v categoriesDataFromFirestore.`);
+            console.warn(`register.js: Názov kategórie pre ID ${row.categoryId} sa nenašiel v categoriesDataFromFirestore alebo je neplatný. Kategória bude preskočená.`);
         }
     });
 
@@ -590,7 +594,10 @@ function App() {
             const generatedTeamName = `${clubName}${suffix}`;
 
             // Načítame existujúce dáta tímu pre zachovanie (ak existujú)
-            const existingTeamData = teamsDataFromPage4[categoryName]?.[teamIndex] || {};
+            // Uistite sa, že existujúce dáta kategórie a tímu sú platné objekty pred prístupom
+            const existingCategoryTeams = teamsDataFromPage4[categoryName];
+            const existingTeamData = (existingCategoryTeams && Array.isArray(existingCategoryTeams) && existingCategoryTeams[teamIndex])
+                                     ? existingCategoryTeams[teamIndex] : {};
 
             return {
                 teamName: generatedTeamName,
@@ -603,13 +610,15 @@ function App() {
                     : [{ size: '', quantity: '' }],
                 // NOVINKA: Zabezpečiť, aby sa zachovali aj dáta pre Page 5
                 accommodation: existingTeamData.accommodation || { type: '' },
-                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, // drivers by mal byť zachovaný z existingTeamData ak existuje
+                // Zachovávame existujúce dáta 'arrival' vrátane 'drivers'
+                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, 
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null
             };
         });
     });
     setTeamsDataFromPage4(newTeamsDataForPage4);
+    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (after update):", newTeamsDataForPage4); // DEBUG
 
     setFormData(prev => ({
         ...prev,
@@ -625,6 +634,7 @@ function App() {
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
     setTeamsDataFromPage4(teamsDataFromPage4Final);
+    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (received from Page4Form):", teamsDataFromPage4Final); // DEBUG
 
     setPage(5);
     setLoading(false);
@@ -637,6 +647,7 @@ function App() {
 
     // Aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
     setTeamsDataFromPage4(finalTeamsDataFromPage5);
+    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (received from Page5Form):", finalTeamsDataFromPage5); // DEBUG
 
     setPage(6); // Prechod na Page 6 (súhrn)
     setLoading(false);
