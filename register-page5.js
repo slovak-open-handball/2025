@@ -89,7 +89,7 @@ function TeamAccommodationAndArrival({
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
         setArrivalType(newValue);
-        if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava' && newValue !== 'vlastná doprava') {
+        if (newValue !== 'verejná doprava - vlak' && newValue !== 'verejná doprava - autobus' && newValue !== 'vlastná doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
@@ -204,15 +204,15 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'vlaková doprava',
-                            checked: arrivalType === 'vlaková doprava',
+                            value: 'verejná doprava - vlak',
+                            checked: arrivalType === 'verejná doprava - vlak',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'vlaková doprava')
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'verejná doprava - vlak')
                     ),
-                    arrivalType === 'vlaková doprava' && React.createElement(
+                    arrivalType === 'verejná doprava - vlak' && React.createElement(
                         'div',
                         { className: 'ml-8 mb-4' },
                         React.createElement(
@@ -254,15 +254,15 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'autobusová doprava',
-                            checked: arrivalType === 'autobusová doprava',
+                            value: 'verejná doprava - autobus',
+                            checked: arrivalType === 'verejná doprava - autobus',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'autobusová doprava')
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'verejná doprava - autobus')
                     ),
-                    arrivalType === 'autobusová doprava' && React.createElement(
+                    arrivalType === 'verejná doprava - autobus' && React.createElement(
                         'div',
                         { className: 'ml-8 mb-4' },
                         React.createElement(
@@ -870,7 +870,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     return false;
                 }
 
-                if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
+                if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
                     return false;
                 }
             }
