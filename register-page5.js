@@ -1015,12 +1015,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
-                            { key: entry.id, className: 'flex items-center space-x-2 mb-2 w-full' }, {/* Pridaná trieda w-full */}
+                            { key: entry.id, className: 'flex items-center space-x-2 mb-2 w-full' },
                             // Input pre počet šoférov
-                            React.createElement('div', { className: 'w-24' }, {/* Obalenie inputu pre kontrolu šírky */}
+                            React.createElement('div', { className: 'w-24' }, 
                                 React.createElement('input', {
                                     type: 'number',
-                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', 
                                     value: entry.count,
                                     onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
                                     placeholder: 'Počet',
@@ -1030,9 +1030,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 })
                             ),
                             // Selectbox pre pohlavie
-                            React.createElement('div', { className: 'flex-1 min-w-[120px]' }, {/* Flexibilná šírka s min-width */}
+                            React.createElement('div', { className: 'flex-1 min-w-[120px]' }, 
                                 React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                     value: entry.gender,
                                     onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                     required: true,
@@ -1043,15 +1043,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 )
                             ),
                             // Selectbox pre tím
-                            React.createElement('div', { className: 'flex-1 min-w-[200px]' }, {/* Flexibilná šírka s min-width */}
+                            React.createElement('div', { className: 'flex-1 min-w-[200px]' },
                                 React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', 
                                     value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
-                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value), // Zmena field na 'teamId' pre správne spracovanie
+                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value), 
                                     required: true,
                                     disabled: loading,
                                 }, 
-                                React.createElement('option', { key: "team-placeholder", value: '' }, '-- Vyberte tím --'), {/* Kľúč pre placeholder */}
+                                React.createElement('option', { key: "team-placeholder", value: '' }, '-- Vyberte tím --'), 
                                 getAvailableTeamOptions(entry).map(team => (
                                     React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
                                 ))
