@@ -50,7 +50,6 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-// Komponent pre správu príchodu a ubytovania tímu
 function TeamAccommodationAndArrival({ 
     team, 
     categoryName, 
@@ -62,7 +61,6 @@ function TeamAccommodationAndArrival({
     tournamentStartDateDisplay, 
     generateTimeOptions 
 }) {
-    // Lokálne stavy pre ubytovanie a príchod (aby sa zmeny prejavili lokálne pred handleChange)
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
     const [arrivalHours, setArrivalHours] = React.useState(() => {
@@ -74,7 +72,6 @@ function TeamAccommodationAndArrival({
         return initialTime ? initialTime.split(':')[1] : '';
     });
 
-    // Synchronizácia lokálnych stavov s propmi (pri zmene tímu)
     React.useEffect(() => {
         setSelectedAccommodation(team.accommodation?.type || '');
         setArrivalType(team.arrival?.type || '');
@@ -95,13 +92,10 @@ function TeamAccommodationAndArrival({
         if (newValue !== 'vlaková doprava' && newValue !== 'autobusová doprava' && newValue !== 'vlastná doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
-            // Reset drivers data when arrival type changes away from transport types
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
         } else if (newValue === 'vlastná doprava') {
-             // For 'vlastná doprava', drivers will be managed globally. Initialize with 0 for validation.
-             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: [] }); // Zmena na prázdne pole
+             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: [] });
         } else {
-            // Ensure time is updated correctly when arrival type changes to time-based
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString, drivers: null });
         }
@@ -120,21 +114,16 @@ function TeamAccommodationAndArrival({
             setArrivalMinutes(value);
         }
         
-        // Always construct the time string. If a part is empty, it means "not selected".
-        // The parent handleChange will receive this string.
         let timeString = '';
         if (currentHours && currentMinutes) {
             timeString = `${currentHours}:${currentMinutes}`;
-        } else if (currentHours && currentMinutes === '') { // Only hours selected, minutes are empty
-            timeString = currentHours; // Just store hours, or whatever is preferred for partial input
-        } else if (currentHours === '' && currentMinutes) { // Only minutes selected, hours are empty
-            timeString = currentMinutes; // Just store minutes
+        } else if (currentHours && currentMinutes === '') {
+            timeString = currentHours;
+        } else if (currentHours === '' && currentMinutes) {
+            timeString = currentMinutes;
         }
-        // If both are empty, timeString remains ''
 
-        // Pass null to parent if timeString is empty to signify no time selected,
-        // otherwise pass the constructed time string.
-        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null, drivers: null }); // Drivers are now managed globally
+        handleChange(categoryName, teamIndex, 'arrival', { type: arrivalType, time: timeString || null, drivers: null });
     };
 
     return React.createElement(
@@ -164,15 +153,10 @@ function TeamAccommodationAndArrival({
                         }),
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`) 
                     ),
-                    // Zobrazenie typov ubytovania zoradených abecedne
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        // Získanie aktuálneho počtu pre daný typ ubytovania
                         const currentCount = accommodationCounts[acc.type] || 0;
-                        // Skontrolujte, či je kapacita plná
                         const isFull = currentCount >= acc.capacity;
-                        // Zablokovať, ak je plná kapacita alebo sa načítava
                         const isDisabled = isFull || loading;
-                        // Triedy pre label
                         const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
 
                         return React.createElement(
@@ -241,7 +225,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalHours-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '', // Ensure it's controlled by state
+                                    value: arrivalHours || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -254,7 +238,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalMinutes-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '', // Ensure it's controlled by state
+                                    value: arrivalMinutes || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -293,7 +277,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalHours-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalHours || '', // Ensure it's controlled by state
+                                    value: arrivalHours || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -306,7 +290,7 @@ function TeamAccommodationAndArrival({
                                 React.createElement('select', {
                                     id: `arrivalMinutes-${categoryName}-${teamIndex}`,
                                     className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-                                    value: arrivalMinutes || '', // Ensure it's controlled by state
+                                    value: arrivalMinutes || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
                                     disabled: loading,
@@ -329,8 +313,6 @@ function TeamAccommodationAndArrival({
                     }),
                     React.createElement('span', { className: 'ml-3 text-gray-800' }, 'vlastná doprava')
                 ),
-                // Pôvodné inputboxy pre počet šoférov sú odstránené z tohto komponentu.
-                // Budú spravované v globálnej sekcii v Page5Form.
                 React.createElement(
                     'label',
                     { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
@@ -350,7 +332,6 @@ function TeamAccommodationAndArrival({
     );
 }
 
-// Komponent pre výber balíčka tímu
 function TeamPackageSettings({ 
     team, 
     categoryName, 
@@ -477,11 +458,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [packages, setPackages] = React.useState([]);
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
-    // Nový stav pre záznamy o šoféroch
-    // Štruktúra: [{ id: 'uniqueId', count: number, gender: 'male'|'female', categoryName: string, teamIndex: number }]
     const [driverEntries, setDriverEntries] = React.useState([]);
 
-    // Helper na generovanie unikátnych ID pre záznamy o šoféroch
     const generateUniqueId = () => `driver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const getDaysBetween = (start, end) => {
@@ -618,12 +596,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [db]);
 
 
-    // Nová handleChange funkcia pre aktualizáciu vnorených dát tímu
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
-        // Toto volá pôvodnú handleChange z App.js, ktorá vie pracovať s teamsDataFromPage4
         handleChange({
             target: {
-                id: 'teamsDataFromPage4', // Špeciálny ID, ktorý App.js rozpozná
+                id: 'teamsDataFromPage4',
                 value: {
                     categoryName: categoryName,
                     teamIndex: teamIndex,
@@ -635,7 +611,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
 
-    // Zoznam tímov, ktoré si zvolili "vlastná doprava"
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
@@ -645,7 +620,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         categoryName: categoryName,
                         teamIndex: teamIndex,
                         teamName: team.teamName,
-                        id: `${categoryName}-${teamIndex}` // Unikátne ID pre tím v selectoch
+                        id: `${categoryName}-${teamIndex}`
                     });
                 }
             });
@@ -653,18 +628,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return teams;
     }, [teamsDataFromPage4]);
 
-    // Možnosti pre pohlavie šoféra (vždy "Muži" a "Ženy")
     const getAvailableGenderOptions = () => [
-        { value: '', label: '-- Vyberte pohlavie --' },
+        { value: '', label: 'Vyberte' }, // Zmenené z '-- Vyberte pohlavie --' na 'Vyberte'
         { value: 'male', label: 'Muži' },
         { value: 'female', label: 'Ženy' }
     ];
 
-    // Možnosti pre výber tímu (filtrované na základe už vybratých kombinácií tím-pohlavie)
     const getAvailableTeamOptions = (currentEntry = null) => {
         const usedTeamGenderCombinations = new Set();
         driverEntries.forEach(entry => {
-            // Ak to nie je aktuálny záznam, ktorý sa upravuje, a je platný, pridaj jeho kombináciu do množiny
             if (entry.id !== (currentEntry ? currentEntry.id : null) && entry.categoryName && entry.teamIndex !== null && entry.gender !== '') {
                 usedTeamGenderCombinations.add(`${entry.categoryName}-${entry.teamIndex}-${entry.gender}`);
             }
@@ -675,26 +647,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
             
-            // Overíme, či kombinácia tím-pohlavie je už použitá v iných záznamoch
             const isMaleTaken = usedTeamGenderCombinations.has(maleCombo);
             const isFemaleTaken = usedTeamGenderCombinations.has(femaleCombo);
             
-            // Pridáme možnosť tímu iba ak nie je úplne "vyčerpaný" pre obe pohlavia, alebo ak aktuálny záznam upravuje tento tím
             const currentEntryTeamId = currentEntry ? `${currentEntry.categoryName}-${currentEntry.teamIndex}` : null;
 
-            if (currentEntryTeamId === team.id) { // Ak aktuálny záznam upravuje tento tím
+            if (currentEntryTeamId === team.id) {
                 options.push(team);
-            } else if (!isMaleTaken || !isFemaleTaken) { // Ak tím nie je obsadený pre obe pohlavia inými záznamami
+            } else if (!isMaleTaken || !isFemaleTaken) {
                  options.push(team);
             }
         });
 
-        // Zoraďte možnosti (okrem placeholderu, ktorý sa pridáva manuálne)
         const sortedOptions = options.sort((a, b) => a.teamName.localeCompare(b.teamName));
         return sortedOptions;
     };
 
-    // Funkcia na pridanie nového záznamu o šoférovi
     const handleAddDriverEntry = () => {
         setDriverEntries(prev => [...prev, {
             id: generateUniqueId(),
@@ -705,16 +673,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }]);
     };
 
-    // Funkcia na odstránenie záznamu o šoférovi
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => prev.filter(entry => entry.id !== idToRemove));
     };
 
-    // Funkcia na zmenu hodnoty v zázname o šoférovi
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(prev => prev.map(entry => {
             if (entry.id === id) {
-                if (field === 'teamId') { // Ak sa mení selectbox tímu
+                if (field === 'teamId') {
                     const [catName, teamIdxStr] = value.split('-');
                     const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
                     return {
@@ -733,11 +699,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }));
     };
 
-    // Kontrola, či je tlačidlo na pridanie šoféra viditeľné
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
         
-        // Ak už existuje aspoň jeden záznam, ktorý je neúplný (tzn. jedno z jeho polí je prázdne/neplatné)
         const hasIncompleteEntry = driverEntries.some(entry => 
             entry.count === '' || 
             parseInt(entry.count, 10) <= 0 || 
@@ -770,54 +734,48 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const isFormValidPage5 = React.useMemo(() => {
-        // Ak nie sú žiadne tímy, formulár nie je platný
         if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) {
             return false;
         }
 
-        // Iterujeme cez všetky tímy a kontrolujeme validáciu ubytovania a balíčkov
         for (const categoryName in teamsDataFromPage4) {
             for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
-                // Validácia ubytovania pre každý tím
                 if (accommodationTypes.length > 0 && (!team.accommodation?.type || team.accommodation.type.trim() === '')) {
                     const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation?.type);
                     if (team.accommodation?.type !== 'bez ubytovania' && selectedAccType) {
                         const currentCount = accommodationCounts[selectedAccType.type] || 0;
                         if (currentCount >= selectedAccType.capacity) {
-                            return false; // Vybrané ubytovanie je plné
+                            return false;
                         }
                     } else if (accommodationTypes.length > 0 && !team.accommodation?.type) {
-                        return false; // Ak sú typy ubytovania, ale nič nie je vybrané
+                        return false;
                     }
                 }
 
-                // Validácia balíčka pre každý tím
                 if (packages.length > 0 && (!team.packageId || team.packageId.trim() === '')) {
                     return false;
                 }
 
-                // Validácia príchodu pre vlakovú/autobusovú dopravu
                 if ((team.arrival?.type === 'vlaková doprava' || team.arrival?.type === 'autobusová doprava') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
                     return false;
                 }
             }
         }
 
-        // Nová validácia pre driverEntries (pre "vlastná doprava")
-        const aggregatedDrivers = {}; // { 'category-teamIndex': { male: 0, female: 0 } }
-        const usedCombinations = new Set(); // Na kontrolu duplicitných kombinácií tím-pohlavie
+        const aggregatedDrivers = {};
+        const usedCombinations = new Set();
 
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
             if (isNaN(count) || count <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) {
-                return false; // Neúplný alebo neplatný záznam o šoférovi
+                return false;
             }
 
             const teamId = `${entry.categoryName}-${entry.teamIndex}`;
             const comboKey = `${teamId}-${entry.gender}`;
 
             if (usedCombinations.has(comboKey)) {
-                return false; // Nájdeme duplicitnú kombináciu tím-pohlavie
+                return false;
             }
             usedCombinations.add(comboKey);
 
@@ -831,8 +789,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         }
 
-        // Skontrolujte, či každý tím s "vlastná doprava" má priradeného aspoň jedného šoféra
-        // Agregácia z driverEntries je teraz komplexnejšia, musíme to prejsť ručne
         const teamsRequiringDrivers = teamsWithOwnTransport.map(team => team.id);
         const teamsWithAssignedDrivers = new Set();
         
@@ -842,15 +798,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         });
 
-        // Pre každý tím, ktorý si zvolil vlastnú dopravu, musíme overiť, či má aspoň jedného šoféra
         for (const teamId of teamsRequiringDrivers) {
             if (!teamsWithAssignedDrivers.has(teamId)) {
-                return false; // Tím s vlastnou dopravou nemá priradených žiadnych šoférov
+                return false;
             }
-            // A tiež overiť, či celkový počet šoférov pre tento tím je > 0
             const assigned = aggregatedDrivers[teamId];
             if (!assigned || (assigned.male === 0 && assigned.female === 0)) {
-                return false; // Tím s vlastnou dopravou má priradený záznam, ale celkový počet šoférov je 0
+                return false;
             }
         }
 
@@ -873,23 +827,19 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         closeNotification(); 
 
         if (!isFormValidPage5) {
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra a uistiť sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra a uistite sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
             setNotificationType('error');
             setLoading(false); 
             return;
         }
 
         try {
-            // Hlboká kópia teamsDataFromPage4 na úpravu pred odoslaním
             const teamsDataForSubmission = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
-            // Reset počtov šoférov pre všetky tímy v teamsDataForSubmission, ktoré používajú 'vlastná doprava'
-            // Aplikujeme agregované počty z driverEntries do teamsDataForSubmission
             for (const categoryName in teamsDataForSubmission) {
                 teamsDataForSubmission[categoryName] = teamsDataForSubmission[categoryName].map((team, teamIdx) => {
                     const teamId = `${categoryName}-${teamIdx}`;
                     if (team.arrival?.type === 'vlastná doprava') {
-                        // Vypočítame agregované počty šoférov pre tento konkrétny tím
                         let maleDriversCount = 0;
                         let femaleDriversCount = 0;
                         driverEntries.filter(entry => 
@@ -914,7 +864,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             }
                         };
                     }
-                    // Ak nie je vlastná doprava, drivers by mal byť null
                     return {
                         ...team,
                         arrival: {
@@ -925,8 +874,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 });
             }
             
-            // Nakoniec, po agregácii všetkých dát o šoféroch do teamsDataForSubmission, odovzdáme túto aktualizovanú štruktúru ďalej
-            await handleSubmit(teamsDataForSubmission); // handleSubmit from App.js now takes one argument (teamsDataForSubmission)
+            await handleSubmit(teamsDataForSubmission);
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -975,7 +923,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
                                 React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
 
-                                // Komponent pre ubytovanie a príchod tímu
                                 React.createElement(TeamAccommodationAndArrival, {
                                     team: team,
                                     categoryName: categoryName,
@@ -988,7 +935,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     generateTimeOptions: generateTimeOptions,
                                 }),
 
-                                // Komponent pre výber balíčka tímu
                                 React.createElement(TeamPackageSettings, {
                                     team: team,
                                     categoryName: categoryName,
@@ -1004,23 +950,30 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 ))
             ),
 
-            // Sekcia pre správu šoférov (Vlastná doprava)
-            teamsWithOwnTransport.length > 0 && ( // Zobrazí sa len ak sú nejaké tímy s vlastnou dopravou
+            teamsWithOwnTransport.length > 0 && (
                 React.createElement(
                     'div',
                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Tu môžete pridať informácie o šoféroch pre tímy, ktoré zvolili "vlastnú dopravu".'),
+                    
+                    React.createElement( // Popisky stĺpcov
+                        'div',
+                        { className: 'flex items-center space-x-2 mb-2 w-full font-bold text-gray-700' },
+                        React.createElement('div', { className: 'w-24' }, 'Počet'),
+                        React.createElement('div', { className: 'flex-1 min-w-[100px]' }, 'Pohlavie'), {/* Zmenšenie min-width */}
+                        React.createElement('div', { className: 'flex-1 min-w-[200px]' }, 'Tím'),
+                        React.createElement('div', { className: 'w-8' }) // Prázdny div pre zarovnanie s tlačidlom "-"
+                    ),
 
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
                             { key: entry.id, className: 'flex items-center space-x-2 mb-2 w-full' },
-                            // Input pre počet šoférov
-                            React.createElement('div', { className: 'w-24' }, 
+                            React.createElement('div', { className: 'w-24' },
                                 React.createElement('input', {
                                     type: 'number',
-                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', 
+                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                     value: entry.count,
                                     onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
                                     placeholder: 'Počet',
@@ -1029,8 +982,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     disabled: loading,
                                 })
                             ),
-                            // Selectbox pre pohlavie
-                            React.createElement('div', { className: 'flex-1 min-w-[120px]' }, 
+                            React.createElement('div', { className: 'flex-1 min-w-[100px]' }, {/* Zmenšenie min-width */}
                                 React.createElement('select', {
                                     className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                     value: entry.gender,
@@ -1042,35 +994,32 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 ))
                                 )
                             ),
-                            // Selectbox pre tím
                             React.createElement('div', { className: 'flex-1 min-w-[200px]' },
                                 React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', 
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal', // Pridané overflow-hidden a whitespace-normal
                                     value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
-                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value), 
+                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
                                     required: true,
                                     disabled: loading,
                                 }, 
-                                React.createElement('option', { key: "team-placeholder", value: '' }, '-- Vyberte tím --'), 
+                                React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'), // Zmenené z '-- Vyberte tím --' na 'Vyberte'
                                 getAvailableTeamOptions(entry).map(team => (
                                     React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
                                 ))
                                 )
                             ),
-                            // Tlačidlo na odstránenie riadku
                             React.createElement(
                                 'button',
                                 {
                                     type: 'button',
                                     onClick: () => handleRemoveDriverEntry(entry.id),
-                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${driverEntries.length === 0 ? 'invisible' : ''}`, // Skryť, ak žiadne záznamy
+                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${driverEntries.length === 0 ? 'invisible' : ''}`,
                                     disabled: loading,
                                 },
                                 '-'
                             )
                         )
                     )),
-                    // Tlačidlo "+"
                     isAddDriverButtonVisible &&
                     React.createElement(
                         'button',
