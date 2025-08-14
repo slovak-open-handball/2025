@@ -582,25 +582,26 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Používame hlboké porovnanie pre polia a objekty
         const areDriverEntriesEqual = (arr1, arr2) => {
             if (arr1.length !== arr2.length) return false;
-            // Sorting both arrays to ensure consistent comparison order for stable IDs
-            const sortedArr1 = [...arr1].sort((a, b) => a.id.localeCompare(b.id));
-            const sortedArr2 = [...arr2].sort((a, b) => a.id.localeCompare(b.id));
+            // It's crucial to sort by a stable characteristic that reflects the "identity" of the driver entry.
+            // Since ID is built from categoryName, teamIndex, and gender, sorting by this derived ID ensures
+            // that we compare "equivalent" entries from both arrays.
+            const sortedArr1 = [...arr1].sort((a, b) => {
+                const idA = a.categoryName && a.teamIndex !== null && a.gender ? `${a.categoryName}-${a.teamIndex}-${a.gender}` : a.id;
+                const idB = b.categoryName && b.teamIndex !== null && b.gender ? `${b.categoryName}-${b.teamIndex}-${b.gender}` : b.id;
+                return idA.localeCompare(idB);
+            });
+            const sortedArr2 = [...arr2].sort((a, b) => {
+                const idA = a.categoryName && a.teamIndex !== null && a.gender ? `${a.categoryName}-${a.teamIndex}-${a.gender}` : a.id;
+                const idB = b.categoryName && b.teamIndex !== null && b.gender ? `${b.categoryName}-${b.teamIndex}-${b.gender}` : b.id;
+                return idA.localeCompare(idB);
+            });
 
             for (let i = 0; i < sortedArr1.length; i++) {
-                // Compare relevant properties, excluding 'id' if it's a temporary one
                 const entry1 = sortedArr1[i];
                 const entry2 = sortedArr2[i];
 
-                // If both are temporary, their specific temp IDs don't matter, compare content
-                if (entry1.id.startsWith('driver-temp-') && entry2.id.startsWith('driver-temp-')) {
-                     if (entry1.count !== entry2.count ||
-                        entry1.gender !== entry2.gender ||
-                        entry1.categoryName !== entry2.categoryName ||
-                        entry1.teamIndex !== entry2.teamIndex) {
-                        return false;
-                    }
-                } else if (entry1.id !== entry2.id || 
-                    entry1.count !== entry2.count ||
+                // Compare only the data-relevant fields, ignoring the React 'id' used for keys.
+                if (entry1.count !== entry2.count ||
                     entry1.gender !== entry2.gender ||
                     entry1.categoryName !== entry2.categoryName ||
                     entry1.teamIndex !== entry2.teamIndex) {
@@ -610,10 +611,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             return true;
         };
         
-        // Pred porovnaním zoradíme obe polia, aby bolo porovnanie konzistentné
-        // NO LONGER SORTING newLoadedDriverEntries here, it should be sorted based on `id`
-        // if the stable ID is derived from categoryName-teamIndex-gender, it will naturally sort
-        // We will now sort the arrays inside the comparison function itself
         if (!areDriverEntriesEqual(newLoadedDriverEntries, driverEntries)) {
             setDriverEntries(newLoadedDriverEntries);
         }
