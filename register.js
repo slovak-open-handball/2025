@@ -582,7 +582,8 @@ function App() {
                     : [{ size: '', quantity: '' }],
                 // NOVINKA: Inicializácia dát pre Page 5 (ubytovanie, príchod, balíček)
                 accommodation: existingTeamData.accommodation || { type: '' },
-                arrival: existingTeamData.arrival || { type: '', time: null, drivers: { male: '', female: '' } }, // Pridané defaultné hodnoty pre drivers
+                // Inicializácia drivers ako prázdne pole, Page5Form ho naplní
+                arrival: existingTeamData.arrival || { type: '', time: null, drivers: [] }, 
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null
             };
@@ -693,28 +694,73 @@ function App() {
 
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
       try {
-        // Logika transformácie teamsDataToSaveFinal (už je inicializovaná)
+        // Dôležitá zmena: Správne agregujeme dáta o šoféroch pre uloženie
+        // teamsDataToSaveFinal už prichádza s driverEntries spracovanými z Page5Form.
+        // Avšak, štruktúra driverEntries bola zmenená na samostatné záznamy.
+        // Potrebujeme prejsť pôvodným teamsDataFromPage4 (teraz teamsDataToSaveFinal)
+        // a zabezpečiť, že 'drivers' je prázdny objekt na začiatku,
+        // a potom ho naplniť z agregovaných hodnôt.
+
+        // Príprava dát šoférov pre Firestore
+        const aggregatedDriversForFirestore = {}; // Bude obsahovať { 'category-teamIndex': { male: count, female: count } }
+
+        // Zhromaždíme počty šoférov pre každý tím z driverEntries, ktoré už boli spracované v Page5Form
+        // Tieto dáta už sú správne na základe vstupov v Page5Form a sú uložené v teamsDataFromPage4
+        // ktoré sú následne skopírované do teamsDataToSaveFinal.
+        // Takže stačí, ak zabezpečíme, aby team.arrival.drivers bola správna štruktúra.
+
         for (const categoryName in teamsDataToSaveFinal) {
-            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => ({
-                ...team,
-                players: team.players === '' ? 0 : team.players,
-                womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
-                menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
-                tshirts: team.tshirts.map(tshirt => ({
-                    ...tshirt,
-                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                })),
-                // Konverzia a uloženie dát Page 5 (ubytovanie, príchod, balíček)
-                accommodation: team.accommodation || { type: 'Bez ubytovania' },
-                arrival: {
-                    type: team.arrival?.type || 'bez dopravy',
-                    time: team.arrival?.time || null,
-                    drivers: team.arrival?.drivers || { male: '', female: '' } // Pridané ukladanie počtu šoférov
-                },
-                packageId: team.packageId || '',
-                packageDetails: team.packageDetails || null
-            }));
+            teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => {
+                // Ensure drivers is an object, not an array or null
+                if (team.arrival && team.arrival.type === 'vlastná doprava') {
+                    // Page5Form by už mala nastaviť drivers na { male: aggregatedMale, female: aggregatedFemale }
+                    // ale pre istotu znova normalizujeme.
+                    const maleDrivers = team.arrival.drivers?.male !== undefined ? team.arrival.drivers.male : 0;
+                    const femaleDrivers = team.arrival.drivers?.female !== undefined ? team.arrival.drivers.female : 0;
+                    return {
+                        ...team,
+                        players: team.players === '' ? 0 : team.players,
+                        womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
+                        menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
+                        tshirts: team.tshirts.map(tshirt => ({
+                            ...tshirt,
+                            quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                        })),
+                        accommodation: team.accommodation || { type: 'Bez ubytovania' },
+                        arrival: {
+                            type: team.arrival?.type || 'bez dopravy',
+                            time: team.arrival?.time || null,
+                            drivers: { // Zabezpečíme správnu štruktúru pre Firestore
+                                male: maleDrivers, 
+                                female: femaleDrivers
+                            } 
+                        },
+                        packageId: team.packageId || '',
+                        packageDetails: team.packageDetails || null
+                    };
+                } else {
+                    return { // Pre tímy bez vlastnej dopravy, drivers by mal byť null alebo prázdny objekt
+                        ...team,
+                        players: team.players === '' ? 0 : team.players,
+                        womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
+                        menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
+                        tshirts: team.tshirts.map(tshirt => ({
+                            ...tshirt,
+                            quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                        })),
+                        accommodation: team.accommodation || { type: 'Bez ubytovania' },
+                        arrival: {
+                            type: team.arrival?.type || 'bez dopravy',
+                            time: team.arrival?.time || null,
+                            drivers: null // Pre tímy, ktoré nevybrali "vlastnú dopravu"
+                        }, 
+                        packageId: team.packageId || '',
+                        packageDetails: team.packageDetails || null
+                    };
+                }
+            });
         }
+
 
         await setDoc(userDocRef, {
           firstName: formData.firstName,
@@ -879,9 +925,8 @@ function App() {
                     (team.accommodation?.type && team.accommodation.type.trim() !== '') ||
                     (team.arrival?.type && team.arrival.type.trim() !== '') ||
                     (team.packageId && team.packageId.trim() !== '') ||
-                    // NOVINKA: Kontrola pre šoférov v Page 5
-                    (team.arrival?.drivers?.male !== undefined && team.arrival.drivers.male !== '') ||
-                    (team.arrival?.drivers?.female !== undefined && team.arrival.drivers.female !== '')
+                    // NOVINKA: Kontrola pre šoférov v Page 5 - teraz drivers je objekt
+                    (team.arrival?.drivers && (team.arrival.drivers.male !== undefined || team.arrival.drivers.female !== undefined))
                 );
                 if (hasTeamDetails) {
                     break;
