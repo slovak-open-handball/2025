@@ -1116,54 +1116,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            const teamsDataForSubmission = JSON.parse(JSON.stringify(teamsDataFromPage4));
+            // Updated: Call the updateParentTeamsData function
+            await updateParentTeamsData(driverEntries);
 
-            for (const categoryName in teamsDataForSubmission) {
-                teamsDataForSubmission[categoryName] = teamsDataForSubmission[categoryName].map((team, teamIdx) => {
-                    // Pre každý tím v teamsDataForSubmission je potrebné zistiť,
-                    // koľko šoférov má pre danú kategóriu a tím z driverEntries.
-                    const teamId = `${categoryName}-${teamIdx}`;
-                    
-                    if (team.arrival?.type === 'vlastná doprava') {
-                        let maleDriversCount = 0;
-                        let femaleDriversCount = 0;
-                        
-                        // Filtrujeme driverEntries pre aktuálny tím a agregujeme počty
-                        driverEntries.filter(entry =>
-                            entry.categoryName === categoryName &&
-                            entry.teamIndex === teamIdx
-                        ).forEach(entry => {
-                            const count = parseInt(entry.count, 10);
-                            if (!isNaN(count) && count > 0) {
-                                if (entry.gender === 'male') {
-                                    maleDriversCount += count;
-                                } else if (entry.gender === 'female') {
-                                    femaleDriversCount += count;
-                                }
-                            }
-                        });
-
-                        return {
-                            ...team,
-                            arrival: {
-                                ...team.arrival,
-                                drivers: { male: maleDriversCount, female: femaleDriversCount }
-                            }
-                        };
-                    }
-                    // Ak typ dopravy NIE JE vlastná doprava, drivers by mali byť null alebo absent.
-                    // Zabezpečíme, aby sa pre tieto tímy drivers vynulovali, ak boli náhodou nastavené.
-                    return {
-                        ...team,
-                        arrival: {
-                            ...team.arrival,
-                            drivers: null 
-                        }
-                    };
-                });
-            }
-
-            await handleSubmit(teamsDataForSubmission);
+            // Now, teamsDataFromPage4 should be up-to-date in the parent component's state
+            // It will be accessible via the handleSubmit prop.
+            await handleSubmit(teamsDataFromPage4); // Pass the already updated formData
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -1329,53 +1287,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         type: 'button',
                         onClick: () => {
                             // Update parent state with current driver entries before navigating back
-                            const teamsDataForSubmission = JSON.parse(JSON.stringify(teamsDataFromPage4));
-
-                            for (const categoryName in teamsDataForSubmission) {
-                                teamsDataForSubmission[categoryName] = teamsDataForSubmission[categoryName].map((team, teamIdx) => {
-                                    const teamId = `${categoryName}-${teamIdx}`;
-                                    
-                                    if (team.arrival?.type === 'vlastná doprava') {
-                                        let maleDriversCount = 0;
-                                        let femaleDriversCount = 0;
-                                        
-                                        driverEntries.filter(entry =>
-                                            entry.categoryName === categoryName &&
-                                            entry.teamIndex === teamIdx
-                                        ).forEach(entry => {
-                                            const count = parseInt(entry.count, 10);
-                                            if (!isNaN(count) && count > 0) {
-                                                if (entry.gender === 'male') {
-                                                    maleDriversCount += count;
-                                                } else if (entry.gender === 'female') {
-                                                    femaleDriversCount += count;
-                                                }
-                                            }
-                                        });
-
-                                        return {
-                                            ...team,
-                                            arrival: {
-                                                ...team.arrival,
-                                                drivers: { male: maleDriversCount, female: femaleDriversCount }
-                                            }
-                                        };
-                                    }
-                                    return {
-                                        ...team,
-                                        arrival: {
-                                            ...team.arrival,
-                                            drivers: null 
-                                        }
-                                    };
-                                });
-                            }
-                            handleChange({
-                                target: {
-                                    id: 'teamsDataFromPage4',
-                                    value: teamsDataForSubmission
-                                }
-                            });
+                            updateParentTeamsData(driverEntries);
                             handlePrev(); // Then navigate back
                         },
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
