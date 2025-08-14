@@ -629,7 +629,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [teamsDataFromPage4]);
 
     const getAvailableGenderOptions = () => [
-        { value: '', label: 'Vyberte' }, // Zmenené z '-- Vyberte pohlavie --' na 'Vyberte'
+        { value: '', label: 'Vyberte' }, 
         { value: 'male', label: 'Muži' },
         { value: 'female', label: 'Ženy' }
     ];
@@ -957,13 +957,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Tu môžete pridať informácie o šoféroch pre tímy, ktoré zvolili "vlastnú dopravu".'),
                     
-                    React.createElement( // Popisky stĺpcov
+                    React.createElement(
                         'div',
                         { className: 'flex items-center space-x-2 mb-2 w-full font-bold text-gray-700' },
                         React.createElement('div', { className: 'w-24' }, 'Počet'),
-                        React.createElement('div', { className: 'flex-1 min-w-[100px]' }, 'Pohlavie'), {/* Zmenšenie min-width */}
+                        React.createElement('div', { className: 'flex-1 min-w-[100px]' }, 'Pohlavie'),
                         React.createElement('div', { className: 'flex-1 min-w-[200px]' }, 'Tím'),
-                        React.createElement('div', { className: 'w-8' }) // Prázdny div pre zarovnanie s tlačidlom "-"
+                        React.createElement('div', { className: 'w-8' })
                     ),
 
                     driverEntries.map((entry) => (
@@ -982,7 +982,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     disabled: loading,
                                 })
                             ),
-                            React.createElement('div', { className: 'flex-1 min-w-[100px]' }, {/* Zmenšenie min-width */}
+                            React.createElement('div', { className: 'flex-1 min-w-[100px]' },
                                 React.createElement('select', {
                                     className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                     value: entry.gender,
@@ -996,13 +996,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             ),
                             React.createElement('div', { className: 'flex-1 min-w-[200px]' },
                                 React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal', // Pridané overflow-hidden a whitespace-normal
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal', 
                                     value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
                                     onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
                                     required: true,
                                     disabled: loading,
                                 }, 
-                                React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'), // Zmenené z '-- Vyberte tím --' na 'Vyberte'
+                                React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
                                 getAvailableTeamOptions(entry).map(team => (
                                     React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
                                 ))
