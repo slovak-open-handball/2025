@@ -401,8 +401,8 @@ function TeamPackageSettings({
                             React.createElement(
                                 'div',
                                 { className: 'ml-8 text-sm text-gray-600 mt-2' },
-                                (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
-                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {})).filter(key => key !== 'participantCard')])].sort().map(date => {
+                                (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals || {}).length > 0)) ? (
+                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
 
