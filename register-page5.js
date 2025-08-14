@@ -437,6 +437,90 @@ function TeamPackageSettings({
     );
 }
 
+// CustomTeamSelect komponent pre selectbox, ktorý podporuje zalamovanie textu v možnostiach
+function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const selectRef = React.useRef(null);
+
+    const selectedOption = options.find(option => option.id === value);
+    const displayedValue = selectedOption ? `${selectedOption.teamName} (${selectedOption.categoryName})` : placeholder;
+
+    const handleSelectClick = () => {
+        if (!disabled) {
+            setIsOpen(prev => !prev);
+        }
+    };
+
+    const handleOptionClick = (optionValue) => {
+        onChange(optionValue);
+        setIsOpen(false);
+    };
+
+    // Zatvorenie selectboxu pri kliknutí mimo neho
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (selectRef.current && !selectRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const inputClasses = `
+        shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full cursor-pointer
+        ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}
+        relative flex justify-between items-center pr-10
+        min-h-[4rem] flex-wrap align-middle
+    `; // Pridané flex-wrap a align-middle
+
+    const dropdownClasses = `
+        absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto
+        ${isOpen ? 'block' : 'hidden'}
+    `;
+
+    const optionClasses = `
+        px-3 py-2 cursor-pointer hover:bg-blue-100 text-gray-800 whitespace-normal break-words
+    `; // Pridané break-words pre robustnejšie zalamovanie
+
+    return React.createElement(
+        'div',
+        { className: 'relative w-full', ref: selectRef },
+        React.createElement(
+            'div',
+            { className: inputClasses, onClick: handleSelectClick },
+            React.createElement('span', { className: 'flex-grow whitespace-normal' }, displayedValue),
+            React.createElement(
+                'svg',
+                { className: `h-5 w-5 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`, viewBox: '0 0 20 20', fill: 'currentColor' },
+                React.createElement('path', { fillRule: 'evenodd', d: 'M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z', clipRule: 'evenodd' })
+            )
+        ),
+        React.createElement(
+            'div',
+            { className: dropdownClasses },
+            options.length === 0 ? (
+                React.createElement('div', { className: 'px-3 py-2 text-gray-500' }, 'Žiadne dostupné tímy.')
+            ) : (
+                options.map(option => (
+                    React.createElement(
+                        'div',
+                        {
+                            key: option.id,
+                            onClick: () => handleOptionClick(option.id),
+                            className: optionClasses + (option.id === value ? ' bg-blue-200' : '')
+                        },
+                        `${option.teamName} (${option.categoryName})`
+                    )
+                ))
+            )
+        )
+    );
+}
+
 
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) {
     const db = getFirestore();
@@ -1001,19 +1085,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     'div',
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
-                                    React.createElement('select', {
-                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal h-auto',
+                                    React.createElement(CustomTeamSelect, {
                                         value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
-                                        onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
-                                        required: true,
+                                        onChange: (value) => handleDriverEntryChange(entry.id, 'teamId', value),
+                                        options: getAvailableTeamOptions(entry),
                                         disabled: loading,
-                                        style: { minHeight: '4rem' }
-                                    },
-                                    React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
-                                    getAvailableTeamOptions(entry).map(team => (
-                                        React.createElement('option', { key: team.id, value: team.id, className: 'whitespace-normal' }, `${team.teamName} (${team.categoryName})`)
-                                    ))
-                                    )
+                                        placeholder: 'Vyberte',
+                                    })
                                 ),
                                 React.createElement( 
                                     'div',
