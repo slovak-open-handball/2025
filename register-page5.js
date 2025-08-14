@@ -887,32 +887,65 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const handleDriverEntryChange = (id, field, value) => {
-        setDriverEntries(prev => prev.map(entry => {
-            if (entry.id === id) {
-                if (field === 'teamId') {
-                    const [catName, teamIdxStr] = value.split('-');
-                    const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                    // When teamId changes, regenerate the stable ID for the entry based on new team and current gender
-                    const newId = `${catName}-${teamIdx}-${entry.gender}`; 
-                    return {
-                        ...entry,
-                        id: newId, // Update the ID to a stable one
-                        categoryName: catName || '',
-                        teamIndex: teamIdx,
-                        // Do NOT reset gender or count here, user is changing team for an existing driver entry
-                    };
-                } else { // field is 'gender' or 'count'
-                    // If gender changes, update the ID to reflect the new stable combination
-                    const updatedEntry = { ...entry, [field]: value };
-                    if (field === 'gender' && updatedEntry.categoryName && updatedEntry.teamIndex !== null && updatedEntry.gender) {
+        setDriverEntries(prev => {
+            const updatedEntries = prev.map(entry => {
+                if (entry.id === id) {
+                    let updatedEntry = { ...entry, [field]: value };
+                    if (field === 'teamId') {
+                        const [catName, teamIdxStr] = value.split('-');
+                        const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+                        updatedEntry = {
+                            ...updatedEntry,
+                            categoryName: catName || '',
+                            teamIndex: teamIdx,
+                        };
+                        updatedEntry.id = `${updatedEntry.categoryName}-${updatedEntry.teamIndex}-${updatedEntry.gender}`;
+                    } else if (field === 'gender' && updatedEntry.categoryName && updatedEntry.teamIndex !== null && updatedEntry.gender) {
                         updatedEntry.id = `${updatedEntry.categoryName}-${updatedEntry.teamIndex}-${updatedEntry.gender}`;
                     }
                     return updatedEntry;
                 }
-            }
-            return entry;
-        }));
+                return entry;
+            });
+
+            // NOVINKA: Agregácia a odoslanie dát o šoféroch do nadradeného komponentu (App.js)
+            const aggregatedDrivers = {};
+            updatedEntries.forEach(entry => {
+                const teamId = `${entry.categoryName}-${entry.teamIndex}`;
+                if (entry.categoryName && entry.teamIndex !== null && entry.gender && entry.count !== '') {
+                    const count = parseInt(entry.count, 10);
+                    if (!isNaN(count) && count > 0) {
+                        if (!aggregatedDrivers[teamId]) {
+                            aggregatedDrivers[teamId] = { male: 0, female: 0 };
+                        }
+                        if (entry.gender === 'male') {
+                            aggregatedDrivers[teamId].male += count;
+                        } else {
+                            aggregatedDrivers[teamId].female += count;
+                        }
+                    }
+                }
+            });
+
+            // Aktualizácia teamsDataFromPage4 v App komponente pre každý tím
+            teamsWithOwnTransport.forEach(team => {
+                const teamId = team.id;
+                const [catName, teamIdxStr] = teamId.split('-');
+                const teamIdx = parseInt(teamIdxStr, 10);
+
+                const currentDrivers = aggregatedDrivers[teamId] || { male: 0, female: 0 };
+                
+                // Používame handleTeamDataChange na aktualizáciu drivers pre konkrétny tím
+                handleTeamDataChange(catName, teamIdx, 'arrival', {
+                    ...teamsDataFromPage4[catName]?.[teamIdx]?.arrival, // Zachovať existujúce arrival dáta
+                    drivers: currentDrivers
+                });
+            });
+
+            return updatedEntries;
+        });
     };
+
 
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
