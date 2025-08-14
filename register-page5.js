@@ -228,7 +228,6 @@ function TeamAccommodationAndArrival({
                                     value: arrivalHours || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
-                                    disabled: loading,
                                 }, generateTimeOptions(24))
                             ),
                             React.createElement(
@@ -241,7 +240,6 @@ function TeamAccommodationAndArrival({
                                     value: arrivalMinutes || '',
                                     onChange: handleTimeSelectChange,
                                     required: true,
-                                    disabled: loading,
                                 }, generateTimeOptions(60))
                             )
                         )
@@ -629,7 +627,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [teamsDataFromPage4]);
 
     const getAvailableGenderOptions = () => [
-        { value: '', label: 'Vyberte' }, 
+        { value: '', label: 'Vyberte' },
         { value: 'male', label: 'Muži' },
         { value: 'female', label: 'Ženy' }
     ];
@@ -957,63 +955,66 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Tu môžete pridať informácie o šoféroch pre tímy, ktoré zvolili "vlastnú dopravu".'),
                     
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center space-x-2 mb-2 w-full font-bold text-gray-700' },
-                        React.createElement('div', { className: 'w-24' }, 'Počet'),
-                        React.createElement('div', { className: 'flex-1 min-w-[100px]' }, 'Pohlavie'),
-                        React.createElement('div', { className: 'flex-1 min-w-[200px]' }, 'Tím'),
-                        React.createElement('div', { className: 'w-8' })
-                    ),
-
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
-                            { key: entry.id, className: 'flex items-center space-x-2 mb-2 w-full' },
-                            React.createElement('div', { className: 'w-24' },
-                                React.createElement('input', {
-                                    type: 'number',
-                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
-                                    value: entry.count,
-                                    onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
-                                    placeholder: 'Počet',
-                                    min: 1,
-                                    required: true,
-                                    disabled: loading,
-                                })
-                            ),
-                            React.createElement('div', { className: 'flex-1 min-w-[100px]' },
-                                React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
-                                    value: entry.gender,
-                                    onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
-                                    required: true,
-                                    disabled: loading,
-                                }, getAvailableGenderOptions().map(opt => (
-                                    React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
-                                ))
-                                )
-                            ),
-                            React.createElement('div', { className: 'flex-1 min-w-[200px]' },
-                                React.createElement('select', {
-                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal', 
-                                    value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
-                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
-                                    required: true,
-                                    disabled: loading,
-                                }, 
-                                React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
-                                getAvailableTeamOptions(entry).map(team => (
-                                    React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
-                                ))
-                                )
-                            ),
+                            { key: entry.id, className: 'flex items-center space-x-2 mb-4 w-full' },
                             React.createElement(
+                                'div', // Main content area (Team select + Count/Gender)
+                                { className: 'flex flex-col flex-grow space-y-2' },
+                                React.createElement( // Team Select row
+                                    'div',
+                                    { className: 'w-full' },
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
+                                    React.createElement('select', {
+                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal',
+                                        value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
+                                        onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
+                                        required: true,
+                                        disabled: loading,
+                                    },
+                                    React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
+                                    getAvailableTeamOptions(entry).map(team => (
+                                        React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
+                                    ))
+                                    )
+                                ),
+                                React.createElement( // Count and Gender row
+                                    'div',
+                                    { className: 'flex space-x-2 w-full' },
+                                    React.createElement('div', { className: 'w-24 flex-shrink-0' },
+                                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Počet'),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
+                                            value: entry.count,
+                                            onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
+                                            placeholder: '00',
+                                            min: 1,
+                                            required: true,
+                                            disabled: loading,
+                                        })
+                                    ),
+                                    React.createElement('div', { className: 'flex-1 min-w-[100px]' },
+                                        React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Pohlavie'),
+                                        React.createElement('select', {
+                                            className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
+                                            value: entry.gender,
+                                            onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
+                                            required: true,
+                                            disabled: loading,
+                                        }, getAvailableGenderOptions().map(opt => (
+                                            React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                                        )))
+                                    )
+                                )
+                            ),
+                            React.createElement( // Delete Button
                                 'button',
                                 {
                                     type: 'button',
                                     onClick: () => handleRemoveDriverEntry(entry.id),
-                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ${driverEntries.length === 0 ? 'invisible' : ''}`,
+                                    className: `bg-red-500 hover:bg-red-700 text-white font-bold w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:shadow-outline ml-2 ${driverEntries.length === 0 ? 'invisible' : ''}`,
                                     disabled: loading,
                                 },
                                 '-'
