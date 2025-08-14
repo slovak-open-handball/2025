@@ -918,7 +918,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
 
-    const updateParentTeamsData = React.useCallback((currentDriverEntries) => {
+    const getAggregatedDriversData = React.useCallback((currentDriverEntries) => {
         const aggregatedDrivers = {};
         // Aggregate drivers from current `driverEntries`
         currentDriverEntries.forEach(entry => {
@@ -966,15 +966,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 };
             });
         }
-
-        // Call the parent handleChange with the fully updated teamsDataFromPage4
-        handleChange({
-            target: {
-                id: 'teamsDataFromPage4',
-                value: updatedTeamsData
-            }
-        });
-    }, [teamsDataFromPage4, handleChange]);
+        return updatedTeamsData; // Return the updated data
+    }, [teamsDataFromPage4]);
 
 
     const isAddDriverButtonVisible = React.useMemo(() => {
@@ -1116,12 +1109,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            // Updated: Call the updateParentTeamsData function
-            await updateParentTeamsData(driverEntries);
+            // Updated: Call getAggregatedDriversData to get the updated data
+            const teamsDataToSubmit = getAggregatedDriversData(driverEntries);
 
-            // Now, teamsDataFromPage4 should be up-to-date in the parent component's state
-            // It will be accessible via the handleSubmit prop.
-            await handleSubmit(teamsDataFromPage4); // Pass the already updated formData
+            // Now, teamsDataToSubmit contains the latest aggregated driver information.
+            // Call handleChange to update the parent's state, then submit with this data.
+            handleChange({
+                target: {
+                    id: 'teamsDataFromPage4',
+                    value: teamsDataToSubmit
+                }
+            });
+            await handleSubmit(teamsDataToSubmit); // Pass the explicitly updated data
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -1286,8 +1285,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'button',
                         onClick: () => {
-                            // Update parent state with current driver entries before navigating back
-                            updateParentTeamsData(driverEntries);
+                            // Updated: Call getAggregatedDriversData to get the updated data
+                            const teamsDataToUpdate = getAggregatedDriversData(driverEntries);
+                            // Call handleChange to update the parent's state
+                            handleChange({
+                                target: {
+                                    id: 'teamsDataFromPage4',
+                                    value: teamsDataToUpdate
+                                }
+                            });
                             handlePrev(); // Then navigate back
                         },
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
