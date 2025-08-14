@@ -606,7 +606,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     }, [teamsDataFromPage4]); // Dependency on teamsDataFromPage4
 
 
-    const generateUniqueId = () => `driver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Helper function to generate a unique ID
+    const generateUniqueId = () => `driver-temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const getDaysBetween = (start, end) => {
         const dates = [];
@@ -851,7 +852,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 teamIndex: null
             };
             const updatedEntries = [...prev, newEntry];
-            // No need to call updateParentTeamsData here, as useEffect will handle initial reconciliation
+            // NO LONGER CALLING updateParentTeamsData here.
+            // Changes will only be pushed to parent on form submission.
             return updatedEntries;
         });
     };
@@ -869,31 +871,38 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const updatedEntries = prev.map(entry => {
                 if (entry.id === id) {
                     let newEntryState = { ...entry, [field]: value };
+                    let newCategoryName = newEntryState.categoryName;
+                    let newTeamIndex = newEntryState.teamIndex;
+                    let newGender = newEntryState.gender;
+
                     if (field === 'teamId') {
                         const [catName, teamIdxStr] = value.split('-');
-                        newEntryState.categoryName = catName || '';
-                        newEntryState.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                        // Re-generate stable ID if teamId changes and gender is already selected
-                        if (newEntryState.categoryName && newEntryState.teamIndex !== null && newEntryState.gender) {
-                             newEntryState.id = `${newEntryState.categoryName}-${newEntryState.teamIndex}-${newEntryState.gender}`;
-                        } else {
-                            // If gender is not yet selected, keep the temporary ID or create a new one based on teamId
-                            newEntryState.id = `${newEntryState.categoryName}-${newEntryState.teamIndex}-${generateUniqueId()}`;
-                        }
+                        newCategoryName = catName || '';
+                        newTeamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+                        newEntryState.categoryName = newCategoryName;
+                        newEntryState.teamIndex = newTeamIndex;
                     } else if (field === 'gender') {
-                        // Re-generate stable ID if gender changes and team is already selected
-                        if (newEntryState.categoryName && newEntryState.teamIndex !== null && newEntryState.gender) {
-                            newEntryState.id = `${newEntryState.categoryName}-${newEntryState.teamIndex}-${newEntryState.gender}`;
-                        } else {
-                             // If team is not yet selected, keep the temporary ID or create a new one based on gender
-                            newEntryState.id = `temp-${generateUniqueId()}-${newEntryState.gender}`; // Temporary ID
+                        newGender = value;
+                        newEntryState.gender = newGender;
+                    }
+
+                    // Now, determine the stable ID based on all three identifying parts
+                    if (newCategoryName && newTeamIndex !== null && newGender) {
+                        newEntryState.id = `${newCategoryName}-${newTeamIndex}-${newGender}`;
+                    } else {
+                        // If not all components are available for a stable ID,
+                        // either keep the current temporary ID or generate a new one
+                        // if it was previously a stable ID but became incomplete.
+                        if (!newEntryState.id.startsWith('driver-temp-')) {
+                             newEntryState.id = generateUniqueId(); // Assign a new temporary ID
                         }
                     }
+                    // NO LONGER CALLING updateParentTeamsData here.
+                    // Changes will only be pushed to parent on form submission.
                     return newEntryState;
                 }
                 return entry;
             });
-            updateParentTeamsData(updatedEntries); // Update parent state immediately
             return updatedEntries;
         });
     };
