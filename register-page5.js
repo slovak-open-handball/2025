@@ -54,7 +54,7 @@ function TeamAccommodationAndArrival({
     team,
     categoryName,
     teamIndex,
-    handleChange,
+    handleChange, // Toto je teraz granulárna handleChange z App.js
     loading,
     accommodationTypes,
     accommodationCounts,
@@ -333,7 +333,7 @@ function TeamPackageSettings({
     team,
     categoryName,
     teamIndex,
-    handleChange,
+    handleChange, // Toto je teraz granulárna handleChange z App.js
     loading,
     packages,
     tournamentDays
@@ -525,7 +525,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 }
 
 
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) {
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, tournamentStartDate, tournamentEndDate }) { // Pridaný setTeamsDataFromPage4
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -726,9 +726,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
 
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
+        // Toto volanie teraz použije nový identifikátor, aby handleChange v App.js vedela,
+        // že ide o granulárnu aktualizáciu do teamsDataFromPage4
         handleChange({
             target: {
-                id: 'teamsDataFromPage4',
+                id: 'teamsDataFromPage4_granular_update',
                 value: {
                     categoryName: categoryName,
                     teamIndex: teamIndex,
@@ -916,7 +918,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         // Iterate through all teams in `updatedTeamsData` to set their `drivers` property correctly
         for (const categoryName in updatedTeamsData) {
-            if (!updatedTeamsData[categoryName] || typeof updatedTeamsData[categoryName] !== 'object') continue; // Ensure category exists and is an object
+            if (!updatedTeamsData[categoryName] || typeof updatedTeamsData[categoryName] !== 'object') continue;
 
             updatedTeamsData[categoryName] = updatedTeamsData[categoryName].map((team, teamIdx) => {
                 const teamId = `${categoryName}-${teamIdx}`;
@@ -942,7 +944,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             });
         }
         return updatedTeamsData; // Return the updated data
-    }, []); // Odstránená závislosť na teamsDataFromPage4, pretože sa odovzdáva ako argument
+    }, []);
 
 
     const isAddDriverButtonVisible = React.useMemo(() => {
@@ -1089,12 +1091,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         try {
             // Získanie aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred submitom
             const teamsDataToSubmit = getAggregatedDriversData(driverEntries, teamsDataFromPage4); // Odovzdáme aj teamsDataFromPage4
-            handleChange({
-                target: {
-                    id: 'teamsDataFromPage4',
-                    value: teamsDataToSubmit
-                }
-            });
+            setTeamsDataFromPage4(teamsDataToSubmit); // Používame priamy setter z App.js
+            console.log("Page5Form - Odosielam teamsDataToSubmit (priame nastavenie):", teamsDataToSubmit); // DEBUG LOG
             await handleSubmit(teamsDataToSubmit); // Následné odoslanie formulára s týmito dátami
 
         } catch (error) {
@@ -1213,7 +1211,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement(
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
-                                    React.createElement('div', { className: 'w-1/2 flex-shrink-0' },  // Zmenené na w-1/2
+                                    React.createElement('div', { className: 'w-1/2 flex-shrink-0' },
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Počet'),
                                         React.createElement('input', {
                                             type: 'number',
@@ -1227,7 +1225,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             id: entry.id // Pridané ID pre ľahšiu manipuláciu
                                         })
                                     ),
-                                    React.createElement('div', { className: 'w-1/2' }, // Zmenené na w-1/2
+                                    React.createElement('div', { className: 'w-1/2' },
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Pohlavie'),
                                         React.createElement('select', {
                                             className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
@@ -1274,16 +1272,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'button',
                         onClick: () => {
-                            // Získanie aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred navigáciou
-                            const teamsDataToUpdate = getAggregatedDriversData(driverEntries, teamsDataFromPage4); // Odovzdáme aj teamsDataFromPage4
-                            handleChange({
-                                target: {
-                                    id: 'teamsDataFromPage4',
-                                    value: teamsDataToUpdate
-                                }
-                            });
-                            console.log("Dáta odoslané rodičovi pred navigáciou späť:", teamsDataToUpdate); // DEBUG LOG
-                            handlePrev(); // Potom prejdite späť
+                            // Pri kliknutí na tlačidlo "Späť" agregujte šoférov a priamo aktualizujte teamsDataFromPage4 rodiča
+                            const teamsDataToUpdate = getAggregatedDriversData(driverEntries, teamsDataFromPage4);
+                            setTeamsDataFromPage4(teamsDataToUpdate); // Používame priamy setter
+                            console.log("Page5Form - Dáta odoslané rodičovi pred navigáciou späť (priame nastavenie):", teamsDataToUpdate); // DEBUG LOG
+                            handlePrev(); // Potom sa vráťte späť
                         },
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
