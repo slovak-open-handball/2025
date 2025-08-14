@@ -578,44 +578,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             });
         }
 
-        // Ak sa nové načítané záznamy líšia od aktuálnych, aktualizujte stav
-        // Používame hlboké porovnanie pre polia a objekty
-        const areDriverEntriesEqual = (arr1, arr2) => {
-            if (arr1.length !== arr2.length) return false;
-            // It's crucial to sort by a stable characteristic that reflects the "identity" of the driver entry.
-            // Since ID is built from categoryName, teamIndex, and gender, sorting by this derived ID ensures
-            // that we compare "equivalent" entries from both arrays.
-            const sortedArr1 = [...arr1].sort((a, b) => {
-                const idA = a.categoryName && a.teamIndex !== null && a.gender ? `${a.categoryName}-${a.teamIndex}-${a.gender}` : a.id;
-                const idB = b.categoryName && b.teamIndex !== null && b.gender ? `${b.categoryName}-${b.teamIndex}-${b.gender}` : b.id;
-                return idA.localeCompare(idB);
-            });
-            const sortedArr2 = [...arr2].sort((a, b) => {
-                const idA = a.categoryName && a.teamIndex !== null && a.gender ? `${a.categoryName}-${a.teamIndex}-${a.gender}` : a.id;
-                const idB = b.categoryName && b.teamIndex !== null && b.gender ? `${b.categoryName}-${b.teamIndex}-${b.gender}` : b.id;
-                return idA.localeCompare(idB);
-            });
+        // Zjednodušená aktualizácia: Vždy aktualizujte driverEntries, ak sa teamsDataFromPage4 zmení
+        // Tým sa vyhneme potenciálnym problémom s nesprávnou detekciou zmien v areDriverEntriesEqual
+        setDriverEntries(newLoadedDriverEntries);
 
-            for (let i = 0; i < sortedArr1.length; i++) {
-                const entry1 = sortedArr1[i];
-                const entry2 = sortedArr2[i];
-
-                // Compare only the data-relevant fields, ignoring the React 'id' used for keys.
-                if (entry1.count !== entry2.count ||
-                    entry1.gender !== entry2.gender ||
-                    entry1.categoryName !== entry2.categoryName ||
-                    entry1.teamIndex !== entry2.teamIndex) {
-                    return false;
-                }
-            }
-            return true;
-        };
-        
-        if (!areDriverEntriesEqual(newLoadedDriverEntries, driverEntries)) {
-            setDriverEntries(newLoadedDriverEntries);
-        }
-
-    }, [teamsDataFromPage4]); // Dependency on teamsDataFromPage4
+    }, [teamsDataFromPage4]); // Závislosť od teamsDataFromPage4
 
 
     // Helper function to generate a unique ID
@@ -1231,11 +1198,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             type: 'number',
                                             className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                             value: entry.count,
-                                            onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
+                                            onChange: (e) => handleDriverEntryChange(e.target.id, 'count', e.target.value),
                                             placeholder: 'Zadajte počet', // OPRAVA: Zmenený placeholder
                                             min: 1,
                                             required: true,
                                             disabled: loading,
+                                            id: entry.id // Pridané ID pre ľahšiu manipuláciu
                                         })
                                     ),
                                     React.createElement('div', { className: 'w-1/2' }, // Zmenené na w-1/2
@@ -1285,7 +1253,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'button',
                         onClick: () => {
-                            // Updated: Call getAggregatedDriversData to get the updated data
+                            // Call getAggregatedDriversData to get the updated data
                             const teamsDataToUpdate = getAggregatedDriversData(driverEntries);
                             // Call handleChange to update the parent's state
                             handleChange({
