@@ -578,23 +578,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             });
         }
 
-        // Sort for consistent comparison and to ensure predictable order
-        newLoadedDriverEntries.sort((a, b) => a.id.localeCompare(b.id));
+        // Ak sa nové načítané záznamy líšia od aktuálnych, aktualizujte stav
+        // Používame hlboké porovnanie pre polia a objekty
+        const areDriverEntriesEqual = (arr1, arr2) => {
+            if (arr1.length !== arr2.length) return false;
+            for (let i = 0; i < arr1.length; i++) {
+                // Porovnávame len dôležité vlastnosti pre zistenie zmeny
+                if (arr1[i].id !== arr2[i].id || 
+                    arr1[i].count !== arr2[i].count ||
+                    arr1[i].gender !== arr2[i].gender ||
+                    arr1[i].categoryName !== arr2[i].categoryName ||
+                    arr1[i].teamIndex !== arr2[i].teamIndex) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        
+        // Pred porovnaním zoradíme obe polia, aby bolo porovnanie konzistentné
+        newLoadedDriverEntries.sort((a,b) => a.id.localeCompare(b.id));
+        const sortedCurrentDriverEntries = [...driverEntries].sort((a,b) => a.id.localeCompare(b.id));
 
-        // Create a comparable representation of current driverEntries state
-        // Only include relevant properties for comparison
-        const currentDriverEntriesComparable = driverEntries.map(e => ({
-            id: `${e.categoryName}-${e.teamIndex}-${e.gender}`, // Normalize existing random IDs to stable ones for comparison
-            count: e.count,
-            gender: e.gender,
-            categoryName: e.categoryName,
-            teamIndex: e.teamIndex
-        })).sort((a, b) => a.id.localeCompare(b.id)); // Sort current state for consistent comparison
-
-
-        // Compare if there's a real difference in relevant data (stable IDs and counts)
-        // If the stringified representation differs, it means the content changed.
-        if (JSON.stringify(newLoadedDriverEntries) !== JSON.stringify(currentDriverEntriesComparable)) {
+        if (!areDriverEntriesEqual(newLoadedDriverEntries, sortedCurrentDriverEntries)) {
             setDriverEntries(newLoadedDriverEntries);
         }
 
@@ -855,19 +860,22 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 if (field === 'teamId') {
                     const [catName, teamIdxStr] = value.split('-');
                     const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+                    // When teamId changes, regenerate the stable ID for the entry based on new team and current gender
+                    const newId = `${catName}-${teamIdx}-${entry.gender}`; 
                     return {
                         ...entry,
+                        id: newId, // Update the ID to a stable one
                         categoryName: catName || '',
                         teamIndex: teamIdx,
-                        // Ak sa zmení tím, resetujeme pohlavie a počet, aby sa vynútil nový výber
-                        gender: '',
-                        count: ''
+                        // Do NOT reset gender or count here, user is changing team for an existing driver entry
                     };
-                } else {
-                    return {
-                        ...entry,
-                        [field]: value
-                    };
+                } else { // field is 'gender' or 'count'
+                    // If gender changes, update the ID to reflect the new stable combination
+                    const updatedEntry = { ...entry, [field]: value };
+                    if (field === 'gender' && updatedEntry.categoryName && updatedEntry.teamIndex !== null && updatedEntry.gender) {
+                        updatedEntry.id = `${updatedEntry.categoryName}-${updatedEntry.teamIndex}-${updatedEntry.gender}`;
+                    }
+                    return updatedEntry;
                 }
             }
             return entry;
