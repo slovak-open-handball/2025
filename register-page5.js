@@ -95,7 +95,7 @@ function TeamAccommodationAndArrival({
             setArrivalMinutes('');
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
         } else if (newValue === 'vlastná doprava') {
-             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: [] });
+             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: { male: 0, female: 0 } }); // Initialize drivers object
         } else {
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString, drivers: null });
@@ -546,41 +546,59 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // NOVINKA: useEffect na inicializáciu driverEntries z teamsDataFromPage4
     React.useEffect(() => {
-        const initialDriverEntries = [];
+        const newLoadedDriverEntries = [];
+
         for (const categoryName in teamsDataFromPage4) {
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
-                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers) {
-                    if (team.arrival.drivers.male > 0) {
-                        initialDriverEntries.push({
-                            id: `initial-male-${categoryName}-${teamIndex}-${Math.random().toString(36).substr(2, 9)}`, // Unikátne ID
-                            count: team.arrival.drivers.male.toString(),
-                            gender: 'male',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
-                    }
-                    if (team.arrival.drivers.female > 0) {
-                        initialDriverEntries.push({
-                            id: `initial-female-${categoryName}-${teamIndex}-${Math.random().toString(36).substr(2, 9)}`, // Unikátne ID
-                            count: team.arrival.drivers.female.toString(),
-                            gender: 'female',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
-                    }
+                const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
+
+                // Male drivers
+                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers?.male > 0) {
+                    const stableId = `${teamStableIdPrefix}-male`;
+                    newLoadedDriverEntries.push({
+                        id: stableId, // Stable ID
+                        count: team.arrival.drivers.male.toString(),
+                        gender: 'male',
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                    });
+                }
+
+                // Female drivers
+                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers?.female > 0) {
+                    const stableId = `${teamStableIdPrefix}-female`;
+                    newLoadedDriverEntries.push({
+                        id: stableId, // Stable ID
+                        count: team.arrival.drivers.female.toString(),
+                        gender: 'female',
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                    });
                 }
             });
         }
-        // Nastavíme lokálny stav driverEntries iba ak sa líši
-        // Hlboké porovnanie je tu ideálne, ale pre jednoduchosť môžeme skúsiť porovnať dĺžky
-        // a vyhnúť sa zbytočným re-renderom.
-        // Pre istotu a aby React správne detekoval zmenu, budeme setovať, ak sa pole zmenilo.
-        if (JSON.stringify(initialDriverEntries.map(e => ({ cat: e.categoryName, teamIdx: e.teamIndex, gender: e.gender, count: e.count }))) !==
-            JSON.stringify(driverEntries.map(e => ({ cat: e.categoryName, teamIdx: e.teamIndex, gender: e.gender, count: e.count })))) {
-                setDriverEntries(initialDriverEntries);
-            }
 
-    }, [teamsDataFromPage4]); // Znovu spustiť, keď sa zmenia tímy (napr. pri návrate z inej stránky)
+        // Sort for consistent comparison and to ensure predictable order
+        newLoadedDriverEntries.sort((a, b) => a.id.localeCompare(b.id));
+
+        // Create a comparable representation of current driverEntries state
+        // Only include relevant properties for comparison
+        const currentDriverEntriesComparable = driverEntries.map(e => ({
+            id: `${e.categoryName}-${e.teamIndex}-${e.gender}`, // Normalize existing random IDs to stable ones for comparison
+            count: e.count,
+            gender: e.gender,
+            categoryName: e.categoryName,
+            teamIndex: e.teamIndex
+        })).sort((a, b) => a.id.localeCompare(b.id)); // Sort current state for consistent comparison
+
+
+        // Compare if there's a real difference in relevant data (stable IDs and counts)
+        // If the stringified representation differs, it means the content changed.
+        if (JSON.stringify(newLoadedDriverEntries) !== JSON.stringify(currentDriverEntriesComparable)) {
+            setDriverEntries(newLoadedDriverEntries);
+        }
+
+    }, [teamsDataFromPage4]); // Dependency on teamsDataFromPage4
 
 
     const generateUniqueId = () => `driver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -819,7 +837,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleAddDriverEntry = () => {
         setDriverEntries(prev => [...prev, {
-            id: generateUniqueId(),
+            id: generateUniqueId(), // This generates a random ID for new entries
             count: '',
             gender: '',
             categoryName: '',
