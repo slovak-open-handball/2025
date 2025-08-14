@@ -978,40 +978,23 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
 
-        const hasIncompleteEntry = driverEntries.some(entry =>
-            entry.count === '' ||
-            parseInt(entry.count, 10) <= 0 ||
-            entry.gender === '' ||
-            entry.categoryName === '' ||
-            entry.teamIndex === null
-        );
-        if (hasIncompleteEntry) {
-            return false;
-        }
-
-        const availableCombinations = new Set();
+        // Check if there are any available team-gender combinations left to add
         const usedCombinations = new Set();
-
-        // Build a set of currently used team-gender combinations from driverEntries
         driverEntries.forEach(entry => {
             if (entry.categoryName && entry.teamIndex !== null && entry.gender) {
                 usedCombinations.add(`${entry.categoryName}-${entry.teamIndex}-${entry.gender}`);
             }
         });
 
-        // Determine which combinations are still available for new entries
-        teamsWithOwnTransport.forEach(team => {
-            // For each team, check if male or female driver options are still available
+        for (const team of teamsWithOwnTransport) {
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
             
-            if (!usedCombinations.has(maleCombo)) availableCombinations.add(maleCombo);
-            if (!usedCombinations.has(femaleCombo)) availableCombinations.add(femaleCombo);
-        });
-
-        // The button is visible if there's at least one available combination left,
-        // and no incomplete current entries.
-        return availableCombinations.size > 0;
+            if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
+                return true; // There's at least one combination available
+            }
+        }
+        return false; // No more combinations can be added
     }, [driverEntries, teamsWithOwnTransport, loading]);
 
 
@@ -1310,7 +1293,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 transition-colors duration-200 focus:outline-none focus:shadow-outline
                                 ${loading ? 'opacity-70 cursor-not-allowed' : ''}
                             `.trim(),
-                            disabled: loading || driverEntries.some(entry => entry.count === '' || parseInt(entry.count, 10) <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) || !isAddDriverButtonVisible,
+                            disabled: loading // Only disable if loading
                         },
                         '+'
                     )
