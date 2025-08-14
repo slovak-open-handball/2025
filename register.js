@@ -10,10 +10,10 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
-import { Page3Form } from './register-page3.js';
-import { Page4Form } from './register-page4.js';
-import { Page5Form } from './register-page5.js';
-import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
+import { Page3Form } } from './register-page3.js';
+import { Page4Form } } from './register-page4.js';
+import { Page5Form } } from './register-page5.js';
+import { Page6Form } } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
@@ -414,30 +414,29 @@ function App() {
     setNotificationType(type);
   }, [setNotificationMessage, setShowNotification, setNotificationType]);
 
-  // HandleChange pre hlavné formData a teamsDataFromPage4
+  // HandleChange pre hlavné formData (teraz už NEBUDE spravovať teamsDataFromPage4 pri kompletných objektoch)
   const handleChange = (e) => {
     const { id, value } = e.target;
 
-    if (id === 'teamsDataFromPage4') {
-        // Spracovanie aktualizácií prichádzajúcich z TeamAccommodationAndArrival a TeamPackageSettings
+    // Tento blok je určený pre granulárne aktualizácie prichádzajúce z hlboko vnorených komponentov
+    // ako TeamAccommodationAndArrival alebo TeamPackageSettings.
+    // NEMÁ sa používať na nastavenie celého objektu teamsDataFromPage4.
+    if (id === 'teamsDataFromPage4_granular_update') { // Prekryštalizované ID na jasné oddelenie granulárnych aktualizácií
         setTeamsDataFromPage4(prevTeamsData => {
             const newTeamsData = { ...prevTeamsData };
 
-            // NOVINKA: Prísna kontrola platnosti categoryName pred jej použitím ako kľúča
             if (typeof value.categoryName !== 'string' || value.categoryName.trim() === '') {
-                console.warn("Attempted to update teamsDataFromPage4 with an invalid categoryName:", value.categoryName);
-                return prevTeamsData; // Vrátiť pôvodný stav, aby sa predišlo neplatnému kľúču 'undefined'
+                console.warn("Pokus o aktualizáciu teamsDataFromPage4 s neplatným názvom kategórie:", value.categoryName);
+                return prevTeamsData;
             }
 
-            // Ensure category and team objects exist before updating
             if (!newTeamsData[value.categoryName]) {
                 newTeamsData[value.categoryName] = [];
             }
             if (!newTeamsData[value.categoryName][value.teamIndex]) {
                 newTeamsData[value.categoryName][value.teamIndex] = {};
             }
-            // Aktualizujeme konkrétne pole tímu
-            // DÔLEŽITÉ: Používame hlbokú kópiu pre nested objekty ako 'arrival' alebo 'accommodation'
+
             if (value.field === 'accommodation' || value.field === 'arrival' || value.field === 'packageDetails') {
                 newTeamsData[value.categoryName][value.teamIndex] = {
                     ...newTeamsData[value.categoryName][value.teamIndex],
@@ -446,18 +445,17 @@ function App() {
             } else if (value.field === 'packageId') {
                  newTeamsData[value.categoryName][value.teamIndex] = {
                     ...newTeamsData[value.categoryName][value.teamIndex],
-                    [value.field]: value.data // 'value.data' je tu samotné ID balíčka
+                    [value.field]: value.data
                 };
-            }
-            else {
+            } else {
                 newTeamsData[value.categoryName][value.teamIndex] = {
                     ...newTeamsData[value.categoryName][value.teamIndex],
                     [value.field]: value.data
                 };
             }
-            console.log("handleChange - prevTeamsData:", prevTeamsData); // DEBUG
-            console.log("handleChange - value:", value); // DEBUG
-            console.log("handleChange - newTeamsData (after update):", newTeamsData); // DEBUG
+            console.log("handleChange - granulárna aktualizácia - prevTeamsData:", prevTeamsData); // DEBUG
+            console.log("handleChange - granulárna aktualizácia - value (vstup):", value); // DEBUG
+            console.log("handleChange - granulárna aktualizácia - newTeamsData (po aktualizácii):", newTeamsData); // DEBUG
             return newTeamsData;
         });
     } else if (id === 'billing') {
@@ -617,8 +615,9 @@ function App() {
             };
         });
     });
+    // Priama aktualizácia stavu teamsDataFromPage4
     setTeamsDataFromPage4(newTeamsDataForPage4);
-    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (after update):", newTeamsDataForPage4); // DEBUG
+    console.log("handleNextPage3ToPage4 - newTeamsDataForPage4 (po aktualizácii):", newTeamsDataForPage4); // DEBUG
 
     setFormData(prev => ({
         ...prev,
@@ -631,10 +630,11 @@ function App() {
 
   const handleNextPage4ToPage5 = async (teamsDataFromPage4Final) => {
     setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info');
 
+    // Priama aktualizácia stavu teamsDataFromPage4
     setTeamsDataFromPage4(teamsDataFromPage4Final);
-    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (received from Page4Form):", teamsDataFromPage4Final); // DEBUG
+    console.log("handleNextPage4ToPage5 - teamsDataFromPage4Final (prijaté z Page4Form, priame nastavenie):", teamsDataFromPage4Final); // DEBUG
 
     setPage(5);
     setLoading(false);
@@ -643,11 +643,11 @@ function App() {
   // NOVINKA: Funkcia na prechod z Page 5 na Page 6
   const handleNextPage5ToPage6 = async (finalTeamsDataFromPage5) => {
     setLoading(true);
-    dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
+    dispatchAppNotification('', 'info');
 
-    // Aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
+    // Priama aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
     setTeamsDataFromPage4(finalTeamsDataFromPage5);
-    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (received from Page5Form):", finalTeamsDataFromPage5); // DEBUG
+    console.log("handleNextPage5ToPage6 - finalTeamsDataFromPage5 (prijaté z Page5Form, priame nastavenie):", finalTeamsDataFromPage5); // DEBUG
 
     setPage(6); // Prechod na Page 6 (súhrn)
     setLoading(false);
@@ -1069,7 +1069,7 @@ function App() {
                   numberOfPlayersLimit: numberOfPlayersInTeam,
                   numberOfTeamMembersLimit: numberOfImplementationTeamMembers,
                   teamsDataFromPage4: teamsDataFromPage4,
-                  setTeamsDataFromPage4: setTeamsDataFromPage4,
+                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Posielame setTeamsDataFromPage4 pre granulárne aktualizácie v Page4Form
                   closeNotification: closeNotification,
                   setNotificationMessage: setNotificationMessage,
                   setShowNotification: setShowNotification,
@@ -1085,7 +1085,8 @@ function App() {
                   loading: loading,
                   setLoading: setLoading,
                   setRegistrationSuccess: setRegistrationSuccess,
-                  handleChange: handleChange, // Use the updated handleChange that supports nested team data
+                  handleChange: handleChange, // Tento handleChange je teraz *len* pre formData a nové granulárne aktualizácie teamsDataFromPage4
+                  setTeamsDataFromPage4: setTeamsDataFromPage4, // Explicitne posielame setter pre úplné aktualizácie z Page5Form
                   isRecaptchaReady: isRecaptchaReady,
                   tournamentStartDate: registrationStartDate,
                   tournamentEndDate: registrationEndDate,
