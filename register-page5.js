@@ -542,9 +542,38 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
     // Lokálny stav pre záznamy šoférov
-    const [driverEntries, setDriverEntries] = React.useState([]);
+    // NOVINKA: Zmenená inicializácia driverEntries priamo z teamsDataFromPage4
+    const [driverEntries, setDriverEntries] = React.useState(() => {
+        const initialDriverEntries = [];
+        for (const categoryName in teamsDataFromPage4) {
+            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
+                const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
+                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers) {
+                    if (team.arrival.drivers.male > 0) {
+                        initialDriverEntries.push({
+                            id: `${teamStableIdPrefix}-male`,
+                            count: team.arrival.drivers.male.toString(),
+                            gender: 'male',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
+                    if (team.arrival.drivers.female > 0) {
+                        initialDriverEntries.push({
+                            id: `${teamStableIdPrefix}-female`,
+                            count: team.arrival.drivers.female.toString(),
+                            gender: 'female',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
+                }
+            });
+        }
+        return initialDriverEntries;
+    });
 
-    // NOVINKA: useEffect na inicializáciu driverEntries z teamsDataFromPage4
+    // NOVINKA: useEffect na aktualizáciu driverEntries pri zmene teamsDataFromPage4
     // Toto je kľúčová zmena pre udrženie stavu šoférov
     React.useEffect(() => {
         const newLoadedDriverEntries = [];
@@ -580,10 +609,31 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             });
         }
-        // Priamo nastavíme stav driverEntries na základe newLoadedDriverEntries
-        // bez komplexného porovnávania, aby sa zabezpečila okamžitá synchronizácia.
-        // Dôležité je, že ID sú stabilné.
-        setDriverEntries(newLoadedDriverEntries);
+        
+        // Používame porovnanie pre istotu, aby sme predišli nekonečným cyklom,
+        // ak by sa teamsDataFromPage4 menilo, ale efektívne dáta šoférov nie.
+        const areDriverEntriesEqual = (arr1, arr2) => {
+            if (arr1.length !== arr2.length) return false;
+            // Sorting for consistent comparison regardless of order
+            const sortedArr1 = [...arr1].sort((a,b) => a.id.localeCompare(b.id));
+            const sortedArr2 = [...arr2].sort((a,b) => a.id.localeCompare(b.id));
+
+            for (let i = 0; i < sortedArr1.length; i++) {
+                if (sortedArr1[i].id !== sortedArr2[i].id || 
+                    sortedArr1[i].count !== sortedArr2[i].count ||
+                    sortedArr1[i].gender !== sortedArr2[i].gender ||
+                    sortedArr1[i].categoryName !== sortedArr2[i].categoryName ||
+                    sortedArr1[i].teamIndex !== sortedArr2[i].teamIndex) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // Aktualizujeme stav len vtedy, ak sa dáta skutočne zmenili
+        if (!areDriverEntriesEqual(newLoadedDriverEntries, driverEntries)) {
+            setDriverEntries(newLoadedDriverEntries);
+        }
 
     }, [teamsDataFromPage4]); // Dependency na teamsDataFromPage4
 
