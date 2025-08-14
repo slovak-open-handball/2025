@@ -1134,11 +1134,19 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
             ) : (
                 // Filter categories that might be undefined or null and ensure they are objects and have teams
-                Object.keys(teamsDataFromPage4).filter(categoryName => 
-                    teamsDataFromPage4[categoryName] && 
-                    typeof teamsDataFromPage4[categoryName] === 'object' &&
-                    teamsDataFromPage4[categoryName].length > 0 // NOVINKA: Kontrolujeme, či kategória obsahuje tímy
-                ).map(categoryName => (
+                Object.keys(teamsDataFromPage4).filter(categoryName => {
+                    const categoryData = teamsDataFromPage4[categoryName];
+                    // Ensure categoryName is a valid non-empty string
+                    if (typeof categoryName !== 'string' || categoryName.trim() === '') {
+                        return false;
+                    }
+                    // Ensure categoryData exists, is an object (not null), and is an array
+                    if (!categoryData || typeof categoryData !== 'object' || !Array.isArray(categoryData)) {
+                        return false;
+                    }
+                    // Ensure the array contains at least one non-null/non-undefined team
+                    return categoryData.some(team => team !== null && team !== undefined);
+                }).map(categoryName => (
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -1274,6 +1282,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     value: teamsDataToUpdate
                                 }
                             });
+                            console.log("Dáta odoslané rodičovi pred navigáciou späť:", teamsDataToUpdate); // DEBUG LOG
                             handlePrev(); // Potom prejdite späť
                         },
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
