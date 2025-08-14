@@ -549,6 +549,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         const newLoadedDriverEntries = [];
 
         for (const categoryName in teamsDataFromPage4) {
+            // Filter out any undefined/null categories at this level
+            if (!teamsDataFromPage4[categoryName]) continue;
+
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
 
@@ -740,6 +743,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
+            // Also filter out any undefined/null categories here
+            if (!teamsDataFromPage4[categoryName]) continue;
+
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 if (team.arrival?.type === 'vlastná doprava') {
                     teams.push({
@@ -933,6 +939,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         // Iterate through all teams in `updatedTeamsData` to set their `drivers` property correctly
         for (const categoryName in updatedTeamsData) {
+            if (!updatedTeamsData[categoryName]) continue; // Ensure category exists
+
             updatedTeamsData[categoryName] = updatedTeamsData[categoryName].map((team, teamIdx) => {
                 const teamId = `${categoryName}-${teamIdx}`;
                 if (team.arrival?.type === 'vlastná doprava') {
@@ -1002,6 +1010,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         for (const categoryName in teamsDataFromPage4) {
+            // Ensure category exists for validation
+            if (!teamsDataFromPage4[categoryName]) continue;
+
             for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
                 // Validate accommodation
                 if (accommodationTypes.length > 0 && (!team.accommodation?.type || team.accommodation.type.trim() === '')) {
@@ -1141,7 +1152,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             Object.keys(teamsDataFromPage4).length === 0 ? (
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
             ) : (
-                Object.keys(teamsDataFromPage4).map(categoryName => (
+                // Filter categories that might be undefined or null
+                Object.keys(teamsDataFromPage4).filter(categoryName => teamsDataFromPage4[categoryName]).map(categoryName => (
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -1214,7 +1226,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             type: 'number',
                                             className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                             value: entry.count,
-                                            onChange: (e) => handleDriverEntryChange(e.target.id, 'count', e.target.value),
+                                            onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value), // OPRAVA: Používame entry.id pri zmene
                                             placeholder: 'Zadajte počet', // OPRAVA: Zmenený placeholder
                                             min: 1,
                                             required: true,
