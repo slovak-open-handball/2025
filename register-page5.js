@@ -582,13 +582,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Používame hlboké porovnanie pre polia a objekty
         const areDriverEntriesEqual = (arr1, arr2) => {
             if (arr1.length !== arr2.length) return false;
-            for (let i = 0; i < arr1.length; i++) {
-                // Porovnávame len dôležité vlastnosti pre zistenie zmeny
-                if (arr1[i].id !== arr2[i].id || 
-                    arr1[i].count !== arr2[i].count ||
-                    arr1[i].gender !== arr2[i].gender ||
-                    arr1[i].categoryName !== arr2[i].categoryName ||
-                    arr1[i].teamIndex !== arr2[i].teamIndex) {
+            // Sorting both arrays to ensure consistent comparison order for stable IDs
+            const sortedArr1 = [...arr1].sort((a, b) => a.id.localeCompare(b.id));
+            const sortedArr2 = [...arr2].sort((a, b) => a.id.localeCompare(b.id));
+
+            for (let i = 0; i < sortedArr1.length; i++) {
+                // Compare relevant properties, excluding 'id' if it's a temporary one
+                const entry1 = sortedArr1[i];
+                const entry2 = sortedArr2[i];
+
+                // If both are temporary, their specific temp IDs don't matter, compare content
+                if (entry1.id.startsWith('driver-temp-') && entry2.id.startsWith('driver-temp-')) {
+                     if (entry1.count !== entry2.count ||
+                        entry1.gender !== entry2.gender ||
+                        entry1.categoryName !== entry2.categoryName ||
+                        entry1.teamIndex !== entry2.teamIndex) {
+                        return false;
+                    }
+                } else if (entry1.id !== entry2.id || 
+                    entry1.count !== entry2.count ||
+                    entry1.gender !== entry2.gender ||
+                    entry1.categoryName !== entry2.categoryName ||
+                    entry1.teamIndex !== entry2.teamIndex) {
                     return false;
                 }
             }
@@ -596,10 +611,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
         
         // Pred porovnaním zoradíme obe polia, aby bolo porovnanie konzistentné
-        newLoadedDriverEntries.sort((a,b) => a.id.localeCompare(b.id));
-        const sortedCurrentDriverEntries = [...driverEntries].sort((a,b) => a.id.localeCompare(b.id));
-
-        if (!areDriverEntriesEqual(newLoadedDriverEntries, sortedCurrentDriverEntries)) {
+        // NO LONGER SORTING newLoadedDriverEntries here, it should be sorted based on `id`
+        // if the stable ID is derived from categoryName-teamIndex-gender, it will naturally sort
+        // We will now sort the arrays inside the comparison function itself
+        if (!areDriverEntriesEqual(newLoadedDriverEntries, driverEntries)) {
             setDriverEntries(newLoadedDriverEntries);
         }
 
@@ -852,8 +867,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 teamIndex: null
             };
             const updatedEntries = [...prev, newEntry];
-            // NO LONGER CALLING updateParentTeamsData here.
-            // Changes will only be pushed to parent on form submission.
             return updatedEntries;
         });
     };
@@ -861,7 +874,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
-            updateParentTeamsData(updatedEntries); // Update parent state after removal
+            // After removing an entry, immediately update the parent state to reflect the change
+            // This is crucial for enabling/disabling the "Ďalej" button and "+" button correctly.
+            updateParentTeamsData(updatedEntries); 
             return updatedEntries;
         });
     };
@@ -897,8 +912,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                              newEntryState.id = generateUniqueId(); // Assign a new temporary ID
                         }
                     }
-                    // NO LONGER CALLING updateParentTeamsData here.
-                    // Changes will only be pushed to parent on form submission.
                     return newEntryState;
                 }
                 return entry;
@@ -994,6 +1007,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
             
+            // Check if either male or female driver option is still available for this team
             if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
                 return true; // There's at least one combination available
             }
@@ -1080,6 +1094,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
       : 'bg-blue-500 hover:bg-blue-700 text-white'
     }
   `;
+
+    const addButtonClasses = `
+        font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4
+        transition-colors duration-200 focus:outline-none focus:shadow-outline
+        ${!isAddDriverButtonVisible || loading
+            ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed'
+            : 'bg-blue-500 hover:bg-blue-700 text-white'
+        }`.trim();
+
 
     const handlePage5Submit = async (e) => {
         e.preventDefault();
@@ -1287,18 +1310,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             )
                         )
                     )),
-                    isAddDriverButtonVisible &&
                     React.createElement(
                         'button',
                         {
                             type: 'button',
                             onClick: handleAddDriverEntry,
-                            className: `
-                                bg-green-500 hover:bg-green-700 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4
-                                transition-colors duration-200 focus:outline-none focus:shadow-outline
-                                ${loading ? 'opacity-70 cursor-not-allowed' : ''}
-                            `.trim(),
-                            disabled: loading || driverEntries.some(entry => entry.count === '' || parseInt(entry.count, 10) <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null), // Add check for incomplete entries
+                            className: addButtonClasses,
+                            disabled: loading || !isAddDriverButtonVisible,
                         },
                         '+'
                     )
