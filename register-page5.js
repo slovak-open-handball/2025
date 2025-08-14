@@ -1096,7 +1096,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 React.createElement( 
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
-                                    React.createElement('div', { className: 'w-24 flex-shrink-0' },
+                                    React.createElement('div', { className: 'w-1/2 flex-shrink-0' },  // Zmenené na w-1/2
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Počet'),
                                         React.createElement('input', {
                                             type: 'number',
@@ -1109,7 +1109,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             disabled: loading,
                                         })
                                     ),
-                                    React.createElement('div', { className: 'flex-1 min-w-[100px] max-w-[120px]' }, 
+                                    React.createElement('div', { className: 'w-1/2' }, // Zmenené na w-1/2
                                         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Pohlavie'),
                                         React.createElement('select', {
                                             className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
