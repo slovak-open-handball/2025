@@ -430,10 +430,24 @@ function App() {
                 newTeamsData[value.categoryName][value.teamIndex] = {};
             }
             // Aktualizujeme konkrétne pole tímu
-            newTeamsData[value.categoryName][value.teamIndex] = {
-                ...newTeamsData[value.categoryName][value.teamIndex],
-                [value.field]: value.data
-            };
+            // DÔLEŽITÉ: Používame hlbokú kópiu pre nested objekty ako 'arrival' alebo 'accommodation'
+            if (value.field === 'accommodation' || value.field === 'arrival' || value.field === 'packageDetails') {
+                newTeamsData[value.categoryName][value.teamIndex] = {
+                    ...newTeamsData[value.categoryName][value.teamIndex],
+                    [value.field]: { ...newTeamsData[value.categoryName][value.teamIndex][value.field], ...value.data }
+                };
+            } else if (value.field === 'packageId') {
+                 newTeamsData[value.categoryName][value.teamIndex] = {
+                    ...newTeamsData[value.categoryName][value.teamIndex],
+                    [value.field]: value.data // 'value.data' je tu samotné ID balíčka
+                };
+            }
+            else {
+                newTeamsData[value.categoryName][value.teamIndex] = {
+                    ...newTeamsData[value.categoryName][value.teamIndex],
+                    [value.field]: value.data
+                };
+            }
             return newTeamsData;
         });
     } else if (id === 'billing') {
@@ -580,10 +594,9 @@ function App() {
                 tshirts: existingTeamData.tshirts && existingTeamData.tshirts.length > 0
                     ? existingTeamData.tshirts
                     : [{ size: '', quantity: '' }],
-                // NOVINKA: Inicializácia dát pre Page 5 (ubytovanie, príchod, balíček)
+                // NOVINKA: Zabezpečiť, aby sa zachovali aj dáta pre Page 5
                 accommodation: existingTeamData.accommodation || { type: '' },
-                // Inicializácia drivers ako prázdne pole, Page5Form ho naplní
-                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, // drivers by mal byť null, Page5Form ho naplní
+                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, // drivers by mal byť zachovaný z existingTeamData ak existuje
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null
             };
