@@ -10,10 +10,10 @@ const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwYROR2f
 // Import komponentov pre stránky formulára z ich samostatných súborov
 import { Page1Form, PasswordInput, CountryCodeModal } from './register-page1.js';
 import { Page2Form } from './register-page2.js';
-import { Page3Form } } from './register-page3.js';
-import { Page4Form } } from './register-page4.js';
-import { Page5Form } } from './register-page5.js';
-import { Page6Form } } from './register-page6.js'; // NOVINKA: Import pre Page6Form
+import { Page3Form } from './register-page3.js';
+import { Page4Form } from './register-page4.js';
+import { Page5Form } from './register-page5.js';
+import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6Form
 
 // Importy pre potrebné Firebase funkcie (modulárna syntax v9)
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
