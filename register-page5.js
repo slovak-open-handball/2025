@@ -513,7 +513,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
                             onClick: () => handleOptionClick(option.id),
                             className: optionClasses + (option.id === value ? ' bg-blue-200' : '')
                         },
-                        `${option.teamName} (${option.categoryName})`
+                        `${option.categoryName} - ${option.teamName}`
                     )
                 ))
             )
