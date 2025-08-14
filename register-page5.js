@@ -550,7 +550,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const categoryName in teamsDataFromPage4) {
             // Filter out any undefined/null categories at this level
-            if (!teamsDataFromPage4[categoryName]) continue;
+            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 const teamStableIdPrefix = `${categoryName}-${teamIndex}`;
@@ -744,7 +744,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
             // Also filter out any undefined/null categories here
-            if (!teamsDataFromPage4[categoryName]) continue;
+            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 if (team.arrival?.type === 'vlastná doprava') {
@@ -837,14 +837,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 teamIndex: null
             };
             const updatedEntries = [...prev, newEntry];
-            // Okamžitá aktualizácia rodičovského stavu po pridaní šoféra
-            const teamsDataAfterAdd = getAggregatedDriversData(updatedEntries);
-            handleChange({
-                target: {
-                    id: 'teamsDataFromPage4',
-                    value: teamsDataAfterAdd
-                }
-            });
+            // Neaktualizujeme parent state hneď, len lokálny stav
             return updatedEntries;
         });
     };
@@ -852,14 +845,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
-            // Okamžitá aktualizácia rodičovského stavu po odstránení šoféra
-            const teamsDataAfterRemoval = getAggregatedDriversData(updatedEntries);
-            handleChange({
-                target: {
-                    id: 'teamsDataFromPage4',
-                    value: teamsDataAfterRemoval
-                }
-            });
+            // Neaktualizujeme parent state hneď, len lokálny stav
             return updatedEntries;
         });
     };
@@ -899,16 +885,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
                 return entry;
             });
-
-            // Okamžitá aktualizácia rodičovského stavu po zmene údajov šoféra
-            const teamsDataAfterChange = getAggregatedDriversData(updatedEntries);
-            handleChange({
-                target: {
-                    id: 'teamsDataFromPage4',
-                    value: teamsDataAfterChange
-                }
-            });
-
+            // Neaktualizujeme parent state hneď, len lokálny stav
             return updatedEntries;
         });
     };
@@ -939,7 +916,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         // Iterate through all teams in `updatedTeamsData` to set their `drivers` property correctly
         for (const categoryName in updatedTeamsData) {
-            if (!updatedTeamsData[categoryName]) continue; // Ensure category exists
+            if (!updatedTeamsData[categoryName] || typeof updatedTeamsData[categoryName] !== 'object') continue; // Ensure category exists and is an object
 
             updatedTeamsData[categoryName] = updatedTeamsData[categoryName].map((team, teamIdx) => {
                 const teamId = `${categoryName}-${teamIdx}`;
@@ -1011,7 +988,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
         for (const categoryName in teamsDataFromPage4) {
             // Ensure category exists for validation
-            if (!teamsDataFromPage4[categoryName]) continue;
+            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             for (const team of (teamsDataFromPage4[categoryName] || []).filter(t => t)) {
                 // Validate accommodation
@@ -1110,11 +1087,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            // Získanie už aktuálnych dát šoférov z lokálneho stavu (ktorý je už synchronizovaný cez handleChange v handleDriverEntryChange, handleAddDriverEntry, handleRemoveDriverEntry)
+            // Získanie už aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred submitom
             const teamsDataToSubmit = getAggregatedDriversData(driverEntries);
-
-            // Následné odoslanie formulára s týmito dátami
-            await handleSubmit(teamsDataToSubmit);
+            handleChange({
+                target: {
+                    id: 'teamsDataFromPage4',
+                    value: teamsDataToSubmit
+                }
+            });
+            await handleSubmit(teamsDataToSubmit); // Následné odoslanie formulára s týmito dátami
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -1152,8 +1133,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             Object.keys(teamsDataFromPage4).length === 0 ? (
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
             ) : (
-                // Filter categories that might be undefined or null
-                Object.keys(teamsDataFromPage4).filter(categoryName => teamsDataFromPage4[categoryName]).map(categoryName => (
+                // Filter categories that might be undefined or null and ensure they are objects
+                Object.keys(teamsDataFromPage4).filter(categoryName => teamsDataFromPage4[categoryName] && typeof teamsDataFromPage4[categoryName] === 'object').map(categoryName => (
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -1281,9 +1262,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'button',
                         onClick: () => {
-                            // Získanie už aktuálnych dát šoférov z lokálneho stavu (ktorý je už synchronizovaný cez handleChange)
+                            // Získanie aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred navigáciou
                             const teamsDataToUpdate = getAggregatedDriversData(driverEntries);
-                            // Zavolanie handleChange na aktualizáciu rodičovského stavu
                             handleChange({
                                 target: {
                                     id: 'teamsDataFromPage4',
