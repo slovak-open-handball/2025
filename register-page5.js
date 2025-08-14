@@ -402,7 +402,7 @@ function TeamPackageSettings({
                                 'div',
                                 { className: 'ml-8 text-sm text-gray-600 mt-2' },
                                 (pkg.meals && (tournamentDays.length > 0 || Object.keys(pkg.meals).length > 0)) ? (
-                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
+                                    [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {})).filter(key => key !== 'participantCard')])].sort().map(date => {
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
 
@@ -544,57 +544,24 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
     // Lokálny stav pre záznamy šoférov
-    const [driverEntries, setDriverEntries] = React.useState(() => {
-        const initialDriverEntries = [];
-        for (const categoryName in teamsDataFromPage4) {
-            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
-                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers) {
-                    if (team.arrival.drivers.male > 0) {
-                        initialDriverEntries.push({
-                            id: generateUniqueId(), // Use a new unique ID for the UI row
-                            count: team.arrival.drivers.male.toString(),
-                            gender: 'male',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
-                    }
-                    if (team.arrival.drivers.female > 0) {
-                        initialDriverEntries.push({
-                            id: generateUniqueId(), // Use a new unique ID for the UI row
-                            count: team.arrival.drivers.female.toString(),
-                            gender: 'female',
-                            categoryName: categoryName,
-                            teamIndex: teamIndex,
-                        });
-                    }
-                }
-            });
-        }
-        return initialDriverEntries;
-    });
+    const [driverEntries, setDriverEntries] = React.useState([]); // Initialize as empty array, useEffect will populate it
 
-    // useEffect na aktualizáciu driverEntries pri zmene teamsDataFromPage4
+    // This useEffect will now be the sole source of truth for driverEntries based on teamsDataFromPage4
     React.useEffect(() => {
-        const newLoadedDriverEntries = [];
-
+        const newDesiredDriverEntries = [];
         for (const categoryName in teamsDataFromPage4) {
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
                 if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers) {
-                    // Male drivers
                     if (team.arrival.drivers.male > 0) {
-                        newLoadedDriverEntries.push({
-                            id: generateUniqueId(), // Generate new unique ID for effect's new entries
+                        newDesiredDriverEntries.push({
                             count: team.arrival.drivers.male.toString(),
                             gender: 'male',
                             categoryName: categoryName,
                             teamIndex: teamIndex,
                         });
                     }
-
-                    // Female drivers
                     if (team.arrival.drivers.female > 0) {
-                        newLoadedDriverEntries.push({
-                            id: generateUniqueId(), // Generate new unique ID for effect's new entries
+                        newDesiredDriverEntries.push({
                             count: team.arrival.drivers.female.toString(),
                             gender: 'female',
                             categoryName: categoryName,
@@ -604,31 +571,76 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
             });
         }
-        
-        // Používame porovnanie pre istotu, aby sme predišli nekonečným cyklom,
-        // ak by sa teamsDataFromPage4 menilo, ale efektívne dáta šoférov nie.
-        const areDriverEntriesEqual = (arr1, arr2) => {
-            if (arr1.length !== arr2.length) return false;
-            // Sorting for consistent comparison regardless of order (only compare data, not ephemeral ID)
-            const getSortableData = (entry) => `${entry.categoryName}-${entry.teamIndex}-${entry.gender}-${entry.count}`;
-            const sortedArr1 = [...arr1].map(getSortableData).sort();
-            const sortedArr2 = [...arr2].map(getSortableData).sort();
 
-            for (let i = 0; i < sortedArr1.length; i++) {
-                if (sortedArr1[i] !== sortedArr2[i]) {
-                    return false;
+        const reconciledDriverEntries = [];
+        const usedLogicalKeys = new Set(); // To prevent duplicate logical entries in reconciled list
+
+        newDesiredDriverEntries.forEach(desiredEntry => {
+            const { categoryName, teamIndex, gender, count } = desiredEntry;
+            const logicalKey = `${categoryName}-${teamIndex}-${gender}`;
+
+            if (usedLogicalKeys.has(logicalKey)) {
+                return; // Skip if this logical entry is already processed
+            }
+            usedLogicalKeys.add(logicalKey);
+
+            let foundExistingEntry = null;
+            // Try to find an existing entry in the current driverEntries with the same logical key
+            for (const existingEntry of driverEntries) {
+                if (existingEntry.categoryName === categoryName &&
+                    existingEntry.teamIndex === teamIndex &&
+                    existingEntry.gender === gender)
+                {
+                    foundExistingEntry = existingEntry;
+                    break;
                 }
+            }
+
+            if (foundExistingEntry) {
+                // Reuse existing ID, but update count if it changed
+                reconciledDriverEntries.push({ ...foundExistingEntry, count: desiredEntry.count });
+            } else {
+                // This is a new logical entry, assign a new stable ID
+                reconciledDriverEntries.push({ id: generateUniqueId(), ...desiredEntry });
+            }
+        });
+
+        // Filter out any entries from `reconciledDriverEntries` that are no longer present in `newDesiredDriverEntries`
+        // (i.e., their associated team changed transport type or driver count became zero)
+        const finalReconciledEntries = reconciledDriverEntries.filter(entry => {
+            const team = teamsDataFromPage4[entry.categoryName]?.[entry.teamIndex];
+            if (!team || team.arrival?.type !== 'vlastná doprava' || !team.arrival?.drivers) {
+                return false; // Team no longer uses own transport or has no drivers
+            }
+            // Check if the specific gender count is still > 0 in teamsDataFromPage4
+            if (entry.gender === 'male' && (team.arrival.drivers.male || 0) <= 0) return false;
+            if (entry.gender === 'female' && (team.arrival.drivers.female || 0) <= 0) return false;
+            return true;
+        });
+
+
+        // Compare content before updating state to avoid unnecessary renders
+        const areContentsEqual = (arr1, arr2) => {
+            if (arr1.length !== arr2.length) return false;
+            const normalize = (entry) => JSON.stringify({
+                categoryName: entry.categoryName,
+                teamIndex: entry.teamIndex,
+                gender: entry.gender,
+                count: entry.count
+            });
+            const sorted1 = arr1.map(normalize).sort();
+            const sorted2 = arr2.map(normalize).sort();
+            for (let i = 0; i < sorted1.length; i++) {
+                if (sorted1[i] !== sorted2[i]) return false;
             }
             return true;
         };
 
-        // Aktualizujeme stav len vtedy, ak sa dáta skutočne zmenili
-        // Pri porovnávaní dát šoférov ignorujeme ID, pretože sú generované dynamicky pre UI
-        if (!areDriverEntriesEqual(newLoadedDriverEntries, driverEntries)) {
-            setDriverEntries(newLoadedDriverEntries);
+        if (!areContentsEqual(finalReconciledEntries, driverEntries)) {
+            setDriverEntries(finalReconciledEntries);
         }
 
-    }, [teamsDataFromPage4]); // Dependency na teamsDataFromPage4
+    }, [teamsDataFromPage4]); // This is the primary dependency. driverEntries is used for finding existing IDs.
 
 
     const getDaysBetween = (start, end) => {
@@ -864,79 +876,101 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const handleAddDriverEntry = () => {
-        setDriverEntries(prev => [...prev, {
-            id: generateUniqueId(), // This generates a random ID for new entries, which will be stable.
-            count: '',
-            gender: '',
-            categoryName: '',
-            teamIndex: null
-        }]);
+        setDriverEntries(prev => {
+            const newEntries = [...prev, {
+                id: generateUniqueId(), // This generates a random ID for new entries, which will be stable.
+                count: '',
+                gender: '',
+                categoryName: '',
+                teamIndex: null
+            }];
+            updateParentTeamsData(newEntries); // Update parent state immediately after adding
+            return newEntries;
+        });
     };
 
     const handleRemoveDriverEntry = (idToRemove) => {
-        setDriverEntries(prev => prev.filter(entry => entry.id !== idToRemove));
+        setDriverEntries(prev => {
+            const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
+            updateParentTeamsData(updatedEntries); // Update parent state after removal
+            return updatedEntries;
+        });
     };
 
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.map(entry => {
                 if (entry.id === id) {
-                    let updatedEntry = { ...entry, [field]: value };
+                    let newEntryState = { ...entry, [field]: value };
                     if (field === 'teamId') {
                         const [catName, teamIdxStr] = value.split('-');
-                        const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                        updatedEntry = {
-                            ...updatedEntry,
-                            categoryName: catName || '',
-                            teamIndex: teamIdx,
-                        };
-                        // DÔLEŽITÉ: Nemeňte 'id' položky! Musí zostať stabilné pre React 'key' prop.
-                        // updatedEntry.id = `${updatedEntry.categoryName}-${updatedEntry.teamIndex}-${updatedEntry.gender}`; // TOTO JE ODSTRÁNENÉ
-                    } else if (field === 'gender') {
-                        // DÔLEŽITÉ: Nemeňte 'id' položky! Musí zostať stabilné pre React 'key' prop.
-                        // updatedEntry.id = `${updatedEntry.categoryName}-${updatedEntry.teamIndex}-${updatedEntry.gender}`; // TOTO JE ODSTRÁNENÉ
+                        newEntryState.categoryName = catName || '';
+                        newEntryState.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
                     }
-                    return updatedEntry;
+                    return newEntryState;
                 }
                 return entry;
             });
+            updateParentTeamsData(updatedEntries); // Update parent state immediately
+            return updatedEntries;
+        });
+    };
 
-            // Agregácia a odoslanie dát o šoféroch do nadradeného komponentu (App.js)
-            const aggregatedDrivers = {};
-            updatedEntries.forEach(entry => {
-                const teamId = `${entry.categoryName}-${entry.teamIndex}`;
-                if (entry.categoryName && entry.teamIndex !== null && entry.gender && entry.count !== '') {
-                    const count = parseInt(entry.count, 10);
-                    if (!isNaN(count) && count > 0) {
-                        if (!aggregatedDrivers[teamId]) {
-                            aggregatedDrivers[teamId] = { male: 0, female: 0 };
-                        }
-                        if (entry.gender === 'male') {
-                            aggregatedDrivers[teamId].male += count;
-                        } else {
-                            aggregatedDrivers[teamId].female += count;
-                        }
+    const updateParentTeamsData = (currentDriverEntries) => {
+        const aggregatedDrivers = {};
+        // Aggregate drivers from current `driverEntries`
+        currentDriverEntries.forEach(entry => {
+            const teamId = `${entry.categoryName}-${entry.teamIndex}`;
+            if (entry.categoryName && entry.teamIndex !== null && entry.gender && entry.count !== '') {
+                const count = parseInt(entry.count, 10);
+                if (!isNaN(count) && count > 0) {
+                    if (!aggregatedDrivers[teamId]) {
+                        aggregatedDrivers[teamId] = { male: 0, female: 0 };
+                    }
+                    if (entry.gender === 'male') {
+                        aggregatedDrivers[teamId].male += count;
+                    } else {
+                        aggregatedDrivers[teamId].female += count;
                     }
                 }
+            }
+        });
+
+        // Create a deep copy of teamsDataFromPage4 to avoid direct mutation issues
+        const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
+
+        // Iterate through all teams in `updatedTeamsData` to set their `drivers` property correctly
+        for (const categoryName in updatedTeamsData) {
+            updatedTeamsData[categoryName] = updatedTeamsData[categoryName].map((team, teamIdx) => {
+                const teamId = `${categoryName}-${teamIdx}`;
+                if (team.arrival?.type === 'vlastná doprava') {
+                    // Assign aggregated drivers if 'vlastná doprava'
+                    const driversData = aggregatedDrivers[teamId] || { male: 0, female: 0 };
+                    return {
+                        ...team,
+                        arrival: {
+                            ...team.arrival,
+                            drivers: driversData
+                        }
+                    };
+                }
+                // Ensure drivers are null if not 'vlastná doprava'
+                return {
+                    ...team,
+                    arrival: {
+                        ...team.arrival,
+                        drivers: null 
+                    }
+                };
             });
+        }
 
-            // Aktualizácia teamsDataFromPage4 v App komponente pre každý tím, ktorý má vlastnú dopravu.
-            // Je dôležité iterovať cez teamsWithOwnTransport, aby sa aktualizovali len relevantné tímy.
-            teamsWithOwnTransport.forEach(team => {
-                const teamId = team.id;
-                const [catName, teamIdxStr] = teamId.split('-');
-                const teamIdx = parseInt(teamIdxStr, 10);
-
-                const currentDrivers = aggregatedDrivers[teamId] || { male: 0, female: 0 };
-                
-                // Používame handleTeamDataChange na aktualizáciu drivers pre konkrétny tím
-                handleTeamDataChange(catName, teamIdx, 'arrival', {
-                    ...teamsDataFromPage4[catName]?.[teamIdx]?.arrival, // Zachovať existujúce arrival dáta
-                    drivers: currentDrivers
-                });
-            });
-
-            return updatedEntries;
+        // Call the parent handleChange with the fully updated teamsDataFromPage4
+        handleChange({
+            target: {
+                id: 'teamsDataFromPage4',
+                value: updatedTeamsData
+            }
         });
     };
 
