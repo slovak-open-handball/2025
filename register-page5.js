@@ -99,7 +99,7 @@ function TeamAccommodationAndArrival({
             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: null });
         } else if (newValue === 'vlastná doprava') {
              // For 'vlastná doprava', drivers will be managed globally. Initialize with 0 for validation.
-             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: { male: 0, female: 0 } });
+             handleChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: [] }); // Zmena na prázdne pole
         } else {
             // Ensure time is updated correctly when arrival type changes to time-based
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
@@ -634,6 +634,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         });
     };
 
+
     // Zoznam tímov, ktoré si zvolili "vlastná doprava"
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
@@ -669,24 +670,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         });
 
-        const options = [{ value: '', label: '-- Vyberte tím --' }];
+        const options = [];
         teamsWithOwnTransport.forEach(team => {
-            // Skontrolujte, či je tento tím už pokrytý pre mužské AJ ženské pohlavie v iných záznamoch
-            const maleTakenByOtherEntry = usedTeamGenderCombinations.has(`${team.id}-male`);
-            const femaleTakenByOtherEntry = usedTeamGenderCombinations.has(`${team.id}-female`);
+            const maleCombo = `${team.id}-male`;
+            const femaleCombo = `${team.id}-female`;
+            
+            // Overíme, či kombinácia tím-pohlavie je už použitá v iných záznamoch
+            const isMaleTaken = usedTeamGenderCombinations.has(maleCombo);
+            const isFemaleTaken = usedTeamGenderCombinations.has(femaleCombo);
+            
+            // Pridáme možnosť tímu iba ak nie je úplne "vyčerpaný" pre obe pohlavia, alebo ak aktuálny záznam upravuje tento tím
+            const currentEntryTeamId = currentEntry ? `${currentEntry.categoryName}-${currentEntry.teamIndex}` : null;
 
-            // Ak aktuálny záznam upravuje TENTO konkrétny tím, mal by byť vždy dostupný.
-            const isCurrentEntryEditingThisTeam = currentEntry && currentEntry.categoryName === team.categoryName && currentEntry.teamIndex === team.teamIndex;
-
-            if (!maleTakenByOtherEntry || !femaleTakenByOtherEntry || isCurrentEntryEditingThisTeam) {
-                // Pridajte, iba ak nie je úplne 'zadaný' inými záznamami pre obe pohlavia, alebo ak aktuálny záznam upravuje tento tím
-                options.push({ value: team.id, label: `${team.teamName} (${team.categoryName})` });
+            if (currentEntryTeamId === team.id) { // Ak aktuálny záznam upravuje tento tím
+                options.push(team);
+            } else if (!isMaleTaken || !isFemaleTaken) { // Ak tím nie je obsadený pre obe pohlavia inými záznamami
+                 options.push(team);
             }
         });
 
-        // Zoraďte možnosti (okrem placeholderu)
-        const sortedOptions = options.slice(1).sort((a, b) => a.label.localeCompare(b.label));
-        return [options[0], ...sortedOptions];
+        // Zoraďte možnosti (okrem placeholderu, ktorý sa pridáva manuálne)
+        const sortedOptions = options.sort((a, b) => a.teamName.localeCompare(b.teamName));
+        return sortedOptions;
     };
 
     // Funkcia na pridanie nového záznamu o šoférovi
@@ -707,20 +712,40 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     // Funkcia na zmenu hodnoty v zázname o šoférovi
     const handleDriverEntryChange = (id, field, value) => {
-        setDriverEntries(prev => prev.map(entry =>
-            entry.id === id ? {
-                ...entry,
-                [field]: value
-            } : entry
-        ));
+        setDriverEntries(prev => prev.map(entry => {
+            if (entry.id === id) {
+                if (field === 'teamId') { // Ak sa mení selectbox tímu
+                    const [catName, teamIdxStr] = value.split('-');
+                    const teamIdx = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
+                    return {
+                        ...entry,
+                        categoryName: catName || '',
+                        teamIndex: teamIdx
+                    };
+                } else {
+                    return {
+                        ...entry,
+                        [field]: value
+                    };
+                }
+            }
+            return entry;
+        }));
     };
 
     // Kontrola, či je tlačidlo na pridanie šoféra viditeľné
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
         
-        // Ak už existuje aspoň jeden záznam, ktorý je neúplný, nedovolí pridať ďalší.
-        if (driverEntries.some(entry => entry.count === '' || parseInt(entry.count, 10) <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null)) {
+        // Ak už existuje aspoň jeden záznam, ktorý je neúplný (tzn. jedno z jeho polí je prázdne/neplatné)
+        const hasIncompleteEntry = driverEntries.some(entry => 
+            entry.count === '' || 
+            parseInt(entry.count, 10) <= 0 || 
+            entry.gender === '' || 
+            entry.categoryName === '' || 
+            entry.teamIndex === null
+        );
+        if (hasIncompleteEntry) {
             return false;
         }
 
@@ -807,13 +832,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         // Skontrolujte, či každý tím s "vlastná doprava" má priradeného aspoň jedného šoféra
-        for (const team of teamsWithOwnTransport) {
-            const teamId = team.id;
+        // Agregácia z driverEntries je teraz komplexnejšia, musíme to prejsť ručne
+        const teamsRequiringDrivers = teamsWithOwnTransport.map(team => team.id);
+        const teamsWithAssignedDrivers = new Set();
+        
+        driverEntries.forEach(entry => {
+            if (entry.categoryName && entry.teamIndex !== null) {
+                teamsWithAssignedDrivers.add(`${entry.categoryName}-${entry.teamIndex}`);
+            }
+        });
+
+        // Pre každý tím, ktorý si zvolil vlastnú dopravu, musíme overiť, či má aspoň jedného šoféra
+        for (const teamId of teamsRequiringDrivers) {
+            if (!teamsWithAssignedDrivers.has(teamId)) {
+                return false; // Tím s vlastnou dopravou nemá priradených žiadnych šoférov
+            }
+            // A tiež overiť, či celkový počet šoférov pre tento tím je > 0
             const assigned = aggregatedDrivers[teamId];
             if (!assigned || (assigned.male === 0 && assigned.female === 0)) {
-                return false; // Tím s "vlastná doprava" nemá priradených žiadnych šoférov v driverEntries
+                return false; // Tím s vlastnou dopravou má priradený záznam, ale celkový počet šoférov je 0
             }
         }
+
         return true;
     }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
 
@@ -844,52 +884,49 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const teamsDataForSubmission = JSON.parse(JSON.stringify(teamsDataFromPage4));
 
             // Reset počtov šoférov pre všetky tímy v teamsDataForSubmission, ktoré používajú 'vlastná doprava'
+            // Aplikujeme agregované počty z driverEntries do teamsDataForSubmission
             for (const categoryName in teamsDataForSubmission) {
-                teamsDataForSubmission[categoryName] = teamsDataForSubmission[categoryName].map(team => {
+                teamsDataForSubmission[categoryName] = teamsDataForSubmission[categoryName].map((team, teamIdx) => {
+                    const teamId = `${categoryName}-${teamIdx}`;
                     if (team.arrival?.type === 'vlastná doprava') {
+                        // Vypočítame agregované počty šoférov pre tento konkrétny tím
+                        let maleDriversCount = 0;
+                        let femaleDriversCount = 0;
+                        driverEntries.filter(entry => 
+                            entry.categoryName === categoryName && 
+                            entry.teamIndex === teamIdx
+                        ).forEach(entry => {
+                            const count = parseInt(entry.count, 10);
+                            if (!isNaN(count) && count > 0) {
+                                if (entry.gender === 'male') {
+                                    maleDriversCount += count;
+                                } else if (entry.gender === 'female') {
+                                    femaleDriversCount += count;
+                                }
+                            }
+                        });
+
                         return {
                             ...team,
                             arrival: {
                                 ...team.arrival,
-                                drivers: { male: 0, female: 0 } // Reset pre agregáciu
+                                drivers: { male: maleDriversCount, female: femaleDriversCount }
                             }
                         };
                     }
-                    return team;
-                });
-            }
-
-            // Agregácia šoférov z driverEntries do teamsDataForSubmission
-            driverEntries.forEach(entry => {
-                const { count, gender, categoryName, teamIndex } = entry;
-                const parsedCount = parseInt(count, 10);
-                if (parsedCount > 0 && categoryName && teamIndex !== null && gender) {
-                    const team = teamsDataForSubmission[categoryName]?.[teamIndex];
-                    if (team && team.arrival?.type === 'vlastná doprava') {
-                        if (gender === 'male') {
-                            team.arrival.drivers.male += parsedCount;
-                        } else if (gender === 'female') {
-                            team.arrival.drivers.female += parsedCount;
+                    // Ak nie je vlastná doprava, drivers by mal byť null
+                    return {
+                        ...team,
+                        arrival: {
+                            ...team.arrival,
+                            drivers: null
                         }
-                    }
-                }
-            });
-
-            // Aktualizujte stav teamsDataFromPage4 v nadradenom komponente (App.js)
-            // Toto prechádza každým tímom a volá handleTeamDataChange pre aktualizáciu driver dát
-            for (const categoryName in teamsDataForSubmission) {
-                teamsDataForSubmission[categoryName].forEach((team, teamIndex) => {
-                    if (team.arrival?.type === 'vlastná doprava') {
-                         handleTeamDataChange(categoryName, teamIndex, 'arrival', {
-                            type: team.arrival.type,
-                            time: team.arrival.time,
-                            drivers: team.arrival.drivers // Toto budú agregované dáta šoférov
-                        });
-                    }
+                    };
                 });
             }
-
-            await handleSubmit(); // Zavolajte handleSubmit nadradeného komponentu
+            
+            // Nakoniec, po agregácii všetkých dát o šoféroch do teamsDataForSubmission, odovzdáme túto aktualizovanú štruktúru ďalej
+            await handleSubmit(teamsDataForSubmission); // handleSubmit from App.js now takes one argument (teamsDataForSubmission)
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -901,7 +938,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const generateTimeOptions = (limit) => {
-        const options = [React.createElement('option', { key: "", value: "" }, "--")];
+        const options = [React.createElement('option', { key: "placeholder", value: "" }, "--")];
         for (let i = 0; i < limit; i++) {
             const value = i.toString().padStart(2, '0');
             options.push(React.createElement('option', { key: value, value: value }, value));
@@ -978,43 +1015,48 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
-                            { key: entry.id, className: 'flex items-center space-x-2 mb-2' },
+                            { key: entry.id, className: 'flex items-center space-x-2 mb-2 w-full' }, {/* Pridaná trieda w-full */}
                             // Input pre počet šoférov
-                            React.createElement('input', {
-                                type: 'number',
-                                className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-24',
-                                value: entry.count,
-                                onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
-                                placeholder: 'Počet',
-                                min: 1,
-                                required: true,
-                                disabled: loading,
-                            }),
+                            React.createElement('div', { className: 'w-24' }, {/* Obalenie inputu pre kontrolu šírky */}
+                                React.createElement('input', {
+                                    type: 'number',
+                                    className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    value: entry.count,
+                                    onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
+                                    placeholder: 'Počet',
+                                    min: 1,
+                                    required: true,
+                                    disabled: loading,
+                                })
+                            ),
                             // Selectbox pre pohlavie
-                            React.createElement('select', {
-                                className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
-                                value: entry.gender,
-                                onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
-                                required: true,
-                                disabled: loading,
-                            }, getAvailableGenderOptions().map(opt => ( // Vždy ponúka obe pohlavia, jedinečnosť sa kontroluje vo validácii
-                                React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
-                            ))),
+                            React.createElement('div', { className: 'flex-1 min-w-[120px]' }, {/* Flexibilná šírka s min-width */}
+                                React.createElement('select', {
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    value: entry.gender,
+                                    onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
+                                    required: true,
+                                    disabled: loading,
+                                }, getAvailableGenderOptions().map(opt => (
+                                    React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
+                                ))
+                                )
+                            ),
                             // Selectbox pre tím
-                            React.createElement('select', {
-                                className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 flex-1',
-                                value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '', // Combine for value
-                                onChange: (e) => {
-                                    const [catName, teamIdx] = e.target.value.split('-');
-                                    handleDriverEntryChange(entry.id, 'categoryName', catName);
-                                    handleDriverEntryChange(entry.id, 'teamIndex', parseInt(teamIdx, 10));
-                                },
-                                required: true,
-                                disabled: loading,
-                            }, React.createElement('option', { value: '' }, '-- Vyberte tím --'),
-                               getAvailableTeamOptions(entry).map(team => ( // Filtrované tímy
-                                React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
-                            ))),
+                            React.createElement('div', { className: 'flex-1 min-w-[200px]' }, {/* Flexibilná šírka s min-width */}
+                                React.createElement('select', {
+                                    className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full', {/* w-full v rámci obalu */}
+                                    value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
+                                    onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value), // Zmena field na 'teamId' pre správne spracovanie
+                                    required: true,
+                                    disabled: loading,
+                                }, 
+                                React.createElement('option', { key: "team-placeholder", value: '' }, '-- Vyberte tím --'), {/* Kľúč pre placeholder */}
+                                getAvailableTeamOptions(entry).map(team => (
+                                    React.createElement('option', { key: team.id, value: team.id }, `${team.teamName} (${team.categoryName})`)
+                                ))
+                                )
+                            ),
                             // Tlačidlo na odstránenie riadku
                             React.createElement(
                                 'button',
