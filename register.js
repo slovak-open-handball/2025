@@ -19,7 +19,7 @@ import { Page6Form } from './register-page6.js'; // NOVINKA: Import pre Page6For
 // POZNÁMKA: initializeApp, getAuth, getFirestore nie sú tu importované, pretože sa očakávajú globálne.
 // OPRAVENÁ CHYBA: Zmenené '=>' na 'from'
 import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 // Pomocná funkcia na formátovanie objektu Date do lokálneho reťazca 'YYYY-MM-DDTHH:mm'
@@ -583,7 +583,7 @@ function App() {
                 // NOVINKA: Inicializácia dát pre Page 5 (ubytovanie, príchod, balíček)
                 accommodation: existingTeamData.accommodation || { type: '' },
                 // Inicializácia drivers ako prázdne pole, Page5Form ho naplní
-                arrival: existingTeamData.arrival || { type: '', time: null, drivers: [] }, 
+                arrival: existingTeamData.arrival || { type: '', time: null, drivers: null }, // drivers by mal byť null, Page5Form ho naplní
                 packageId: existingTeamData.packageId || '',
                 packageDetails: existingTeamData.packageDetails || null
             };
@@ -611,12 +611,12 @@ function App() {
   };
 
   // NOVINKA: Funkcia na prechod z Page 5 na Page 6
-  const handleNextPage5ToPage6 = async () => {
+  const handleNextPage5ToPage6 = async (finalTeamsDataFromPage5) => {
     setLoading(true);
     dispatchAppNotification('', 'info'); // Vynulovanie notifikácií
 
-    // Validácia Page5 (ubytovanie a príchod) sa vykoná priamo v Page5Form
-    // Pokiaľ by tu bola nejaká dodatočná validácia, pridajte ju sem.
+    // Aktualizácia hlavného stavu teamsDataFromPage4 s finálnymi dátami z Page5
+    setTeamsDataFromPage4(finalTeamsDataFromPage5);
 
     setPage(6); // Prechod na Page 6 (súhrn)
     setLoading(false);
@@ -634,7 +634,8 @@ function App() {
     isRegisteringRef.current = true;
 
     const fullPhoneNumber = `${selectedCountryDialCode}${formData.contactPhoneNumber}`;
-    // OPRAVA: Inicializácia teamsDataToSaveFinal ihneď po deklarácii, aby bola vždy definovaná
+    
+    // Vytvorenie hlbokej kópie teamsDataFromPage4, aby sme mohli manipulovať s dátami bez vedľajších efektov
     let teamsDataToSaveFinal = JSON.parse(JSON.stringify(teamsDataFromPage4)); 
 
     try {
@@ -694,73 +695,52 @@ function App() {
 
       const userDocRef = doc(collection(firestoreDb, 'users'), user.uid);
       try {
-        // Dôležitá zmena: Správne agregujeme dáta o šoféroch pre uloženie
-        // teamsDataToSaveFinal už prichádza s driverEntries spracovanými z Page5Form.
-        // Avšak, štruktúra driverEntries bola zmenená na samostatné záznamy.
-        // Potrebujeme prejsť pôvodným teamsDataFromPage4 (teraz teamsDataToSaveFinal)
-        // a zabezpečiť, že 'drivers' je prázdny objekt na začiatku,
-        // a potom ho naplniť z agregovaných hodnôt.
-
-        // Príprava dát šoférov pre Firestore
-        const aggregatedDriversForFirestore = {}; // Bude obsahovať { 'category-teamIndex': { male: count, female: count } }
-
-        // Zhromaždíme počty šoférov pre každý tím z driverEntries, ktoré už boli spracované v Page5Form
-        // Tieto dáta už sú správne na základe vstupov v Page5Form a sú uložené v teamsDataFromPage4
-        // ktoré sú následne skopírované do teamsDataToSaveFinal.
-        // Takže stačí, ak zabezpečíme, aby team.arrival.drivers bola správna štruktúra.
-
+        // Prejdite `teamsDataToSaveFinal` a zabezpečte správnu štruktúru `drivers`
+        // Page5Form už odosiela správne agregované dáta o šoféroch v `team.arrival.drivers`
+        // takto: { male: count, female: count }.
+        // Táto slučka zabezpečuje, že všetky tímy majú správne inicializované fields
+        // a `drivers` je null, ak nebola zvolená 'vlastná doprava'.
         for (const categoryName in teamsDataToSaveFinal) {
             teamsDataToSaveFinal[categoryName] = teamsDataToSaveFinal[categoryName].map(team => {
-                // Ensure drivers is an object, not an array or null
-                if (team.arrival && team.arrival.type === 'vlastná doprava') {
-                    // Page5Form by už mala nastaviť drivers na { male: aggregatedMale, female: aggregatedFemale }
-                    // ale pre istotu znova normalizujeme.
-                    const maleDrivers = team.arrival.drivers?.male !== undefined ? team.arrival.drivers.male : 0;
-                    const femaleDrivers = team.arrival.drivers?.female !== undefined ? team.arrival.drivers.female : 0;
-                    return {
-                        ...team,
-                        players: team.players === '' ? 0 : team.players,
-                        womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
-                        menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
-                        tshirts: team.tshirts.map(tshirt => ({
-                            ...tshirt,
-                            quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                        })),
-                        accommodation: team.accommodation || { type: 'Bez ubytovania' },
-                        arrival: {
-                            type: team.arrival?.type || 'bez dopravy',
-                            time: team.arrival?.time || null,
-                            drivers: { // Zabezpečíme správnu štruktúru pre Firestore
-                                male: maleDrivers, 
-                                female: femaleDrivers
-                            } 
-                        },
-                        packageId: team.packageId || '',
-                        packageDetails: team.packageDetails || null
+                const updatedTeam = { ...team };
+
+                // Normalizácia polí, ktoré môžu byť prázdne stringy
+                updatedTeam.players = updatedTeam.players === '' ? 0 : updatedTeam.players;
+                updatedTeam.womenTeamMembers = updatedTeam.womenTeamMembers === '' ? 0 : updatedTeam.womenTeamMembers;
+                updatedTeam.menTeamMembers = updatedTeam.menTeamMembers === '' ? 0 : updatedTeam.menTeamMembers;
+                
+                // Normalizácia tričiek
+                updatedTeam.tshirts = updatedTeam.tshirts.map(tshirt => ({
+                    ...tshirt,
+                    quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
+                }));
+
+                // Normalizácia ubytovania
+                updatedTeam.accommodation = updatedTeam.accommodation || { type: 'Bez ubytovania' };
+                if (updatedTeam.accommodation.type === '') updatedTeam.accommodation.type = 'Bez ubytovania';
+
+                // Normalizácia príchodu a šoférov
+                updatedTeam.arrival = updatedTeam.arrival || { type: 'bez dopravy', time: null, drivers: null };
+                if (updatedTeam.arrival.type === '') updatedTeam.arrival.type = 'bez dopravy';
+                
+                // Ak je typ príchodu 'vlastná doprava', uistite sa, že drivers sú správne {male: ..., female: ...}
+                // Inak nastavte drivers na null.
+                if (updatedTeam.arrival.type === 'vlastná doprava') {
+                    updatedTeam.arrival.drivers = {
+                        male: updatedTeam.arrival.drivers?.male !== undefined ? updatedTeam.arrival.drivers.male : 0,
+                        female: updatedTeam.arrival.drivers?.female !== undefined ? updatedTeam.arrival.drivers.female : 0
                     };
                 } else {
-                    return { // Pre tímy bez vlastnej dopravy, drivers by mal byť null alebo prázdny objekt
-                        ...team,
-                        players: team.players === '' ? 0 : team.players,
-                        womenTeamMembers: team.womenTeamMembers === '' ? 0 : team.womenTeamMembers,
-                        menTeamMembers: team.menTeamMembers === '' ? 0 : team.menTeamMembers,
-                        tshirts: team.tshirts.map(tshirt => ({
-                            ...tshirt,
-                            quantity: tshirt.quantity === '' ? 0 : tshirt.quantity
-                        })),
-                        accommodation: team.accommodation || { type: 'Bez ubytovania' },
-                        arrival: {
-                            type: team.arrival?.type || 'bez dopravy',
-                            time: team.arrival?.time || null,
-                            drivers: null // Pre tímy, ktoré nevybrali "vlastnú dopravu"
-                        }, 
-                        packageId: team.packageId || '',
-                        packageDetails: team.packageDetails || null
-                    };
+                    updatedTeam.arrival.drivers = null;
                 }
+
+                // Normalizácia balíčka
+                if (updatedTeam.packageId === '') updatedTeam.packageId = null;
+                if (!updatedTeam.packageDetails) updatedTeam.packageDetails = null;
+
+                return updatedTeam;
             });
         }
-
 
         await setDoc(userDocRef, {
           firstName: formData.firstName,
@@ -778,7 +758,7 @@ function App() {
           registrationDate: serverTimestamp(),
           passwordLastChanged: serverTimestamp(),
           categories: formData.categories,
-          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5
+          teams: teamsDataToSaveFinal, // Uložíme celú štruktúru s dátami Page 5 vrátane šoférov
         });
       } catch (firestoreError) {
           let firestoreErrorMessage = 'Chyba pri ukladaní údajov. Skontrolujte bezpečnostné pravidlá Firestore.';
@@ -1070,7 +1050,7 @@ function App() {
                   teamsDataFromPage4: teamsDataFromPage4,
                   availableCategoriesMap: categoriesDataFromFirestore, // Provided for completeness, might not be used directly in Page5Form logic
                   handlePrev: handlePrev,
-                  handleSubmit: handleNextPage5ToPage6,
+                  handleSubmit: handleNextPage5ToPage6, // Zmena volanej funkcie
                   loading: loading,
                   setLoading: setLoading,
                   setRegistrationSuccess: setRegistrationSuccess,
