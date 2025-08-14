@@ -960,9 +960,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             'div',
                             { key: entry.id, className: 'flex items-center space-x-2 mb-4 w-full' },
                             React.createElement(
-                                'div', // Main content area (Team select + Count/Gender)
+                                'div', 
                                 { className: 'flex flex-col flex-grow space-y-2' },
-                                React.createElement( // Team Select row
+                                React.createElement(
                                     'div',
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
@@ -979,7 +979,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     ))
                                     )
                                 ),
-                                React.createElement( // Count and Gender row
+                                React.createElement( 
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
                                     React.createElement('div', { className: 'w-24 flex-shrink-0' },
@@ -1009,7 +1009,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     )
                                 )
                             ),
-                            React.createElement( // Delete Button
+                            React.createElement(
                                 'button',
                                 {
                                     type: 'button',
