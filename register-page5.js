@@ -831,6 +831,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 teamIndex: null
             };
             const updatedEntries = [...prev, newEntry];
+            // Okamžitá aktualizácia rodičovského stavu po pridaní šoféra
+            const teamsDataAfterAdd = getAggregatedDriversData(updatedEntries);
+            handleChange({
+                target: {
+                    id: 'teamsDataFromPage4',
+                    value: teamsDataAfterAdd
+                }
+            });
             return updatedEntries;
         });
     };
@@ -838,9 +846,14 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
-            // No direct call to updateParentTeamsData here.
-            // Parent state will only be updated on form submission (handlePage5Submit)
-            // or when navigating back.
+            // Okamžitá aktualizácia rodičovského stavu po odstránení šoféra
+            const teamsDataAfterRemoval = getAggregatedDriversData(updatedEntries);
+            handleChange({
+                target: {
+                    id: 'teamsDataFromPage4',
+                    value: teamsDataAfterRemoval
+                }
+            });
             return updatedEntries;
         });
     };
@@ -880,6 +893,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 }
                 return entry;
             });
+
+            // Okamžitá aktualizácia rodičovského stavu po zmene údajov šoféra
+            const teamsDataAfterChange = getAggregatedDriversData(updatedEntries);
+            handleChange({
+                target: {
+                    id: 'teamsDataFromPage4',
+                    value: teamsDataAfterChange
+                }
+            });
+
             return updatedEntries;
         });
     };
@@ -1076,18 +1099,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            // Updated: Call getAggregatedDriversData to get the updated data
+            // Získanie už aktuálnych dát šoférov z lokálneho stavu (ktorý je už synchronizovaný cez handleChange v handleDriverEntryChange, handleAddDriverEntry, handleRemoveDriverEntry)
             const teamsDataToSubmit = getAggregatedDriversData(driverEntries);
 
-            // Now, teamsDataToSubmit contains the latest aggregated driver information.
-            // Call handleChange to update the parent's state, then submit with this data.
-            handleChange({
-                target: {
-                    id: 'teamsDataFromPage4',
-                    value: teamsDataToSubmit
-                }
-            });
-            await handleSubmit(teamsDataToSubmit); // Pass the explicitly updated data
+            // Následné odoslanie formulára s týmito dátami
+            await handleSubmit(teamsDataToSubmit);
 
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
@@ -1253,16 +1269,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     {
                         type: 'button',
                         onClick: () => {
-                            // Call getAggregatedDriversData to get the updated data
+                            // Získanie už aktuálnych dát šoférov z lokálneho stavu (ktorý je už synchronizovaný cez handleChange)
                             const teamsDataToUpdate = getAggregatedDriversData(driverEntries);
-                            // Call handleChange to update the parent's state
+                            // Zavolanie handleChange na aktualizáciu rodičovského stavu
                             handleChange({
                                 target: {
                                     id: 'teamsDataFromPage4',
                                     value: teamsDataToUpdate
                                 }
                             });
-                            handlePrev(); // Then navigate back
+                            handlePrev(); // Potom prejdite späť
                         },
                         className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200',
                         disabled: loading,
