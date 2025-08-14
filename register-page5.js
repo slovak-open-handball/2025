@@ -50,16 +50,16 @@ function NotificationModal({ message, onClose, type = 'info' }) {
     );
 }
 
-function TeamAccommodationAndArrival({ 
-    team, 
-    categoryName, 
-    teamIndex, 
-    handleChange, 
-    loading, 
-    accommodationTypes, 
-    accommodationCounts, 
-    tournamentStartDateDisplay, 
-    generateTimeOptions 
+function TeamAccommodationAndArrival({
+    team,
+    categoryName,
+    teamIndex,
+    handleChange,
+    loading,
+    accommodationTypes,
+    accommodationCounts,
+    tournamentStartDateDisplay,
+    generateTimeOptions
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -89,6 +89,7 @@ function TeamAccommodationAndArrival({
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
         setArrivalType(newValue);
+        // OPRAVA: Zmenené názvy typov dopravy
         if (newValue !== 'verejná doprava - vlak' && newValue !== 'verejná doprava - autobus' && newValue !== 'vlastná doprava') {
             setArrivalHours('');
             setArrivalMinutes('');
@@ -103,17 +104,17 @@ function TeamAccommodationAndArrival({
 
     const handleTimeSelectChange = (e) => {
         const { id, value } = e.target;
-        let currentHours = arrivalHours; 
+        let currentHours = arrivalHours;
         let currentMinutes = arrivalMinutes;
 
-        if (id.includes('arrivalHours')) { 
+        if (id.includes('arrivalHours')) {
             currentHours = value;
             setArrivalHours(value);
-        } else if (id.includes('arrivalMinutes')) { 
+        } else if (id.includes('arrivalMinutes')) {
             currentMinutes = value;
             setArrivalMinutes(value);
         }
-        
+
         let timeString = '';
         if (currentHours && currentMinutes) {
             timeString = `${currentHours}:${currentMinutes}`;
@@ -151,7 +152,7 @@ function TeamAccommodationAndArrival({
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`) 
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`)
                     ),
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
                         const currentCount = accommodationCounts[acc.type] || 0;
@@ -161,8 +162,8 @@ function TeamAccommodationAndArrival({
 
                         return React.createElement(
                             'label',
-                            { 
-                                key: acc.type, 
+                            {
+                                key: acc.type,
                                 className: labelClasses,
                             },
                             React.createElement('input', {
@@ -174,8 +175,8 @@ function TeamAccommodationAndArrival({
                                 className: 'form-radio h-5 w-5 text-blue-600',
                                 disabled: isDisabled,
                             }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' }, 
-                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}` 
+                            React.createElement('span', { className: 'ml-3 text-gray-800' },
+                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}`
                             )
                         );
                     })
@@ -204,7 +205,7 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'verejná doprava - vlak',
+                            value: 'verejná doprava - vlak', // OPRAVA: Zmenená hodnota
                             checked: arrivalType === 'verejná doprava - vlak',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
@@ -254,7 +255,7 @@ function TeamAccommodationAndArrival({
                         React.createElement('input', {
                             type: 'radio',
                             name: `arrivalType-${categoryName}-${teamIndex}`,
-                            value: 'verejná doprava - autobus',
+                            value: 'verejná doprava - autobus', // OPRAVA: Zmenená hodnota
                             checked: arrivalType === 'verejná doprava - autobus',
                             onChange: handleArrivalChange,
                             className: 'form-radio h-5 w-5 text-blue-600',
@@ -328,14 +329,14 @@ function TeamAccommodationAndArrival({
     );
 }
 
-function TeamPackageSettings({ 
-    team, 
-    categoryName, 
-    teamIndex, 
-    handleChange, 
-    loading, 
-    packages, 
-    tournamentDays 
+function TeamPackageSettings({
+    team,
+    categoryName,
+    teamIndex,
+    handleChange,
+    loading,
+    packages,
+    tournamentDays
 }) {
     const [selectedPackageId, setSelectedPackageId] = React.useState(team.packageId || '');
 
@@ -404,7 +405,7 @@ function TeamPackageSettings({
                                     [...new Set([...tournamentDays, ...Object.keys(pkg.meals || {}).filter(key => key !== 'participantCard')])].sort().map(date => {
                                         const mealsForDay = pkg.meals[date];
                                         const includedItems = [];
-                                        
+
                                         if (isNaN(new Date(date).getTime())) {
                                             return null;
                                         }
@@ -442,6 +443,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
     const [isOpen, setIsOpen] = React.useState(false);
     const selectRef = React.useRef(null);
 
+    // Zmena formátu pre zobrazenú hodnotu
     const selectedOption = options.find(option => option.id === value);
     const displayedValue = selectedOption ? `${selectedOption.categoryName} - ${selectedOption.teamName}` : placeholder;
 
@@ -513,6 +515,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
                             onClick: () => handleOptionClick(option.id),
                             className: optionClasses + (option.id === value ? ' bg-blue-200' : '')
                         },
+                        // Zmena formátu pre zobrazenie v rozbaľovacom zozname
                         `${option.categoryName} - ${option.teamName}`
                     )
                 ))
@@ -538,13 +541,53 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const [packages, setPackages] = React.useState([]);
     const [tournamentStartDateDisplay, setTournamentStartDateDisplay] = React.useState('');
 
+    // Lokálny stav pre záznamy šoférov
     const [driverEntries, setDriverEntries] = React.useState([]);
+
+    // NOVINKA: useEffect na inicializáciu driverEntries z teamsDataFromPage4
+    React.useEffect(() => {
+        const initialDriverEntries = [];
+        for (const categoryName in teamsDataFromPage4) {
+            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
+                if (team.arrival?.type === 'vlastná doprava' && team.arrival?.drivers) {
+                    if (team.arrival.drivers.male > 0) {
+                        initialDriverEntries.push({
+                            id: `initial-male-${categoryName}-${teamIndex}-${Math.random().toString(36).substr(2, 9)}`, // Unikátne ID
+                            count: team.arrival.drivers.male.toString(),
+                            gender: 'male',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
+                    if (team.arrival.drivers.female > 0) {
+                        initialDriverEntries.push({
+                            id: `initial-female-${categoryName}-${teamIndex}-${Math.random().toString(36).substr(2, 9)}`, // Unikátne ID
+                            count: team.arrival.drivers.female.toString(),
+                            gender: 'female',
+                            categoryName: categoryName,
+                            teamIndex: teamIndex,
+                        });
+                    }
+                }
+            });
+        }
+        // Nastavíme lokálny stav driverEntries iba ak sa líši
+        // Hlboké porovnanie je tu ideálne, ale pre jednoduchosť môžeme skúsiť porovnať dĺžky
+        // a vyhnúť sa zbytočným re-renderom.
+        // Pre istotu a aby React správne detekoval zmenu, budeme setovať, ak sa pole zmenilo.
+        if (JSON.stringify(initialDriverEntries.map(e => ({ cat: e.categoryName, teamIdx: e.teamIndex, gender: e.gender, count: e.count }))) !==
+            JSON.stringify(driverEntries.map(e => ({ cat: e.categoryName, teamIdx: e.teamIndex, gender: e.gender, count: e.count })))) {
+                setDriverEntries(initialDriverEntries);
+            }
+
+    }, [teamsDataFromPage4]); // Znovu spustiť, keď sa zmenia tímy (napr. pri návrate z inej stránky)
+
 
     const generateUniqueId = () => `driver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const getDaysBetween = (start, end) => {
         const dates = [];
-        let currentDate = new Date(start); 
+        let currentDate = new Date(start);
         while (currentDate <= end) {
             dates.push(currentDate.toISOString().split('T')[0]);
             currentDate.setDate(currentDate.getDate() + 1);
@@ -757,10 +800,10 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         teamsWithOwnTransport.forEach(team => {
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
-            
+
             const isMaleTaken = usedTeamGenderCombinations.has(maleCombo);
             const isFemaleTaken = usedTeamGenderCombinations.has(femaleCombo);
-            
+
             const currentEntryTeamId = currentEntry ? `${currentEntry.categoryName}-${currentEntry.teamIndex}` : null;
 
             if (currentEntryTeamId === team.id) {
@@ -815,12 +858,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
-        
-        const hasIncompleteEntry = driverEntries.some(entry => 
-            entry.count === '' || 
-            parseInt(entry.count, 10) <= 0 || 
-            entry.gender === '' || 
-            entry.categoryName === '' || 
+
+        const hasIncompleteEntry = driverEntries.some(entry =>
+            entry.count === '' ||
+            parseInt(entry.count, 10) <= 0 ||
+            entry.gender === '' ||
+            entry.categoryName === '' ||
             entry.teamIndex === null
         );
         if (hasIncompleteEntry) {
@@ -869,7 +912,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 if (packages.length > 0 && (!team.packageId || team.packageId.trim() === '')) {
                     return false;
                 }
-
+                // OPRAVA: Zmenené názvy typov dopravy vo validácii
                 if ((team.arrival?.type === 'verejná doprava - vlak' || team.arrival?.type === 'verejná doprava - autobus') && (!team.arrival?.time || team.arrival.time.trim() === '')) {
                     return false;
                 }
@@ -907,7 +950,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Skontrolujte, či každý tím s "vlastná doprava" má priradeného aspoň jedného šoféra
         const teamsRequiringDrivers = teamsWithOwnTransport.map(team => team.id);
         const teamsWithAssignedDrivers = new Set();
-        
+
         driverEntries.forEach(entry => {
             if (entry.categoryName && entry.teamIndex !== null) {
                 teamsWithAssignedDrivers.add(`${entry.categoryName}-${entry.teamIndex}`);
@@ -940,13 +983,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handlePage5Submit = async (e) => {
         e.preventDefault();
 
-        if (setLoading) setLoading(true); 
-        closeNotification(); 
+        if (setLoading) setLoading(true);
+        closeNotification();
 
         if (!isFormValidPage5) {
             setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra a uistite sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error');
             setNotificationType('error');
-            setLoading(false); 
+            setLoading(false);
             return;
         }
 
@@ -959,8 +1002,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     if (team.arrival?.type === 'vlastná doprava') {
                         let maleDriversCount = 0;
                         let femaleDriversCount = 0;
-                        driverEntries.filter(entry => 
-                            entry.categoryName === categoryName && 
+                        driverEntries.filter(entry =>
+                            entry.categoryName === categoryName &&
                             entry.teamIndex === teamIdx
                         ).forEach(entry => {
                             const count = parseInt(entry.count, 10);
@@ -990,7 +1033,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     };
                 });
             }
-            
+
             await handleSubmit(teamsDataForSubmission);
 
         } catch (error) {
@@ -1073,15 +1116,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     { className: 'border-t border-gray-200 pt-4 mt-4' },
                     React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, 'Šoféri pre vlastnú dopravu'),
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-4' }, 'Pridajte informácie o šoféroch pre tímy, ktoré majú zvolenú vlastnú dopravu.'),
-                    
+
                     driverEntries.map((entry) => (
                         React.createElement(
                             'div',
                             { key: entry.id, className: 'flex items-start space-x-2 mb-4 w-full' },
                             React.createElement(
-                                'div', 
+                                'div',
                                 { className: 'flex flex-col flex-grow space-y-2' },
-                                React.createElement( 
+                                React.createElement(
                                     'div',
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
@@ -1093,7 +1136,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                         placeholder: 'Vyberte',
                                     })
                                 ),
-                                React.createElement( 
+                                React.createElement(
                                     'div',
                                     { className: 'flex space-x-2 w-full' },
                                     React.createElement('div', { className: 'w-1/2 flex-shrink-0' },  // Zmenené na w-1/2
@@ -1103,7 +1146,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             className: 'shadow appearance-none border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full',
                                             value: entry.count,
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
-                                            placeholder: 'Zadajte počet',
+                                            placeholder: 'Zadajte počet', // OPRAVA: Zmenený placeholder
                                             min: 1,
                                             required: true,
                                             disabled: loading,
@@ -1117,13 +1160,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                             required: true,
                                             disabled: loading,
-                                        }, getAvailableGenderOptions(entry).map(opt => ( 
+                                        }, getAvailableGenderOptions(entry).map(opt => (
                                             React.createElement('option', { key: opt.value, value: opt.value }, opt.label)
                                         )))
                                     )
                                 )
                             ),
-                            React.createElement( 
+                            React.createElement(
                                 'button',
                                 {
                                     type: 'button',
@@ -1142,7 +1185,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             type: 'button',
                             onClick: handleAddDriverEntry,
                             className: `
-                                bg-green-500 hover:bg-green-700 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4 
+                                bg-green-500 hover:bg-green-700 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center mx-auto mt-4
                                 transition-colors duration-200 focus:outline-none focus:shadow-outline
                                 ${loading ? 'opacity-70 cursor-not-allowed' : ''}
                             `.trim(),
