@@ -891,7 +891,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
 
-    const getAggregatedDriversData = React.useCallback((currentDriverEntries) => {
+    const getAggregatedDriversData = React.useCallback((currentDriverEntries, originalTeamsData) => { // Pridaný argument originalTeamsData
         const aggregatedDrivers = {};
         // Aggregate drivers from current `driverEntries`
         currentDriverEntries.forEach(entry => {
@@ -911,8 +911,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         });
 
-        // Create a deep copy of teamsDataFromPage4 to avoid direct mutation issues
-        const updatedTeamsData = JSON.parse(JSON.stringify(teamsDataFromPage4));
+        // Create a deep copy of the originalTeamsData to avoid direct mutation issues
+        const updatedTeamsData = JSON.parse(JSON.stringify(originalTeamsData)); // Používame originalTeamsData
 
         // Iterate through all teams in `updatedTeamsData` to set their `drivers` property correctly
         for (const categoryName in updatedTeamsData) {
@@ -942,7 +942,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             });
         }
         return updatedTeamsData; // Return the updated data
-    }, [teamsDataFromPage4]);
+    }, []); // Odstránená závislosť na teamsDataFromPage4, pretože sa odovzdáva ako argument
 
 
     const isAddDriverButtonVisible = React.useMemo(() => {
@@ -1087,8 +1087,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
 
         try {
-            // Získanie už aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred submitom
-            const teamsDataToSubmit = getAggregatedDriversData(driverEntries);
+            // Získanie aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred submitom
+            const teamsDataToSubmit = getAggregatedDriversData(driverEntries, teamsDataFromPage4); // Odovzdáme aj teamsDataFromPage4
             handleChange({
                 target: {
                     id: 'teamsDataFromPage4',
@@ -1133,8 +1133,12 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             Object.keys(teamsDataFromPage4).length === 0 ? (
                 React.createElement('div', { className: 'text-center py-8 text-gray-600' }, 'Prejdite prosím na predchádzajúcu stránku a zadajte tímy.')
             ) : (
-                // Filter categories that might be undefined or null and ensure they are objects
-                Object.keys(teamsDataFromPage4).filter(categoryName => teamsDataFromPage4[categoryName] && typeof teamsDataFromPage4[categoryName] === 'object').map(categoryName => (
+                // Filter categories that might be undefined or null and ensure they are objects and have teams
+                Object.keys(teamsDataFromPage4).filter(categoryName => 
+                    teamsDataFromPage4[categoryName] && 
+                    typeof teamsDataFromPage4[categoryName] === 'object' &&
+                    teamsDataFromPage4[categoryName].length > 0 // NOVINKA: Kontrolujeme, či kategória obsahuje tímy
+                ).map(categoryName => (
                     React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -1263,7 +1267,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         type: 'button',
                         onClick: () => {
                             // Získanie aktuálnych dát šoférov z lokálneho stavu a ich prenesenie do parent state pred navigáciou
-                            const teamsDataToUpdate = getAggregatedDriversData(driverEntries);
+                            const teamsDataToUpdate = getAggregatedDriversData(driverEntries, teamsDataFromPage4); // Odovzdáme aj teamsDataFromPage4
                             handleChange({
                                 target: {
                                     id: 'teamsDataFromPage4',
