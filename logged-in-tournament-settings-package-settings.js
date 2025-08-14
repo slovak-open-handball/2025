@@ -471,7 +471,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         checked: showRefreshmentColumn,
                         onChange: (e) => setShowRefreshmentColumn(e.target.checked),
                     }),
-                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'Zobraziť stĺpec občerstvenie')
+                    React.createElement('label', { htmlFor: 'toggleRefreshmentColumn', className: 'ml-2 text-gray-700' }, 'zobraziť stĺpec občerstvenie')
                 )
             )
         ) : (
