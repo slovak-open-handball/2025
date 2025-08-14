@@ -1002,16 +1002,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                     { className: 'w-full' },
                                     React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1' }, 'Tím'),
                                     React.createElement('select', {
-                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal h-auto', // Pridané h-auto
+                                        className: 'shadow border rounded-lg py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 w-full overflow-hidden whitespace-normal h-auto',
                                         value: entry.categoryName && entry.teamIndex !== null ? `${entry.categoryName}-${entry.teamIndex}` : '',
                                         onChange: (e) => handleDriverEntryChange(entry.id, 'teamId', e.target.value),
                                         required: true,
                                         disabled: loading,
-                                        style: { minHeight: '4rem' } // Pridané minHeight pre zobrazenie dvoch riadkov
+                                        style: { minHeight: '4rem' }
                                     },
                                     React.createElement('option', { key: "team-placeholder", value: '' }, 'Vyberte'),
                                     getAvailableTeamOptions(entry).map(team => (
-                                        React.createElement('option', { key: team.id, value: team.id, className: 'whitespace-normal' }, `${team.teamName} (${team.categoryName})`) // Pridané whitespace-normal
+                                        React.createElement('option', { key: team.id, value: team.id, className: 'whitespace-normal' }, `${team.teamName} (${team.categoryName})`)
                                     ))
                                     )
                                 ),
