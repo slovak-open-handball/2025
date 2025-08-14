@@ -422,6 +422,13 @@ function App() {
         // Spracovanie aktualizácií prichádzajúcich z TeamAccommodationAndArrival a TeamPackageSettings
         setTeamsDataFromPage4(prevTeamsData => {
             const newTeamsData = { ...prevTeamsData };
+
+            // NOVINKA: Prísna kontrola platnosti categoryName pred jej použitím ako kľúča
+            if (typeof value.categoryName !== 'string' || value.categoryName.trim() === '') {
+                console.warn("Attempted to update teamsDataFromPage4 with an invalid categoryName:", value.categoryName);
+                return prevTeamsData; // Vrátiť pôvodný stav, aby sa predišlo neplatnému kľúču 'undefined'
+            }
+
             // Ensure category and team objects exist before updating
             if (!newTeamsData[value.categoryName]) {
                 newTeamsData[value.categoryName] = [];
