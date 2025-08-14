@@ -443,7 +443,7 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
     const selectRef = React.useRef(null);
 
     const selectedOption = options.find(option => option.id === value);
-    const displayedValue = selectedOption ? `${selectedOption.teamName} (${selectedOption.categoryName})` : placeholder;
+    const displayedValue = selectedOption ? `${selectedOption.categoryName} - ${selectedOption.teamName}` : placeholder;
 
     const handleSelectClick = () => {
         if (!disabled) {
