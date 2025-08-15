@@ -193,10 +193,10 @@ function TournamentSettingsApp() {
   const [activeSetting, setActiveSetting] = React.useState(null); // Nový stav pre aktívne nastavenie
 
   const settingComponents = [
-    { id: 'general', title: 'Všeobecné nastavenia registrácie', component: GeneralRegistrationSettings },
-    { id: 'tshirt', title: 'Nastavenia veľkostí tričiek', component: TShirtSizeSettings },
-    { id: 'accommodation', title: 'Nastavenia ubytovania', component: AccommodationSettings },
-    { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
+    { id: 'general', component: GeneralRegistrationSettings },
+    { id: 'tshirt', component: TShirtSizeSettings },
+    { id: 'accommodation', component: AccommodationSettings },
+    { id: 'package', component: PackageSettings },
   ];
 
 
