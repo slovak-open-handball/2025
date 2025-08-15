@@ -847,7 +847,35 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleRemoveDriverEntry = (idToRemove) => {
         setDriverEntries(prev => {
             const updatedEntries = prev.filter(entry => entry.id !== idToRemove);
-            // Neaktualizujeme parent state hneď, len lokálny stav
+
+            // Find the team associated with the removed entry to update its drivers data in parent state
+            const removedEntry = prev.find(entry => entry.id === idToRemove);
+            if (removedEntry && removedEntry.categoryName && removedEntry.teamIndex !== null) {
+                const affectedCategoryName = removedEntry.categoryName;
+                const affectedTeamIndex = removedEntry.teamIndex;
+
+                // Re-aggregate drivers for the affected team based on the `updatedEntries`
+                const currentTeamDrivers = { male: 0, female: 0 };
+                updatedEntries.forEach(entry => {
+                    if (entry.categoryName === affectedCategoryName && entry.teamIndex === affectedTeamIndex && entry.gender && entry.count !== '') {
+                        const count = parseInt(entry.count, 10);
+                        if (!isNaN(count) && count > 0) {
+                            if (entry.gender === 'male') {
+                                currentTeamDrivers.male += count;
+                            } else {
+                                currentTeamDrivers.female += count;
+                            }
+                        }
+                    }
+                });
+
+                // Update parent state
+                handleChange(affectedCategoryName, affectedTeamIndex, 'arrival', {
+                    ...teamsDataFromPage4[affectedCategoryName][affectedTeamIndex].arrival,
+                    drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
+                });
+            }
+
             return updatedEntries;
         });
     };
@@ -860,6 +888,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     let newCategoryName = newEntryState.categoryName;
                     let newTeamIndex = newEntryState.teamIndex;
                     let newGender = newEntryState.gender;
+                    let newCount = newEntryState.count;
 
                     if (field === 'teamId') {
                         const [catName, teamIdxStr] = value.split('-');
@@ -870,6 +899,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     } else if (field === 'gender') {
                         newGender = value;
                         newEntryState.gender = newGender;
+                    } else if (field === 'count') {
+                        newCount = value;
+                        newEntryState.count = newCount;
                     }
 
                     // Now, determine the stable ID based on all three identifying parts
@@ -883,11 +915,48 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                              newEntryState.id = generateUniqueId(); // Assign a new temporary ID
                         }
                     }
+
+                    // --- NEW LOGIC: Update parent state for drivers immediately ---
+                    // Only update parent state if team and gender are selected and count is valid
+                    if (newCategoryName && newTeamIndex !== null && teamsDataFromPage4[newCategoryName] && teamsDataFromPage4[newCategoryName][newTeamIndex] && teamsDataFromPage4[newCategoryName][newTeamIndex].arrival?.type === 'vlastná doprava') {
+                        const currentTeamDrivers = { male: 0, female: 0 };
+                        
+                        // First, add the change from the current entry
+                        const parsedCount = parseInt(newCount, 10);
+                        if (!isNaN(parsedCount) && parsedCount > 0 && newGender) {
+                            if (newGender === 'male') {
+                                currentTeamDrivers.male += parsedCount;
+                            } else {
+                                currentTeamDrivers.female += parsedCount;
+                            }
+                        }
+
+                        // Then, add other existing driver entries for the same team (excluding the current one)
+                        prev.forEach(otherEntry => {
+                            if (otherEntry.id !== id && otherEntry.categoryName === newCategoryName && otherEntry.teamIndex === newTeamIndex && otherEntry.gender && otherEntry.count !== '') {
+                                const otherCount = parseInt(otherEntry.count, 10);
+                                if (!isNaN(otherCount) && otherCount > 0) {
+                                    if (otherEntry.gender === 'male') {
+                                        currentTeamDrivers.male += otherCount;
+                                    } else {
+                                        currentTeamDrivers.female += otherCount;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Propagate this aggregated drivers object up to the parent
+                        handleChange(newCategoryName, newTeamIndex, 'arrival', {
+                            ...teamsDataFromPage4[newCategoryName][newTeamIndex].arrival, // Preserve other arrival properties
+                            drivers: currentTeamDrivers.male === 0 && currentTeamDrivers.female === 0 ? null : currentTeamDrivers
+                        });
+                    }
+                    // --- END NEW LOGIC ---
+
                     return newEntryState;
                 }
                 return entry;
             });
-            // Neaktualizujeme parent state hneď, len lokálny stav
             return updatedEntries;
         });
     };
@@ -1051,9 +1120,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const hasAnyValidDriverEntry = Object.values(aggregatedDrivers).some(
                 (drivers) => drivers.male > 0 || drivers.female > 0
             );
-            if (!hasAnyValidDriverEntry) {
-                // Ak existujú tímy s "vlastná doprava", ale žiadny platný šofér nebol pridaný, formulár je neplatný.
-                return false; 
+            // Ak existujú tímy s "vlastná doprava", ale žiadny platný šofér nebol pridaný, formulár je neplatný.
+            if (!hasAnyValidDriverEntry && driverEntries.length === 0) {
+                 return false; 
+            }
+            // Ak existujú záznamy šoférov, ale žiadny z nich nie je pre tím s "vlastnou dopravou", tak to tiež nie je ok
+            const hasDriverForOwnTransportTeam = driverEntries.some(entry => {
+                const teamId = `${entry.categoryName}-${entry.teamIndex}`;
+                return teamsWithOwnTransport.some(team => team.id === teamId);
+            });
+            if (teamsWithOwnTransport.length > 0 && !hasDriverForOwnTransportTeam) {
+                 return false;
             }
         }
 
@@ -1087,7 +1164,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         // Validácia formulára sa vykonáva na začiatku, aby sa zabránilo odoslaniu neplatných údajov.
         if (!isFormValidPage5) {
             // Aktualizovaná notifikačná správa, aby zodpovedala novej validácii
-            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musíte pridať aspoň jedného šoféra pre ľubovoľný tím, uistite sa, že všetky polia sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error'); 
+            setNotificationMessage("Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod). Pre tímy s 'vlastnou dopravou' musí byť pridaný aspoň jeden šofér pre niektorý z týchto tímov. Uistite sa, že všetky polia šoférov sú vyplnené a bez duplicitných záznamov pre pohlavie a tím.", 'error'); 
             setNotificationType('error');
             setLoading(false);
             return;
